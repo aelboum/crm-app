@@ -18,7 +18,7 @@ import psycopg
 import pytest
 from psycopg import sql
 
-from tests.support import clean_environment
+from tests.support import clean_environment, run_module
 
 REQUIRED = (
     "ENVIRONMENT",
@@ -56,6 +56,16 @@ def libpq_url(url: str) -> str:
     """A SQLAlchemy URL (`postgresql+psycopg://`) as a libpq URL."""
     parts = urlsplit(url)
     return urlunsplit(parts._replace(scheme="postgresql"))
+
+
+@pytest.fixture(scope="session")
+def migrated(integration_env: dict[str, str], tmp_path_factory: pytest.TempPathFactory) -> None:
+    """Both migration histories applied, twice, so every test also proves the
+    migration step is idempotent."""
+    cwd = tmp_path_factory.mktemp("migrate")
+    for attempt in (1, 2):
+        result = run_module("crm_app.migrate", [], integration_env, cwd)
+        assert result.returncode == 0, f"migration run {attempt} failed:\n{result.stderr}"
 
 
 @pytest.fixture(scope="session")

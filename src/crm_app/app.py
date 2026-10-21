@@ -7,7 +7,8 @@ SaaS-OS's `build_platform_app()` (SaaS-OS ADR-0017). The platform
 contributes the fail-closed startup checks (every route declares exactly
 one policy; the database role cannot bypass Row-Level Security), request
 correlation, the health routes and the OIDC routes under `/auth`. Product
-routers are mounted on top as they are added; Phase 1 has none.
+routers (`crm_app.api`) are mounted on top; the platform's startup check
+then covers them too.
 
 There is deliberately no module-level `app`: importing this module must not
 resolve configuration, so tests and tools can import it safely.
@@ -31,4 +32,8 @@ def create_app() -> FastAPI:
     # Imported only after validation: SaaS-OS resolves configuration at import time.
     from saas_os.api.platform import build_platform_app  # noqa: PLC0415
 
-    return build_platform_app(title=TITLE, version=__version__)
+    from crm_app.api.workspaces import router as workspaces_router  # noqa: PLC0415
+
+    app = build_platform_app(title=TITLE, version=__version__)
+    app.include_router(workspaces_router)
+    return app

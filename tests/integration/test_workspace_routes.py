@@ -1,0 +1,92 @@
+"""The workspace routes admit members with the permission and refuse every
+other caller without revealing whether the workspace exists.
+
+Drives `workspace_route_probe` in a fresh interpreter (SaaS-OS caches its
+configuration per process) against the integration database.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from tests.support import REPO_ROOT, run_module
+
+pytestmark = pytest.mark.usefixtures("migrated")
+
+Probe = dict[str, Any]
+
+
+@pytest.fixture(scope="module")
+def probe(integration_env: dict[str, str], tmp_path_factory: pytest.TempPathFactory) -> Probe:
+    env = {**integration_env, "PYTHONPATH": str(REPO_ROOT)}
+    cwd: Path = tmp_path_factory.mktemp("routes")
+    result = run_module("tests.integration.workspace_route_probe", [], env, cwd)
+    assert result.returncode == 0, result.stderr
+    line = next(x for x in result.stdout.splitlines() if x.startswith("RESULT "))
+    return json.loads(line.removeprefix("RESULT "))
+
+
+@pytest.mark.parametrize("route", ["workspace", "members"])
+def test_members_with_the_permission_are_admitted(probe: Probe, route: str) -> None:
+    assert probe[route]["owner"] == 200
+    assert probe[route]["reader"] == 200
+
+
+@pytest.mark.parametrize("route", ["workspace", "members"])
+def test_a_member_without_the_permission_is_refused(probe: Probe, route: str) -> None:
+    assert probe[route]["roleless"] == 403
+
+
+@pytest.mark.parametrize("route", ["workspace", "members"])
+def test_non_members_and_other_workspaces_get_the_same_404(probe: Probe, route: str) -> None:
+    assert probe[route]["outsider"] == 404
+    assert probe[route]["other_owner"] == 404
+
+
+@pytest.mark.parametrize("route", ["workspace", "members"])
+def test_anonymous_callers_are_refused(probe: Probe, route: str) -> None:
+    assert probe[route]["anonymous"] == 401
+
+
+def test_an_unknown_workspace_is_indistinguishable_from_a_foreign_one(
+    probe: Probe,
+) -> None:
+    assert probe["unknown_workspace"] == 404
+    assert probe["unknown_members"] == 404
+
+
+def test_the_workspace_returned_is_the_requested_one(probe: Probe) -> None:
+    assert probe["owner_workspace_id_matches"] is True
+
+
+def test_the_member_list_holds_exactly_this_workspaces_members(probe: Probe) -> None:
+    assert probe["member_user_ids"] == probe["expected_member_user_ids"]
+    assert probe["other_owner_listed"] is False
+
+
+def test_the_member_list_shows_each_members_roles(probe: Probe) -> None:
+    roles = probe["member_roles"]
+    assert isinstance(roles, dict)
+    assert roles[probe["owner_id"]] == ["Owner"]
+    assert roles[probe["reader_id"]] == ["Read-only"]
+    assert roles[probe["roleless_id"]] == []
+
+
+def test_ordinary_members_see_active_memberships_only(probe: Probe) -> None:
+    assert probe["statuses_seen_by_reader"] == ["active"]
+    assert probe["revoked_id"] not in probe["member_user_ids"]
+
+
+def test_owners_also_see_suspended_but_never_revoked_memberships(probe: Probe) -> None:
+    assert probe["owner_sees_user_ids"] == probe["owner_expected_user_ids"]
+    assert probe["statuses_seen_by_owner"] == ["active", "suspended"]
+    assert probe["revoked_id"] not in probe["owner_sees_user_ids"]
+    assert probe["owner_sees_total"] == len(probe["owner_expected_user_ids"])
+
+
+def test_page_size_is_bounded(probe: Probe) -> None:
+    assert probe["page_too_large"] == 422

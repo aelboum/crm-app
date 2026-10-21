@@ -39,6 +39,25 @@ PLACEHOLDER_SETTINGS = {
 }
 
 
+# Tables the product schema `crm_app` may contain. Empty until the purge
+# decision (PHASE2-PLAN.md gate G1) is approved: the guards in
+# `tests/unit/test_schema_guard.py` and
+# `tests/integration/test_tenant_table_guard.py` fail if a migration adds a
+# table that is not listed here.
+PRODUCT_TABLES: frozenset[str] = frozenset()
+
+# Product tables that deliberately hold no tenant data and so carry no
+# `tenant_id`. Every other product table must be tenant-owned; listing a
+# table here is a reviewed decision, never a way past the RLS and purge
+# guards.
+GLOBAL_TABLES: frozenset[str] = frozenset()
+
+# Tenant-owned tables whose rows a tenant purge removes. It becomes the
+# purge participant's manifest once gate G1 settles how participants are
+# registered; it is deliberately not a purge interface of its own.
+PURGE_COVERED_TABLES: frozenset[str] = frozenset()
+
+
 def clean_environment(overrides: Mapping[str, str] | None = None) -> dict[str, str]:
     """The current environment without any configuration, plus `overrides`."""
     env = {key: value for key, value in os.environ.items() if key not in CONFIG_NAMES}

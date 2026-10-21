@@ -38,14 +38,6 @@ def _probe_result(stdout: str) -> dict[str, int]:
     return json.loads(lines[0].removeprefix("PROBE "))
 
 
-@pytest.fixture(scope="module")
-def migrated(integration_env: dict[str, str], tmp_path_factory: pytest.TempPathFactory) -> None:
-    cwd = tmp_path_factory.mktemp("migrate")
-    for attempt in (1, 2):
-        result = run_module("crm_app.migrate", [], integration_env, cwd)
-        assert result.returncode == 0, f"migration run {attempt} failed:\n{result.stderr}"
-
-
 @pytest.mark.usefixtures("migrated")
 def test_both_migration_histories_are_at_head(owner_connection: psycopg.Connection) -> None:
     platform = owner_connection.execute(

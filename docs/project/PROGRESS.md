@@ -195,6 +195,29 @@ stopped; that commit changes only `.github/workflows/ci.yml`.
 ## Next authorized action
 
 None beyond reporting. Phase 1 is complete and Phase 0 task 0.3 is
-done. The next roadmap task is Phase 2 (identity, workspaces, and
-tenant isolation): a Phase 2 plan built on decisions P2-A to P2-E, which
-needs the owner's approval before any implementation.
+done. Phase 2 is in progress (uncommitted, 2026-10-21), following
+`PHASE2-PLAN.md`. Owner decisions that day: Q6 approved (role matrix);
+Q-purge option (a), upstream first with no internal-import exception;
+Q1 approved as a design direction only; S1b and S3 approved within
+supported APIs. Done locally (plan §11.1):
+- the permission catalogue and role templates (`src/crm_app/roles.py`);
+- registration of the 39 granted permissions in the migration step
+  (`crm_app.permissions`), with no role created or granted anywhere;
+- structural schema guards that keep tenant-owned tables out until the
+  purge gate G1;
+- two read-only routes, `GET /v1/workspaces/{id}` and
+  `/v1/workspaces/{id}/members`.
+
+All checks pass locally:
+- unit tests (77), plus the static, secret and dependency checks;
+- integration tests (33), including the tenant-table guards and the
+  workspace route tests, run against local services;
+- the opt-in identity test (1).
+
+CI has not run on these changes, because they are not committed.
+
+Not done: tenant tables, the purge participant, the provisioning command,
+and any route that changes memberships, roles or Owners (gates G1, G2,
+G-LOCK in plan §14).
+The upstream request draft is in plan Appendix A and has not been sent.
+Tenant isolation is untested, because no tenant-owned table exists.
