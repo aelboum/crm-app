@@ -12,8 +12,8 @@ Row-Level Security helpers, jobs and health checks. This repository owns the
 CRM domain, its schema and migrations, and its configuration. See
 `docs/architecture/saas-os-integration.md`.
 
-**Status:** Phase 1 (product foundation). There are no CRM features yet and
-no frontend; see `ROADMAP.md` and `docs/project/PROGRESS.md`.
+**Status:** Phase 1 (product foundation) complete. There are no CRM features
+yet and no frontend; see `ROADMAP.md` and `docs/project/PROGRESS.md`.
 
 ## Proprietary notice
 
@@ -80,8 +80,9 @@ ZITADEL's, after which the client ID changes.
 | Secret scan | `git ls-files -z \| xargs -0 uv run detect-secrets-hook --baseline .secrets.baseline` |
 
 The integration tests use their own database (`crm_app_test`) and Redis
-database 1. CI (`.github/workflows/ci.yml`) runs the same checks. It is not
-active until the repository is pushed.
+database 1. CI (`.github/workflows/ci.yml`) runs the same checks on every
+push to `main` and every pull request, in the private repository
+`aelboum/crm-app`.
 
 ## Layout
 
@@ -102,4 +103,3 @@ docs/architecture/  platform boundary and integration notes
 - No CRM features, no tenant data tables and no frontend.
 - No metrics: SaaS-OS v0.3.0 has none. Tracing goes to the console exporter only.
 - No production deployment, hosting or TLS configuration.
-- CI has not run on GitHub; the repository has no remote yet.

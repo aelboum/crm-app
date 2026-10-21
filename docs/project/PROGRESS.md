@@ -5,7 +5,8 @@ destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
 **Last updated:** 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
-first local commits, decision K2.1)
+first local commits, decision K2.1; remote, push and first CI run,
+decision K2.2)
 
 ## Current phase
 
@@ -13,24 +14,30 @@ first local commits, decision K2.1)
   Design import).
 - **Phase 0.5 — Foundational decisions:** K1–K5, D-WS and P-1 to P-6
   approved and recorded in `DECISIONS.md`.
-- **Phase 1 — Product foundation:** locally verified; remote CI pending.
-  Committed locally (decision K2.1). **Not complete:** acceptance
-  criterion 9 (CI passing on the exact evaluated commit) cannot be met
-  until creating the remote and pushing are approved and CI passes on
-  the pushed commit.
+- **Phase 1 — Product foundation:** complete. Locally verified, and CI
+  passed on the exact pushed commit `dbb15609cd2531d3c430f06ee9c2e7bbd7f6a1c6`
+  (GitHub Actions run 39652641595, 2026-10-21), which meets acceptance
+  criterion 9 (decision K2.2).
 
 ## Repository state
 
 - **Directory:** `C:\Users\imran\Documents\crm-app`, branch `main`.
-- **Commits** (local only, decision K2.1):
+- **Commits** on `main` (decisions K2.1 and K2.2):
   - `0bdbfdb4ef382b1b64b28b7589123a425f6b9cf4` — Phase 1 foundation on
     SaaS-OS v0.1.2 (`b0809ee`), 44 files;
   - `35e13e8873ba47ac8a4da752bfa089a6c72ec01f` — SaaS-OS v0.3.0 upgrade
     (decision K3.1), 10 files; installed pin
     `5905156a99a4526e5071ce091a58667c08b0a019`;
-  - a documentation-only follow-up recording this state.
-- **Remote:** none. Creating the remote, pushing, pull requests,
-  releasing and deploying are not authorized.
+  - `df6d810a267095c351659b84cb9d7f728427d36f` — project records for the
+    local commits;
+  - `dbb15609cd2531d3c430f06ee9c2e7bbd7f6a1c6` — CI keeps a result for
+    every commit on `main` (per-commit concurrency group, no
+    cancellation on `main`);
+  - a documentation-only follow-up recording the remote and CI result.
+- **Remote:** `https://github.com/aelboum/crm-app`, private, default
+  branch `main`, created and pushed 2026-10-21 (decision K2.2). Further
+  pushes need approval each time; pull requests, merges, tags,
+  releases and deployment are not authorized.
 - **Untracked local files, never committed (covered by `.gitignore`):**
   - `.env` and `.env.test`: local-only random credentials and the local
     OIDC client ID;
@@ -103,8 +110,23 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 | Clean copy (criterion 1): trackable files copied to a fresh temporary directory, empty uv cache | `uv sync --locked` and `uv lock --check` exit 0; installed commit `5905156…`; unit tests 43 passed; directory removed afterwards |
 
-Not run: CI (criterion 9; the commits now exist locally, decision K2.1,
-but creating the remote and pushing are not approved).
+CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
+
+## Criterion 9: CI on the pushed commit (2026-10-21)
+
+GitHub Actions run 39652641595 (`push` to `main`), head commit
+`dbb15609cd2531d3c430f06ee9c2e7bbd7f6a1c6`, which is the remote `main`
+(`git ls-remote origin refs/heads/main`). Conclusion: success.
+
+| Job | Result | Evidence from the run log |
+| --- | --- | --- |
+| quality | success | 32 files already formatted; ruff: all checks passed; pyright: 0 errors; import-linter: 2 kept, 0 broken; unit: 43 passed |
+| integration | success | 7 passed against the PostgreSQL 16 and Redis 7 service containers (`CRM_APP_REQUIRE_INTEGRATION=1`, so missing settings fail instead of skipping) |
+| security | success | pip-audit: no known vulnerabilities; detect-secrets hook passed |
+
+This was the first run on Linux. The local integration suite was not
+rerun after the CI concurrency commit because Docker Desktop was
+stopped; that commit changes only `.github/workflows/ci.yml`.
 
 ## Security assumptions and unverified behaviour
 
@@ -137,7 +159,6 @@ but creating the remote and pushing are not approved).
 
 | Blocker | Impact | Needed |
 | --- | --- | --- |
-| No remote or push authorized (local commits exist, K2.1) | Phase 1 criterion 9; any CI evidence | Owner approval to create the private `aelboum/crm-app` repository and push `main` |
 | Claude Design not accessible (no design MCP server configured) | Frontend work and the P-6 decision | Owner adds the Claude Design MCP server and completes `/design-login`, or exports the project files locally. Standalone Claude Design closes 2026-12-14 |
 | ZITADEL v4.19.5 instead of the proposed v4.19.0 | Recorded under P-4 | Owner confirmation |
 
@@ -156,8 +177,8 @@ but creating the remote and pushing are not approved).
 
 ## Next authorized action
 
-None beyond reporting. The next step for Phase 1 is an approved remote
-and push, so that CI runs on the exact commit. The next roadmap task is
-Phase 2 (identity, workspaces, and tenant isolation). It should start
-only after Phase 1 criterion 9 is resolved or explicitly waived by the
-owner.
+None beyond reporting. Phase 1 is complete. The next roadmap task is
+Phase 2 (identity, workspaces, and tenant isolation), which needs the
+owner's approval to start. Claude Design access was authorized on
+2026-10-21 (`/design-login`), so the outstanding read-only design
+inspection (Phase 0 task 0.3, decision P-6) can proceed.

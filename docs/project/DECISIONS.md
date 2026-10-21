@@ -248,6 +248,30 @@ approval), **Superseded**.
   and a passing CI run, each separately approved. Phase 1 status:
   locally verified; remote CI pending.
 
+## K2.2 — Remote repository, first push and first CI run
+
+- **Status:** Approved by the owner, 2026-10-21 ("approve A and B", then
+  "approve the docs commit and push"), and completed. Extends K2 and
+  K2.1.
+- **Approved and done:**
+  - Commit `dbb15609cd2531d3c430f06ee9c2e7bbd7f6a1c6`: CI gives each
+    commit on `main` its own concurrency group and never cancels on
+    `main`; pull requests still cancel superseded runs.
+  - Repository `https://github.com/aelboum/crm-app` created with
+    `gh repo create --private` as `aelboum`; visibility private, default
+    branch `main`.
+  - `main` pushed over HTTPS with the GitHub CLI as credential helper for
+    that push only (Git configuration unchanged). The remote `main`
+    equalled `dbb1560`, with history `dbb1560` ← `df6d810` ← `35e13e8` ←
+    `0bdbfdb`.
+  - This documentation commit and its push.
+- **Evidence:** GitHub Actions run 39652641595 on `dbb1560`: `quality`,
+  `integration` and `security` all succeeded (details in `PROGRESS.md`).
+  Phase 1 acceptance criterion 9 is met, and Phase 1 is complete.
+- **Still not authorized:** further pushes without approval, pull
+  requests, merges, tags, releases, publication and deployment, and any
+  change to the repository's visibility or settings.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project
