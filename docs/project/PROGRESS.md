@@ -4,7 +4,8 @@ The verified current state of the project. `ROADMAP.md` defines the
 destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
-**Last updated:** 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1)
+**Last updated:** 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
+first local commits, decision K2.1)
 
 ## Current phase
 
@@ -12,16 +13,24 @@ anything here that was not verified.
   Design import).
 - **Phase 0.5 — Foundational decisions:** K1–K5, D-WS and P-1 to P-6
   approved and recorded in `DECISIONS.md`.
-- **Phase 1 — Product foundation:** implemented and verified locally.
-  **Not complete:** acceptance criterion 9 (CI passing on the exact
-  evaluated commit) cannot be met until committing and pushing are
-  approved.
+- **Phase 1 — Product foundation:** locally verified; remote CI pending.
+  Committed locally (decision K2.1). **Not complete:** acceptance
+  criterion 9 (CI passing on the exact evaluated commit) cannot be met
+  until creating the remote and pushing are approved and CI passes on
+  the pushed commit.
 
 ## Repository state
 
 - **Directory:** `C:\Users\imran\Documents\crm-app`, branch `main`.
-- **Commits and remote:** no commits, no remote. Committing, pushing and
-  creating the remote are not authorized.
+- **Commits** (local only, decision K2.1):
+  - `0bdbfdb4ef382b1b64b28b7589123a425f6b9cf4` — Phase 1 foundation on
+    SaaS-OS v0.1.2 (`b0809ee`), 44 files;
+  - `35e13e8873ba47ac8a4da752bfa089a6c72ec01f` — SaaS-OS v0.3.0 upgrade
+    (decision K3.1), 10 files; installed pin
+    `5905156a99a4526e5071ce091a58667c08b0a019`;
+  - a documentation-only follow-up recording this state.
+- **Remote:** none. Creating the remote, pushing, pull requests,
+  releasing and deploying are not authorized.
 - **Untracked local files, never committed (covered by `.gitignore`):**
   - `.env` and `.env.test`: local-only random credentials and the local
     OIDC client ID;
@@ -94,7 +103,8 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 | Clean copy (criterion 1): trackable files copied to a fresh temporary directory, empty uv cache | `uv sync --locked` and `uv lock --check` exit 0; installed commit `5905156…`; unit tests 43 passed; directory removed afterwards |
 
-Not run: CI (criterion 9, still blocked on commit approval).
+Not run: CI (criterion 9; the commits now exist locally, decision K2.1,
+but creating the remote and pushing are not approved).
 
 ## Security assumptions and unverified behaviour
 
@@ -127,7 +137,7 @@ Not run: CI (criterion 9, still blocked on commit approval).
 
 | Blocker | Impact | Needed |
 | --- | --- | --- |
-| No commit or remote authorized | Phase 1 criterion 9; any CI evidence | Owner approval to create the private `aelboum/crm-app` repository, make the first commit, and push |
+| No remote or push authorized (local commits exist, K2.1) | Phase 1 criterion 9; any CI evidence | Owner approval to create the private `aelboum/crm-app` repository and push `main` |
 | Claude Design not accessible (no design MCP server configured) | Frontend work and the P-6 decision | Owner adds the Claude Design MCP server and completes `/design-login`, or exports the project files locally. Standalone Claude Design closes 2026-12-14 |
 | ZITADEL v4.19.5 instead of the proposed v4.19.0 | Recorded under P-4 | Owner confirmation |
 
@@ -146,6 +156,8 @@ Not run: CI (criterion 9, still blocked on commit approval).
 
 ## Next authorized action
 
-None beyond reporting. The next roadmap task is Phase 2 (identity,
-workspaces, and tenant isolation). It should start only after Phase 1
-criterion 9 is resolved or explicitly waived by the owner.
+None beyond reporting. The next step for Phase 1 is an approved remote
+and push, so that CI runs on the exact commit. The next roadmap task is
+Phase 2 (identity, workspaces, and tenant isolation). It should start
+only after Phase 1 criterion 9 is resolved or explicitly waived by the
+owner.

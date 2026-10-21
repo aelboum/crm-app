@@ -220,6 +220,34 @@ approval), **Superseded**.
 - **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
   `.secrets.baseline` hash back. Both releases share the migration head.
 
+## K2.1 — First local commits
+
+- **Status:** Approved by the owner, 2026-10-21, and completed. Extends
+  K2: committing locally on `main` is authorized for the two commits
+  below and this documentation follow-up only. Everything else K2 lists
+  as not yet authorized stays unauthorized: creating the remote,
+  setting its visibility, pushing, pull requests, releasing and
+  deploying.
+- **Commits** (author `aelboum`, branch `main`, no remote):
+  1. `0bdbfdb4ef382b1b64b28b7589123a425f6b9cf4` — Phase 1 foundation on
+     SaaS-OS v0.1.2 (`b0809eeb3448956a4dc85a5541514823ec9ceae7`), 44
+     files. Its tree is the pre-K3.1 project: the 10 files the upgrade
+     changed were rebuilt from the pre-upgrade `uv.lock` backup and by
+     reversing the recorded upgrade edits, in a separate copy, without
+     touching the working tree. On that copy the Phase 1 checks passed
+     again (locked install of `b0809ee`, ruff, pyright, import-linter,
+     unit 43, integration 7, identity 1, detect-secrets, pip-audit).
+  2. `35e13e8873ba47ac8a4da752bfa089a6c72ec01f` — SaaS-OS v0.3.0 upgrade
+     (decision K3.1), 10 files, pin
+     `5905156a99a4526e5071ce091a58667c08b0a019`.
+- **Excluded from both commits:** `.env`, `.env.test`, `.venv/`,
+  `deploy/local/.bootstrap/`, `*.egg-info/`, `__pycache__/` and tool
+  caches (all covered by `.gitignore`).
+- **Consequences:** Phase 1 acceptance criterion 9 (CI passing on the
+  exact evaluated commit) is still not met; it needs the remote, a push
+  and a passing CI run, each separately approved. Phase 1 status:
+  locally verified; remote CI pending.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project
