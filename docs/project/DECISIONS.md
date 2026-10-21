@@ -272,6 +272,301 @@ approval), **Superseded**.
   requests, merges, tags, releases, publication and deployment, and any
   change to the repository's visibility or settings.
 
+## D-DES — Claude Design prototype recorded as a design reference
+
+- **Status:** Recorded 2026-10-21 on the owner's instruction. Phase 0
+  task 0.3 is complete.
+- **Decision:** The owner-exported prototype
+  (`Design system questionnaire-handoff.zip`, SHA-256
+  `128683965341eeace19746a8c8e0b70987bf484f41590036b19b068c030b55d7`) is
+  a visual and interaction reference only. It is not production code, a
+  binding architecture, or evidence that any functionality exists.
+  `support.js` (the design tool's runtime) and `mock-data.js` (sample
+  data) are never copied into the product; no export file is in the
+  repository.
+- **Evidence and limits:** `DESIGN-INSPECTION.md` (the canonical record).
+  The bundle does not contain the project ID named in `CLAUDE.md` §2, so
+  the link to that project rests on the owner's statement.
+- **Consequences:** Frontend work still waits for P-6 and an approved
+  Phase 2 plan (the Phase 2 decisions P2-A to P2-E below were approved on
+  2026-10-21). The missing-design backlog is in `DESIGN-INSPECTION.md`
+  §6.
+
+## K5.1 — Global SaaS direction
+
+- **Status:** Approved by the owner, 2026-10-21. Extends K5; K5's MVP
+  feature list and deferrals are unchanged.
+- **Decision:**
+  - The product is a global SaaS for agencies, small businesses and
+    growing companies. The Netherlands and the EU may be the initial
+    market, but the architecture must be neither EU-only nor US-specific.
+    This supersedes K5's "Netherlands and the EU" as the definition of
+    the target users; it remains the likely initial market.
+  - English is the initial and only promised UI language. The UI is
+    translation-ready from the start; other languages are promised only
+    when implemented.
+  - Locale, time zone, date and time formats, currency and international
+    phone numbers are configurable.
+  - Privacy, consent, communication, retention and data-subject handling
+    are designed to be jurisdiction-aware. GDPR applies where relevant
+    but is not treated as the only regime.
+  - Generic CRM terms and entities only; no industry-specific (for
+    example dental) concepts.
+  - Tenant isolation and permissions are enforced in the backend through
+    SaaS-OS and PostgreSQL. Frontend visibility is never an
+    authorization boundary.
+  - "Global" does not require every language, jurisdiction, payment
+    method or channel in the first release.
+- **Unchanged:** K4 (the name stays provisional), K5's MVP list and
+  deferrals, and K5's deployment model (hosted, single region). Whether
+  later customers need other regions or data residency is an open
+  question, not part of this decision.
+
+## P2-A to P2-E — Phase 2 decisions
+
+- **Status:** Proposed on 2026-10-21 and **approved by the owner on
+  2026-10-21**, each with the conditions recorded under it. None is
+  implemented; implementation follows the Phase 2 plan, which still needs
+  approval. Evidence is the pinned SaaS-OS v0.3.0 (`5905156`), verified
+  by reading the installed package and its documents at the pin; file
+  references are to `saas_os/` in the installed package.
+- **Common conditions:** no SaaS-OS capability is assumed or invented,
+  and its public API is never bypassed. Where an approved decision cannot
+  be implemented through supported interfaces, the exact gap is
+  documented and work stops before any workaround.
+- **Current product state:** `crm_app/permissions.py` registers no
+  permissions; `create_app()` mounts only the platform's health and
+  `/auth` routes.
+
+### P2-A — Product roles
+
+- **SaaS-OS facts:**
+  - No built-in roles. Roles are freely named, tenant-local rows created
+    with `create_role(tenant_id, name, *, caller)` (`core/rbac`).
+    SaaS-OS itself only ever creates an `owner` role, in its operator
+    bootstrap, holding just `tenant:read_status`.
+  - Permissions are a global catalogue registered with
+    `register_permission(resource, action)`; registering grants nothing.
+    `grant_permission` requires the caller to hold the permission already
+    (no privilege amplification). `assign_role` accepts only a signed-in
+    user and requires the caller to hold every permission of the role.
+  - "Administrator" is a capability (an active member holding
+    `membership_role:create`), protected by the last-administrator guard
+    (ADR-0043).
+  - Deny grants override allows; delegations are time-limited.
+  - SaaS-OS ships opt-in routes for members and invitations
+    (`/v1/tenants/{id}/members`, `/invitations`, acceptance) but none for
+    roles, role assignment or permission grants.
+- **Recommendation:** four product role templates seeded into every new
+  workspace by the product's provisioning code: **Owner** (everything,
+  including membership and roles), **Admin** (everything except
+  ownership transfer), **Member** (day-to-day CRM work), **Read-only**
+  (view only). Product permissions use the `crm_app.` prefix and are
+  registered in the migration step. Role changes go through the public
+  `assign_role`/`remove_role` functions behind product routes. The
+  identity provider (ZITADEL) holds identities only, not roles.
+- **Implications:** The exact permission list per role is defined in the
+  Phase 2 plan. Owner protection relies on SaaS-OS's last-administrator
+  guard. No new SaaS-OS capability is needed.
+- **Approved 2026-10-21:** four initial product roles, Owner, Admin,
+  Member and Read-only, with these conditions:
+  - They are product-level roles; neither SaaS-OS nor ZITADEL supplies
+    them. ZITADEL handles identity only; authorization uses SaaS-OS roles
+    and permissions.
+  - Every protected operation is checked in the backend; hiding a control
+    is not authorization. Permissions are tenant-scoped, and access
+    requires explicit membership of the workspace.
+  - The last Owner cannot be removed or demoted by accident.
+  - Tests cover cross-tenant access, privilege escalation, role
+    assignment and unauthorized operations.
+- **Verification on 2026-10-21 (implementation gap to plan for):**
+  - The documented bootstrap gives its `owner` role only
+    `("tenant", "read_status")` (`api/tenant_bootstrap.py:147`). A
+    bootstrapped owner therefore cannot invite members or manage roles
+    until the product grants it permissions.
+  - Supported path: `create_role` and `grant_permission` accept
+    `SystemCaller(PROVISIONING)` on any open tenant, and provisioning is
+    exempt from the no-amplification check (`core/rbac/service.py`). So
+    product provisioning code can create the Admin, Member and Read-only
+    roles and grant product and capability permissions to the bootstrap
+    `owner` role, which then serves as the product Owner. The Owner
+    assigns other roles with `assign_role`, which accepts signed-in users
+    only.
+  - Open point: `core/authority/caller.py` scopes PROVISIONING to
+    "creating a tenant's initial authority structure before any principal
+    in it could hold authority". Whether seeding roles immediately after
+    bootstrap, and adding permissions to existing workspaces later, fall
+    within that scope must be settled in the Phase 2 plan before
+    implementation. If not, work stops at that gap.
+
+### P2-B — Agency and client workspaces
+
+- **SaaS-OS facts:** `get_tenant_context` admits a request only with a
+  direct membership row in that exact tenant; a parent tenant's
+  `SUBTREE` role does not reach a child through these routes. No API
+  lists a user's tenants (`/auth/me` returns only the user ID).
+- **Recommendation:**
+  - The business relationship (an agency serves a client) is product
+    data; the security boundary is the SaaS-OS tenant. They are kept
+    separate.
+  - For the MVP, every workspace is an ordinary tenant, and every agency
+    staff member who works in a client workspace is an explicit member of
+    it with a role there.
+  - A product-owned workspace index may list workspaces for the switcher
+    and an agency directory, but every entry is re-checked against a live
+    membership before it is shown or opened, and listing never grants
+    data access.
+  - Not in scope without an approved security design and verified
+    SaaS-OS support: parent-to-child access, cross-client rollups,
+    "open as client" and an agency access matrix (Phase 11).
+- **Approved 2026-10-21:** explicit membership for every workspace a
+  user accesses, with these conditions:
+  - Agency staff are directly authorized members of each client
+    workspace they access.
+  - An agency directory may list client workspaces; listing never grants
+    access to their data, and every request for workspace data is
+    authorized independently.
+  - Parent/child relationships never imply inherited access.
+  - Cross-client rollups, impersonation, "open as client" and any other
+    elevated agency access are deferred until a separate security design
+    is reviewed and approved.
+  - No SaaS-OS hierarchy or "my workspaces" API is added or simulated.
+
+### P2-C — Signup and tenant provisioning
+
+- **SaaS-OS facts:**
+  - SaaS-OS has no self-service signup; ADR-0040 assigns it to the
+    product. `create_tenant` accepts an operator holding
+    `platform.tenant:create` or `SystemCaller(PROVISIONING)`, which
+    `core/authority/caller.py` defines as covering "a consumer's own
+    provisioning/seed code". Provisioning may create only a root tenant
+    or a child of a still-pending tenant.
+  - `assign_first_role_for_new_tenant` requires
+    `SystemCaller(PROVISIONING)`, and its docstring says it must not be
+    called from any path other than tenant bootstrap.
+  - `python -m saas_os.api.tenant_bootstrap` is the documented operator
+    command that creates and activates a tenant with its first owner.
+  - Invitations carry no role: accepting one gives a bare membership, and
+    SaaS-OS sends no invitation email.
+- **Recommendation (smallest safe MVP):** workspaces are created by an
+  operator with the documented bootstrap command, plus a product step
+  that seeds the P2-A role templates; members join by invitation through
+  the SaaS-OS invitation routes, and the product assigns their role and
+  delivers the invitation email. A public "create my workspace" form is
+  a later, separately approved feature with its own abuse controls,
+  built on `create_tenant` with `PROVISIONING` in product provisioning
+  code; it is not assumed for the MVP.
+- **Implications:** no bootstrap bypass and no use of
+  `assign_first_role_for_new_tenant` outside a brand-new tenant's
+  bootstrap. Invitation email needs the transactional email capability
+  (SMTP, verified as partial in Phase 0).
+- **Approved 2026-10-21:** operator-created workspaces and
+  invitation-based membership as the initial MVP provisioning model, with
+  these conditions:
+  - No public self-service tenant creation in this phase.
+  - Workspace creation and role setup use supported mechanisms only;
+    bootstrap-only functions are not misused (see the P2-A open point).
+  - Invitations are never simulated. Before they are implemented, the
+    Phase 2 plan documents their lifecycle: creation, association with a
+    verified identity, expiry, revocation, one-time acceptance, safe role
+    assignment, and real delivery status.
+  - No invitation system or email integration is authorized by this
+    decision.
+- **Verified 2026-10-21:**
+  - `python -m saas_os.api.tenant_bootstrap` exists at the pin with the
+    options `--tenant-name`, `--owner-issuer`, `--owner-subject`,
+    `--dry-run` and `--confirm-production` (required when
+    `ENVIRONMENT=production`); it prints the tenant, owner, membership and
+    role IDs. It describes itself as the "first-tenant bootstrap" but is
+    idempotent per tenant name and refuses to claim a tenant that already
+    has other members, so it can be run once per new workspace. Not yet
+    run against this product; the operator procedure is written in the
+    Phase 2 plan only after a dry run against the local services.
+  - Email: SaaS-OS exports transactional `send_email` with an SMTP
+    provider (`core/email`). `crm-app` has no SMTP or email-provider
+    configuration. **Invitation delivery is therefore a dependency:** it
+    needs an approved email provider and its credentials. Until then no
+    screen or API may report an invitation as sent. An accepted SMTP
+    handoff is not proof of delivery; the plan defines what "delivered"
+    means.
+
+### P2-D — Localisation and compliance foundation
+
+- **SaaS-OS facts:** tenants and users carry no locale, time zone or
+  currency; usage reporting is in UTC; billing currency lives in the
+  payment provider. SaaS-OS has no consent, suppression, data-export or
+  subject-access API; marketing email is a stated non-goal. Tenant purge
+  exists (operator only), and products must register purge participants.
+- **Recommendation:**
+  - *General internationalisation (product-owned, from Phase 2):* store
+    timestamps in UTC; workspace defaults and per-user overrides for
+    locale and time zone; ISO 4217 currency on every monetary amount;
+    E.164 phone numbers; all UI text in message catalogues; locale-aware
+    formatting.
+  - *Jurisdiction-specific work (later phases, per market):* consent
+    model per contact and channel with source, time and wording (Phase 6
+    and 7, needed for the MVP email channel); suppression and
+    unsubscribe; retention rules; data-subject export and deletion,
+    building on SaaS-OS tenant purge and user erasure; legal review per
+    market before claims of compliance (Phase 13).
+- **Approved 2026-10-21:** the general internationalisation requirements
+  above, plus:
+  - No hard-coded US-only (or any single-country) assumptions in dates,
+    currency, phone numbers or terminology.
+  - Consent, suppression, retention, data-subject requests and legal
+    review are explicit, market-specific work items. Localisation alone
+    is never presented as legal compliance in any jurisdiction.
+  - Global use is the direction; the Netherlands/EU may be the initial
+    market but not the exclusive target (K5.1).
+  - K5's single-region hosting stands. Multi-region hosting and data
+    residency outside that region are undecided and need their own
+    decision.
+- **Unresolved architecture issue (purge participants):** SaaS-OS's
+  documented way for a product to have its tenant data removed by a
+  tenant purge is to register purge participants in
+  `saas_os.core.tenancy.purge_participants`. That submodule is not
+  exported from `saas_os.core.tenancy`, so it is outside this product's
+  approved import surface (`CLAUDE.md` §3), although the SaaS-OS
+  consumer scaffold uses it. No internal import, reflection,
+  monkey-patching or other workaround is allowed without a narrowly
+  scoped, documented exception approved by the owner. It must be resolved
+  before the first tenant table exists, because product rows would
+  otherwise survive a tenant purge.
+
+### P2-E — Generic CRM model
+
+- **Recommendation:** generic terms and entities: Workspace, Member,
+  Contact, Company (contacts link to companies by ID), Pipeline, Stage,
+  Opportunity (with an explicit open, won or lost outcome and
+  stage-change history), Task, Activity, Note, Tag, Custom field
+  definition and value, Form and Form submission, Email message, Consent
+  record. Contact lifecycle stages and pipelines are configurable per
+  workspace, with neutral defaults (for example Lead, Prospect,
+  Customer). No dental, health or insurance fields, and nothing from
+  `mock-data.js`. Industry templates, if any, are a later feature.
+- **Implications:** the schema is designed in Phases 2–4 under the
+  existing roadmap; every tenant table has RLS and cross-tenant tests.
+- **Approved 2026-10-21:** a generic CRM model for the initial product:
+  - Generic concepts (contacts, companies, opportunities/deals,
+    pipelines, tasks, activities) with stable identifiers for every
+    relationship; contacts link to companies by ID, never by name.
+  - Configurable pipeline stages within the approved scope; won and lost
+    are explicit outcomes, never a hard-coded stand-in for a stage.
+  - Stage history where the roadmap requires it (ROADMAP 4.2–4.4).
+  - Dates and times as typed values, never display strings.
+  - Tenant-scoped records and access paths under the SaaS-OS and
+    PostgreSQL security model.
+  - Nothing from the prototype: no dental terms, sample data,
+    health or insurance fields, mock data, prototype engine or generated
+    assets.
+  - No schema or migration in this decision; detailed schema decisions
+    belong to the implementation plan of each roadmap phase.
+
+### P-6 — Frontend framework
+
+Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
+§7; no framework is chosen and no package is added.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

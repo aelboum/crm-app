@@ -6,18 +6,27 @@ anything here that was not verified.
 
 **Last updated:** 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
 first local commits, decision K2.1; remote, push and first CI run,
-decision K2.2)
+decision K2.2; Claude Design inspection, D-DES and K5.1; Phase 2
+decisions P2-A to P2-E approved)
 
 ## Current phase
 
-- **Phase 0 — Discovery:** evidence complete except task 0.3 (Claude
-  Design import).
+- **Phase 0 — Discovery:** evidence complete. Task 0.3 was completed on
+  2026-10-21 by a read-only inspection of the owner's file export of the
+  Claude Design project; the Claude Design MCP workflow was not used.
+  Canonical record: `DESIGN-INSPECTION.md`.
 - **Phase 0.5 — Foundational decisions:** K1–K5, D-WS and P-1 to P-6
-  approved and recorded in `DECISIONS.md`.
+  approved and recorded in `DECISIONS.md`; K5.1 (global SaaS direction)
+  approved 2026-10-21. P-6 defers the frontend framework choice, which
+  is still open.
 - **Phase 1 — Product foundation:** complete. Locally verified, and CI
   passed on the exact pushed commit `dbb15609cd2531d3c430f06ee9c2e7bbd7f6a1c6`
   (GitHub Actions run 39652641595, 2026-10-21), which meets acceptance
-  criterion 9 (decision K2.2).
+  criterion 9 (decision K2.2). CI also passed on `13d6685` (run
+  39653421776).
+- **Phase 2 — Identity, workspaces and tenant isolation:** not started.
+  Its decisions P2-A to P2-E were approved on 2026-10-21 with conditions
+  (`DECISIONS.md`); implementation needs an approved Phase 2 plan.
 
 ## Repository state
 
@@ -159,15 +168,23 @@ stopped; that commit changes only `.github/workflows/ci.yml`.
 
 | Blocker | Impact | Needed |
 | --- | --- | --- |
-| Claude Design not accessible (no design MCP server configured) | Frontend work and the P-6 decision | Owner adds the Claude Design MCP server and completes `/design-login`, or exports the project files locally. Standalone Claude Design closes 2026-12-14 |
+| Frontend framework not chosen (P-6) | Frontend work | Owner decision, using the criteria in `DESIGN-INSPECTION.md` §7. The design export has been inspected; the Claude Design MCP workflow was not used |
+| Missing designs (states, a generic CRM version, membership, consent) | Frontend work on MVP screens | Design requests in `DESIGN-INSPECTION.md` §6, before standalone Claude Design closes on 2026-12-14 |
+| No email provider configured | Real invitation delivery (P2-C) and the MVP email channel | An approved transactional email provider and credentials; until then nothing may be shown as sent |
+| Purge participants outside the approved import surface | Removal of product data on tenant purge, before the first tenant table | Owner decision on a narrowly scoped exception or another supported path (P2-D) |
 | ZITADEL v4.19.5 instead of the proposed v4.19.0 | Recorded under P-4 | Owner confirmation |
 
 ## Open questions recorded for later phases
 
-- D-WS details (workspace discovery, signup, agency access) are verified
-  in Phase 2.
+- D-WS details: agency access and initial provisioning are now decided
+  (P2-B, P2-C); the product-owned workspace index for the switcher is
+  designed in the Phase 2 plan.
+- Whether `SystemCaller(PROVISIONING)` may seed product roles right
+  after the tenant bootstrap, and add permissions to existing workspaces
+  later (P2-A open point). Settle in the Phase 2 plan.
 - The purge-participant registry module is documented but not a package
-  export. Settle its use before the first tenant table.
+  export (P2-D). Settle its use before the first tenant table.
+- Multi-region hosting and data residency (K5.1).
 - The timing of calendar/booking, campaigns, automation, AI, and
   reporting relative to the K5 MVP.
 - The sibling repository's ownership and permission, before any reuse.
@@ -177,8 +194,7 @@ stopped; that commit changes only `.github/workflows/ci.yml`.
 
 ## Next authorized action
 
-None beyond reporting. Phase 1 is complete. The next roadmap task is
-Phase 2 (identity, workspaces, and tenant isolation), which needs the
-owner's approval to start. Claude Design access was authorized on
-2026-10-21 (`/design-login`), so the outstanding read-only design
-inspection (Phase 0 task 0.3, decision P-6) can proceed.
+None beyond reporting. Phase 1 is complete and Phase 0 task 0.3 is
+done. The next roadmap task is Phase 2 (identity, workspaces, and
+tenant isolation): a Phase 2 plan built on decisions P2-A to P2-E, which
+needs the owner's approval before any implementation.

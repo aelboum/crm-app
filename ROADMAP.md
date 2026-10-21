@@ -1,13 +1,13 @@
 # LeadStack CRM — Master Product Roadmap
 
-**Status:** Planning (Phase 0.5 decisions recorded; Phase 1 not yet authorized)
+**Status:** Phase 1 complete (CI passed on the pushed commit, 2026-10-21); Phase 2 decisions approved, Phase 2 plan pending. Current state: `docs/project/PROGRESS.md`
 **Product name:** LeadStack CRM (internal provisional name only; see decision K4)
 **Architecture:** New product consuming SaaS-OS as an external package
 **SaaS-OS pin:** `5905156a99a4526e5071ce091a58667c08b0a019` (v0.3.0; decisions K3 and K3.1)
 **Product approach:** Modular monolith initially
 **Database:** PostgreSQL
 **Identity:** ZITADEL, subject to compatibility verification
-**Frontend design:** Claude Design prototype, not yet imported or finalized
+**Frontend design:** Claude Design prototype, inspected read-only on 2026-10-21 as a design reference (`docs/project/DESIGN-INSPECTION.md`); not finalized
 **Reference ZIP:** AgentStack CRM template (PolyForm Perimeter 1.0.0, noncompete); feature-idea reference only, no reuse of code, schemas, business rules, text, or assets (decision K1)
 
 Decisions are recorded in `docs/project/DECISIONS.md`; the verified current
@@ -128,7 +128,7 @@ Before making changes:
 
 # 4. Phase 0 — Discovery and Baseline Audit
 
-**Status:** Evidence complete except task 0.3 (Claude Design not yet imported). Findings: `docs/project/PHASE0-DISCOVERY.md`.
+**Status:** Evidence complete. Task 0.3 completed 2026-10-21 from an owner-supplied file export rather than the MCP workflow (`docs/project/DESIGN-INSPECTION.md`). Findings: `docs/project/PHASE0-DISCOVERY.md`.
 
 ## Objectives
 
@@ -287,7 +287,7 @@ Keep these decisions documented so that later feature requests do not silently e
 
 # 6. Phase 1 — Product Foundation
 
-**Status:** Implemented and verified locally (2026-10-20). Not complete: "CI passes on the exact code being evaluated" awaits approval to commit and push. Evidence: `docs/project/PROGRESS.md`.
+**Status:** Complete. Implemented and verified locally (2026-10-20); CI passed on the exact pushed commit `dbb1560` (GitHub Actions run 39652641595, 2026-10-21). Evidence: `docs/project/PROGRESS.md`.
 
 ## Objectives
 
@@ -358,7 +358,7 @@ Use the actual language and tooling selected after discovery.
 
 # 7. Phase 2 — Identity, Workspaces, and Tenant Isolation
 
-**Status:** Not started.
+**Status:** Not started. Decisions P2-A to P2-E (roles, workspace membership, provisioning, localisation foundations, generic CRM model) approved 2026-10-21 in `docs/project/DECISIONS.md`; implementation needs an approved Phase 2 plan.
 
 ## Objectives
 
@@ -1034,7 +1034,9 @@ Demonstrate that the product can be operated safely and reliably.
 
 Evaluate applicable obligations for the target markets and selected providers.
 
-For a Netherlands/EU launch, assess applicable GDPR requirements and electronic-marketing rules. If Morocco remains an initial market, assess the applicable Moroccan data-protection requirements, including Law 09-08, with qualified guidance where needed.
+The product is a global SaaS (decision K5.1). For each market the product launches in, assess the applicable data-protection, electronic-marketing, consent, retention and data-subject requirements, with qualified guidance where needed. For example, a Netherlands/EU launch requires a GDPR and EU electronic-marketing assessment; if Morocco becomes a market, its data-protection law (including Law 09-08) applies. No single jurisdiction defines the product, and localisation alone is not compliance.
+
+Hosting stays in a single region (decision K5); multi-region hosting and data residency outside that region need a separate decision.
 
 Do not claim legal compliance without the required assessment and evidence.
 
@@ -1255,7 +1257,7 @@ If an important decision was never recorded, return to the relevant decision sec
 
 # 24. Immediate Next Actions
 
-The project must proceed in this order. Current status of each item is tracked in `docs/project/PROGRESS.md` (as of 2026-10-20: items 1–6 and the MVP scope in item 8 are recorded; item 7 is blocked on Claude Design access; the architecture in item 8 and item 9 await owner approval of `docs/project/PHASE1-PLAN.md`).
+The project must proceed in this order. Current status of each item is tracked in `docs/project/PROGRESS.md` (as of 2026-10-20: items 1–6 and the MVP scope in item 8 are recorded; item 7 is blocked on Claude Design access; the architecture in item 8 and item 9 await owner approval of `docs/project/PHASE1-PLAN.md`. Update 2026-10-21: item 7 is complete, see `docs/project/DESIGN-INSPECTION.md`).
 
 1. Complete the read-only Phase 0 discovery report.
 2. Resolve K1: confirm the product is built independently from scratch.

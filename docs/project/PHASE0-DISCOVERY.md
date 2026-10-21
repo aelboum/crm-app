@@ -149,3 +149,14 @@ Usage-based channel fees and AI plans are billed on top.
 design-system flow. No local copies of the project files were found.
 Frontend work is blocked until the project is imported and inspected
 (ROADMAP §24).
+
+**Update 2026-10-21 — task 0.3 complete [V].** The owner exported the
+project as `Design system questionnaire-handoff.zip` (211,140 bytes,
+SHA-256 `128683965341eeace19746a8c8e0b70987bf484f41590036b19b068c030b55d7`)
+and it was inspected read-only, outside the repository; nothing was
+copied in. The 2026-10-20 status above is kept as history. Findings,
+provenance limits (the bundle does not contain the project ID), the
+design-to-roadmap mapping and the missing-design backlog are recorded
+once, in `DESIGN-INSPECTION.md`; decisions in `DECISIONS.md` (D-DES,
+K5.1, P2-A to P2-E). Frontend implementation still waits for decision
+P-6 and the Phase 2 decisions.
