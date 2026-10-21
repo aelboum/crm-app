@@ -1,0 +1,99 @@
+[project]
+name = "crm-app"
+version = "0.0.0"
+description = "Multi-tenant CRM product (internal provisional name: LeadStack CRM) built on the external SaaS-OS platform package."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+# Proprietary. No open-source licence is granted; see README.md.
+classifiers = [
+    "License :: Other/Proprietary License",
+    "Private :: Do Not Upload",
+]
+dependencies = [
+    # Decision K3 (docs/project/DECISIONS.md): exactly one SaaS-OS
+    # requirement, pinned to the exact commit of release v0.1.2. Never a
+    # branch or a tag, never an editable or local-path install. Changing it
+    # requires a new approved decision; tests/unit/test_dependency_pin.py
+    # asserts the manifest, the lockfile and the installed commit.
+    "saas-os @ git+https://github.com/aelboum/saas-os@b0809eeb3448956a4dc85a5541514823ec9ceae7",
+]
+
+[project.scripts]
+crm-app-migrate = "crm_app.migrate:main"
+crm-app-worker = "crm_app.worker:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14",
+    "pyright>=1.1.400",
+    "import-linter>=2.3",
+    "pytest>=8.4",
+    "pip-audit>=2.9",
+    "detect-secrets>=1.5",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+crm_app = ["migrations/*.py", "migrations/*.mako", "migrations/versions/*.py", "py.typed"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "C4", "SIM", "RUF", "PL", "PT"]
+ignore = [
+    "PLR2004", # literal status codes and counts read more clearly than named constants
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert, use fixed dummy credentials and launch subprocesses.
+"tests/**" = ["S101", "S105", "S106", "S603", "S607", "PLR0913"]
+# Migrations build DDL from a validated SQL identifier.
+"src/crm_app/migrations/**" = ["S608"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["crm_app"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: needs the local PostgreSQL and Redis from deploy/local (see README.md)",
+]
+
+[tool.importlinter]
+root_packages = ["crm_app"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Product code reaches the database only through saas_os.infra.db (migrations excepted)"
+type = "forbidden"
+source_modules = ["crm_app"]
+forbidden_modules = ["sqlalchemy", "psycopg"]
+ignore_imports = [
+    "crm_app.migrations.** -> sqlalchemy",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain modules are independent of the HTTP framework and the entrypoints"
+type = "forbidden"
+source_modules = ["crm_app.domains"]
+forbidden_modules = ["fastapi", "starlette", "crm_app.app", "crm_app.worker", "crm_app.migrate"]

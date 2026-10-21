@@ -1,0 +1,27 @@
+# Local configuration and secrets: never committed.
+.env
+.env.*
+!.env.example
+!.env.test.example
+deploy/local/.env
+deploy/local/.bootstrap/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.coverage
+htmlcov/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
