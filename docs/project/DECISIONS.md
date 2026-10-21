@@ -567,6 +567,56 @@ approval), **Superseded**.
 Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 §7; no framework is chosen and no package is added.
 
+## Q6 — Product role and permission matrix
+
+- **Status:** Approved by the owner, 2026-10-21. Refines P2-A; the full
+  matrix is `PHASE2-PLAN.md` §5.2–5.3, and the code that encodes it is
+  `src/crm_app/roles.py` (checked row by row by `tests/unit/test_roles.py`).
+- **Decision:**
+  - Four roles: Owner, Admin, Member, Read-only. Authorization is
+    enforced in the backend through supported SaaS-OS permission
+    mechanisms (tenant-local roles and `crm_app.`-prefixed permissions
+    checked by `require_permission` / `can()`).
+  - All four roles can read the workspace's CRM data.
+  - Owner, Admin and Member can create and edit ordinary CRM records.
+  - Only Owner and Admin can delete contacts, companies, opportunities and
+    notes; Members may delete tasks only.
+  - Owner and Admin manage ordinary memberships and invitations, subject
+    to the restrictions below.
+  - Admins cannot manage Owners or change security-sensitive settings.
+  - Owner assignment, transfer and removal require concurrency-safe
+    protection and a last-active-Owner safeguard (gate G-LOCK).
+  - Workspace deletion and purge are operator-only; no product role can
+    start them (SaaS-OS ADR-0040). No role holds `tenant:suspend` or
+    `role_permission:*`.
+  - Audit access and export are available to Owner and Admin.
+- **Scope:** product policy only. It does not authorize implementing every
+  route; each route still needs its gate (G1, G2, G-LOCK, G3/G4 in
+  `PHASE2-PLAN.md` §14).
+
+## Q-purge — Purge integration
+
+- **Status:** Approved by the owner, 2026-10-21 (option (a) in
+  `PHASE2-PLAN.md` §9.4).
+- **Decision:**
+  - The product integrates with tenant purge only through a supported,
+    public SaaS-OS purge-registration API.
+  - No internal SaaS-OS module is imported and no internal-import
+    exception is granted (the registry currently lives only in
+    `saas_os.core.tenancy.purge_participants`, outside the public surface
+    of `CLAUDE.md` §3).
+  - No tenant-owned table is created until all of these are in place: the
+    supported integration, an approved SaaS-OS pin that provides it, the
+    product safeguards (a participant that verifies no rows remain;
+    coverage of every tenant table), and the relevant passing tests (gate
+    G1, acceptance criteria in `PHASE2-PLAN.md` §9.4).
+  - The operator procedure prohibits bypassing product purge participants
+    (`saas-os-operator purge-tenant --no-product-participants` is never
+    used for this product). This is a procedural rule; no product check
+    can stop an operator who bypasses participants explicitly.
+  - The upstream request (`PHASE2-PLAN.md` Appendix A) stays unsent
+    unless separately authorized.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

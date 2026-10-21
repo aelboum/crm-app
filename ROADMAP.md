@@ -1,6 +1,6 @@
 # LeadStack CRM — Master Product Roadmap
 
-**Status:** Phase 1 complete (CI passed on the pushed commit, 2026-10-21); Phase 2 decisions approved, Phase 2 plan pending. Current state: `docs/project/PROGRESS.md`
+**Status:** Phase 1 complete (CI passed on the pushed commit, 2026-10-21); Phase 2 in progress: groundwork done and CI-verified, further work gated (see §7). Current state: `docs/project/PROGRESS.md`
 **Product name:** LeadStack CRM (internal provisional name only; see decision K4)
 **Architecture:** New product consuming SaaS-OS as an external package
 **SaaS-OS pin:** `5905156a99a4526e5071ce091a58667c08b0a019` (v0.3.0; decisions K3 and K3.1)
@@ -358,7 +358,17 @@ Use the actual language and tooling selected after discovery.
 
 # 7. Phase 2 — Identity, Workspaces, and Tenant Isolation
 
-**Status:** Not started. Decisions P2-A to P2-E (roles, workspace membership, provisioning, localisation foundations, generic CRM model) approved 2026-10-21 in `docs/project/DECISIONS.md`; implementation needs an approved Phase 2 plan.
+**Status:** In progress; not complete. Plan: `docs/project/PHASE2-PLAN.md`. Decisions P2-A to P2-E, Q6 (role matrix) and Q-purge approved 2026-10-21 in `docs/project/DECISIONS.md`.
+
+* **Done and CI-verified** (commit `a069a6a1675802139e8862d0f639388d521b95c7`, GitHub Actions run 39675570028): the four role templates and permission catalogue; registration of the granted permissions in the migration step (no roles created or granted anywhere); structural guards that keep tenant-owned tables out and fix the RLS, privilege and purge-coverage rules for future ones; two read-only routes, `GET /v1/workspaces/{id}` and `GET /v1/workspaces/{id}/members`, with backend permission checks.
+* **Remaining work:** the provisioning command; membership, role and Owner management routes with last-Owner protection; invitations; workspace settings (locale, time zone, currency); the workspace directory; the first tenant-owned tables with RLS negative tests; the purge participant; the Phase 2 security review.
+* **Blocked by gates** (`PHASE2-PLAN.md` §14):
+  * **G1:** tenant-owned tables, until SaaS-OS provides a supported public purge-registration API in an approved pin, with the required safeguards and tests (decision Q-purge).
+  * **G2:** the provisioning command; the design is approved, but implementing and running it are not authorized.
+  * **G-LOCK:** any Owner-, role- or membership-changing route, until concurrency-safe Owner protection is proven by tests against a real database.
+  * **G3/G4:** real invitation delivery and the invitation flow, pending the email-provider and invitation decisions.
+* **External dependencies:** two upstream SaaS-OS requests are drafted and not sent: purge-participant registration, and adding permissions to existing workspaces.
+* **Not yet proven:** runtime RLS isolation of product data and purge correctness (no tenant-owned table exists).
 
 ## Objectives
 
