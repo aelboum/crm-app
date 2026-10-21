@@ -4,7 +4,7 @@ The verified current state of the project. `ROADMAP.md` defines the
 destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
-**Last updated:** 2026-10-20
+**Last updated:** 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1)
 
 ## Current phase
 
@@ -36,7 +36,9 @@ anything here that was not verified.
   - `C:\Users\imran\Documents\leadstack-crm`: 1,466 deletions, `CLAUDE.md`
     modified, 2 untracked; `CLAUDE.md` and `ROADMAP.md` hashes unchanged;
   - `C:\Users\imran\Documents\Leadstack`: `a4422a0`, 72 uncommitted paths;
-  - `C:\Users\imran\Documents\saas-os`: `2adf634`, clean.
+  - `C:\Users\imran\Documents\saas-os`: `2adf634`, clean. On 2026-10-21
+    it was at `5905156` (v0.3.0, advanced by the owner) and clean; it was
+    only read for the K3.1 upgrade.
 
 ## Phase 1: what was built
 
@@ -71,6 +73,28 @@ anything here that was not verified.
 **Totals:** unit 43 passed; integration 7 passed (against local services,
 and again in the CI dry run); identity 1 passed. All runs were local on
 Windows 11 with Docker Desktop. Linux CI has not run.
+
+## SaaS-OS upgrade to v0.3.0 (decision K3.1, 2026-10-21)
+
+The table above records the evidence at `b0809ee`. On the new pin
+`5905156` every check was run again, locally:
+
+| Check | Result |
+| --- | --- |
+| `uv lock` | Only the saas-os entry changed (0.1.2 → 0.3.0); 72 packages, the other 71 unchanged |
+| `uv sync --locked`, `uv lock --check` | Exit 0; installed `saas-os` 0.3.0, `direct_url.json` commit `5905156…`, not editable |
+| `ruff format --check .` / `ruff check .` | 32 files already formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| `pytest tests/unit` | 43 passed (includes the pin test, now asserting `5905156`) |
+| `pytest tests/integration` (local services, `.env.test`) | 7 passed; platform migration head still `f6a2c8e4b1d9` |
+| `CRM_APP_IDENTITY_TEST=1 pytest tests/identity` | 1 passed |
+| `saas-os-local-identity` rerun against the local ZITADEL | Exit 0; existing project and application found, nothing created, client ID unchanged |
+| detect-secrets hook | Exit 0, after replacing the audited false-positive hash of the pin SHA in `.secrets.baseline` |
+| pip-audit (hashed export, SaaS-OS excluded) | "No known vulnerabilities found" |
+
+| Clean copy (criterion 1): trackable files copied to a fresh temporary directory, empty uv cache | `uv sync --locked` and `uv lock --check` exit 0; installed commit `5905156…`; unit tests 43 passed; directory removed afterwards |
+
+Not run: CI (criterion 9, still blocked on commit approval).
 
 ## Security assumptions and unverified behaviour
 

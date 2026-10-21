@@ -185,6 +185,41 @@ approval), **Superseded**.
   - SaaS-OS itself was qualified against v4.19.0, not v4.19.5. The patch
     version difference is verified only by this local test.
 
+## K3.1 — SaaS-OS pin moved to v0.3.0
+
+- **Status:** Approved by the owner, 2026-10-21 ("upgrade to v0.3.0").
+  Supersedes the commit named in K3 (and in P-2); every other part of K3
+  stands. The pin stays fixed until a further approved decision.
+- **Decision:** Exactly one SaaS-OS dependency:
+  `saas-os @ git+https://github.com/aelboum/saas-os@5905156a99a4526e5071ce091a58667c08b0a019`
+- **Evidence (verified 2026-10-21):**
+  - `git ls-remote https://github.com/aelboum/saas-os refs/tags/v0.3.0^{}`
+    resolves to `5905156…`, the merge commit of pull request #86, which
+    is also `main`; the annotated tag object is `e01b6a0`.
+  - The GitHub Release `v0.3.0` was published 2026-10-21 with no assets.
+    The `CI` (run 39628783399) and `Release` (run 39634387373) workflows
+    succeeded on `5905156`.
+  - Between `b0809ee` (v0.1.2) and `5905156` (39 commits), the only
+    library change is `saas_os/infra/local_identity/zitadel_bootstrap.py`
+    (complete paged listings, new `IncompleteListingError`). The package
+    metadata raises the certifi floor to `2026.10.19`. The changelog
+    records no migration (head `f6a2c8e4b1d9`) and no changed public
+    signature. The other changes are SaaS-OS's own Compose files,
+    `deploy/` units, scripts, CI and documentation, which this product
+    does not use.
+  - `saas-os-update check` (policy v4) returned `BLOCKED` (exit 30) only
+    because the updater does not rewrite `uv.lock` and the working tree is
+    untracked; the changed paths were reviewed by hand instead.
+  - CONSUMER-GUIDE §14, v0.1.2 → v0.2.0 and v0.2.0 → v0.3.0: the only
+    step that applies here is accepting `certifi>=2026.10.19`; `uv.lock`
+    already had 2026.10.19. The ZITADEL, `.env.app` and `deploy/` steps
+    concern `docker-compose.prod.yml`, which this product does not run.
+  - `uv lock` changed only the saas-os entry; the other 71 packages are
+    unchanged. Every Phase 1 check passed again on the new pin (see
+    `PROGRESS.md`).
+- **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
+  `.secrets.baseline` hash back. Both releases share the migration head.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

@@ -3,13 +3,15 @@
 ## Pin
 
 ```text
-saas-os @ git+https://github.com/aelboum/saas-os@b0809eeb3448956a4dc85a5541514823ec9ceae7
+saas-os @ git+https://github.com/aelboum/saas-os@5905156a99a4526e5071ce091a58667c08b0a019
 ```
 
-- **Release:** v0.1.2. The annotated tag object is `dd398b1`, and the
-  remote tag resolved to this commit on 2026-10-20.
-- **Platform migration head:** `f6a2c8e4b1d9`.
-- **Approval:** decision K3. The pin is fixed through Phase 1.
+- **Release:** v0.3.0. The annotated tag object is `e01b6a0`, and the
+  remote tag resolved to this commit on 2026-10-21. SaaS-OS CI run
+  39628783399 passed on it.
+- **Platform migration head:** `f6a2c8e4b1d9` (unchanged since v0.1.2).
+- **Approval:** decision K3, moved from v0.1.2 (`b0809ee`) by decision
+  K3.1. The pin is fixed until a further approved decision.
 - **Guard:** `tests/unit/test_dependency_pin.py` checks the manifest, the
   `uv.lock` source, the installed `direct_url.json` commit, that the
   install is non-editable, and that no URL carries credentials.
@@ -91,7 +93,12 @@ path). Non-secret settings are read from the process environment only.
   - No per-tenant secret store.
   - Email is transactional SMTP only.
   - No embeddings or streaming inference.
-- **Upstream note (report only, SaaS-OS not modified):** SaaS-OS's local
-  identity topology references ZITADEL v4.19.0, which is in the affected
-  ranges of several published high-severity advisories. This product uses
-  v4.19.5 locally (`deploy/local/compose.yaml`).
+- **Upstream note:** from v0.2.0, SaaS-OS's Compose files use ZITADEL
+  v4.19.5, the version this product already runs locally
+  (`deploy/local/compose.yaml`). SaaS-OS's live validation of v4.19.5 did
+  not cover browser sign-in through the Login V2 pages; this product's
+  identity test covers sign-in through the legacy login UI only.
+- **Local identity bootstrap:** from v0.2.0, `saas-os-local-identity`
+  reads complete paged listings and stops with `IncompleteListingError`
+  on a partial one. Rerun against the local ZITADEL on 2026-10-21, it
+  found the existing project and application and created nothing.

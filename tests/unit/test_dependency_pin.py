@@ -1,5 +1,5 @@
 """The SaaS-OS dependency is the approved commit, in the manifest, the
-lockfile and the installed package (decision K3)."""
+lockfile and the installed package (decisions K3 and K3.1)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import saas_os
 
 from tests.support import REPO_ROOT
 
-APPROVED_PIN = "b0809eeb3448956a4dc85a5541514823ec9ceae7"
+APPROVED_PIN = "5905156a99a4526e5071ce091a58667c08b0a019"
 APPROVED_REQUIREMENT = f"saas-os @ git+https://github.com/aelboum/saas-os@{APPROVED_PIN}"
 
 
