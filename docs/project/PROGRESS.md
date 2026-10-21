@@ -195,11 +195,11 @@ stopped; that commit changes only `.github/workflows/ci.yml`.
 ## Next authorized action
 
 None beyond reporting. Phase 1 is complete and Phase 0 task 0.3 is
-done. Phase 2 is in progress (uncommitted, 2026-10-21), following
+done. Phase 2 is in progress (2026-10-21), following
 `PHASE2-PLAN.md`. Owner decisions that day: Q6 approved (role matrix);
 Q-purge option (a), upstream first with no internal-import exception;
 Q1 approved as a design direction only; S1b and S3 approved within
-supported APIs. Done locally (plan §11.1):
+supported APIs. Done and committed (plan §11.1):
 - the permission catalogue and role templates (`src/crm_app/roles.py`);
 - registration of the 39 granted permissions in the migration step
   (`crm_app.permissions`), with no role created or granted anywhere;
@@ -214,10 +214,20 @@ All checks pass locally:
   workspace route tests, run against local services;
 - the opt-in identity test (1).
 
-CI has not run on these changes, because they are not committed.
+Committed as `a069a6a1675802139e8862d0f639388d521b95c7` on `main` and
+pushed; local and remote `main` matched and the working tree was clean.
+GitHub Actions run 39675570028 on that commit: **success**.
+- quality: 77 unit tests passed; pyright 0 errors; import contracts 2
+  kept.
+- integration: 33 passed against CI's PostgreSQL and Redis services.
+- security: secret scan passed; dependency audit found no known
+  vulnerabilities.
+
+No merge, release or deployment.
 
 Not done: tenant tables, the purge participant, the provisioning command,
 and any route that changes memberships, roles or Owners (gates G1, G2,
-G-LOCK in plan §14).
-The upstream request draft is in plan Appendix A and has not been sent.
+G-LOCK in plan §14). Both upstream requests are drafted and have not been
+sent: purge-participant registration (plan Appendix A) and adding
+permissions to existing workspaces (plan §7.5).
 Tenant isolation is untested, because no tenant-owned table exists.
