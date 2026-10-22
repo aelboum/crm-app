@@ -73,7 +73,7 @@ L243-247):
 | Home / Dashboard (`ScreenDashboard`) | `/home` | needs CRM data | Placeholder |
 | Agency views: Workspaces, Templates (empty), Team, Billing | none yet | 11 (agency model undecided, P2-B) | Not implemented |
 | Signup (`LeadStack Signup.dc.html`) | none yet | P2-C | Not implemented |
-| ⌘K palette (`LeadStack CRM.dc.html` L257-281), toast | frame | 2 | Toast implemented. Palette implemented with page navigation only (§4b); **not geometrically compared** |
+| ⌘K palette (`LeadStack CRM.dc.html` L257-281), toast | frame | 2 | Toast implemented. Palette implemented with page navigation only; **compared (§4b)** |
 
 ## 2. Recorded gaps and ambiguities in the source
 
@@ -283,8 +283,54 @@ strip):
   0 failed.
 - Vitest covers navigation, the empty state, Ctrl+K, Escape and an axe
   scan.
-- **Not done:** a numeric geometry comparison against the prototype's
-  palette.
+
+**Comparison (2026-10-22):**
+- **Reference:** the prototype's palette in a client workspace, served
+  locally from the read-only extraction.
+- **Viewport:** both 1280×609 CSS px in Chrome (DPR 1.5).
+- **Method:** `getBoundingClientRect` and `getComputedStyle` on the same
+  elements in both pages.
+- **Screenshots** (scratch, outside the repository): reference
+  `claude-chrome-screenshots-lcgIMS/screenshot-1792667943105-3.jpg`;
+  implementation `…/screenshot-1792668019092-4.jpg`.
+
+| Element | Reference | Implementation |
+| --- | --- | --- |
+| Backdrop | full viewport, `rgba(22,27,38,0.28)`, 90 px top padding; click closes | same |
+| Panel | 600×507 at (340, 90), white, r12, shadow `0 24px 60px rgba(22,27,38,0.28)` | same, after a fix (below) |
+| Input row | 600×52, padding 0 16 | same |
+| Input | 500×24 at (383, 104), 15 px, line-height 21.75, ink | same, after a fix (below) |
+| esc hint | 31×19 at (893, 106), mono 11 px, border `#E3E6EA`, r4, padding 1/5 | same |
+| Group header | 11/600, padding 10/10/4, 30 px, `#687082` | same |
+| Rows | 579×38, r7, padding 0 10; label 13/500; sub 12 px `#687082`; ↵ icon | same |
+| Results area | max 420 px, padding 6 | 386 px, so the note row fits the same total height |
+| Footer | 600×35, 11.5 px, padding 9/16, `#FAFAFB`, top border `#EEF0F3` | same |
+| Empty state | 588×75, padding 28, centred, `#687082` | same block, with different text (below) |
+
+**Material differences found and fixed:**
+1. **Input text colour:** typed text was pure black instead of the
+   design's ink `#161B26`.
+2. **Panel height:** the panel was 541 px instead of 507, because of the
+   honesty note. At this viewport its bottom (631 px) passed the window's
+   609 px; it ended at 597 px in the design. The results area now caps at
+   386 px, which brings the total back to 507 px.
+3. **Placeholder colour:** set to `#687082` (4.5:1) instead of the
+   design's `#8A91A0`; recorded as an accessibility deviation.
+
+**Remaining deviations, with reasons:**
+- **Wording:** "Jump to a page…" instead of "Search contacts, deals,
+  pages, or jump to a page…", and "No pages match …" instead of "No
+  matches for …". No record search exists.
+- **Note row:** a 34 px row stating that record search is not available.
+  As a result, the empty-state panel is 208 px instead of 174.
+- **Missing groups:** no Contacts or Opportunities groups and no recent
+  records; the Go to group lists every page instead of three before
+  scrolling.
+- **Pixels:** no pixel-level overlay was made (no image library);
+  geometry and computed styles match as listed.
+- **Not checked:** Firefox, Safari, a real screen reader, and the palette
+  at phone width against the design (the design defines no phone
+  layout).
 
 ## 5. Accessibility and quality evidence (2026-10-22)
 

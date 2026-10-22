@@ -241,11 +241,14 @@ p { margin: 0; }
 .palette-dialog { outline: none; }
 .palette-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 52px; border-bottom: 1px solid #eef0f3; }
 .palette-search-icon { color: #687082; flex: none; }
-.palette-input { flex: 1; border: none; outline: none; font: inherit; font-size: 15px; background: transparent; min-width: 0; }
+.palette-input { flex: 1; border: none; outline: none; font: inherit; font-size: 15px; color: var(--ink); background: transparent; min-width: 0; }
+/* The design's placeholder is #8A91A0; #687082 meets 4.5:1. */
+.palette-input::placeholder { color: #687082; }
 .palette-input::-webkit-search-cancel-button { display: none; }
 .palette-esc { font-family: var(--mono); font-size: 11px; color: #687082; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
 .palette-note { padding: 8px 16px; font-size: 12px; color: #687082; background: #fafafb; border-bottom: 1px solid #eef0f3; }
-.palette-results { max-height: 420px; overflow: auto; padding: 6px; outline: none; }
+/* 420 px in the design, less the 34 px note row, so the panel keeps the design's height. */
+.palette-results { max-height: 386px; overflow: auto; padding: 6px; outline: none; }
 .palette-header { font-size: 11px; font-weight: 600; color: #687082; padding: 10px 10px 4px; letter-spacing: 0.04em; text-transform: uppercase; }
 .palette-item {
   display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 7px;
