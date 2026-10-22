@@ -43,7 +43,7 @@ _PROBE = (
 
 
 # The frontend's static files (crm_app.api.spa): public, read-only, no data.
-FRONTEND = {"GET /", "GET /app", "GET /app/{requested:path}"}
+FRONTEND = {"GET,HEAD /", "GET,HEAD /app", "GET,HEAD /app/{requested:path}"}
 
 
 def _policies(tmp_path: Path) -> dict[str, tuple[str, str, bool]]:

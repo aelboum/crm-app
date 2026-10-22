@@ -28,10 +28,18 @@ DIST_ENV = "CRM_APP_FRONTEND_DIST"
 DEFAULT_DIST = "frontend/dist"
 BASE = "/app"
 
+# React Aria inserts exactly one fixed stylesheet (a touch-action rule for
+# pressable elements); this hash admits that text and nothing else, so no
+# inline style is allowed in general. It is a public hash, not a secret.
+REACT_ARIA_STYLE = (
+    "'sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o='"  # pragma: allowlist secret
+)
+
 # The app loads only its own files and talks only to its own origin.
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
-        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+        "default-src 'self'; script-src 'self'; "
+        f"style-src 'self' {REACT_ARIA_STYLE}; img-src 'self' data:; "
         "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; "
         "form-action 'self'; frame-ancestors 'none'"
     ),
@@ -76,13 +84,17 @@ def resolve(root: Path, requested: str) -> tuple[Path, str] | None:
     return None if Path(requested).suffix else (index, REVALIDATE)
 
 
-@router.get("/", dependencies=[_static])
+# HEAD is answered like GET without a body, as HTTP requires (RFC 9110 §9.3.2).
+_READ = ["GET", "HEAD"]
+
+
+@router.api_route("/", methods=_READ, dependencies=[_static])
 def root_redirect() -> RedirectResponse:
     return RedirectResponse(BASE, status_code=307)
 
 
-@router.get(BASE, dependencies=[_static])
-@router.get(BASE + "/{requested:path}", dependencies=[_static])
+@router.api_route(BASE, methods=_READ, dependencies=[_static])
+@router.api_route(BASE + "/{requested:path}", methods=_READ, dependencies=[_static])
 def frontend(requested: str = "") -> FileResponse:
     found = resolve(frontend_root(), requested)
     if found is None:

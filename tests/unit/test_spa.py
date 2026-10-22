@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 from pathlib import Path
 
 import pytest
 
-from crm_app.api.spa import IMMUTABLE, REVALIDATE, SECURITY_HEADERS, resolve
+from crm_app.api.spa import IMMUTABLE, REACT_ARIA_STYLE, REVALIDATE, SECURITY_HEADERS, resolve
+
+# The stylesheet React Aria injects (react-aria usePress), byte for byte.
+REACT_ARIA_RULE = (
+    "@layer {\n  [data-react-aria-pressable] {\n    touch-action: pan-x pan-y pinch-zoom;\n  }\n}"
+)
 
 
 @pytest.fixture
@@ -53,3 +60,14 @@ def test_the_policy_allows_only_same_origin_resources() -> None:
     assert "default-src 'self'" in policy
     assert "frame-ancestors 'none'" in policy
     assert "unsafe" not in policy
+
+
+def test_only_react_arias_fixed_stylesheet_is_admitted_inline() -> None:
+    styles = next(
+        d
+        for d in SECURITY_HEADERS["Content-Security-Policy"].split("; ")
+        if d.startswith("style-src")
+    )
+    assert styles == f"style-src 'self' {REACT_ARIA_STYLE}"
+    expected = base64.b64encode(hashlib.sha256(REACT_ARIA_RULE.encode()).digest()).decode()
+    assert f"'sha256-{expected}'" == REACT_ARIA_STYLE

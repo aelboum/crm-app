@@ -137,6 +137,11 @@ def main() -> None:
             "page_csp": app_page.headers.get("content-security-policy", ""),
             "asset": [asset.status_code, asset.headers.get("cache-control")],
             "missing_asset": client.get("/app/assets/missing.js").status_code,
+            "head": [
+                client.head("/app").status_code,
+                client.head("/app").content.decode(),
+                client.head("/app/assets/app-1.js").status_code,
+            ],
             "traversal": client.get("/app/..%2F..%2Fpyproject.toml").status_code,
         }
         result = {

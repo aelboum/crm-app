@@ -116,4 +116,5 @@ def test_the_frontend_is_served_from_the_api_origin(probe: Probe) -> None:
     assert "default-src 'self'" in frontend["page_csp"]
     assert frontend["asset"] == [200, "public, max-age=31536000, immutable"]
     assert frontend["missing_asset"] == 404
+    assert frontend["head"] == [200, "", 200]
     assert frontend["traversal"] == 404
