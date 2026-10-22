@@ -3,6 +3,11 @@
 #   docker compose -f deploy/local/compose.yaml --env-file .env up -d
 #   docker compose -f deploy/local/compose.yaml --env-file .env --profile identity up -d
 #
+# One browser origin, http://localhost:8000, served by `edge` (Caddyfile):
+# the application (run on the host at 127.0.0.1:8001), ZITADEL and its
+# Login V2 UI all appear on it, so sign-in never shows an identity-provider
+# hostname (decision D-IDL; SaaS-OS ADR-0025). ZITADEL publishes no port.
+#
 # Every published port is bound to 127.0.0.1, so nothing is reachable from
 # other machines. Images are pinned by tag and digest (verified 2026-10-20,
 # see docs/project/PROGRESS.md). Secrets come from the untracked `.env`.
@@ -41,6 +46,17 @@ services:
       timeout: 5s
       retries: 10
 
+  edge:
+    image: caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
+    ports:
+      - "127.0.0.1:${CRM_APP_PUBLIC_PORT:-8000}:8000"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    # Reaches the application on the host. Docker Desktop provides this name;
+    # the mapping makes it work on Linux engines too.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   # --- Local identity provider (profile `identity`) ---------------------------
   # Modelled on SaaS-OS's local identity topology (docs/LOCAL-IDENTITY.md at
   # the pinned commit). ZITADEL keeps its own database, separate from the
@@ -55,7 +71,10 @@ services:
       POSTGRES_PASSWORD: ${ZITADEL_DB_PASSWORD:?set ZITADEL_DB_PASSWORD in .env}
       POSTGRES_DB: ${ZITADEL_DB_NAME:?set ZITADEL_DB_NAME in .env}
     volumes:
-      - zitadel-db-data:/var/lib/postgresql/data
+      # A new volume for the same-origin issuer (D-IDL): ZITADEL's issuer is
+      # fixed when its database is first initialised. The previous volume,
+      # `zitadel-db-data`, is left in place, unused.
+      - zitadel-same-origin-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -90,12 +109,13 @@ services:
       ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${ZITADEL_DB_PASSWORD}
       ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
       # The external domain and port are what browsers see, what appears as
-      # the token `iss`, and what ZITADEL matches the Host header against.
-      # They must equal OIDC_ISSUER_URL; the listen port equals the
-      # published port so the same URL works from the host and the network.
-      ZITADEL_PORT: ${ZITADEL_LOCAL_PORT:-8081}
-      ZITADEL_EXTERNALDOMAIN: zitadel.localhost
-      ZITADEL_EXTERNALPORT: ${ZITADEL_LOCAL_PORT:-8081}
+      # the token `iss`, and what ZITADEL matches the Host header against:
+      # the application's own origin, through `edge`. They must equal
+      # OIDC_ISSUER_URL and PUBLIC_APP_ORIGIN. Changing them needs a fresh
+      # ZITADEL database (README.md).
+      ZITADEL_PORT: "8080"
+      ZITADEL_EXTERNALDOMAIN: localhost
+      ZITADEL_EXTERNALPORT: ${CRM_APP_PUBLIC_PORT:-8000}
       ZITADEL_EXTERNALSECURE: "false"
       ZITADEL_TLS_ENABLED: "false"
       ZITADEL_FIRSTINSTANCE_ORG_NAME: crm-app-local
@@ -110,16 +130,21 @@ services:
       ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: bootstrap
       ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2100-01-01T00:00:00Z"
       ZITADEL_FIRSTINSTANCE_PATPATH: /bootstrap/bootstrap.pat
-      # The bundled legacy login UI; Login V2 is a separate image not run here.
-      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "false"
-    ports:
-      - "127.0.0.1:${ZITADEL_LOCAL_PORT:-8081}:${ZITADEL_LOCAL_PORT:-8081}"
+      # Login V2 (service `zitadel-login`) on the application's origin. Its
+      # machine user and token are created on first start and written to the
+      # untracked bootstrap directory; this follows ZITADEL's own Compose
+      # setup. Production uses a system-user key instead (SaaS-OS ADR-0025 §7).
+      ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /bootstrap/login-client.pat
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2100-01-01T00:00:00Z"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: http://localhost:${CRM_APP_PUBLIC_PORT:-8000}/ui/v2/login/
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: http://localhost:${CRM_APP_PUBLIC_PORT:-8000}/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: http://localhost:${CRM_APP_PUBLIC_PORT:-8000}/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_SAML_DEFAULTLOGINURLV2: http://localhost:${CRM_APP_PUBLIC_PORT:-8000}/ui/v2/login/login?samlRequest=
     volumes:
       - ./.bootstrap:/bootstrap
-    networks:
-      default:
-        aliases:
-          - zitadel.localhost
     depends_on:
       zitadel-db:
         condition: service_healthy
@@ -132,6 +157,29 @@ services:
       start_period: 30s
       retries: 20
 
+  zitadel-login:
+    profiles: ["identity"]
+    image: ghcr.io/zitadel/zitadel-login:v4.19.5@sha256:2f8e57672fcd4f9a285d99355fae9f85fd7495768c090c07c3bbc2d84fc06617
+    environment:
+      ZITADEL_API_URL: http://zitadel:8080
+      NEXT_PUBLIC_BASE_PATH: /ui/v2/login
+      ZITADEL_SERVICE_USER_TOKEN_FILE: /bootstrap/login-client.pat
+      # Signs Login V2's session cookie; at least 32 characters.
+      ZITADEL_SESSION_COOKIE_SECRET: ${ZITADEL_LOGIN_SESSION_COOKIE_SECRET:?set ZITADEL_LOGIN_SESSION_COOKIE_SECRET in .env}
+      # ZITADEL picks its instance from Host: the public host, not `zitadel`.
+      CUSTOM_REQUEST_HEADERS: Host:localhost,X-Forwarded-Proto:http
+    volumes:
+      - ./.bootstrap:/bootstrap:ro
+    depends_on:
+      zitadel:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "node /app/healthcheck.mjs http://localhost:3000/ui/v2/login/healthy"]
+      interval: 5s
+      timeout: 10s
+      start_period: 20s
+      retries: 20
+
 volumes:
   db-data:
-  zitadel-db-data:
+  zitadel-same-origin-data:

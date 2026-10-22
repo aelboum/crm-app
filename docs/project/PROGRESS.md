@@ -57,7 +57,8 @@ decisions P2-A to P2-E approved)
   - tool caches.
 - **Local Docker services** (project `crm-app-local`, all bound to
   127.0.0.1): `db` on 55432, `redis` on 56379, `zitadel` on 8081.
-  `zitadel-db` publishes no port. They are still running. Stop them with
+  `zitadel-db` publishes no port. (Changed 2026-10-22, decision D-IDL: `edge`
+  on 8000 fronts the application and ZITADEL; ZITADEL publishes no port.) They are still running. Stop them with
   `docker compose -f deploy/local/compose.yaml --env-file .env --profile identity down`.
 - **Untouched (verified by `git status` on 2026-10-20):**
   - `C:\Users\imran\Documents\leadstack-crm`: 1,466 deletions, `CLAUDE.md`
@@ -264,4 +265,72 @@ Next: frontend scaffold and Phase 2 screens (plan §16, F1). G1 waits on #87.
 **F1 (2026-10-22, plan §11.3):** the frontend shell and the member screens,
 served by the API under `/app`, plus `GET /v1/workspaces/{id}/access`.
 Frontend 15 tests, unit 91 and integration 55 (full suite, `crm_app_test`) pass locally.
-Not yet tried in a real browser against ZITADEL.
+Not yet tried in a real browser against ZITADEL (done since; see below).
+
+**Browser validation (2026-10-22, real Chrome, local ZITADEL; plan §11.3):**
+- **Setup:** app server started by Claude with the owner's approval,
+  against the disposable `crm_app_test` database and the local OIDC client.
+  The owner signed in to ZITADEL themselves; no credential passed through
+  Claude. A throwaway workspace was seeded in `crm_app_test` only (the
+  owner plus fake Owner, Admin, Member and suspended Member). The server
+  was stopped afterwards. Compose services were not touched.
+- **Verified in the browser:**
+  - sign-in redirect (PKCE S256, callback `/auth/callback`) and return
+    to `/app`;
+  - member list, roles and statuses;
+  - suspend and reactivate;
+  - remove (Escape cancels and sends nothing; Confirm revokes);
+  - removing another Owner's Owner role after confirmation (200);
+  - stepping down as the last Owner, refused with the right message
+    (409);
+  - opening a workspace by ID with the keyboard;
+  - an unknown workspace getting the neutral not-found message;
+  - sign-out.
+- **Page checks:** no application console errors and no CSP violations
+  (only a wallet extension's warnings). The self-hosted font loaded. The
+  session cookie is not readable from JavaScript.
+- **Defects found and fixed (tests added, frontend now 17 tests):**
+  - keyboard focus fell to `<body>` when a removed member's row
+    disappeared; it now moves to the result message;
+  - after sign-out the previous workspace's data stayed on screen; the
+    app now returns to the start page.
+
+  Both fixes were rechecked in the browser.
+- **Gaps found, not fixed:**
+  - Sign-out ends only the app session. The ZITADEL session survives, so
+    "Sign in" succeeds again without a password. SaaS-OS's logout does
+    not end the provider session; an upstream request is drafted (plan
+    Appendix C), not sent.
+  - In Git Bash on Windows, `AUTH_POST_LOGIN_PATH=/app` is rewritten
+    into a Windows path and sign-in fails with "Authentication is not
+    configured"; this is now documented in the README.
+  - `HEAD /app` returns 405 (only GET is registered).
+- **Not tested in a browser:** the Admin view (actions on Owners hidden),
+  automated contrast measurement, screen-reader output, and mobile width.
+- **Uncommitted:** the two fixes, their tests, and these documents. The
+  owner has not authorized a commit for this cycle.
+
+**Same-origin sign-in (2026-10-22, decision D-IDL):**
+- Local ZITADEL now sits behind the `edge` service on
+  `http://localhost:8000`, with Login V2.
+- **Verified:**
+  - live discovery shows issuer `http://localhost:8000`;
+  - in Chrome, the whole sign-in stayed on `localhost:8000`, from `/app`
+    through `/oauth/v2/authorize` and `/ui/v2/login/...` to
+    `/auth/callback` and back to `/app`; the owner entered their own
+    credentials;
+  - a membership change through the edge succeeded, so the same-origin
+    check passes behind the proxy;
+  - no application console errors;
+  - with a throwaway Caddy and an echo server using the same Caddyfile,
+    the app received only `saas_os_session`, never the provider cookies.
+- **Observed gaps:**
+  - a sign-in left open for more than 10 minutes ends on a raw 400 page
+    at `/auth/callback` (SaaS-OS's transaction lifetime; its page);
+  - Login V2 offers self-registration and is shown in the browser's
+    language;
+  - sign-out still leaves the ZITADEL session alive (Appendix C).
+- **Uncommitted:** `deploy/local/compose.yaml`, `deploy/local/Caddyfile`,
+  `.env.example`, `.env.test.example`, README and docs. The owner's
+  `.env` was updated locally (backup `.env.backup-2026-10-22`, untracked);
+  `.env.test` still names the old issuer.

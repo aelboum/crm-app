@@ -656,6 +656,44 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - Neither changes the pin. Adopting a release that resolves them needs a
   separate, owner-approved pin move.
 
+## D-IDL — Local sign-in on the application's own origin
+
+- **Status:** Approved by the owner, 2026-10-22 ("set up same-origin login
+  locally"), after the owner noted that the identity provider's hostname
+  appeared during sign-in.
+- **Context:** SaaS-OS ADR-0023 keeps ZITADEL an invisible implementation
+  detail, and ADR-0025 (accepted and implemented) serves ZITADEL's Login V2
+  on the product's own domain for fresh deployments. ADR-0026 (a login form
+  built inside the product, with credentials passing through SaaS-OS) was
+  rejected by the owner on 2026-10-16. The earlier local setup ran ZITADEL
+  on its own host (`http://zitadel.localhost:8081`) with the legacy login
+  screens.
+- **Decision:**
+  - Local development follows ADR-0025's "Topology A". A Caddy `edge`
+    service on `http://localhost:8000` (`deploy/local/Caddyfile`, started
+    from SaaS-OS's `saas-os-edge-config`) serves Login V2 at
+    `/ui/v2/login`, ZITADEL's documented routes, and everything else from
+    the application on 127.0.0.1:8001.
+  - The OIDC issuer equals `PUBLIC_APP_ORIGIN`. ZITADEL publishes no port.
+  - Provider cookies are stripped before requests reach the application
+    (ADR-0025 §9).
+  - The Login V2 service authenticates to ZITADEL with a login-client
+    token that ZITADEL writes to the untracked bootstrap directory. This
+    follows ZITADEL's own Compose setup and is local only; production
+    follows ADR-0025 §7 (a system-user key).
+- **Consequences:**
+  - The local ZITADEL instance was recreated on a new volume
+    (`zitadel-same-origin-data`). The old volume is left unused and was not
+    deleted.
+  - The OIDC client ID changed, and so did the admin's login-name domain.
+  - Users created under the old issuer no longer match.
+- **Not decided here:**
+  - the production domain and TLS (it waits on the product name, K4);
+  - branding of the login screens;
+  - turning off self-registration (Login V2 offers "register" by default;
+    P2-C);
+  - ending the provider session on sign-out (PHASE2-PLAN Appendix C).
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

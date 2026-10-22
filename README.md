@@ -32,17 +32,20 @@ until its licensing and ownership position has been confirmed.
 
 ```bash
 cp .env.example .env            # then replace every change-me value
-docker compose -f deploy/local/compose.yaml --env-file .env up -d --wait db redis
+docker compose -f deploy/local/compose.yaml --env-file .env up -d --wait db redis edge
 uv sync --locked
 set -a; . ./.env; set +a        # PUBLIC_APP_ORIGIN and APP_DB_USER are read from the process environment
 uv run crm-app-migrate          # SaaS-OS migrations, then this product's
-uv run uvicorn crm_app.app:create_app --factory --host 127.0.0.1 --port 8000
+uv run uvicorn crm_app.app:create_app --factory --host 127.0.0.1 --port 8001
 uv run crm-app-worker           # in a second terminal
 (cd frontend && npm ci && npm run build)   # or `npm run dev` to rebuild on change
 ```
 
-The API serves the built frontend at `http://localhost:8000/app` from the
-same origin (`crm_app.api.spa`); there is no separate web server.
+Open `http://localhost:8000/app`. The browser only ever talks to the `edge`
+service on port 8000 (`deploy/local/Caddyfile`), which forwards to the
+application on 127.0.0.1:8001 and, with the identity profile running, to
+ZITADEL and its login UI on the same origin (decision D-IDL). The API
+serves the built frontend itself (`crm_app.api.spa`).
 
 `/healthz` and `/readyz` report liveness and readiness. All local services
 listen on `127.0.0.1` only.
@@ -59,9 +62,23 @@ uv run saas-os-local-identity --zitadel-url "$OIDC_ISSUER_URL" \
 ```
 
 Put the printed `OIDC_CLIENT_ID` in `.env` and restart the application.
-`http://localhost:8000/auth/login` then signs in through ZITADEL. The
+In Git Bash on Windows, export `MSYS2_ENV_CONV_EXCL=AUTH_POST_LOGIN_PATH`
+before starting it: otherwise Git Bash rewrites `/app` into a Windows path
+and `/auth/login` answers "Authentication is not configured".
+`http://localhost:8000/auth/login` then signs in. The login screens are
+ZITADEL's Login V2, served at `/ui/v2/login` on the application's own
+origin, so no identity-provider hostname appears (SaaS-OS ADR-0025). The
 administrator's login name is
-`<ZITADEL_FIRSTINSTANCE_ADMIN_USERNAME>@crm-app-local.zitadel.localhost`.
+`<ZITADEL_FIRSTINSTANCE_ADMIN_USERNAME>@crm-app-local.localhost`.
+A sign-in left open for more than 10 minutes is refused at
+`/auth/callback` (SaaS-OS's login-transaction lifetime); start again from
+`/app`.
+
+ZITADEL's issuer is fixed when its database is first created. Moving from
+the earlier `http://zitadel.localhost:8081` setup therefore uses a new
+volume (`zitadel-same-origin-data`); the old `zitadel-db-data` volume is
+left unused and can be removed by hand. After the switch, rerun
+`saas-os-local-identity` and put the new `OIDC_CLIENT_ID` in `.env`.
 After sign-in the browser returns to `AUTH_POST_LOGIN_PATH` (`/app` in
 `.env.example`). There is no list of workspaces yet: open one by its link
 (`/app/w/<workspace id>`) or paste its ID on the start page.

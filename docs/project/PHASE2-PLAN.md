@@ -1003,8 +1003,10 @@ any real workspace is provisioned.
   jsx-a11y supports 10.
 
 **Not verified or known limits:**
-- Not yet exercised in a real browser against ZITADEL; the flow is
-  covered only by component tests.
+- Browser validation against local ZITADEL done 2026-10-22 (PROGRESS.md):
+  two defects fixed (focus loss after removal, stale data after
+  sign-out). Open: sign-out leaves the ZITADEL session alive (Appendix C)
+  and `HEAD /app` returns 405.
 - Colour contrast is not measured automatically.
 - Members are shown by ID, because there is no member profile (§6.5, G1).
 - The JavaScript bundle is about 564 kB (176 kB gzipped); code splitting
@@ -1263,3 +1265,36 @@ capability, an owner-approved pin move, and a product test that adds a
 permission to an existing workspace's template roles and leaves exactly
 the expected grants. Until then, new permissions reach only workspaces
 provisioned afterwards (§7.5).
+
+## Appendix C — Upstream request draft: end the provider session on sign-out (not sent)
+
+Prepared 2026-10-22 from the browser validation. **Not sent; no issue or
+pull request exists.** Sending it needs separate authorization.
+
+**Title:** `POST /auth/logout` should be able to end the OIDC provider
+session (RP-initiated logout)
+
+**Observed at v0.3.0 (`5905156`).** `POST /auth/logout` revokes the
+SaaS-OS session and clears the cookie, but the identity provider's
+session stays alive. With local ZITADEL, choosing "Sign in" again after
+sign-out completes without a password. On a shared computer the next
+person can therefore sign back in as the previous user.
+
+**Request.** An optional, documented RP-initiated logout:
+- after revoking the session, return the provider's
+  `end_session_endpoint` URL (from discovery), with `client_id`, an
+  optional `id_token_hint` and a configured same-origin
+  `post_logout_redirect_uri`;
+- or provide a `GET /auth/logout/redirect` route that does the same
+  after a same-origin `POST`.
+
+Keep the current behaviour as the default for compatibility.
+
+**Expected tests:**
+- the end-session URL comes from discovery, never from the request;
+- the post-logout redirect must be same-origin;
+- no token appears in logs;
+- the behaviour is unchanged when the option is off.
+
+**Acceptance for this product.** After sign-out, "Sign in" asks for
+credentials again; tested against local ZITADEL.

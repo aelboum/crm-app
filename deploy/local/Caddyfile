@@ -1,0 +1,81 @@
+# Local-development edge: one origin (PUBLIC_APP_ORIGIN, http://localhost:8000)
+# for the application and the identity provider (decision D-IDL, DECISIONS.md).
+#
+# Started from SaaS-OS's reusable local edge (`saas-os-edge-config`, SaaS-OS
+# ADR-0024); from that moment the file is this project's own. Extended with
+# SaaS-OS ADR-0025's same-origin login topology ("Topology A"): ZITADEL and
+# its Login V2 UI are served from the application's own origin, so the
+# browser never leaves it and no identity-provider hostname is ever shown.
+#
+# NOT a production edge: no TLS, plaintext HTTP, published on 127.0.0.1 only.
+#
+# Route ownership, most specific first (each `handle` is exclusive):
+#   1. /ui/v2/login[/*]              -> Login V2 (ZITADEL's official image)
+#   2. ZITADEL's documented routes   -> ZITADEL; includes /auth/v1/*, which
+#                                       therefore wins over the app's /auth/*
+#   3. everything else               -> this application (API under /auth
+#                                       and /v1, frontend under /app)
+
+{
+	auto_https off
+	# Caddy's admin API can rewrite the configuration; nothing here needs it.
+	admin off
+	log {
+		output stdout
+		format console
+	}
+}
+
+# Provider cookies (Login V2's `sessions` cookie holds ZITADEL session
+# tokens) share this host with the application. They must never reach the
+# application (SaaS-OS ADR-0025 §9); removed from the Cookie header here,
+# leaving the application's own cookies untouched.
+(strip_provider_cookies) {
+	route {
+		request_header Cookie "(?:^|;\s*)(?:(?:__Host-|__Secure-)?zitadel\.[^=;]*|sessions|fingerprintId|verificationCheck|NEXT_LOCALE)=[^;]*" ""
+		request_header Cookie "^;\s*" ""
+		@no_cookie_left not header_regexp Cookie \S
+		request_header @no_cookie_left -Cookie
+	}
+}
+
+# ZITADEL and Login V2 read these headers ahead of Host to choose their
+# instance; a browser must never choose it.
+(drop_client_zitadel_host_headers) {
+	header_up -X-Zitadel-Instance-Host
+	header_up -X-Zitadel-Public-Host
+	header_up -X-Zitadel-Forward-Host
+}
+
+:8000 {
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	@login_v2 path /ui/v2/login /ui/v2/login/*
+	handle @login_v2 {
+		reverse_proxy zitadel-login:3000 {
+			import drop_client_zitadel_host_headers
+		}
+	}
+
+	# ZITADEL v4.19.x's documented public route inventory (as in SaaS-OS
+	# ADR-0025 §5). Re-check when the pinned ZITADEL version changes.
+	@zitadel path /v2/* /v2beta/* /zitadel.* /admin/v1/* /auth/v1/* /management/v1/* /system/v1/* /assets/v1/* /oidc/v1/* /saml/v2/* /oauth/v2/* /device /device/* /.well-known/openid-configuration /.well-known/apple-app-site-association /.well-known/assetlinks.json /openapi/* /idps/callback /idps/callback/* /ui/console /ui/console/* /ui/login /ui/login/*
+	handle @zitadel {
+		# gRPC and Connect clients need HTTP/2; ZITADEL listens in cleartext.
+		reverse_proxy h2c://zitadel:8080 {
+			import drop_client_zitadel_host_headers
+		}
+	}
+
+	# The application runs on the host (uvicorn on 127.0.0.1:8001, README.md)
+	# and serves both the API (/auth/*, /v1/*, /healthz, /readyz) and the
+	# built frontend (/app).
+	handle {
+		import strip_provider_cookies
+		reverse_proxy {$CRM_APP_UPSTREAM:http://host.docker.internal:8001}
+	}
+}
