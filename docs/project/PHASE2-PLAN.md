@@ -894,7 +894,7 @@ new major framework and needs approval (CLAUDE.md §9).
   workspace settings and member profiles (need tenant tables, G1);
   workspace deletion and purge (operator-only by design, never a route).
 
-### 11.2 S6 and S7 (2026-10-21, uncommitted, validated locally)
+### 11.2 S6 and S7 (2026-10-21; committed `19e7dce`, CI run 39742030028 green)
 
 - **S6, provisioning command:** `src/crm_app/provision.py`
   (`python -m crm_app.provision`), implementing the §7.4 sequence with
@@ -1044,8 +1044,8 @@ under concurrency (G-LOCK).
 | G0 | All Phase 2 implementation | Owner approval of this plan |
 | G1 | First tenant-owned table (S4, S5) | The acceptance criteria in §9.4: a SaaS-OS release with a public purge-registration API and an approved pin move (Q-purge decided 2026-10-21: upstream first) |
 | G-Q6 | Registering the catalogue (S1b) and any route (S3, S7) | **Passed 2026-10-21** (Q6 approved) |
-| G-LOCK | Any route that removes, demotes, suspends or revokes an Owner, or assigns Owner (S7) | The §5.4 concurrency tests passing against a real database (needs the local services or CI), and approval of the operator rule for paths outside the product |
-| G2 | Automated role setup / provisioning command (S6) | Owner approval of Q1 and a separately approved local validation run |
+| G-LOCK | Any route that removes, demotes, suspends or revokes an Owner, or assigns Owner (S7) | **Passed 2026-10-22**: §5.4 concurrency tests pass locally and in CI run 39742030028; operator rule in §5.4 |
+| G2 | Automated role setup / provisioning command (S6) | **Passed 2026-10-22** for the command and its test-database validation (§11.2). Provisioning any real workspace still needs owner authorization |
 | G3 | Real invitation delivery | Email provider and credentials approved (Q3); may involve cost |
 | G4 | Invitation implementation (S9) | Decisions Q4 and Q5 |
 | G5 | Directory index table (S5, S8) | Security review of §6.4 |
@@ -1061,14 +1061,13 @@ APIs). Still open:
 
 1. **Q-purge follow-up:** authorize sending the upstream request in
    Appendix A (no external action has been taken).
-2. **Q1 → G2:** authorize implementing the provisioning command against
-   §7.4, and separately a local validation run.
-3. **Q2 (G7):** authorize sending the upstream question in §7.5; until
-   answered, no grants to existing workspaces.
-4. **G-LOCK:** allow the local services to be started (or rely on CI) so
-   the Owner-protection concurrency tests can run before S7; approve the
-   operator rule that `erase-user` and other operator commands are not
-   used to remove a workspace's last Owner.
+2. **Real workspaces:** authorize provisioning the first real workspace
+   with `crm_app.provision` (G2 itself passed 2026-10-22).
+3. **Q2 (G7):** authorize sending the upstream request in Appendix B;
+   until answered, no grants to existing workspaces.
+4. **Operator rule (§5.4):** confirm that `erase-user` and other operator
+   commands are never used to remove a workspace's last active Owner
+   (G-LOCK passed 2026-10-22 on the product routes).
 5. **Q3 (G3):** which transactional email provider, and when?
 6. **Q4 (G4):** manual invitation link while no provider is configured,
    or no invitations until one is?
@@ -1081,11 +1080,12 @@ export policy (P2-D).
 
 ## 16. Recommended next action
 
-1. Let the integration suite run (start the local services, or push for
-   CI) so the S1b registration, the S2 guards and the S3 route tests run
-   for the first time.
-2. Authorize sending the two upstream requests (Appendix A and §7.5).
-3. Then decide G2 (provisioning command) and G-LOCK (Owner routes).
+(Updated 2026-10-22; S1–S3, S6 and S7 are committed and CI-verified.)
+
+1. Authorize sending the two upstream requests (Appendices A and B). G1,
+   and with it every tenant-owned table, waits on Appendix A.
+2. Decide Q3–Q5 so the invitation flow (S9) can start, and P-6 so
+   frontend work can start.
 
 ## Appendix A — Upstream request draft (not sent)
 
@@ -1135,6 +1135,70 @@ working with it.
 - The public-surface classification test treats the new export as
   PUBLIC_API.
 
+**Acceptance for this product (gate G1, §9.4).** A tagged SaaS-OS release
+containing the public API, an owner-approved pin move to it, and product
+tests showing the participant is registered in every process that can
+run `purge_tenant()` and removes every tenant-owned product row.
+
 **Related (separate requests, same audience):** a sanctioned way to add a
-newly registered permission to existing tenants' roles (§7.5), and a
-public export of `AuthorityNotAuthorizedError` (§7.5).
+newly registered permission to existing tenants' roles (Appendix B), and
+a public export of `AuthorityNotAuthorizedError` (§7.5).
+
+## Appendix B — Upstream request draft: permissions for existing tenants (not sent)
+
+Prepared 2026-10-22 for the SaaS-OS repository from the findings in §7.5.
+**Not sent; no issue or pull request exists.** Sending it needs separate
+authorization.
+
+**Title:** Document a supported way to grant a newly registered
+permission to existing tenants' roles
+
+**Context.** A consumer registers its permissions with
+`register_permission()` and grants them to the roles it creates when a
+tenant is provisioned (`grant_permission()` under
+`SystemCaller(PROVISIONING)`). When a later product release adds a
+permission, tenants provisioned earlier need it on their existing roles.
+
+**Problem.**
+- A user caller cannot grant it: `grant_permission()` requires the caller
+  to already hold the permission (anti-amplification,
+  `core/rbac/service.py:257-290`), and nobody holds a brand-new one.
+- PROVISIONING can technically do it on any open tenant, but its
+  documented scope is "initial authority structure before any principal
+  could hold authority", and ADR-0045 (l.214, l.1401) records that reach
+  as not yet narrowed or decided.
+- No upgrade or migration pattern for this exists in the pinned `docs/`
+  or `examples/`.
+
+**Request.** One of the following, documented as the supported consumer
+path:
+1. a documented, audited system authority (or PROVISIONING use) for
+   "permission migrations" that may only add a registered permission to a
+   named role in an existing tenant; or
+2. an operator command, for example
+   `saas-os-operator grant-permission --role <name> --permission <key>
+   [--tenant <id> | --all-tenants] --dry-run`, that does the same.
+
+**Expected behaviour.**
+- Only adds grants; never removes them, never creates roles, never
+  assigns roles to memberships.
+- Refuses unregistered permissions and closed or purging tenants.
+- Idempotent: an existing grant is reported, not duplicated or treated as
+  an error.
+- Each grant is audited with the authority used.
+- Safe to re-run after partial failure (per-tenant transactions, a
+  summary of granted, already-present and refused tenants).
+
+**Tests we would expect upstream.**
+- Granting a newly registered permission to a named role across two
+  tenants succeeds and is audited; a re-run reports no change.
+- An unregistered permission, an unknown role, and a purging tenant are
+  refused without partial writes in that tenant.
+- A user caller still cannot grant a permission it does not hold.
+- The public-surface classification test covers the new entry point.
+
+**Acceptance for this product (gate G7).** A tagged release with the
+capability, an owner-approved pin move, and a product test that adds a
+permission to an existing workspace's template roles and leaves exactly
+the expected grants. Until then, new permissions reach only workspaces
+provisioned afterwards (§7.5).
