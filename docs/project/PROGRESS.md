@@ -358,3 +358,46 @@ Not yet tried in a real browser against ZITADEL (done since; see below).
   GitHub Actions run 39754775922 succeeded (quality, frontend,
   integration, security). The settings script and these notes are
   committed together, after these notes were written.
+
+**2026-10-22 (later), Phase 3 design, app frame and design fidelity (uncommitted):**
+- **Phase 3 design:** a build-ready plan for Contacts and Companies is in
+  `PHASE3-PLAN.md`. It is planning only; no table or migration (G1).
+  Owner questions are in its §18.
+- **App frame, rebuilt to the design** (`frontend/src/shell/`,
+  `components/ui/`):
+  - the header, the sidebar (232/60 px, collapsible groups) and the
+    design's placeholder page for every unbuilt module;
+  - Settings › Team & roles in the design's settings layout, with a
+    read-only role matrix generated from Q6;
+  - shared Button, Badge, Dialog, DataTable, Toast and state components.
+  - Unbuilt features are labelled "soon" or "not available yet";
+    nothing pretends to work.
+- **Design fidelity:**
+  - Inventory: every file in the export was inspected from source.
+  - Comparison: geometry and styles of the frame and the Team & roles
+    page were compared numerically against the prototype, served locally
+    at the same viewport.
+  - Six material differences were fixed; the remaining deviations are
+    listed with reasons.
+  - Details: `DESIGN-FIDELITY.md`.
+- **Quality:**
+  - `HEAD /app` returns 200.
+  - Lighthouse accessibility scores 100 with no failed audits on
+    Settings and on a placeholder page, colour contrast included.
+  - Keyboard order and focus are checked, as is the phone layout at
+    390 px (emulated).
+  - The Admin view is checked with a test Admin session.
+  - A real CSP violation (React Aria's injected stylesheet) is fixed with
+    a hash-only allowance, and the favicon 404 is removed.
+  - Test sessions were created only in `crm_app_test` and revoked
+    afterwards.
+- **Tests:** frontend 25; Python unit 92.
+- **Not verified:**
+  - pixel overlays (no image library);
+  - Firefox and Safari;
+  - screen reader output;
+  - the phone layout in a real window (the Chrome window could not be
+    resized; DevTools emulation was used).
+- **Committed locally** (owner-authorized, 2026-10-22; **not pushed**):
+  backend and tests `dc1b4f7`, frontend `2e722e7`, and these documents in
+  the following commit. CI has not run on them.

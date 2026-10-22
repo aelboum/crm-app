@@ -440,7 +440,7 @@ Test that:
 
 # 8. Phase 3 — Core CRM
 
-**Status:** Not started.
+**Status:** Not started; build-ready design in `docs/project/PHASE3-PLAN.md` (2026-10-22, planning only). Building waits on gate G1 (aelboum/saas-os#87) and the owner questions in its §18.
 
 ## Objectives
 

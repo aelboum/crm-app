@@ -1,5 +1,7 @@
 # Claude Design Inspection (Phase 0 task 0.3)
 
+> Screen-by-screen inventory, fidelity checklist and comparison evidence (2026-10-22): `DESIGN-FIDELITY.md`.
+
 The canonical record of the read-only inspection of the Claude Design
 prototype, done on 2026-10-21. Labels: **[V]** verified in a named file
 or command; **[I]** inference; **[R]** recommendation. Decisions that
