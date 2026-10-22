@@ -88,10 +88,12 @@ from saas_os.core.tenancy.purge_participants import (
     TenantPurgeParticipant,
 )
 
+
 def register_purge_participant(participant: TenantPurgeParticipant) -> TenantPurgeParticipant:
     """Register a Product participant with this process's registry.
     Idempotent for the same object; a different object with the same name
     raises DuplicateTenantPurgeParticipantError."""
+
 
 def registered_purge_participant_names() -> tuple[str, ...]:
     """Names registered in this process, in run order (for startup checks
