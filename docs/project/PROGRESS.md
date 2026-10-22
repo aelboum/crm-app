@@ -334,3 +334,27 @@ Not yet tried in a real browser against ZITADEL (done since; see below).
   `.env.example`, `.env.test.example`, README and docs. The owner's
   `.env` was updated locally (backup `.env.backup-2026-10-22`, untracked);
   `.env.test` still names the old issuer.
+
+**Sign-in settings (2026-10-22, decision D-IDL.1):**
+- `deploy/local/configure-zitadel.py` applied the settings to local
+  ZITADEL. It printed the resulting values, and a second run changed
+  nothing.
+- **Checked in the browser:** Login V2 no longer shows a registration
+  link.
+- **Not yet tried by hand:** lockout and the hidden-unknown-username
+  behaviour.
+- **Login V2 response headers** (observed through the edge):
+  - `frame-ancestors 'none'`, `X-Frame-Options: deny`, `nosniff`, and
+    `no-store` caching;
+  - its own Content-Security-Policy allows `'unsafe-inline'` and
+    `'unsafe-eval'` scripts and names the internal `http://zitadel:8080`
+    for images and fonts. That policy belongs to ZITADEL's official
+    image; changing it would mean customizing that image (SaaS-OS
+    ADR-0025 uses the official one). Because Login V2 shares the app's
+    origin, this is the weaker side of the shared-origin trade-off
+    ADR-0025 accepted;
+  - it also sends HSTS, which browsers ignore over plain HTTP.
+- **Commits:** the earlier work is committed as `4e576e7` and `3023ff5`;
+  GitHub Actions run 39754775922 succeeded (quality, frontend,
+  integration, security). The settings script and these notes are
+  committed together, after these notes were written.

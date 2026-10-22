@@ -694,6 +694,30 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
     P2-C);
   - ending the provider session on sign-out (PHASE2-PLAN Appendix C).
 
+## D-IDL.1 — Local sign-in security settings
+
+- **Status:** Approved by the owner, 2026-10-22. Applies to local ZITADEL;
+  production equivalents are part of the deployment work.
+- **Settings** (`deploy/local/configure-zitadel.py`, instance defaults,
+  idempotent):
+  - self-registration off;
+  - external identity providers off;
+  - unknown usernames not revealed;
+  - lockout after 5 wrong passwords or one-time codes;
+  - two-factor optional.
+- **Why:**
+  - accounts come from provisioning and invitations, not self-sign-up
+    (sign-up waits on P2-C);
+  - no external provider is approved;
+  - account enumeration and unlimited guessing were possible with
+    ZITADEL's defaults.
+- **Open:**
+  - whether two-factor becomes required, for example for Owners;
+  - password length rules (ZITADEL's default is 8 characters with
+    complexity);
+  - production settings;
+  - Login V2's own response headers (see PROGRESS, 2026-10-22).
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project
