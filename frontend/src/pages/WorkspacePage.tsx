@@ -3,11 +3,13 @@ import {
   Building2,
   Check,
   ChevronDown,
+  ExternalLink,
   Eye,
   ListPlus,
   Minus,
   Palette,
   Plug,
+  Shield,
   Sparkles,
   User,
   UserPlus,
@@ -25,7 +27,7 @@ import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
 import { en, type MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
-import { availableActions, type MemberAction } from "../members/actions";
+import { availableActions, highestRole, type MemberAction } from "../members/actions";
 
 /*
  * Settings › Team & roles, reproduced from the design (ScreenSettings.dc.html:
@@ -374,11 +376,97 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
   },
 ];
 
-export function MembersPage({ workspaceId }: { workspaceId: string }) {
+/** The settings sections that exist; every other one is marked "soon". */
+export type SettingsSection = "team" | "profile";
+const BUILT_SECTIONS: readonly string[] = ["team", "profile"];
+
+/**
+ * Settings › My profile (ScreenSettings.dc.html L43-52). The role line is
+ * real. Display name and time zone cannot be stored yet: SaaS-OS keeps no
+ * name, `/auth/me` returns only the user ID, and a profile table waits on
+ * gate G1 (PHASE2-PLAN.md §6.5). The fields are therefore shown disabled,
+ * with the browser's time zone for reference, and "Manage" is unavailable
+ * because the identity provider has no self-service page that keeps it
+ * invisible (SaaS-OS ADR-0023).
+ */
+function ProfileSection({ access, workspaceName }: { access: Access; workspaceName: string }) {
+  const t = useT();
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const role = highestRole(access.roles);
+  return (
+    <section className="profile-card" aria-label={t("settings.profile")}>
+      <div className="profile-identity">
+        <span className="profile-avatar" aria-hidden="true">
+          <User size={22} />
+        </span>
+        <div>
+          <p className="profile-title">{t("profile.signedIn")}</p>
+          <p className="profile-role-line">
+            {role ? `${role} · ${workspaceName}` : workspaceName}
+          </p>
+        </div>
+      </div>
+      <div className="profile-fields">
+        <div className="field-stack">
+          <label htmlFor="profile-name" className="field-label">
+            {t("profileForm.name")}
+          </label>
+          <input
+            id="profile-name"
+            className="field-input"
+            disabled
+            placeholder={t("profileForm.notStored")}
+            aria-describedby="profile-note"
+          />
+        </div>
+        <div className="field-stack">
+          <label htmlFor="profile-zone" className="field-label">
+            {t("profileForm.zone")}
+          </label>
+          <select
+            id="profile-zone"
+            className="field-input"
+            disabled
+            defaultValue={browserZone}
+            aria-describedby="profile-note"
+          >
+            <option value={browserZone}>{t("profileForm.browserZone", { zone: browserZone })}</option>
+          </select>
+        </div>
+      </div>
+      <p id="profile-note" className="profile-note">
+        {t("profileForm.note")}
+      </p>
+      <div className="idp-card">
+        <Shield size={16} className="idp-icon" aria-hidden="true" />
+        <div className="idp-text">
+          <p className="idp-title">{t("profileForm.idpTitle")}</p>
+          <p className="idp-sub">{t("profileForm.idpSub")}</p>
+        </div>
+        <AriaButton className="idp-manage" isDisabled>
+          {t("profileForm.manage")}
+          <ExternalLink size={12} aria-hidden="true" />
+          <span className="visually-hidden">{` (${t("nav.soon")})`}</span>
+        </AriaButton>
+      </div>
+    </section>
+  );
+}
+
+export function SettingsPage({
+  workspaceId,
+  section,
+  onSelect,
+}: {
+  workspaceId: string;
+  section: SettingsSection;
+  onSelect: (section: SettingsSection) => void;
+}) {
   const t = useT();
   const toast = useToast();
   const access = useAccess(workspaceId);
   const workspace = useWorkspace(workspaceId);
+  const isProfile = section === "profile";
   return (
     <div className="settings-layout">
       <nav className="settings-nav" aria-label={t("settings.title")}>
@@ -390,19 +478,21 @@ export function MembersPage({ workspaceId }: { workspaceId: string }) {
             <ul className="settings-nav-list">
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const current = item.id === "team";
+                const built = BUILT_SECTIONS.includes(item.id);
+                const current = item.id === section;
                 return (
                   <li key={item.id}>
                     <AriaButton
                       className={current ? "settings-nav-item active" : "settings-nav-item"}
                       aria-current={current ? "page" : false}
                       onPress={() => {
-                        if (!current) toast(t("settings.unavailable", { name: t(item.label) }));
+                        if (built) onSelect(item.id as SettingsSection);
+                        else toast(t("settings.unavailable", { name: t(item.label) }));
                       }}
                     >
                       <Icon size={15} className="settings-nav-icon" aria-hidden="true" />
                       <span className="settings-nav-text">{t(item.label)}</span>
-                      {current ? null : <span className="nav-soon">{t("nav.soonLower")}</span>}
+                      {built ? null : <span className="nav-soon">{t("nav.soonLower")}</span>}
                     </AriaButton>
                   </li>
                 );
@@ -412,22 +502,29 @@ export function MembersPage({ workspaceId }: { workspaceId: string }) {
         ))}
       </nav>
       <div className="settings-scroll">
-      <div className="settings-content">
-        <div className="settings-header">
-          <h1 className="settings-title">{t("settings.team")}</h1>
-          <p className="settings-desc">{t("settings.teamDesc")}</p>
+        <div className="settings-content">
+          <div className="settings-header">
+            <h1 className="settings-title">
+              {isProfile ? t("settings.profile") : t("settings.team")}
+            </h1>
+            <p className="settings-desc">
+              {isProfile ? t("settings.profileDesc") : t("settings.teamDesc")}
+            </p>
+          </div>
+          {access.isPending ? <Loading /> : null}
+          {access.isError ? (
+            <LoadError error={access.error} onRetry={() => void access.refetch()} />
+          ) : null}
+          {access.data && isProfile ? (
+            <ProfileSection access={access.data} workspaceName={workspace.data?.name ?? ""} />
+          ) : null}
+          {access.data && !isProfile ? (
+            <>
+              <MembersCard workspaceId={workspaceId} access={access.data} />
+              <RolePermissions />
+            </>
+          ) : null}
         </div>
-        {access.isPending ? <Loading /> : null}
-        {access.isError ? (
-          <LoadError error={access.error} onRetry={() => void access.refetch()} />
-        ) : null}
-        {access.data ? (
-          <>
-            <MembersCard workspaceId={workspaceId} access={access.data} />
-            <RolePermissions />
-          </>
-        ) : null}
-      </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Access, Member } from "../api/client";
-import { availableActions } from "./actions";
+import { availableActions, highestRole } from "./actions";
 
 const ALL = {
   read_members: true,
@@ -62,5 +62,13 @@ describe("availableActions", () => {
     expect(revoke?.confirm).toBe("revoke");
     const ownerRevoke = availableActions(member(["Owner"]), owner).find((a) => a.key === "revoke");
     expect(ownerRevoke?.confirm).toBe("owner");
+  });
+});
+
+describe("highestRole", () => {
+  it("picks the most senior role, not the alphabetically first", () => {
+    expect(highestRole(["Admin", "Owner"])).toBe("Owner");
+    expect(highestRole(["Member", "Read-only"])).toBe("Member");
+    expect(highestRole([])).toBeUndefined();
   });
 });

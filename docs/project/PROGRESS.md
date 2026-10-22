@@ -401,3 +401,17 @@ Not yet tried in a real browser against ZITADEL (done since; see below).
 - **Committed locally** (owner-authorized, 2026-10-22; **not pushed**):
   backend and tests `dc1b4f7`, frontend `2e722e7`, and these documents in
   the following commit. CI has not run on them.
+
+**Settings › My profile (2026-10-22, uncommitted):**
+- Implemented in the design's layout with only what exists: the real role
+  line, disabled fields with a note that profiles cannot be stored yet
+  (G1), the browser's time zone shown read-only, and "Manage" disabled.
+- No storage, endpoint or migration.
+- Compared against the design at 1280 px; one mismatch fixed
+  (`DESIGN-FIDELITY.md` §4a).
+- Frontend tests: 28 passed. Lighthouse accessibility 100 (0 failed) on
+  My profile; no console messages; no overflow at 390 px.
+- Review fix: the role shown is now the most senior one, not the
+  alphabetically first.
+- Screens compared so far: the app frame, Team & roles and My profile.
+  The other design screens are placeholders or not started.

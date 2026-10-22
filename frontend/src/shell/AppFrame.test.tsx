@@ -99,6 +99,28 @@ describe("app frame", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows My profile with the real role and no field that pretends to save", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(`/w/${WS}/settings`, signedIn);
+    await user.click(await screen.findByRole("button", { name: "My profile" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "My profile" })).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({ section: "profile" });
+    expect(screen.getByText("Owner · Acme Studio")).toBeInTheDocument();
+    expect(screen.getByLabelText("Display name")).toBeDisabled();
+    expect(screen.getByLabelText("Time zone")).toBeDisabled();
+    expect(screen.getByLabelText("Display name")).toHaveAccessibleDescription(
+      /can't be saved yet/,
+    );
+    expect(screen.getByRole("button", { name: /Manage/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "My profile" })).toHaveAttribute("aria-current", "page");
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("opens My profile directly from its link", async () => {
+    renderApp(`/w/${WS}/settings?section=profile`, signedIn);
+    expect(await screen.findByRole("heading", { level: 1, name: "My profile" })).toBeInTheDocument();
+  });
+
   it("renders the settings page with the role matrix and passes an accessibility scan", async () => {
     renderApp(`/w/${WS}/settings`, signedIn);
     expect(await screen.findByRole("heading", { name: "Role permissions" })).toBeInTheDocument();

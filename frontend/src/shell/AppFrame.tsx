@@ -40,6 +40,7 @@ import {
 import { useAccess, useMe, useSignOut, useWorkspace } from "../api/queries";
 import { useToast } from "../components/ui/Toast";
 import { useT } from "../i18n/useT";
+import { highestRole } from "../members/actions";
 import { findGroup, GROUPS, type Section, SETTINGS_SLUG } from "./navigation";
 import { type SidebarState, useSidebar } from "./useSidebar";
 
@@ -258,7 +259,7 @@ function ProfileMenu({ workspaceId }: { workspaceId: string }) {
   const t = useT();
   const access = useAccess(workspaceId);
   const { signOut, run } = useSignOutAndLeave();
-  const role = access.data?.roles[0];
+  const role = access.data ? highestRole(access.data.roles) : undefined;
   return (
     <>
       {signOut.isError ? (

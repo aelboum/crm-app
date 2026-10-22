@@ -90,3 +90,11 @@ export function availableActions(member: Member, access: Access): MemberAction[]
   }
   return actions;
 }
+
+/**
+ * The most senior of a member's roles, for one-line display. The API returns
+ * roles alphabetically, so the first one is not necessarily the highest.
+ */
+export function highestRole(roles: readonly string[]): string | undefined {
+  return ROLES.find((role) => roles.includes(role)) ?? roles[0];
+}

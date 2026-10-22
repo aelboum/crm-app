@@ -59,7 +59,8 @@ L243-247):
 | --- | --- | --- | --- |
 | Shell (`LeadStack CRM.dc.html`: header, sidebar, palette, menus, toast, placeholder) | frame of `/app/w/{id}/*` | 2 (F1) | **Implemented; compared (§3)** |
 | Settings › Team & roles (`ScreenSettings.dc.html` L11-27, L54-68) | `/app/w/{id}/settings` | 2 | **Implemented; compared (§4)** |
-| Settings › other sections (profile, business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
+| Settings › My profile (`ScreenSettings.dc.html` L43-52) | `/app/w/{id}/settings?section=profile` | 2 | **Implemented, read-only parts; compared (§4a)** |
+| Settings › other sections (business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
 | Contacts (`ScreenContacts`) | `/contacts` | 3 | Design spec in `PHASE3-PLAN.md` §13; placeholder page (G1) |
 | Companies (`ScreenCompanies`) | `/companies` | 3 | Same as Contacts |
 | Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | Placeholder |
@@ -183,6 +184,67 @@ L243-247):
   of `#C2C8D1` for 3:1 non-text contrast.
 - **Other settings sections:** listed and marked "soon".
 - **Invite:** answers that invitations are not available yet (G1/G4).
+
+## 4a. Settings › My profile: assessment and comparison evidence
+
+**What the source specifies** (`ScreenSettings.dc.html` L43-52):
+- a card with a 52 px avatar, the name (15/600) and a role line;
+- two editable inputs, Display name and Time zone. The design has no save
+  action;
+- an identity-provider card, "Email, password & two-factor", with a
+  visual-only "Manage ↗" button.
+
+**What the system supports:**
+- **Role line:** available through `/v1/workspaces/{id}/access` and the
+  workspace name.
+- **Name and e-mail:** not available. SaaS-OS stores no name, and
+  `/auth/me` returns only the user ID.
+- **Storing a display name or time zone:** blocked. It would need a
+  product table holding personal data, which waits on G1 together with
+  member profiles (`PHASE2-PLAN.md` §6.5). No storage was added.
+- **"Manage":** has no target that keeps the identity provider invisible
+  (Login V2 has no self-service page; the ZITADEL console would expose
+  the provider, against SaaS-OS ADR-0023).
+
+**Implemented:**
+- the design's layout with the real role line;
+- disabled fields with an explicit note that they cannot be saved yet;
+- the browser's detected time zone shown read-only;
+- "Manage" disabled.
+- No backend change, endpoint or storage.
+
+**Comparison** (1280 px; reference values offset by the 32 px context
+strip):
+
+| Element | Reference | Implementation |
+| --- | --- | --- |
+| h1 | 748×29, 20/650 | same |
+| Card | 748 px, r10, padding 18/20 | same |
+| Avatar | 52×52 at x 521, `#3D5A80` | same |
+| Name | x 587, 15/600 | same |
+| Inputs | 346×34 at x 521 and 881, r7 | same |
+| Labels | 12.5/500 | same |
+| Identity card | 707×62, `#F6F7F9`, r8 | same |
+| Manage | 88×30, 13/500, x 1125 | same, after one fix (it first reused the 12.5/400 select style) |
+
+- **Screenshot:** `claude-chrome-screenshots-lcgIMS/screenshot-1792665726967-2.jpg`.
+- **Deviations, with reasons:**
+  - the card is 51 px taller because of the honesty note;
+  - the inputs have a disabled background because they cannot save;
+  - the avatar shows an icon and the name line says "Signed in", because
+    no name is stored.
+  - In the settings nav, "Appearance & white-label" is truncated because
+    of its "soon" marker.
+- **Checks:**
+  - Lighthouse (desktop 1280×800, a test session in `crm_app_test`):
+    Accessibility 100, 35 passed, 0 failed, colour contrast included;
+    the console was empty;
+  - at a 390×844 emulated phone viewport, no element overflows;
+  - a jsdom axe scan and the tests pass.
+- **Defect found in review and fixed:** the role line showed the
+  alphabetically first role, so a member with Admin and Owner read
+  "Admin". It now shows the most senior role (`highestRole`); the profile
+  menu had the same flaw and is fixed too. A unit test covers it.
 
 ## 5. Accessibility and quality evidence (2026-10-22)
 

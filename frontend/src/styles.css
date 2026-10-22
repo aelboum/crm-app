@@ -310,6 +310,42 @@ p { margin: 0; }
 /* #8A91A0 instead of the design's #C2C8D1 so the "none" mark meets 3:1. */
 .perm-none { color: #8a91a0; }
 
+/* Settings › My profile (ScreenSettings.dc.html L43-52). */
+.profile-card {
+  background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.profile-identity { display: flex; align-items: center; gap: 14px; }
+.profile-avatar {
+  width: 52px; height: 52px; border-radius: 50%; background: #3d5a80; color: #fff;
+  display: flex; align-items: center; justify-content: center; flex: none;
+}
+.profile-title { font-weight: 600; font-size: 15px; }
+.profile-role-line { color: #687082; }
+.profile-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.field-stack { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 12.5px; font-weight: 500; }
+.field-input {
+  height: 34px; border: 1px solid var(--line-strong); border-radius: 7px; padding: 0 10px;
+  background: #fff; font: inherit; color: inherit;
+}
+.field-input:disabled { background: #f6f7f9; color: #5f6778; cursor: not-allowed; }
+.profile-note { font-size: 12px; color: #687082; }
+.idp-card {
+  display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: #f6f7f9;
+  border: 1px solid var(--line); align-items: center;
+}
+.idp-icon { color: var(--ink-2); flex: none; }
+.idp-text { flex: 1; }
+.idp-title { font-weight: 500; }
+.idp-sub { font-size: 12px; color: #687082; }
+/* ScreenSettings.dc.html L50: 30 px, padding 0 10, 13/500, border #D4D8DE. */
+.idp-manage {
+  height: 30px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff;
+  font: inherit; font-weight: 500; display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer;
+}
+.idp-manage[data-disabled] { cursor: not-allowed; color: #687082; }
+
 /* --- Pages and cards ------------------------------------------------------- */
 .page { display: grid; gap: var(--space-4); max-width: 1320px; }
 .members-page { padding: 20px 28px 40px; }

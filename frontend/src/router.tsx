@@ -14,7 +14,7 @@ import { ApiError } from "./api/client";
 import { keys } from "./api/queries";
 import { LoadError } from "./components/StateNotice";
 import { HomePage, isWorkspaceId } from "./pages/HomePage";
-import { MembersPage } from "./pages/WorkspacePage";
+import { type SettingsSection, SettingsPage } from "./pages/WorkspacePage";
 import { AppFrame, PlaceholderPage, PlainLayout } from "./shell/AppFrame";
 import { findSection, SETTINGS_SLUG } from "./shell/navigation";
 
@@ -80,8 +80,21 @@ const workspaceIndexRoute = createRoute({
 
 function SectionPage() {
   const { workspaceId, section: slug } = sectionRoute.useParams();
-  // Settings holds Members today; every other module is the design's placeholder.
-  if (slug === SETTINGS_SLUG) return <MembersPage workspaceId={workspaceId} />;
+  const { section: settingsSection } = sectionRoute.useSearch();
+  const navigate = sectionRoute.useNavigate();
+  // Settings holds Team & roles and My profile today; every other module is
+  // the design's placeholder.
+  if (slug === SETTINGS_SLUG) {
+    return (
+      <SettingsPage
+        workspaceId={workspaceId}
+        section={settingsSection ?? "team"}
+        onSelect={(next) => {
+          void navigate({ search: next === "team" ? {} : { section: next } });
+        }}
+      />
+    );
+  }
   const section = findSection(slug);
   return section ? <PlaceholderPage section={section} /> : notFound;
 }
@@ -89,6 +102,9 @@ function SectionPage() {
 const sectionRoute = createRoute({
   getParentRoute: () => workspaceRoute,
   path: "$section",
+  // Only known settings sections are accepted; anything else shows the default.
+  validateSearch: (search: Record<string, unknown>): { section?: SettingsSection } =>
+    search.section === "profile" ? { section: "profile" } : {},
   component: SectionPage,
 });
 
