@@ -13,15 +13,23 @@ import json
 from pathlib import Path
 
 from crm_app.permissions import PERMISSIONS
-from crm_app.roles import ROLE_TEMPLATES
+from crm_app.roles import ROLE_TEMPLATES, Role
 from tests.support import PLACEHOLDER_SETTINGS, clean_environment, run_python
 
 PRODUCT_PREFIX = "/v1/workspaces"
 
+MEMBER = "/v1/workspaces/{tenant_id}/members/{membership_id}"
 EXPECTED = {
     "GET /v1/workspaces/{tenant_id}": "crm_app.workspace:read",
     "GET /v1/workspaces/{tenant_id}/members": "membership:read",
+    f"POST {MEMBER}/roles": "membership_role:create",
+    f"DELETE {MEMBER}/roles/{{role}}": "membership_role:delete",
+    f"POST {MEMBER}/suspend": "membership:suspend",
+    f"POST {MEMBER}/reactivate": "membership:reactivate",
+    f"POST {MEMBER}/revoke": "membership:revoke",
 }
+# Membership and role changes (gate G-LOCK); every other product route reads.
+CHANGING = {key for key in EXPECTED if not key.startswith("GET ")}
 
 _PROBE = (
     "import json\n"
@@ -46,12 +54,20 @@ def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) 
     assert {key: detail for key, (_, detail, _) in policies.items()} == EXPECTED
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
-    # Membership and role changes wait for the last-Owner safeguard.
-    assert all(key.startswith("GET ") for key in policies)
+    assert {key for key in policies if not key.startswith("GET ")} == CHANGING
 
 
-def test_route_permissions_are_registered_and_granted_to_every_role() -> None:
+def test_route_permissions_are_registered() -> None:
     for detail in EXPECTED.values():
         resource, _, action = detail.rpartition(":")
         assert (resource, action) in PERMISSIONS
-        assert all((resource, action) in template for template in ROLE_TEMPLATES.values())
+
+
+def test_reading_routes_are_open_to_every_role_and_changes_to_owner_and_admin() -> None:
+    for key, detail in EXPECTED.items():
+        resource, _, action = detail.rpartition(":")
+        holders = {
+            role for role, template in ROLE_TEMPLATES.items() if (resource, action) in template
+        }
+        expected = set(Role) if key not in CHANGING else {Role.OWNER, Role.ADMIN}
+        assert holders == expected, key

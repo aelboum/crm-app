@@ -311,9 +311,16 @@ them.
 - **Not proven:** this needs the concurrency tests in §5.5 against a real
   database (two Owners removing each other; two demotions; the invariant
   "at least one ACTIVE Owner" checked afterwards, not just status codes).
-  Those tests do not exist yet, so no Owner-changing route has been
-  implemented: gate G-LOCK stays closed (§11.1, §14). The integration runs
-  of 2026-10-21 cover the read-only routes only (§13.1).
+  Implemented and tested locally on 2026-10-21 (§11.2): the strategy
+  above in `src/crm_app/api/members.py`, with the decision rule in
+  `crm_app.domains.membership.refusal_for`.
+
+**Operator rule (G-LOCK):** administrative commands outside the product
+(`saas-os-operator erase-user`, user deactivation, platform tenant
+operations, direct database edits) must never remove, demote or disable a
+workspace's last active Owner. A verified Owner transfer through the
+product comes first. The product lock cannot cover these paths; the rule
+is procedural.
 
 ### 5.5 Negative tests that make the matrix real (S7, §13)
 
@@ -887,8 +894,58 @@ new major framework and needs approval (CLAUDE.md §9).
   workspace settings and member profiles (need tenant tables, G1);
   workspace deletion and purge (operator-only by design, never a route).
 
-Next work needs: G-LOCK (Owner-changing routes), G1 (tenant tables),
-G2 (provisioning command).
+### 11.2 S6 and S7 (2026-10-21, uncommitted, validated locally)
+
+- **S6, provisioning command:** `src/crm_app/provision.py`
+  (`python -m crm_app.provision`), implementing the §7.4 sequence with
+  public SaaS-OS functions only. Validated by `tests/integration/test_provision.py`
+  (8 tests against `crm_app_test`):
+  - a dry run changes nothing;
+  - a run creates the workspace (active), the four roles with exactly the
+    template grants, and one active Owner;
+  - a re-run performs nothing;
+  - runs interrupted after workspace creation, after activation and after
+    partial role creation are completed;
+  - a same-name workspace with another member is refused and left
+    unchanged;
+  - output holds identifiers only.
+
+  The production confirmation flag is enforced before any database
+  access. **No real workspace has been provisioned.**
+- **S7, membership and role routes:** `src/crm_app/api/members.py`:
+  - `POST …/members/{membership_id}/roles` (`membership_role:create`);
+  - `DELETE …/members/{membership_id}/roles/{role}` (`membership_role:delete`);
+  - `POST …/suspend`, `…/reactivate`, `…/revoke` (`membership:*`).
+
+  Rules:
+  - only Owners touch Owners or grant the Owner role;
+  - nobody changes their own membership or roles, except an Owner
+    stepping down;
+  - Owner changes need `confirm_owner_change`;
+  - the last active Owner can never be removed, demoted, suspended or
+    revoked.
+
+  Validated by `tests/integration/test_owner_protection.py` (8 tests):
+  - 15 rounds (5 each of revoke, suspend and Owner-role removal) of two
+    Owners targeting each other simultaneously: exactly one request
+    succeeded each time, and the database held exactly one active Owner
+    afterwards;
+  - transfer (grant, then step down) works;
+  - ten refused cases leave the persisted roles and Owners unchanged;
+  - an Admin manages ordinary members;
+  - another workspace's membership is a 404.
+
+  `tests/unit/test_membership_visibility.py` covers the rule's branches;
+  `tests/unit/test_routes.py` the seven route policies.
+- **Remaining limits:**
+  - concurrency was tested with two competing requests in one process;
+  - paths outside the product are covered only by the operator rule
+    (§5.4);
+  - under contention the lock wait is bounded at 5 s (409 `busy`);
+    pool-exhaustion behaviour under heavy load is not load-tested.
+
+Next work needs: G1 (tenant tables). G2 needs owner authorization before
+any real workspace is provisioned.
 
 ## 12. Security and privacy considerations
 
@@ -956,8 +1013,8 @@ on the exact commit evaluated before Phase 2 is complete.
 | `ruff check .` | PASS |
 | `pyright` | PASS (0 errors) |
 | `lint-imports` | PASS (2 kept, 0 broken) |
-| `pytest tests/unit` | PASS (77), including `test_roles.py`, `test_schema_guard.py`, `test_routes.py`, `test_catalog_rules.py`, `test_membership_visibility.py` |
-| `pytest tests/integration` (33 tests, including `test_tenant_table_guard.py` and `test_workspace_routes.py`), `.env.test` exported, local PostgreSQL 16 and Redis 7 started by the owner | **PASS** (33 passed, 0 skipped) |
+| `pytest tests/unit` | PASS (83 on 2026-10-21 after S6/S7; 77 before), including `test_roles.py`, `test_schema_guard.py`, `test_routes.py`, `test_catalog_rules.py`, `test_membership_visibility.py` |
+| `pytest tests/integration` (33 tests, including `test_tenant_table_guard.py` and `test_workspace_routes.py`), `.env.test` exported, local PostgreSQL 16 and Redis 7 started by the owner | **PASS** (33 passed, 0 skipped; 49 after S6/S7, all modules, `crm_app_test`) |
 | `CRM_APP_IDENTITY_TEST=1 pytest tests/identity` (local ZITADEL) | **PASS** (1) |
 | `detect-secrets-hook` (all tracked and new files) | PASS |
 | `pip-audit` (hashed export, SaaS-OS excluded) | PASS (no known vulnerabilities) |

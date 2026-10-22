@@ -231,3 +231,17 @@ G-LOCK in plan §14). Both upstream requests are drafted and have not been
 sent: purge-participant registration (plan Appendix A) and adding
 permissions to existing workspaces (plan §7.5).
 Tenant isolation is untested, because no tenant-owned table exists.
+
+**Since then (2026-10-21, uncommitted, local only; plan §11.2):**
+- **Provisioning command (S6, gate G2):** `python -m crm_app.provision`,
+  8 integration tests against `crm_app_test` pass. No real workspace has
+  been provisioned.
+- **Membership and role routes with last-Owner protection (S7, gate
+  G-LOCK):** 8 integration tests pass, including 15 rounds of competing
+  Owner removals. In every round the database kept exactly one active
+  Owner. The operator rule for paths outside the product is in plan §5.4.
+- **Totals:** unit 83, integration 49, static and secret checks pass.
+- **Not yet done:** commit and CI; G1 (tenant tables) remains blocked.
+
+Next executable task: review and commit S6/S7 (needs approval), then the
+upstream request texts and other G1-independent Phase 2 work.

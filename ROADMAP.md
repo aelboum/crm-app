@@ -364,8 +364,8 @@ Use the actual language and tooling selected after discovery.
 * **Remaining work:** the provisioning command; membership, role and Owner management routes with last-Owner protection; invitations; workspace settings (locale, time zone, currency); the workspace directory; the first tenant-owned tables with RLS negative tests; the purge participant; the Phase 2 security review.
 * **Blocked by gates** (`PHASE2-PLAN.md` §14):
   * **G1:** tenant-owned tables, until SaaS-OS provides a supported public purge-registration API in an approved pin, with the required safeguards and tests (decision Q-purge).
-  * **G2:** the provisioning command; the design is approved, but implementing and running it are not authorized.
-  * **G-LOCK:** any Owner-, role- or membership-changing route, until concurrency-safe Owner protection is proven by tests against a real database.
+  * **G2:** the provisioning command is implemented and validated against the test database (uncommitted, 2026-10-21); provisioning any real workspace needs owner authorization.
+  * **G-LOCK:** Owner-, role- and membership-changing routes are implemented with a per-workspace lock; local concurrency tests against the test database show the last active Owner is never removed (uncommitted, 2026-10-21). Paths outside the product are covered by an operator rule only (`PHASE2-PLAN.md` §5.4). Not yet CI-verified.
   * **G3/G4:** real invitation delivery and the invitation flow, pending the email-provider and invitation decisions.
 * **External dependencies:** two upstream SaaS-OS requests are drafted and not sent: purge-participant registration, and adding permissions to existing workspaces.
 * **Not yet proven:** runtime RLS isolation of product data and purge correctness (no tenant-owned table exists).
