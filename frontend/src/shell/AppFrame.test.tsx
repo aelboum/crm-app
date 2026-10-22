@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -61,11 +61,38 @@ describe("app frame", () => {
     expect(screen.queryByRole("link", { name: /Companies/ })).toBeNull();
   });
 
-  it("says plainly that search is not available yet", async () => {
+  it("opens a page palette that navigates and never pretends to search records", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(`/w/${WS}/settings`, signedIn);
+    await user.click(await screen.findByRole("button", { name: /Jump to a page/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Go to a page" });
+    expect(
+      within(dialog).getByText("Searching contacts, deals and other records is not available yet."),
+    ).toBeInTheDocument();
+    const input = within(dialog).getByRole("searchbox", { name: "Jump to a page…" });
+    expect(input).toHaveFocus();
+    await user.type(input, "zzqq");
+    expect(within(dialog).getByText("No pages match “zzqq”")).toBeInTheDocument();
+    await user.clear(input);
+    await user.type(input, "my prof");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ section: "profile" });
+    });
+    expect(screen.queryByRole("dialog", { name: "Go to a page" })).toBeNull();
+  });
+
+  it("toggles the palette with Ctrl+K and closes it with Escape", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/settings`, signedIn);
-    await user.click(await screen.findByRole("button", { name: /Search contacts, deals, pages/ }));
-    expect(await screen.findByText("Search is not available yet.")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Team & roles" });
+    await user.keyboard("{Control>}k{/Control}");
+    expect(await screen.findByRole("dialog", { name: "Go to a page" })).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Go to a page" })).toBeNull();
+    });
   });
 
   it("lists the design's create actions as not available, none clickable", async () => {

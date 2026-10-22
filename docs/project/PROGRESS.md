@@ -415,3 +415,19 @@ Not yet tried in a real browser against ZITADEL (done since; see below).
   alphabetically first.
 - Screens compared so far: the app frame, Team & roles and My profile.
   The other design screens are placeholders or not started.
+
+**My profile committed locally; palette (2026-10-22):**
+- **My profile:** commit `02a6129`, local and not pushed. Validated on its
+  own in a clean worktree: types, lint, 28 tests and the build pass.
+- **Earlier pushes:** commits `dc1b4f7`, `2e722e7` and `3080d20` were
+  pushed; GitHub Actions run 39766719219 succeeded (quality, frontend,
+  integration, security).
+- **⌘K palette:** implemented with page navigation only; it never
+  searches records (`DESIGN-FIDELITY.md` §4b). Committed locally with
+  owner authorization; not pushed. Frontend tests: 29 passed.
+- **Screens compared so far:** the app frame, Team & roles and
+  My profile. The palette is checked for behaviour and accessibility but
+  not compared geometrically. No other design screen is implemented or
+  verified.
+- **Outstanding:** Firefox and Safari, and a real screen reader; none is
+  available in this environment.

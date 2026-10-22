@@ -38,9 +38,9 @@ import {
 } from "react-aria-components";
 
 import { useAccess, useMe, useSignOut, useWorkspace } from "../api/queries";
-import { useToast } from "../components/ui/Toast";
 import { useT } from "../i18n/useT";
 import { highestRole } from "../members/actions";
+import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
 import { findGroup, GROUPS, type Section, SETTINGS_SLUG } from "./navigation";
 import { type SidebarState, useSidebar } from "./useSidebar";
 
@@ -494,9 +494,10 @@ function Sidebar({ workspaceId, sidebar }: { workspaceId: string; sidebar: Sideb
 /** Everything inside one workspace: header, sidebar and the section page. */
 export function AppFrame({ workspaceId, children }: { workspaceId: string; children: ReactNode }) {
   const t = useT();
-  const toast = useToast();
   const sidebar = useSidebar();
   const workspace = useWorkspace(workspaceId);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useCommandPaletteShortcut(setPaletteOpen);
   return (
     <div className="frame">
       <SkipLink />
@@ -519,8 +520,9 @@ export function AppFrame({ workspaceId, children }: { workspaceId: string; child
         <div className="search-slot">
           <AriaButton
             className="search-trigger"
+            aria-haspopup="dialog"
             onPress={() => {
-              toast(t("search.unavailable"));
+              setPaletteOpen(true);
             }}
           >
             <Search size={15} aria-hidden="true" />
@@ -537,6 +539,12 @@ export function AppFrame({ workspaceId, children }: { workspaceId: string; child
           <ProfileMenu workspaceId={workspaceId} />
         </div>
       </header>
+      <CommandPalette
+        workspaceId={workspaceId}
+        workspaceName={workspace.data?.name ?? ""}
+        isOpen={paletteOpen}
+        onOpenChange={setPaletteOpen}
+      />
       <div className="frame-body">
         <Sidebar workspaceId={workspaceId} sidebar={sidebar} />
         <main id="main" className="frame-main" tabIndex={-1}>

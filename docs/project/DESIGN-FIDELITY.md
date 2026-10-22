@@ -73,7 +73,7 @@ L243-247):
 | Home / Dashboard (`ScreenDashboard`) | `/home` | needs CRM data | Placeholder |
 | Agency views: Workspaces, Templates (empty), Team, Billing | none yet | 11 (agency model undecided, P2-B) | Not implemented |
 | Signup (`LeadStack Signup.dc.html`) | none yet | P2-C | Not implemented |
-| ⌘K palette, toast | frame | 2 | Toast implemented; palette not built (search is not available) |
+| ⌘K palette (`LeadStack CRM.dc.html` L257-281), toast | frame | 2 | Toast implemented. Palette implemented with page navigation only (§4b); **not geometrically compared** |
 
 ## 2. Recorded gaps and ambiguities in the source
 
@@ -245,6 +245,46 @@ strip):
   alphabetically first role, so a member with Admin and Owner read
   "Admin". It now shows the most senior role (`highestRole`); the profile
   menu had the same flaw and is fixed too. A unit test covers it.
+
+## 4b. ⌘K palette: implementation and checks
+
+**What the source specifies:**
+- an overlay at 28% opacity and a 600 px panel (r12) with a 52 px input
+  and a 15 px "Search {scope}, or jump to a page…" placeholder;
+- result groups Contacts, Opportunities, Workspaces and Go to (38 px
+  rows);
+- "No matches for …";
+- a footer reading "↵ open · ⌘K toggle · Scoped to {workspace}".
+
+**Implemented:**
+- the same panel, input, row and footer styling;
+- **"Go to" only:** the modules (placeholders say "Not available yet")
+  and the Settings sections;
+- typing filters the pages; arrow keys and Enter navigate;
+- ⌘/Ctrl+K toggles; Escape closes and returns focus to the trigger.
+
+**Deliberate deviations:**
+- The placeholder and the header trigger say "Jump to a page…", not
+  "Search contacts, deals, pages…", because no record search exists.
+- A one-line note says that searching contacts, deals and other records
+  is not available yet.
+- The Contacts, Opportunities and Workspaces groups are absent; nothing
+  is invented.
+- The empty state reads "No pages match …".
+
+**Checks:**
+- Real Chrome (DevTools, a test session in `crm_app_test`), real keys:
+  - ⌘/Ctrl+K opens with focus in the input;
+  - typing "task" leaves only "Tasks (Not available yet)", and Enter
+    opens its placeholder;
+  - Escape closes and focus returns to the trigger;
+  - no console messages.
+- Lighthouse with the palette open: Accessibility 100, 34 passed,
+  0 failed.
+- Vitest covers navigation, the empty state, Ctrl+K, Escape and an axe
+  scan.
+- **Not done:** a numeric geometry comparison against the prototype's
+  palette.
 
 ## 5. Accessibility and quality evidence (2026-10-22)
 
