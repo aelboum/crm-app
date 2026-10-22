@@ -617,6 +617,45 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   - The upstream request (`PHASE2-PLAN.md` Appendix A) stays unsent
     unless separately authorized.
 
+## P-6.1 — Frontend framework chosen
+
+- **Status:** Approved by the owner, 2026-10-22 (recommendation in
+  `PHASE2-PLAN.md` §10). Supersedes "Still open" under P-6.
+- **Decision:** a React single-page application built with Vite, served
+  from the same origin as the API, using TanStack Router and TanStack
+  Query, React Aria Components for accessibility, react-intl for
+  localisation, and a typed client generated from the FastAPI OpenAPI
+  schema. No server-side rendering framework and no Node server at
+  runtime; Node is a build-time tool only.
+- **Scope:** approves the framework and adding Node build tooling. It does
+  not approve any specific screen: each screen still needs its backend
+  use case, its gate and the missing design states (gate G6).
+
+## Q4, Q5 — Invitation delivery and role confirmation
+
+- **Status:** Approved by the owner, 2026-10-22 (`PHASE2-PLAN.md` §8.2).
+- **Q4:** while no email provider is configured, an Owner or Admin may
+  create an invitation in "manual link" mode: the link is shown once to
+  the inviter, labelled "not sent — deliver it yourself", and its
+  delivery state is `manual`. The product never says it was sent.
+- **Q5:** an accepted invitation gives a membership with no role. The new
+  member appears as "awaiting role" until an Owner or Admin confirms the
+  intended role with one action (no impersonation, no PROVISIONING).
+- **Still blocked:** the invitation flow needs the product table
+  `invitation_intent`, so it waits on gate G1. Real email delivery still
+  needs Q3 (provider and credentials).
+
+## Upstream requests — sent
+
+- **Status:** Sending approved by the owner, 2026-10-22.
+- Opened on `aelboum/saas-os` from the drafts in `PHASE2-PLAN.md`:
+  - #87 "Export the tenant-purge participant registration through a public
+    API" (Appendix A; gate G1);
+  - #88 "Document a supported way to grant a newly registered permission
+    to existing tenants' roles" (Appendix B; gate G7).
+- Neither changes the pin. Adopting a release that resolves them needs a
+  separate, owner-approved pin move.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

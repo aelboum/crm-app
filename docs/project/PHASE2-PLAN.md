@@ -61,7 +61,7 @@ The repository is temporarily public by the owner's choice.
 | P2-C | Operator-created workspaces; invitation-based membership; no simulated invitations; no email integration without approval |
 | P2-D | UTC storage; locale/time zone/currency; jurisdiction-specific work is explicit; purge-participant issue unresolved |
 | P2-E | Generic model; IDs for relationships; typed dates; tenant-scoped records |
-| P-6 | Frontend framework still open |
+| P-6 | Frontend framework still open (decided 2026-10-22 as P-6.1: React + Vite SPA) |
 
 ## 3. Current state and SaaS-OS capability matrix
 
@@ -715,7 +715,7 @@ rule is procedural, not technical.
    audit row naming it; a re-run completes; the coverage guard lists every
    tenant table.
 
-The upstream request draft is in Appendix A (not sent).
+The upstream request draft is in Appendix A (sent 2026-10-22 as aelboum/saas-os#87).
 
 #### Superseded proposal (kept for the record)
 
@@ -765,7 +765,7 @@ tenant-owned table.** The S2 guards enforce this in tests.
 - Product writes take `lock_open_tenant(session, tenant_id)` in the write
   transaction; product jobs run inside `tenant_job_session`.
 
-## 10. Frontend framework comparison (P-6 stays open)
+## 10. Frontend framework comparison (decided 2026-10-22, P-6.1)
 
 The Claude Design prototype runs on React 18 through the design tool's
 own runtime; that is not a reason to choose React. Versions below are
@@ -1047,9 +1047,9 @@ under concurrency (G-LOCK).
 | G-LOCK | Any route that removes, demotes, suspends or revokes an Owner, or assigns Owner (S7) | **Passed 2026-10-22**: §5.4 concurrency tests pass locally and in CI run 39742030028; operator rule in §5.4 |
 | G2 | Automated role setup / provisioning command (S6) | **Passed 2026-10-22** for the command and its test-database validation (§11.2). Provisioning any real workspace still needs owner authorization |
 | G3 | Real invitation delivery | Email provider and credentials approved (Q3); may involve cost |
-| G4 | Invitation implementation (S9) | Decisions Q4 and Q5 |
+| G4 | Invitation implementation (S9) | **Decided 2026-10-22** (Q4 manual link, Q5 two-step role); S9 still needs G1 for `invitation_intent` |
 | G5 | Directory index table (S5, S8) | Security review of §6.4 |
-| G6 | Any frontend work | P-6 approval and the missing design states |
+| G6 | Any frontend work | P-6 **approved 2026-10-22** (P-6.1); each screen still needs its missing design states |
 | G7 | Permissions for existing workspaces in Phases 3+ | Decision on Q2 |
 | G8 | Phase 2 completion | Security review and CI evidence (S11) |
 
@@ -1057,22 +1057,17 @@ under concurrency (G-LOCK).
 
 Decided 2026-10-21: Q6 (approved), Q-purge (upstream first, no
 exception), Q1 (design direction only), S1b and S3 (within supported
-APIs). Still open:
+APIs). Decided 2026-10-22: sending both upstream requests (#87, #88),
+P-6 (React + Vite SPA, P-6.1), Q4 (manual invitation link) and Q5
+(two-step role confirmation). Still open:
 
-1. **Q-purge follow-up:** authorize sending the upstream request in
-   Appendix A (no external action has been taken).
-2. **Real workspaces:** authorize provisioning the first real workspace
+1. **Real workspaces:** authorize provisioning the first real workspace
    with `crm_app.provision` (G2 itself passed 2026-10-22).
-3. **Q2 (G7):** authorize sending the upstream request in Appendix B;
-   until answered, no grants to existing workspaces.
-4. **Operator rule (§5.4):** confirm that `erase-user` and other operator
-   commands are never used to remove a workspace's last active Owner
-   (G-LOCK passed 2026-10-22 on the product routes).
-5. **Q3 (G3):** which transactional email provider, and when?
-6. **Q4 (G4):** manual invitation link while no provider is configured,
-   or no invitations until one is?
-7. **Q5 (G4):** two-step role confirmation after acceptance?
-8. **P-6 (G6):** frontend framework; recommendation in §10.
+2. **Operator rule (§5.4):** confirm that `erase-user` and other operator
+   commands are never used to remove a workspace's last active Owner.
+3. **Q3 (G3):** which transactional email provider, and when?
+4. **Pin moves:** adopting a SaaS-OS release that resolves #87 or #88
+   needs owner approval.
 
 Unchanged and still open elsewhere: multi-region hosting and data
 residency (K5.1); ZITADEL v4.19.5 confirmation (P-4); product erasure and
@@ -1080,17 +1075,19 @@ export policy (P2-D).
 
 ## 16. Recommended next action
 
-(Updated 2026-10-22; S1–S3, S6 and S7 are committed and CI-verified.)
+(Updated 2026-10-22.)
 
-1. Authorize sending the two upstream requests (Appendices A and B). G1,
-   and with it every tenant-owned table, waits on Appendix A.
-2. Decide Q3–Q5 so the invitation flow (S9) can start, and P-6 so
-   frontend work can start.
+1. F1: scaffold the frontend (P-6.1) and build the Phase 2 screens that
+   have a backend today: workspace view, member list, role and status
+   changes with the Owner-protection refusals.
+2. When SaaS-OS resolves #87: propose the pin move, then G1 and the
+   tenant-owned tables (S4, S5), then invitations (S9).
 
-## Appendix A — Upstream request draft (not sent)
+## Appendix A — Upstream request (sent as aelboum/saas-os#87)
 
-Prepared 2026-10-21 for the SaaS-OS repository. **Not sent; no issue or
-pull request exists.** Sending it needs separate authorization.
+Prepared 2026-10-21 for the SaaS-OS repository. Sent with owner approval
+on 2026-10-22 as issue #87; the issue text omits the product-only
+acceptance paragraph below.
 
 **Title:** Export the tenant-purge participant registration through a
 public API
@@ -1144,11 +1141,11 @@ run `purge_tenant()` and removes every tenant-owned product row.
 newly registered permission to existing tenants' roles (Appendix B), and
 a public export of `AuthorityNotAuthorizedError` (§7.5).
 
-## Appendix B — Upstream request draft: permissions for existing tenants (not sent)
+## Appendix B — Upstream request: permissions for existing tenants (sent as aelboum/saas-os#88)
 
 Prepared 2026-10-22 for the SaaS-OS repository from the findings in §7.5.
-**Not sent; no issue or pull request exists.** Sending it needs separate
-authorization.
+Sent with owner approval on 2026-10-22 as issue #88; the issue text
+omits the product-only acceptance paragraph below.
 
 **Title:** Document a supported way to grant a newly registered
 permission to existing tenants' roles

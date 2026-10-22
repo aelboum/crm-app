@@ -367,7 +367,7 @@ Use the actual language and tooling selected after discovery.
   * **G2:** the provisioning command is implemented and validated against the test database (commit `19e7dce`, CI run 39742030028 green); provisioning any real workspace needs owner authorization.
   * **G-LOCK:** Owner-, role- and membership-changing routes are implemented with a per-workspace lock; local concurrency tests against the test database show the last active Owner is never removed (commit `19e7dce`). Paths outside the product are covered by an operator rule only (`PHASE2-PLAN.md` §5.4). CI run 39742030028 green.
   * **G3/G4:** real invitation delivery and the invitation flow, pending the email-provider and invitation decisions.
-* **External dependencies:** two upstream SaaS-OS requests are drafted and not sent: purge-participant registration, and adding permissions to existing workspaces.
+* **External dependencies:** two upstream SaaS-OS requests were opened on 2026-10-22: purge-participant registration (aelboum/saas-os#87, blocks G1) and adding permissions to existing workspaces (aelboum/saas-os#88).
 * **Not yet proven:** runtime RLS isolation of product data and purge correctness (no tenant-owned table exists).
 
 ## Objectives

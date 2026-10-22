@@ -168,7 +168,7 @@ stopped; that commit changes only `.github/workflows/ci.yml`.
 
 | Blocker | Impact | Needed |
 | --- | --- | --- |
-| Frontend framework not chosen (P-6) | Frontend work | Owner decision, using the criteria in `DESIGN-INSPECTION.md` §7. The design export has been inspected; the Claude Design MCP workflow was not used |
+| Frontend framework not chosen (P-6) | Frontend work | Resolved 2026-10-22: React + Vite SPA (`DECISIONS.md` P-6.1) |
 | Missing designs (states, a generic CRM version, membership, consent) | Frontend work on MVP screens | Design requests in `DESIGN-INSPECTION.md` §6, before standalone Claude Design closes on 2026-12-14 |
 | No email provider configured | Real invitation delivery (P2-C) and the MVP email channel | An approved transactional email provider and credentials; until then nothing may be shown as sent |
 | Purge participants outside the approved import surface | Removal of product data on tenant purge, before the first tenant table | Owner decision on a narrowly scoped exception or another supported path (P2-D) |
@@ -253,3 +253,8 @@ been sent.
 Next: every remaining Phase 2 step waits on an owner decision or an
 external dependency (plan §15): sending the upstream requests (G1, G7),
 provisioning a real workspace, Q3–Q5 (invitations) and P-6 (frontend).
+
+**2026-10-22, owner decisions:** both upstream requests opened
+(aelboum/saas-os#87, #88); P-6 decided as a React + Vite SPA (P-6.1);
+Q4 manual invitation link and Q5 two-step role confirmation approved.
+Next: frontend scaffold and Phase 2 screens (plan §16, F1). G1 waits on #87.
