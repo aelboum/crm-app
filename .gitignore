@@ -25,3 +25,8 @@ htmlcov/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Frontend (decision P-6.1)
+node_modules/
+frontend/coverage/
+*.tsbuildinfo

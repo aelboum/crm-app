@@ -43,8 +43,10 @@ decisions P2-A to P2-E approved)
     every commit on `main` (per-commit concurrency group, no
     cancellation on `main`);
   - a documentation-only follow-up recording the remote and CI result.
-- **Remote:** `https://github.com/aelboum/crm-app`, private, default
-  branch `main`, created and pushed 2026-10-21 (decision K2.2). Further
+- **Remote:** `https://github.com/aelboum/crm-app`, default branch
+  `main`, created and pushed 2026-10-21 (decision K2.2). Visibility on
+  2026-10-22 (`gh repo view`): **public**, by the owner's choice; the
+  owner intends to make it private later. Further
   pushes need approval each time; pull requests, merges, tags,
   releases and deployment are not authorized.
 - **Untracked local files, never committed (covered by `.gitignore`):**
@@ -258,3 +260,8 @@ provisioning a real workspace, Q3–Q5 (invitations) and P-6 (frontend).
 (aelboum/saas-os#87, #88); P-6 decided as a React + Vite SPA (P-6.1);
 Q4 manual invitation link and Q5 two-step role confirmation approved.
 Next: frontend scaffold and Phase 2 screens (plan §16, F1). G1 waits on #87.
+
+**F1 (2026-10-22, plan §11.3):** the frontend shell and the member screens,
+served by the API under `/app`, plus `GET /v1/workspaces/{id}/access`.
+Frontend 15 tests, unit 91 and integration 55 (full suite, `crm_app_test`) pass locally.
+Not yet tried in a real browser against ZITADEL.

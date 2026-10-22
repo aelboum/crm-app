@@ -32,10 +32,14 @@ def create_app() -> FastAPI:
     # Imported only after validation: SaaS-OS resolves configuration at import time.
     from saas_os.api.platform import build_platform_app  # noqa: PLC0415
 
+    from crm_app.api.access import router as access_router  # noqa: PLC0415
     from crm_app.api.members import router as members_router  # noqa: PLC0415
+    from crm_app.api.spa import router as spa_router  # noqa: PLC0415
     from crm_app.api.workspaces import router as workspaces_router  # noqa: PLC0415
 
     app = build_platform_app(title=TITLE, version=__version__)
     app.include_router(workspaces_router)
+    app.include_router(access_router)
     app.include_router(members_router)
+    app.include_router(spa_router)
     return app

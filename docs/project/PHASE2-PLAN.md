@@ -947,6 +947,70 @@ new major framework and needs approval (CLAUDE.md §9).
 Next work needs: G1 (tenant tables). G2 needs owner authorization before
 any real workspace is provisioned.
 
+### 11.3 F1 — Frontend shell and member screens (2026-10-22, P-6.1)
+
+**Built:**
+- `frontend/`: a React single-page app (Vite, TanStack Router and Query,
+  React Aria Components, react-intl, a typed client generated from the
+  API's OpenAPI schema). Node is used to build it only.
+- The API serves it from the same origin under `/app`
+  (`crm_app.api.spa`). Each route is a GET with a declared public policy,
+  because SaaS-OS's startup check refuses a `Mount`. Responses carry a
+  strict Content-Security-Policy (`'self'` only, no inline script or
+  style) and `frame-ancestors 'none'`. Fingerprinted assets are cached
+  permanently and everything else is revalidated. Hidden files, paths
+  outside the build, and missing assets return 404.
+- `GET /v1/workspaces/{id}/access` (`crm_app.workspace:read`) returns the
+  caller's membership, roles and the actions they hold. The UI uses it to
+  hide actions the caller cannot take; every changing route still
+  enforces its own rules.
+- Screens:
+  - sign-in (through SaaS-OS `/auth/login`) and sign-out;
+  - opening a workspace by link or ID, because there is no directory
+    until §6.4 (G5, G1);
+  - the workspace's member list, with role, suspend, reactivate and
+    remove actions, a confirmation for every Owner change and every
+    removal, and the server's refusal shown in plain language;
+  - loading, empty, signed-out, not-found (one message for unknown and
+    foreign workspaces) and permission-denied states.
+- Cookie-authenticated changes rely on SaaS-OS's same-origin check
+  (ADR-0044). The app sends no tokens; the session cookie is HttpOnly.
+
+**Tests:**
+- 15 frontend tests (Vitest, Testing Library):
+  - the action rules;
+  - Owner confirmation sending `confirm_owner_change`;
+  - refusal display;
+  - the 401, 404 and malformed-ID states;
+  - axe scans of the start and member pages, with colour contrast
+    excluded because jsdom does not render.
+- Python:
+  - the frontend routes are public, read-only and limited to `/app`;
+  - file resolution, traversal and hidden files;
+  - the committed OpenAPI schema is current;
+  - integration tests of `/access` for each caller, and of serving the
+    build.
+- CI gains a `frontend` job: install from the lock file without scripts,
+  generated types current, types, lint (with jsx-a11y), tests, build,
+  `npm audit`.
+
+**Dependencies:**
+- Exact versions, all published before 2026-10-08 (`npm install
+  --before`).
+- TypeScript stays on 5.9 because `openapi-typescript` 7.13 requires 5.x.
+- ESLint stays on 9 because `eslint-plugin-jsx-a11y` 6.10 does not
+  support 10. ESLint 9 is marked deprecated upstream; revisit when
+  jsx-a11y supports 10.
+
+**Not verified or known limits:**
+- Not yet exercised in a real browser against ZITADEL; the flow is
+  covered only by component tests.
+- Colour contrast is not measured automatically.
+- Members are shown by ID, because there is no member profile (§6.5, G1).
+- The JavaScript bundle is about 564 kB (176 kB gzipped); code splitting
+  is deferred.
+- English only.
+
 ## 12. Security and privacy considerations
 
 - Isolation is enforced twice: permission checks in the API and forced

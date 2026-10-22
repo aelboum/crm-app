@@ -30,24 +30,24 @@ def probe(integration_env: dict[str, str], tmp_path_factory: pytest.TempPathFact
     return json.loads(line.removeprefix("RESULT "))
 
 
-@pytest.mark.parametrize("route", ["workspace", "members"])
+@pytest.mark.parametrize("route", ["workspace", "members", "access"])
 def test_members_with_the_permission_are_admitted(probe: Probe, route: str) -> None:
     assert probe[route]["owner"] == 200
     assert probe[route]["reader"] == 200
 
 
-@pytest.mark.parametrize("route", ["workspace", "members"])
+@pytest.mark.parametrize("route", ["workspace", "members", "access"])
 def test_a_member_without_the_permission_is_refused(probe: Probe, route: str) -> None:
     assert probe[route]["roleless"] == 403
 
 
-@pytest.mark.parametrize("route", ["workspace", "members"])
+@pytest.mark.parametrize("route", ["workspace", "members", "access"])
 def test_non_members_and_other_workspaces_get_the_same_404(probe: Probe, route: str) -> None:
     assert probe[route]["outsider"] == 404
     assert probe[route]["other_owner"] == 404
 
 
-@pytest.mark.parametrize("route", ["workspace", "members"])
+@pytest.mark.parametrize("route", ["workspace", "members", "access"])
 def test_anonymous_callers_are_refused(probe: Probe, route: str) -> None:
     assert probe[route]["anonymous"] == 401
 
@@ -90,3 +90,30 @@ def test_owners_also_see_suspended_but_never_revoked_memberships(probe: Probe) -
 
 def test_page_size_is_bounded(probe: Probe) -> None:
     assert probe["page_too_large"] == 422
+
+
+def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> None:
+    owner, reader = probe["access_seen"]["owner"], probe["access_seen"]["reader"]
+    assert owner["roles"] == ["Owner"]
+    assert all(owner["actions"].values())
+    assert reader["roles"] == ["Read-only"]
+    assert reader["actions"] == {
+        "read_members": True,
+        "assign_role": False,
+        "remove_role": False,
+        "suspend_member": False,
+        "reactivate_member": False,
+        "revoke_member": False,
+        "manage_owners": False,
+    }
+    assert owner["membership_id"] != reader["membership_id"]
+
+
+def test_the_frontend_is_served_from_the_api_origin(probe: Probe) -> None:
+    frontend = probe["frontend"]
+    assert frontend["root"] == [307, "/app"]
+    assert frontend["page"] == [200, "no-cache"]
+    assert "default-src 'self'" in frontend["page_csp"]
+    assert frontend["asset"] == [200, "public, max-age=31536000, immutable"]
+    assert frontend["missing_asset"] == 404
+    assert frontend["traversal"] == 404

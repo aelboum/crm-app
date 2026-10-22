@@ -16,6 +16,7 @@ import os
 import secrets
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from saas_os.core.authority import SystemAuthority, SystemCaller, UserCaller
@@ -110,7 +111,14 @@ def main() -> None:
 
     workspace = f"/v1/workspaces/{a.id}"
     members = f"{workspace}/members"
-    with TestClient(create_app()) as client:
+    access = f"{workspace}/access"
+    # A stand-in frontend build for the static routes (crm_app.api.spa).
+    dist = Path.cwd() / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html><title>app</title>", encoding="utf-8")
+    (dist / "assets" / "app-1.js").write_text("export {};", encoding="utf-8")
+    os.environ["CRM_APP_FRONTEND_DIST"] = str(dist)
+    with TestClient(create_app(), follow_redirects=False) as client:
 
         def status(path: str, caller: str | None) -> int:
             return client.get(path, headers=headers(caller)).status_code
@@ -118,9 +126,23 @@ def main() -> None:
         listed = client.get(members, headers=headers("reader")).json()["items"]
         owner_listed = client.get(members, headers=headers("owner")).json()
         shown = client.get(workspace, headers=headers("owner")).json()
+        access_seen = {
+            c: client.get(access, headers=headers(c)).json() for c in ("owner", "reader")
+        }
+        app_page = client.get("/app/w/anything")
+        asset = client.get("/app/assets/app-1.js")
+        frontend = {
+            "root": [client.get("/").status_code, client.get("/").headers.get("location")],
+            "page": [app_page.status_code, app_page.headers.get("cache-control")],
+            "page_csp": app_page.headers.get("content-security-policy", ""),
+            "asset": [asset.status_code, asset.headers.get("cache-control")],
+            "missing_asset": client.get("/app/assets/missing.js").status_code,
+            "traversal": client.get("/app/..%2F..%2Fpyproject.toml").status_code,
+        }
         result = {
             "workspace": {c or "anonymous": status(workspace, c) for c in CALLERS},
             "members": {c or "anonymous": status(members, c) for c in CALLERS},
+            "access": {c or "anonymous": status(access, c) for c in CALLERS},
             "unknown_workspace": status(f"/v1/workspaces/{uuid.uuid4()}", "owner"),
             "unknown_members": status(f"/v1/workspaces/{uuid.uuid4()}/members", "owner"),
             "page_too_large": status(f"{members}?limit=1000", "owner"),
@@ -142,6 +164,8 @@ def main() -> None:
         "reader_id": str(reader),
         "roleless_id": str(roleless),
         "other_owner_listed": str(b.owner_id) in {item["user_id"] for item in listed},
+        "access_seen": access_seen,
+        "frontend": frontend,
     }
     print("RESULT " + json.dumps(result))
 

@@ -22,6 +22,7 @@ MEMBER = "/v1/workspaces/{tenant_id}/members/{membership_id}"
 EXPECTED = {
     "GET /v1/workspaces/{tenant_id}": "crm_app.workspace:read",
     "GET /v1/workspaces/{tenant_id}/members": "membership:read",
+    "GET /v1/workspaces/{tenant_id}/access": "crm_app.workspace:read",
     f"POST {MEMBER}/roles": "membership_role:create",
     f"DELETE {MEMBER}/roles/{{role}}": "membership_role:delete",
     f"POST {MEMBER}/suspend": "membership:suspend",
@@ -41,12 +42,20 @@ _PROBE = (
 )
 
 
-def _product_policies(tmp_path: Path) -> dict[str, tuple[str, str, bool]]:
+# The frontend's static files (crm_app.api.spa): public, read-only, no data.
+FRONTEND = {"GET /", "GET /app", "GET /app/{requested:path}"}
+
+
+def _policies(tmp_path: Path) -> dict[str, tuple[str, str, bool]]:
     result = run_python(_PROBE, clean_environment(PLACEHOLDER_SETTINGS), tmp_path)
     assert result.returncode == 0, result.stderr
     line = next(x for x in result.stdout.splitlines() if x.startswith("POLICIES "))
     policies = json.loads(line.removeprefix("POLICIES "))
-    return {k: (v[0], v[1], v[2]) for k, v in policies.items() if PRODUCT_PREFIX in k}
+    return {k: (v[0], v[1], v[2]) for k, v in policies.items()}
+
+
+def _product_policies(tmp_path: Path) -> dict[str, tuple[str, str, bool]]:
+    return {k: v for k, v in _policies(tmp_path).items() if PRODUCT_PREFIX in k}
 
 
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
@@ -71,3 +80,12 @@ def test_reading_routes_are_open_to_every_role_and_changes_to_owner_and_admin() 
         }
         expected = set(Role) if key not in CHANGING else {Role.OWNER, Role.ADMIN}
         assert holders == expected, key
+
+
+def test_frontend_routes_are_public_and_read_only(tmp_path: Path) -> None:
+    policies = _policies(tmp_path)
+    frontend = {key: kind for key, (kind, _, _) in policies.items() if key in FRONTEND}
+    assert frontend == dict.fromkeys(FRONTEND, "public")
+    assert not any(
+        key.split(" ", 1)[1].startswith("/app") for key in policies if key not in FRONTEND
+    )
