@@ -1,4 +1,4 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { Button } from "react-aria-components";
 
 import { useMe, useSignOut } from "../api/queries";
@@ -8,6 +8,7 @@ export function Shell() {
   const t = useT();
   const me = useMe();
   const signOut = useSignOut();
+  const navigate = useNavigate();
   return (
     <>
       <a className="skip-link" href="#main">
@@ -28,7 +29,10 @@ export function Shell() {
               className="button"
               isDisabled={signOut.isPending}
               onPress={() => {
-                signOut.mutate();
+                // Leave the current page so nothing from the ended session stays on screen.
+                signOut.mutate(undefined, {
+                  onSuccess: () => void navigate({ to: "/" }),
+                });
               }}
             >
               {t("app.signOut")}

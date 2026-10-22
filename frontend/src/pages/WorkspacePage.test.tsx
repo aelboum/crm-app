@@ -100,6 +100,55 @@ describe("workspace members", () => {
     expect(await screen.findByText("Change saved.")).toBeInTheDocument();
   });
 
+  it("keeps keyboard focus on the page when a removed member's row disappears", async () => {
+    const user = userEvent.setup();
+    let revoked = false;
+    const base = workspace({ roles: ["Owner"], actions: ALL });
+    renderApp(`/w/${WS}`, (method, path, body) => {
+      if (method === "POST" && path.endsWith(`/members/${MEMBER}/revoke`)) {
+        revoked = true;
+        return { status: 200, body: {} };
+      }
+      const reply = base(method, path, body);
+      if (revoked && reply && path.includes("/members?")) {
+        const page = reply.body as { items: { membership_id: string }[]; total: number };
+        const items = page.items.filter((m) => m.membership_id !== MEMBER);
+        return { status: 200, body: { ...page, items, total: items.length } };
+      }
+      return reply;
+    });
+    await screen.findByText("3 members");
+    await user.click(within(rowFor(MEMBER)).getByRole("button", { name: /Actions for member/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Remove from workspace" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Confirm" }));
+
+    expect(await screen.findByText("2 members")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByText("Change saved.").parentElement);
+    });
+  });
+
+  it("leaves the workspace page on sign-out so none of its data stays on screen", async () => {
+    const user = userEvent.setup();
+    let signedOut = false;
+    const base = workspace({ roles: ["Owner"], actions: ALL });
+    renderApp(`/w/${WS}`, (method, path, body) => {
+      if (method === "POST" && path === "/auth/logout") {
+        signedOut = true;
+        return { status: 204 };
+      }
+      if (signedOut) return { status: 401, body: { detail: "Not authenticated" } };
+      return base(method, path, body);
+    });
+    await screen.findByText("3 members");
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(await screen.findByRole("heading", { name: "Sign in to continue" })).toBeVisible();
+    expect(screen.queryByText("Acme")).toBeNull();
+    expect(screen.queryByText("3 members")).toBeNull();
+  });
+
   it("shows the server's refusal when the last Owner would be removed", async () => {
     const user = userEvent.setup();
     const base = workspace({ roles: ["Owner"], actions: ALL });

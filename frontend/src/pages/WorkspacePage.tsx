@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Menu, MenuItem, MenuTrigger, Popover } from "react-aria-components";
 
 import type { Access, Member } from "../api/client";
@@ -109,8 +109,19 @@ function Members({ workspaceId, access }: { workspaceId: string; access: Access 
   const members = useMembers(workspaceId, offset, canRead);
   const change = useMemberChange(workspaceId);
   const [pending, setPending] = useState<Pending | null>(null);
+  const result = useRef<HTMLDivElement>(null);
+  const settled = change.isSuccess || change.isError;
 
-  const submit = ({ member, action }: Pending) => {
+  // A removed member's row, and with it the focused Actions button, can
+  // disappear after a change; keep keyboard focus on the page by moving it
+  // to the result message.
+  useEffect(() => {
+    if (settled && members.isFetched && document.activeElement === document.body) {
+      result.current?.focus();
+    }
+  }, [settled, members.isFetched, members.data]);
+
+  const submit =({ member, action }: Pending) => {
     setPending(null);
     change.mutate({
       membershipId: member.membership_id,
@@ -127,7 +138,7 @@ function Members({ workspaceId, access }: { workspaceId: string; access: Access 
   const page = members.data;
   return (
     <>
-      <div role="status" aria-live="polite">
+      <div role="status" aria-live="polite" tabIndex={-1} ref={result}>
         {change.isSuccess ? <p className="notice info">{t("action.done")}</p> : null}
         {change.isError ? (
           <p className="notice error">{t(refusalLabel(change.error.code))}</p>
