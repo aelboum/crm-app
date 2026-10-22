@@ -448,3 +448,13 @@ Not yet tried in a real browser against ZITADEL (done since; see below).
 - **#87:** still open with no response; no newer SaaS-OS release. A
   refined technical proposal is in `PURGE-API-PROPOSAL.md`; it is not
   sent. G1 stays closed.
+
+**Later on 2026-10-22:**
+- **Pushed:** `264c639`, `c6af3ef` and `3376e37`.
+  - GitHub Actions run 39771257565 on `3376e37` **failed** in the quality
+    job's format step: `ruff format` also formats Python blocks in
+    Markdown, and the proposal's example lacked blank lines.
+  - Fixed in `e0fe0fd`; run 39771661933 **succeeded** (quality,
+    frontend, integration, security).
+- **SaaS-OS #87:** the owner-approved comment was posted
+  (issuecomment-6339887993). No reply yet. G1 stays closed.

@@ -1,7 +1,7 @@
 # Proposal — Public Purge-Participant Registration in SaaS-OS (gate G1)
 
-**Status:** technical proposal, 2026-10-22. **Not sent.** No comment, pull
-request or other communication has been made. Upstream issue
+**Status:** technical proposal, 2026-10-22. Summarised as a comment on #87
+(see §6); no pull request or other communication. Upstream issue
 aelboum/saas-os#87 (opened 2026-10-22 from `PHASE2-PLAN.md` Appendix A)
 is **open with no response**; checked 2026-10-22. The latest release is
 still v0.3.0 and there are no commits after it.
@@ -183,6 +183,9 @@ steps, with an audited reason.
 
 - **Blocker:** unchanged. G1 waits on an upstream release with a public
   registration API.
-- **Sending:** posting this refinement to #87 (for example the
-  idempotent re-registration, the names accessor and Option B) needs the
-  owner's authorization. Nothing has been sent.
+- **Posted 2026-10-22 with the owner's approval:**
+  https://github.com/aelboum/saas-os/issues/87#issuecomment-6339887993.
+  It is the owner's edited text, plus a reference to CONSUMER-GUIDE §11
+  and a criterion naming `saas-os-operator purge-tenant`. It asks the
+  maintainers whether they agree with the direction or prefer another
+  contract. No other communication was sent.
