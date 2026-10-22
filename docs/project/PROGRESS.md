@@ -431,3 +431,20 @@ Not yet tried in a real browser against ZITADEL (done since; see below).
   verified.
 - **Outstanding:** Firefox and Safari, and a real screen reader; none is
   available in this environment.
+
+**Pushes, palette comparison and #87 (2026-10-22):**
+- **Pushed:** `02a6129` (My profile), as a fast-forward. GitHub Actions
+  run 39769519580: **success** (quality, frontend, integration,
+  security).
+- **Palette:** committed locally as `264c639`; not pushed.
+- **Palette comparison against the design** (`DESIGN-FIDELITY.md` §4b),
+  1280×609, numeric:
+  - the panel, input, rows, header, footer, empty state and backdrop
+    match;
+  - three differences fixed: input text colour, panel height (it
+    overflowed the viewport because of the note row), and placeholder
+    contrast;
+  - these fixes are uncommitted.
+- **#87:** still open with no response; no newer SaaS-OS release. A
+  refined technical proposal is in `PURGE-API-PROPOSAL.md`; it is not
+  sent. G1 stays closed.

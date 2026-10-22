@@ -1151,6 +1151,8 @@ export policy (P2-D).
 
 ## Appendix A — Upstream request (sent as aelboum/saas-os#87)
 
+> Refined technical proposal (2026-10-22, not sent): `PURGE-API-PROPOSAL.md`.
+
 Prepared 2026-10-21 for the SaaS-OS repository. Sent with owner approval
 on 2026-10-22 as issue #87; the issue text omits the product-only
 acceptance paragraph below.
