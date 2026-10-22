@@ -1,14 +1,42 @@
-import { Button } from "react-aria-components";
+import type { ReactNode } from "react";
 
 import { ApiError } from "../api/client";
 import { useT } from "../i18n/useT";
+import { Button, buttonClass } from "./ui/Button";
 
 export function Loading() {
   const t = useT();
   return (
-    <p role="status" className="muted">
+    <p role="status" className="state state-loading">
+      <span className="spinner" aria-hidden="true" />
       {t("state.loading")}
     </p>
+  );
+}
+
+/** Nothing to show yet; optionally with one way forward. */
+export function EmptyState({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
+  return (
+    <div className="state state-empty">
+      <p className="state-title">{title}</p>
+      {body ? <p className="muted">{body}</p> : null}
+      {action}
+    </div>
+  );
+}
+
+/**
+ * A feature that does not exist yet. Says so plainly: no control on the page
+ * pretends to work (CLAUDE.md §6).
+ */
+export function Unavailable({ title, body }: { title: string; body: string }) {
+  const t = useT();
+  return (
+    <div className="state state-unavailable">
+      <p className="state-kicker">{t("unavailable.kicker")}</p>
+      <p className="state-title">{title}</p>
+      <p className="muted">{body}</p>
+    </div>
   );
 }
 
@@ -20,7 +48,7 @@ export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => v
     return (
       <div className="notice error" role="alert">
         <p>{t("state.signedOut")}</p>
-        <a className="button primary" href="/auth/login">
+        <a className={buttonClass("primary")} href="/auth/login">
           {t("home.signIn")}
         </a>
       </div>
@@ -32,9 +60,7 @@ export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => v
     <div className="notice error row" role="alert">
       <p>{message}</p>
       {status === 404 || status === 403 ? null : (
-        <Button className="button" onPress={onRetry}>
-          {t("state.retry")}
-        </Button>
+        <Button onPress={onRetry}>{t("state.retry")}</Button>
       )}
     </div>
   );

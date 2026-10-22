@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -28,7 +28,10 @@ describe("home", () => {
     await user.clear(field);
     await user.type(field, "11111111-2222-4333-8444-555555555555");
     await user.click(open);
-    expect(router.state.location.pathname).toBe("/w/11111111-2222-4333-8444-555555555555");
+    // The workspace opens on Settings › Team & roles, the one module that exists.
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/w/11111111-2222-4333-8444-555555555555/settings");
+    });
     expect(await accessibilityViolations()).toEqual([]);
   });
 });

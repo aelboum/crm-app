@@ -1,6 +1,6 @@
-import { Button, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
-
 import { useT } from "../i18n/useT";
+import { Button } from "./ui/Button";
+import { Dialog } from "./ui/Dialog";
 
 interface Props {
   isOpen: boolean;
@@ -13,28 +13,21 @@ interface Props {
 export function ConfirmDialog({ isOpen, message, onConfirm, onCancel }: Props) {
   const t = useT();
   return (
-    <ModalOverlay
-      className="modal-overlay"
+    <Dialog
       isOpen={isOpen}
-      isDismissable
-      onOpenChange={(open) => {
-        if (!open) onCancel();
-      }}
+      title={t("confirm.title")}
+      onClose={onCancel}
+      role="alertdialog"
+      actions={
+        <>
+          <Button onPress={onCancel}>{t("confirm.cancel")}</Button>
+          <Button variant="destructive" onPress={onConfirm}>
+            {t("confirm.submit")}
+          </Button>
+        </>
+      }
     >
-      <Modal className="modal">
-        <Dialog className="dialog" role="alertdialog">
-          <Heading slot="title">{t("confirm.title")}</Heading>
-          <p>{message}</p>
-          <div className="row">
-            <Button className="button" onPress={onCancel}>
-              {t("confirm.cancel")}
-            </Button>
-            <Button className="button danger" onPress={onConfirm}>
-              {t("confirm.submit")}
-            </Button>
-          </div>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+      <p>{message}</p>
+    </Dialog>
   );
 }

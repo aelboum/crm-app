@@ -1,0 +1,116 @@
+import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+
+import { accessibilityViolations, type Handler, renderApp } from "../test/render";
+
+const WS = "11111111-2222-4333-8444-555555555555";
+
+const signedIn: Handler = (method, path) => {
+  if (method !== "GET") return undefined;
+  if (path === "/auth/me") return { status: 200, body: { user_id: "u" } };
+  if (path === `/v1/workspaces/${WS}`) {
+    return { status: 200, body: { id: WS, name: "Acme Studio", status: "active" } };
+  }
+  if (path === `/v1/workspaces/${WS}/access`) {
+    return {
+      status: 200,
+      body: { membership_id: "m", roles: ["Owner"], actions: { read_members: true } },
+    };
+  }
+  if (path.startsWith(`/v1/workspaces/${WS}/members?`)) {
+    return { status: 200, body: { items: [], total: 0, limit: 50, offset: 0 } };
+  }
+  return undefined;
+};
+
+describe("app frame", () => {
+  it("shows the design's navigation, marking every module that is not built", async () => {
+    renderApp(`/w/${WS}/contacts`, signedIn);
+    const nav = await screen.findByRole("navigation", { name: "Workspace" });
+    for (const group of ["CRM", "Scheduling", "Marketing", "AI", "Insights"]) {
+      expect(within(nav).getByRole("button", { name: group })).toHaveAttribute("aria-expanded", "true");
+    }
+    const contacts = within(nav).getByRole("link", { name: /Contacts/ });
+    expect(contacts).toHaveAttribute("aria-current", "page");
+    expect(contacts).toHaveTextContent("soon");
+    expect(within(nav).getByRole("link", { name: "Settings" })).not.toHaveTextContent("soon");
+  });
+
+  it("opens the design's placeholder page for a module that is not built", async () => {
+    renderApp(`/w/${WS}/contacts`, signedIn);
+    expect(await screen.findByRole("heading", { level: 1, name: "Contacts" })).toBeInTheDocument();
+    expect(screen.getByText("Not available yet")).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("collapses and expands the sidebar and its groups", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, signedIn);
+    const collapse = await screen.findByRole("button", { name: "Collapse sidebar" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    await user.click(collapse);
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await user.click(screen.getByRole("button", { name: "Expand sidebar" }));
+    const crm = screen.getByRole("button", { name: "CRM" });
+    await user.click(crm);
+    expect(crm).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: /Companies/ })).toBeNull();
+  });
+
+  it("says plainly that search is not available yet", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, signedIn);
+    await user.click(await screen.findByRole("button", { name: /Search contacts, deals, pages/ }));
+    expect(await screen.findByText("Search is not available yet.")).toBeInTheDocument();
+  });
+
+  it("lists the design's create actions as not available, none clickable", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, signedIn);
+    await user.click(await screen.findByRole("button", { name: "New" }));
+    const menu = await screen.findByRole("menu", { name: "New" });
+    const items = within(menu).getAllByRole("menuitem");
+    expect(items.map((i) => i.textContent)).toEqual([
+      "ContactNot available yet",
+      "OpportunityNot available yet",
+      "AppointmentNot available yet",
+      "ConversationNot available yet",
+      "TaskNot available yet",
+    ]);
+    for (const item of items) expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("shows an empty notifications panel rather than invented notifications", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, signedIn);
+    await user.click(await screen.findByRole("button", { name: "Notifications" }));
+    expect(await screen.findByText("No notifications yet.")).toBeInTheDocument();
+  });
+
+  it("answers an unknown section like an unknown workspace", async () => {
+    renderApp(`/w/${WS}/nonsense`, signedIn);
+    expect(
+      await screen.findByText("This workspace does not exist, or you are not a member of it."),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the settings page with the role matrix and passes an accessibility scan", async () => {
+    renderApp(`/w/${WS}/settings`, signedIn);
+    expect(await screen.findByRole("heading", { name: "Role permissions" })).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
+      "Capability",
+      "Owner",
+      "Admin",
+      "Member",
+      "Read-only",
+    ]);
+    expect(await screen.findByText("No members to show.")).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+});

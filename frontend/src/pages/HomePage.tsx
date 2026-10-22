@@ -1,9 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Button, FieldError, Form, Input, Label, TextField } from "react-aria-components";
+import { FieldError, Form, Input, Label, TextField } from "react-aria-components";
 
 import { useMe } from "../api/queries";
 import { Loading, LoadError } from "../components/StateNotice";
+import { Button, buttonClass } from "../components/ui/Button";
 import { useT } from "../i18n/useT";
 
 const WORKSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,7 +44,7 @@ function OpenWorkspace() {
           <Input className="mono" spellCheck={false} autoComplete="off" />
           <FieldError className="field-error" />
         </TextField>
-        <Button type="submit" className="button primary" isDisabled={!isWorkspaceId(value)}>
+        <Button type="submit" variant="primary" isDisabled={!isWorkspaceId(value)}>
           {t("home.open.submit")}
         </Button>
       </Form>
@@ -62,7 +63,7 @@ export function HomePage() {
         <h1 id="signin-heading">{t("home.signedOut.title")}</h1>
         <p className="muted">{t("home.signedOut.body")}</p>
         <div className="row">
-          <a className="button primary" href="/auth/login">
+          <a className={buttonClass("primary")} href="/auth/login">
             {t("home.signIn")}
           </a>
         </div>

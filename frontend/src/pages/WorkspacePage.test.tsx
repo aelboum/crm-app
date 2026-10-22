@@ -48,7 +48,7 @@ function workspace(access: { roles: string[]; actions: Record<string, boolean> }
 }
 
 const rowFor = (id: string) => {
-  const row = screen.getByText(`Member ${id.slice(0, 8)}`).closest("tr");
+  const row = screen.getByText(`Member ${id.slice(0, 8)}`).closest("li");
   if (!row) throw new Error("row not found");
   return row;
 };
@@ -56,7 +56,8 @@ const rowFor = (id: string) => {
 describe("workspace members", () => {
   it("lists members with roles and status, and passes an accessibility scan", async () => {
     renderApp(`/w/${WS}`, workspace({ roles: ["Owner"], actions: ALL }));
-    expect(await screen.findByRole("heading", { name: "Acme" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Team & roles" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /^Acme/ })).toBeInTheDocument();
     expect(await screen.findByText("3 members")).toBeInTheDocument();
     expect(within(rowFor(ME)).getByText("You")).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
@@ -142,7 +143,8 @@ describe("workspace members", () => {
       return base(method, path, body);
     });
     await screen.findByText("3 members");
-    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await user.click(screen.getByRole("button", { name: "Your account" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
 
     expect(await screen.findByRole("heading", { name: "Sign in to continue" })).toBeVisible();
     expect(screen.queryByText("Acme")).toBeNull();

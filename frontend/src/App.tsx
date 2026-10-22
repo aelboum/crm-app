@@ -3,6 +3,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { IntlProvider } from "react-intl";
 
 import { ApiError } from "./api/client";
+import { ToastProvider } from "./components/ui/Toast";
 import { en } from "./i18n/en";
 import type { createAppRouter } from "./router";
 
@@ -29,7 +30,9 @@ export function App({
   return (
     <IntlProvider locale="en" defaultLocale="en" messages={en}>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </QueryClientProvider>
     </IntlProvider>
   );
