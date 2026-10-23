@@ -173,7 +173,8 @@ interface CreateItem {
 }
 
 // The design's "+ New" menu for a client workspace, in its order and with its
-// shortcut letters. None of these records can be created yet.
+// shortcut letters. Contacts can be created (slice 3A) by callers who may;
+// every other record type is not built yet and says so.
 const CREATE_ITEMS: CreateItem[] = [
   { id: "contact", icon: UserPlus, label: "create.contact", key: "C" },
   { id: "opportunity", icon: Kanban, label: "create.opportunity", key: "O" },
@@ -182,8 +183,11 @@ const CREATE_ITEMS: CreateItem[] = [
   { id: "task", icon: SquareCheckBig, label: "create.task", key: "T" },
 ];
 
-function CreateMenu({ workspaceName }: { workspaceName: string }) {
+function CreateMenu({ workspaceId, workspaceName }: { workspaceId: string; workspaceName: string }) {
   const t = useT();
+  const navigate = useNavigate();
+  const access = useAccess(workspaceId);
+  const available = new Set(access.data?.actions.create_contact === true ? ["contact"] : []);
   return (
     <MenuTrigger>
       <AriaButton className="new-button">
@@ -191,7 +195,20 @@ function CreateMenu({ workspaceName }: { workspaceName: string }) {
         <span className="new-label">{t("create.new")}</span>
       </AriaButton>
       <Popover className="menu-popover create-menu" placement="bottom end" offset={6}>
-        <Menu className="menu" aria-label={t("create.new")} disabledKeys={CREATE_ITEMS.map((c) => c.id)}>
+        <Menu
+          className="menu"
+          aria-label={t("create.new")}
+          disabledKeys={CREATE_ITEMS.map((c) => c.id).filter((id) => !available.has(id))}
+          onAction={(key) => {
+            if (key === "contact") {
+              void navigate({
+                to: "/w/$workspaceId/$section",
+                params: { workspaceId, section: "contacts" },
+                search: { create: "contact" },
+              });
+            }
+          }}
+        >
           <MenuSection>
             <Header className="menu-header">{t("create.in", { name: workspaceName })}</Header>
             {CREATE_ITEMS.map((item) => {
@@ -201,11 +218,13 @@ function CreateMenu({ workspaceName }: { workspaceName: string }) {
                   key={item.id}
                   id={item.id}
                   className="menu-item"
-                  textValue={`${t(item.label)} (${t("nav.soon")})`}
+                  textValue={
+                    available.has(item.id) ? t(item.label) : `${t(item.label)} (${t("nav.soon")})`
+                  }
                 >
                   <Icon size={15} className="menu-icon" aria-hidden="true" />
                   <span className="menu-item-label">{t(item.label)}</span>
-                  <span className="menu-soon">{t("nav.soon")}</span>
+                  {available.has(item.id) ? null : <span className="menu-soon">{t("nav.soon")}</span>}
                 </MenuItem>
               );
             })}
@@ -533,7 +552,7 @@ export function AppFrame({ workspaceId, children }: { workspaceId: string; child
           </AriaButton>
         </div>
         <div className="header-actions">
-          <CreateMenu workspaceName={workspace.data?.name ?? ""} />
+          <CreateMenu workspaceId={workspaceId} workspaceName={workspace.data?.name ?? ""} />
           <Notifications />
           <HelpMenu />
           <ProfileMenu workspaceId={workspaceId} />

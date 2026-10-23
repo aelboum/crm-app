@@ -84,17 +84,29 @@ interface SectionSearch {
   section?: SettingsSection;
   /** The contact or company whose preview is open. */
   record?: string;
+  /** Opens the new-contact dialog (the header's "New → Contact"). */
+  create?: "contact";
 }
 
 function SectionPage() {
   const { workspaceId, section: slug } = sectionRoute.useParams();
-  const { section: settingsSection, record } = sectionRoute.useSearch();
+  const { section: settingsSection, record, create } = sectionRoute.useSearch();
   const navigate = sectionRoute.useNavigate();
   const openRecord = (next: string | null) => {
     void navigate({ search: next ? { record: next } : {} });
   };
   if (slug === "contacts") {
-    return <ContactsPage workspaceId={workspaceId} openId={record ?? null} onOpen={openRecord} />;
+    return (
+      <ContactsPage
+        workspaceId={workspaceId}
+        openId={record ?? null}
+        onOpen={openRecord}
+        startCreate={create === "contact"}
+        onCreateDone={() => {
+          void navigate({ search: record ? { record } : {}, replace: true });
+        }}
+      />
+    );
   }
   if (slug === "companies") {
     return (
@@ -133,6 +145,7 @@ const sectionRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): SectionSearch => ({
     ...(search.section === "profile" ? { section: "profile" as const } : {}),
     ...(typeof search.record === "string" && isWorkspaceId(search.record) ? { record: search.record } : {}),
+    ...(search.create === "contact" ? { create: "contact" as const } : {}),
   }),
   component: SectionPage,
 });

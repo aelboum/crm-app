@@ -115,6 +115,36 @@ describe("app frame", () => {
     expect(await accessibilityViolations()).toEqual([]);
   });
 
+  it("lets a member who may create contacts start one from the New menu", async () => {
+    const user = userEvent.setup();
+    const canCreate: Handler = (method, path, body) =>
+      method === "GET" && path === `/v1/workspaces/${WS}/access`
+        ? {
+            status: 200,
+            body: {
+              membership_id: "m",
+              roles: ["Member"],
+              actions: { read_members: true, create_contact: true },
+            },
+          }
+        : signedIn(method, path, body);
+    renderApp(`/w/${WS}/settings`, canCreate);
+    await user.click(await screen.findByRole("button", { name: "New" }));
+    const menu = await screen.findByRole("menu", { name: "New" });
+    const contact = within(menu).getByRole("menuitem", { name: "Contact" });
+    expect(contact).not.toHaveAttribute("aria-disabled");
+    expect(within(menu).getByRole("menuitem", { name: /Opportunity/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await user.click(contact);
+    expect(await screen.findByRole("dialog", { name: "New contact" })).toBeInTheDocument();
+    // The modal hides the page beneath it from assistive technology.
+    expect(
+      screen.getByRole("heading", { level: 1, name: /Contacts/, hidden: true }),
+    ).toBeInTheDocument();
+  });
+
   it("shows an empty notifications panel rather than invented notifications", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/settings`, signedIn);

@@ -71,11 +71,17 @@ export function ContactsPage({
   workspaceId,
   openId,
   onOpen,
+  startCreate = false,
+  onCreateDone = () => undefined,
 }: {
   workspaceId: string;
   /** The contact whose preview is open (`?record=` in the URL). */
   openId: string | null;
   onOpen: (id: string | null) => void;
+  /** Open the new-contact dialog (`?create=contact`), if the caller may create. */
+  startCreate?: boolean;
+  /** Called when that dialog closes without saving, to clear the request. */
+  onCreateDone?: () => void;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -91,6 +97,10 @@ export function ContactsPage({
   const [dialog, setDialog] = useState<{ contact: Contact | null } | null>(null);
   const q = useDebounced(search);
   const can = (action: string) => access.data?.actions[action] === true;
+  // "New → Contact" in the header opens the dialog through the URL; a
+  // caller who may not create contacts just sees the list.
+  const activeDialog =
+    dialog ?? (startCreate && can("create_contact") ? { contact: null } : null);
 
   const filters: ListFilters = useMemo(
     () => ({
@@ -292,11 +302,14 @@ export function ContactsPage({
           onEdit={(contact) => { setDialog({ contact }); }}
         />
       ) : null}
-      {dialog ? (
+      {activeDialog ? (
         <ContactDialog
           workspaceId={workspaceId}
-          contact={dialog.contact}
-          onClose={() => { setDialog(null); }}
+          contact={activeDialog.contact}
+          onClose={() => {
+            setDialog(null);
+            if (startCreate) onCreateDone();
+          }}
           onSaved={(saved) => {
             setDialog(null);
             onOpen(saved.id);
