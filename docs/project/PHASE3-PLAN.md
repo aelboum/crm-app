@@ -745,10 +745,11 @@ Each stage is reviewed on its own; commits and pushes need separate
 approval.
 
 ### 19.8 Known limitations of slice 3A (2026-10-23)
-- An `Idempotency-Key` is scoped to the workspace and operation: another
-  member sending the same key and body gets the first result back.
-- Deleting a company clears its contacts' `company_id` through the foreign
-  key without raising their `version`.
+- Resolved before push (pre-push review, 2026-10-24): an `Idempotency-Key`
+  is now scoped to the acting member as well as the workspace and kind;
+  deleting a company now unlinks its contacts as versioned, audited
+  contact changes (`reason: company_deleted`); a deadlock or serialization
+  failure is a retryable 409 `conflict`.
 - Phone numbers are stored as typed (trimmed, character-checked); no E.164.
 - A record owner's membership is checked when the record is written; a
   later suspension or removal leaves the value in place.

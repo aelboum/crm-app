@@ -31,7 +31,16 @@ from saas_os.core.authority import UserCaller
 from saas_os.core.idempotency import run_idempotent
 from saas_os.core.identity import get_membership
 from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
-from saas_os.infra.db import IntegrityError, Session, delete, select, tenant_session_scope
+from saas_os.infra.db import (
+    IntegrityError,
+    OperationalError,
+    Session,
+    delete,
+    is_transaction_conflict,
+    select,
+    tenant_session_scope,
+)
+from saas_os.infra.db import update as update_rows
 
 from crm_app.domains import paging
 from crm_app.domains.membership import ACTIVE
@@ -136,6 +145,14 @@ class EmailOrPhoneRequiredError(RecordError):
     status, code = 422, "email_or_phone_required"
 
 
+class TransactionConflictError(RecordError):
+    """PostgreSQL aborted the transaction to resolve a conflict with a
+    concurrent one (deadlock or serialization failure); nothing was
+    committed and repeating the request is safe."""
+
+    status, code = 409, "conflict"
+
+
 Record = dict[str, Any]
 Row = Contact | Company
 
@@ -176,10 +193,18 @@ def _refuse_duplicate(session: Session, kind: Kind, scope: Scope, row: Row) -> N
         raise DuplicateRecordError(kind.duplicate_code, existing)
 
 
+_COMPANY_LINK = "contact_company_fkey"
+
+
 def _duplicate_or(exc: IntegrityError, kind: Kind, scope: Scope, value: str | None) -> Exception:
     """A violation of the kind's unique index becomes the same
-    `DuplicateRecordError` the pre-check raises; anything else is unchanged."""
+    `DuplicateRecordError` the pre-check raises. A contact whose company was
+    deleted between the pre-check and the write breaks the company foreign
+    key; that is the same `company_not_found` the pre-check gives. Anything
+    else is unchanged."""
     constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+    if kind is CONTACT and constraint == _COMPANY_LINK:
+        return InvalidReferenceError("company_not_found")
     if constraint != kind.unique_index or value is None:
         return exc
     with tenant_session_scope(scope.workspace) as session:
@@ -199,6 +224,14 @@ def _write[T](
         raise RecordNotFoundError from None
     except IntegrityError as exc:
         raise _duplicate_or(exc, kind, scope, unique_value()) from None
+    except OperationalError as exc:
+        raise _conflict_or(exc) from None
+
+
+def _conflict_or(exc: OperationalError) -> Exception:
+    """Only a deadlock or serialization failure becomes the retryable 409;
+    every other operational error is unchanged."""
+    return TransactionConflictError() if is_transaction_conflict(exc) else exc
 
 
 @dataclass(frozen=True)
@@ -454,8 +487,9 @@ def create(
     idempotency_key: str | None = None,
 ) -> tuple[Record, bool]:
     """Create a record; returns it and whether this was an idempotent replay.
-    The idempotency record stores the new ID only, never the content; a
-    replay returns the record's current state."""
+    An idempotency key is scoped to the workspace, the kind and the acting
+    member. The idempotency record stores the new ID only, never the
+    content; a replay returns the record's current state."""
     check_owner(scope, values.get("owner_user_id"))
     record_id = uuid.uuid4()
 
@@ -490,13 +524,21 @@ def create(
     else:
         fingerprint = {k: None if v is None else str(v) for k, v in values.items()}
         try:
+            # Keys are scoped to the acting member: another member's request
+            # with the same key never replays this one.
             replay, result = run_idempotent(
-                scope.workspace, f"{kind.resource}.create", idempotency_key, fingerprint, business
+                scope.workspace,
+                f"{kind.resource}.create:{scope.actor}",
+                idempotency_key,
+                fingerprint,
+                business,
             )
         except (TenantClosedError, TenantNotFoundError):
             raise RecordNotFoundError from None
         except IntegrityError as exc:
             raise _duplicate_or(exc, kind, scope, unique_value()) from None
+        except OperationalError as exc:
+            raise _conflict_or(exc) from None
     return get(kind, scope, uuid.UUID(str(result["id"]))), replay
 
 
@@ -557,19 +599,48 @@ def set_archived(kind: Kind, scope: Scope, record_id: uuid.UUID, *, archived: bo
 
 
 def remove(kind: Kind, scope: Scope, record_id: uuid.UUID) -> None:
-    """Permanent delete. Deleting a company unlinks its contacts (the
-    foreign key sets their `company_id` to NULL); the contacts are kept."""
+    """Permanent delete. Deleting a company first unlinks its contacts as an
+    ordinary contact change: `company_id` cleared, a new version, the time
+    and the actor, and an audit entry each. The contacts are kept.
+
+    Lock order: the company row (`FOR UPDATE`), then the linked contact
+    rows, by the same `UPDATE`. A concurrent contact update that links to
+    this company either commits first (its foreign-key check holds the
+    company row, so this waits, then sees and unlinks that contact) or
+    finds the company gone (`company_not_found`). The foreign key's own
+    `ON DELETE SET NULL (company_id)` stays as a backstop and finds nothing
+    left to clear."""
 
     def apply(session: Session) -> None:
         _load(session, kind, scope, record_id, lock=True)
         metadata: dict[str, object] = {}
         if kind is COMPANY:
-            linked = session.execute(
-                select(Contact.id).where(
-                    Contact.tenant_id == scope.workspace, Contact.company_id == record_id
+            unlinked = list(
+                session.execute(
+                    update_rows(Contact)
+                    .where(Contact.tenant_id == scope.workspace, Contact.company_id == record_id)
+                    .values(
+                        company_id=None,
+                        version=Contact.version + 1,
+                        updated_at=_now(),
+                        updated_by_user_id=scope.actor,
+                    )
+                    .returning(Contact.id)
+                    .execution_options(synchronize_session=False)
+                ).scalars()
+            )
+            for contact_id in unlinked:
+                _audit(
+                    session,
+                    CONTACT,
+                    scope,
+                    _Event(
+                        "updated",
+                        contact_id,
+                        {"fields": ["company_id"], "reason": "company_deleted"},
+                    ),
                 )
-            ).all()
-            metadata["unlinked_contacts"] = len(linked)
+            metadata["unlinked_contacts"] = len(unlinked)
         model = kind.model
         session.execute(
             delete(model).where(model.tenant_id == scope.workspace, model.id == record_id)

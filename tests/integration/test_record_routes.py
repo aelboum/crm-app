@@ -192,3 +192,76 @@ def test_every_change_is_audited_without_values(
     assert all('"fields"' in m for m in creations)
     idempotent = [m for a, m in rows if a == "crm_app.contact.created" and '"first_name"' in m]
     assert idempotent  # field names, never values
+
+
+def test_another_members_request_with_the_same_key_is_not_a_replay(probe: Probe) -> None:
+    members = probe["idempotency_members"]
+    owner_status, owner_id = members["owner"]
+    member_status, member_id, replayed, created_by = members["member"]
+    assert (owner_status, member_status) == (201, 201)
+    assert member_id != owner_id
+    assert replayed is None
+    assert created_by == members["member_user"]
+
+
+def test_simultaneous_requests_with_one_key_create_one_record(probe: Probe) -> None:
+    first, second = probe["idempotency_concurrent"]
+    assert first[0] == second[0] == 201
+    assert first[1] == second[1]
+    assert sorted([first[2] or "", second[2] or ""]) == ["", "true"]
+
+
+def test_deleting_a_company_is_a_versioned_change_of_its_contacts(probe: Probe) -> None:
+    deleted = probe["company_delete"]
+    assert deleted["status"] == 204
+    for before, after in zip(deleted["before"], deleted["after"], strict=True):
+        assert before["company_id"] == deleted["company_id"]
+        assert after["company_id"] is None
+        assert after["company"] is None
+        assert after["version"] == before["version"] + 1
+        assert after["updated_by_user_id"] == deleted["admin"]
+        assert after["updated_at"] > before["updated_at"]
+    version, company_id, kept = deleted["bystander"]
+    assert (version, company_id) == (1, kept)
+    assert deleted["stale"] == [409, {"code": "stale_version", "current_version": 2}]
+
+
+def test_each_unlinked_contact_is_audited(
+    probe: Probe, owner_connection: psycopg.Connection
+) -> None:
+    deleted = probe["company_delete"]
+    unlinked = {before["id"] for before in deleted["before"]}
+    rows = owner_connection.execute(
+        "SELECT resource_id, actor_user_id::text, metadata FROM core.audit_log"
+        " WHERE tenant_id = %s AND action = 'crm_app.contact.updated'"
+        " AND metadata->>'reason' = 'company_deleted' AND resource_id = ANY(%s)",
+        (probe["workspace"], list(unlinked)),
+    ).fetchall()
+    assert {resource_id for resource_id, _, _ in rows} == unlinked
+    for _, actor, metadata in rows:
+        assert actor == deleted["admin"]
+        assert metadata["fields"] == ["company_id"]
+    (company,) = owner_connection.execute(
+        "SELECT metadata FROM core.audit_log WHERE tenant_id = %s"
+        " AND action = 'crm_app.company.deleted' AND resource_id = %s",
+        (probe["workspace"], deleted["company_id"]),
+    ).fetchall()
+    assert company[0]["unlinked_contacts"] == 2
+
+
+def test_linking_and_deleting_a_company_at_once_never_leaves_a_dangling_link(
+    probe: Probe,
+) -> None:
+    """Every ordering is acceptable except a 500 or a contact pointing at a
+    deleted company; each outcome pins the matching final state."""
+    for race in probe["race"]:
+        assert race["patch"] in {200, 409, 422}, race
+        assert race["delete"] in {204, 409}, race
+        if race["delete"] == 204:
+            assert race["company_status"] == 404, race
+            assert race["company_id"] is None, race
+            # Linked first, then unlinked by the delete: two new versions.
+            expected = 3 if race["patch"] == 200 else 1
+            assert race["version"] == expected, race
+        if race["patch"] == 422:
+            assert race["version"] == 1, race

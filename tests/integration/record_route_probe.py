@@ -272,6 +272,116 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         result["links"]["company_deleted"] = deleted.status_code
         result["links"]["contact_after"] = [after["company_id"], after["company"]]
 
+        # --- Idempotency keys belong to the acting member -----------------------------
+        shared_key = secrets.token_hex(16)
+        shared_body = {"first_name": "Shared", "phone": "+31 6 5555 0000"}
+        by_owner = post(f"{base}/contacts", "owner", shared_body, **{"Idempotency-Key": shared_key})
+        by_member = post(
+            f"{base}/contacts", Role.MEMBER.value, shared_body, **{"Idempotency-Key": shared_key}
+        )
+        result["idempotency_members"] = {
+            "owner": [by_owner.status_code, by_owner.json()["id"]],
+            "member": [
+                by_member.status_code,
+                by_member.json()["id"],
+                by_member.headers.get("idempotent-replayed"),
+                by_member.json()["created_by_user_id"],
+            ],
+            "member_user": str(users[Role.MEMBER.value]),
+        }
+
+        # Two simultaneous requests by one member with one key: one record.
+        same_key = secrets.token_hex(16)
+        same_body = {"first_name": "Twice", "phone": "+31 6 5555 0001"}
+        key_barrier = threading.Barrier(2)
+
+        def same_key_create() -> list[Any]:
+            key_barrier.wait()
+            response = post(f"{base}/contacts", "owner", same_body, **{"Idempotency-Key": same_key})
+            return [
+                response.status_code,
+                response.json().get("id"),
+                response.headers.get("idempotent-replayed"),
+            ]
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            result["idempotency_concurrent"] = [
+                f.result() for f in [pool.submit(same_key_create), pool.submit(same_key_create)]
+            ]
+
+        # --- Deleting a company is a versioned change of its contacts -----------------
+        doomed = post(f"{base}/companies", "owner", {"name": "Doomed BV"}).json()["id"]
+        kept = post(f"{base}/companies", "owner", {"name": "Kept BV"}).json()["id"]
+        linked_a = contact(company_id=doomed).json()
+        linked_b = contact(company_id=doomed).json()
+        bystander = contact(company_id=kept).json()
+        deleted_company = client.delete(f"{base}/companies/{doomed}", headers=auth("Admin"))
+        after_a = client.get(f"{base}/contacts/{linked_a['id']}", headers=auth("owner")).json()
+        after_b = client.get(f"{base}/contacts/{linked_b['id']}", headers=auth("owner")).json()
+        after_bystander = client.get(
+            f"{base}/contacts/{bystander['id']}", headers=auth("owner")
+        ).json()
+        stale_after_unlink = client.patch(
+            f"{base}/contacts/{linked_a['id']}",
+            json={"city": "Haarlem"},
+            headers={**auth("owner"), "If-Match": '"1"'},
+        )
+        result["company_delete"] = {
+            "status": deleted_company.status_code,
+            "company_id": doomed,
+            "admin": str(users["Admin"]),
+            "before": [linked_a, linked_b],
+            "after": [after_a, after_b],
+            "bystander": [after_bystander["version"], after_bystander["company_id"], kept],
+            "stale": [stale_after_unlink.status_code, stale_after_unlink.json()["detail"]],
+        }
+
+        # A contact update linking to a company races that company's deletion.
+        rounds = []
+        for _ in range(8):
+            target_company = post(f"{base}/companies", "owner", {"name": "Race BV"}).json()["id"]
+            racer = contact(email=None, phone="+31 6 5555 0002").json()["id"]
+            race_barrier = threading.Barrier(2)
+
+            def link(
+                contact_id: str = racer,
+                company_id: str = target_company,
+                barrier: threading.Barrier = race_barrier,
+            ) -> int:
+                barrier.wait()
+                return client.patch(
+                    f"{base}/contacts/{contact_id}",
+                    json={"company_id": company_id},
+                    headers={**auth("owner"), "If-Match": '"1"'},
+                ).status_code
+
+            def drop(
+                company_id: str = target_company, barrier: threading.Barrier = race_barrier
+            ) -> int:
+                barrier.wait()
+                return client.delete(
+                    f"{base}/companies/{company_id}", headers=auth("owner")
+                ).status_code
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                linking, dropping = pool.submit(link), pool.submit(drop)
+                statuses = [linking.result(), dropping.result()]
+            final = client.get(f"{base}/contacts/{racer}", headers=auth("owner")).json()
+            company_left = client.get(
+                f"{base}/companies/{target_company}", headers=auth("owner")
+            ).status_code
+            rounds.append(
+                {
+                    "patch": statuses[0],
+                    "delete": statuses[1],
+                    "company_id": final["company_id"],
+                    "version": final["version"],
+                    "company_status": company_left,
+                    "company": target_company,
+                }
+            )
+        result["race"] = rounds
+
         # --- A deleted workspace refuses writes ---------------------------------------
         bootstrap = SystemCaller(SystemAuthority.PLATFORM_BOOTSTRAP)
         operator_user = _new_user()
