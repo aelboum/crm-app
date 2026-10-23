@@ -3,15 +3,16 @@
 ## Pin
 
 ```text
-saas-os @ git+https://github.com/aelboum/saas-os@5905156a99a4526e5071ce091a58667c08b0a019
+saas-os @ git+https://github.com/aelboum/saas-os@b03d87a5272924d1e413c144dc5c3b41ac430580
 ```
 
-- **Release:** v0.3.0. The annotated tag object is `e01b6a0`, and the
-  remote tag resolved to this commit on 2026-10-21. SaaS-OS CI run
-  39628783399 passed on it.
+- **Release:** v0.5.0. The annotated tag object is `1254662`, and the
+  remote tag resolved to this commit on 2026-10-23. SaaS-OS CI run
+  40002133371 passed on it.
 - **Platform migration head:** `f6a2c8e4b1d9` (unchanged since v0.1.2).
 - **Approval:** decision K3, moved from v0.1.2 (`b0809ee`) by decision
-  K3.1. The pin is fixed until a further approved decision.
+  K3.1 and from v0.3.0 (`5905156`) by decision K3.2. The pin is fixed
+  until a further approved decision.
 - **Guard:** `tests/unit/test_dependency_pin.py` checks the manifest, the
   `uv.lock` source, the installed `direct_url.json` commit, that the
   install is non-editable, and that no URL carries credentials.
@@ -51,7 +52,11 @@ The scaffold's own imports of `saas_os.infra.db.config`,
 replaced by the public `saas_os.infra.db` exports. The purge participant is
 deferred until the first tenant table exists. Its documented module path
 (`saas_os.core.tenancy.purge_participants`) is not a package `__init__`
-export, so that is an open question to settle before Phase 2 needs it.
+export. From v0.5.0, `saas_os.core.tenancy` exports
+`register_purge_participant`, `registered_purge_participant_names` and
+`TenantPurgeParticipant` (SaaS-OS #87, #94); this product does not use
+them yet. Registering the participant is gate G1's work (decision
+Q-purge), not part of the pin move.
 
 ## Observed platform behaviour
 

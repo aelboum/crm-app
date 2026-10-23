@@ -6,7 +6,7 @@ name only (decision K4 in `docs/project/DECISIONS.md`).
 
 The product consumes [SaaS-OS](https://github.com/aelboum/saas-os) as an
 external package pinned to commit
-`5905156a99a4526e5071ce091a58667c08b0a019` (release v0.3.0). SaaS-OS supplies
+`b03d87a5272924d1e413c144dc5c3b41ac430580` (release v0.5.0). SaaS-OS supplies
 the platform: application bootstrap, OIDC sign-in, tenancy, authorization,
 Row-Level Security helpers, jobs and health checks. This repository owns the
 CRM domain, its schema and migrations, and its configuration. See
@@ -132,5 +132,5 @@ docs/architecture/  platform boundary and integration notes
 - No CRM features and no tenant data tables. The frontend covers sign-in,
   opening a workspace and managing its members only; members are shown by
   ID because no member profile is stored yet.
-- No metrics: SaaS-OS v0.3.0 has none. Tracing goes to the console exporter only.
+- No metrics: SaaS-OS v0.5.0 has none. Tracing goes to the console exporter only.
 - No production deployment, hosting or TLS configuration.

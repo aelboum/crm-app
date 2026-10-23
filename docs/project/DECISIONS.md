@@ -220,6 +220,51 @@ approval), **Superseded**.
 - **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
   `.secrets.baseline` hash back. Both releases share the migration head.
 
+## K3.2 — SaaS-OS pin moved to v0.5.0
+
+- **Status:** Approved by the owner, 2026-10-23 ("Proceed with Project A
+  only: the crm-app dependency pin update to SaaS-OS v0.5.0").
+  Supersedes the commit named in K3.1; every other part of K3 stands.
+  The pin stays fixed until a further approved decision.
+- **Decision:** Exactly one SaaS-OS dependency:
+  `saas-os @ git+https://github.com/aelboum/saas-os@b03d87a5272924d1e413c144dc5c3b41ac430580`
+- **Evidence (verified 2026-10-23):**
+  - `git ls-remote https://github.com/aelboum/saas-os refs/tags/v0.5.0^{}`
+    resolves to `b03d87a…`, the merge commit of pull request #101, which
+    is also `main`; the annotated tag object is `1254662`.
+  - The GitHub Release `v0.5.0` was published 2026-10-23. The `CI` (run
+    40002133371, 7 of 7 jobs) and `Release` (run 40006170148) workflows
+    succeeded on `b03d87a`, and `scripts/release.py verify --tag v0.5.0`
+    passed.
+  - Between `5905156` (v0.3.0) and `b03d87a` (25 commits): v0.4.0 adds
+    deployment-level email provider selection and requires SMTP TLS in
+    production; v0.4.1 moves SaaS-OS's own frontend to Next.js 15.5.28 and
+    fixes its release tooling; v0.5.0 exports the tenant-purge
+    participant API from `saas_os.core.tenancy` (SaaS-OS #87, #94),
+    checks participant names against `[a-z0-9][a-z0-9._-]{0,99}`, records
+    `product_participants_skipped` in the purge audit (#99) and exports
+    `AuthorityNotAuthorizedError` from `saas_os.core.rbac` (#98). No
+    migration in any of them (head `f6a2c8e4b1d9`, 52 SaaS-OS migrations
+    at both commits).
+  - CONSUMER-GUIDE §14, v0.3.0 → v0.4.0, v0.4.0 → v0.4.1 and v0.4.1 →
+    v0.5.0: no step applies. This product sends no email through SaaS-OS
+    and sets no SMTP or `EMAIL_PROVIDER` setting; it does not build
+    SaaS-OS's frontend; it registers no purge participant, does not call
+    `purge_tenant()` and does not catch `AuthorityNotAuthorizedError`.
+    Every SaaS-OS import is still a public export
+    (`tests/unit/test_import_surface.py`).
+  - `saas-os-update check` (policy v4) returned `BLOCKED` (exit 30) only
+    because the updater does not rewrite `uv.lock`; its review categories
+    (architecture, authorization, dependency_toolchain, public_api,
+    tenant_rls, unknown) were reviewed by hand against the points above.
+  - `uv lock` changed only the saas-os entry; the other 71 packages are
+    unchanged. The checks in `PROGRESS.md` passed on the new pin.
+- **Not decided here:** registering this product's purge participant
+  and creating tenant-owned tables stay with gate G1 (Q-purge) and need
+  their own approved work.
+- **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
+  `.secrets.baseline` hash back. Both releases share the migration head.
+
 ## K2.1 — First local commits
 
 - **Status:** Approved by the owner, 2026-10-21, and completed. Extends
