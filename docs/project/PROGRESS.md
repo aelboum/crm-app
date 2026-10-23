@@ -522,3 +522,25 @@ Decision P3-A; plan `PHASE3-PLAN.md` §19. Pushed to `main`:
 - Not run: `tests/identity` (needs the local ZITADEL).
 - Known limitations: `PHASE3-PLAN.md` §19.8.
 - Next: 3A.4, the Contacts and Companies screens.
+
+## Slice 3A.4 and hardening (2026-10-24, overnight mandate)
+
+| Commit | Content | CI |
+| --- | --- | --- |
+| `ee355d3` | ROADMAP and PROGRESS: slice 3A outcomes | run 40037220673, all green |
+| `9974bfb` | `/access` reports contact and company permissions | with `77f2c29` |
+| `77f2c29` | Contacts and Companies screens (3A.4), DESIGN-FIDELITY §4c | run 40039613717, all green |
+| `d20f743` | Header "New > Contact" opens the new-contact dialog | run 40040321310, all green |
+
+- Frontend: 42 jsdom tests (13 new for the record screens and the New
+  menu) with axe scans; typecheck, lint and build pass. The bundle-size
+  warning predates this work (618 kB before, 660 kB now).
+- **Blocked:** checking the screens in a real browser. The local app
+  server is not running, and starting it would migrate the local
+  development database and need a ZITADEL sign-in, both of which need the
+  owner.
+- List performance with 100,000 contacts measured on the disposable test
+  database: every case under the 300 ms target (`PHASE3-PLAN.md` §19.8).
+- Read-only security review of the slice: no critical or high finding;
+  four low findings fixed, the rest recorded with reasons
+  (`PHASE3-PLAN.md` §19.8).

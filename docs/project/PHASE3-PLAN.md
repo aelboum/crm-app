@@ -753,7 +753,26 @@ approval.
 - Phone numbers are stored as typed (trimmed, character-checked); no E.164.
 - A record owner's membership is checked when the record is written; a
   later suspension or removal leaves the value in place.
-- List performance with 100,000 contacts (§7 target) is not yet measured.
+- List performance with 100,000 contacts in one workspace, measured
+  2026-10-24 on the local disposable test database (Windows, Docker
+  PostgreSQL 16; not CI hardware), 30 calls of `list_records` each: first
+  page by name p95 49 ms, by updated p95 44 ms, by created p95 39 ms,
+  stage filter p95 50 ms, prefix search p95 178 ms; paging 20 pages deep
+  by name at most 107 ms. All within the §7 target of 300 ms.
+- Security review (2026-10-24, read-only, `PROGRESS.md`): no critical or
+  high finding. Fixed: NUL characters are refused (they caused a 500);
+  any unmapped constraint violation is a 422 `constraint_violation`, so
+  the driver error quoting the row never reaches the server log; 422
+  messages from parsing errors are replaced, so no fragment of a value is
+  returned; website URLs with a user name or password are refused.
+  Accepted for now, with reasons: each list request counts up to 10,001
+  matching IDs (measured above; SaaS-OS rate-limits every route to 60
+  requests a minute per workspace and path); deleting a company with very
+  many contacts unlinks and audits them in one transaction; an owner's
+  membership is checked just before the write transaction, so a member
+  removed in that moment can still be set as owner (the same state as a
+  member removed afterwards, which the UI shows as a former member); an
+  idempotent create replayed after its record was deleted answers 404.
 - Owners are shown as user IDs until member profiles exist (Phase 2 S5).
 - Keyset paging does not snapshot: rows created, changed or archived while
   someone pages may be missed or appear twice (§19.5).

@@ -145,6 +145,14 @@ class EmailOrPhoneRequiredError(RecordError):
     status, code = 422, "email_or_phone_required"
 
 
+class ConstraintViolationError(RecordError):
+    """A value the database refused that validation let through. Raised
+    instead of the driver error, whose detail would quote the row (personal
+    data) in the server log."""
+
+    status, code = 422, "constraint_violation"
+
+
 class TransactionConflictError(RecordError):
     """PostgreSQL aborted the transaction to resolve a conflict with a
     concurrent one (deadlock or serialization failure); nothing was
@@ -201,12 +209,12 @@ def _duplicate_or(exc: IntegrityError, kind: Kind, scope: Scope, value: str | No
     `DuplicateRecordError` the pre-check raises. A contact whose company was
     deleted between the pre-check and the write breaks the company foreign
     key; that is the same `company_not_found` the pre-check gives. Anything
-    else is unchanged."""
+    else becomes `ConstraintViolationError`, never the driver error."""
     constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
     if kind is CONTACT and constraint == _COMPANY_LINK:
         return InvalidReferenceError("company_not_found")
     if constraint != kind.unique_index or value is None:
-        return exc
+        return ConstraintViolationError()
     with tenant_session_scope(scope.workspace) as session:
         existing = _active_with(session, kind, scope, value, other_than=None)
     return DuplicateRecordError(kind.duplicate_code, existing)

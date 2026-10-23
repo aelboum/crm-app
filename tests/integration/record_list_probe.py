@@ -189,6 +189,7 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             "limit_zero": status(f"{base}/contacts", limit=0),
             "limit_high": status(f"{base}/contacts", limit=201),
             "q_long": status(f"{base}/contacts", q="x" * 101),
+            "q_nul": status(f"{base}/contacts", q="a\0b"),
             "bad_owner": status(f"{base}/contacts", owner="someone"),
             "company_stage": status(f"{base}/companies", lifecycle_stage="lead"),
         }

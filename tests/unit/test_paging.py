@@ -100,3 +100,9 @@ def test_a_timestamp_without_a_time_zone_is_refused() -> None:
     )
     with pytest.raises(paging.InvalidCursor):
         paging.decode(cursor, "contact", "created_at", "asc", FILTERS)
+
+
+def test_a_cursor_holding_a_nul_character_is_refused() -> None:
+    cursor = _cursor({**_valid(), "k": ["Ac\0me", str(ROW)]})
+    with pytest.raises(paging.InvalidCursor):
+        paging.decode(cursor, "company", "name", "asc", FILTERS)

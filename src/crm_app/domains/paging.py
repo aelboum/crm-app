@@ -80,6 +80,8 @@ def _load(kind: str, value: object) -> str | datetime | uuid.UUID | None:
             return parsed
     except ValueError:
         raise InvalidCursor from None
+    if "\x00" in value:
+        raise InvalidCursor
     return value
 
 

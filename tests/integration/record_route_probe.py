@@ -150,6 +150,18 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
                 f"{base}/contacts", "owner", {"first_name": "  ", "email": _email()}
             ).status_code,
             "phone_only": status_of({"phone": "+31 20 123 4567"}),
+            "nul_name": post(
+                f"{base}/contacts", "owner", {"first_name": "Sa\0m", "email": _email()}
+            ).status_code,
+            "website_credentials": post(
+                f"{base}/companies",
+                "owner",
+                # A made-up user name and password: the URL form under test.
+                {
+                    "name": "Creds BV",
+                    "website": "https://user:secret@creds.example.test",  # pragma: allowlist secret
+                },
+            ).status_code,
             "normalised": contact(email="  Mixed.Case@Example.TEST ").json()["email"],
         }
 

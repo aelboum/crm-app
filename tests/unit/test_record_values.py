@@ -127,3 +127,25 @@ def test_the_migration_checks_exactly_these_stages_and_sources() -> None:
         and node.targets[0].id in {"STAGES", "SOURCES"}
     }
     assert constants == {"STAGES": values.STAGES, "SOURCES": values.SOURCES}
+
+
+@pytest.mark.parametrize("check", [values.email, values.phone, values.website, values.domain])
+def test_a_nul_character_is_refused_everywhere(check: object) -> None:
+    with pytest.raises(values.InvalidValue):
+        check("a\0b@example.test")  # type: ignore[operator]
+    with pytest.raises(values.InvalidValue):
+        values.text("Sam\0", 200)
+
+
+@pytest.mark.parametrize(
+    "url",
+    # Made-up credentials: the URL forms under test.
+    [
+        "https://user:secret@example.test/",  # pragma: allowlist secret
+        "https://user@example.test",
+        "http://:pw@example.test",  # pragma: allowlist secret
+    ],
+)
+def test_a_website_with_credentials_is_refused(url: str) -> None:
+    with pytest.raises(values.InvalidValue):
+        values.website(url)

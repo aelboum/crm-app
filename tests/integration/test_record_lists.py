@@ -170,6 +170,7 @@ def test_list_parameters_are_validated(probe: Probe) -> None:
             "limit_zero",
             "limit_high",
             "q_long",
+            "q_nul",
             "bad_owner",
             "company_stage",
         ),

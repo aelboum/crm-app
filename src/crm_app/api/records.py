@@ -386,7 +386,7 @@ Stage = Literal["lead", "prospect", "customer", "inactive"]
 class _ListParams(_Strict):
     """Query parameters shared by both lists; unknown parameters are refused."""
 
-    q: str | None = Field(default=None, max_length=100)
+    q: str | None = Field(default=None, max_length=100, pattern=r"^[^\x00]*$")
     owner: list[str] = Field(default_factory=list, max_length=_MAX_VALUES)
     archived: Archived = "false"
     sort: Order = "name"

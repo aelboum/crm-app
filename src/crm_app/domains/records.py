@@ -41,7 +41,10 @@ class InvalidValue(ValueError):
 
 def text(value: str | None, maximum: int, *, required: bool = False) -> str | None:
     """Trimmed text of 1..maximum characters. Optional text that is empty
-    after trimming becomes `None`, never ''."""
+    after trimming becomes `None`, never ''. A NUL character is refused:
+    PostgreSQL text cannot store it."""
+    if value is not None and "\x00" in value:
+        raise InvalidValue("must not contain control characters")
     trimmed = value.strip() if value is not None else ""
     if not trimmed:
         if required:
@@ -75,7 +78,8 @@ def phone(value: str | None) -> str | None:
 
 
 def website(value: str | None) -> str | None:
-    """An absolute `http` or `https` URL with a host; nothing is fetched."""
+    """An absolute `http` or `https` URL with a host and no user name or
+    password in it; nothing is fetched."""
     trimmed = text(value, WEBSITE_MAX)
     if trimmed is None:
         return None
@@ -84,6 +88,8 @@ def website(value: str | None) -> str | None:
         any(c.isspace() for c in trimmed)
         or parts.scheme.lower() not in {"http", "https"}
         or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
     ):
         raise InvalidValue("must be an http or https URL")
     return trimmed

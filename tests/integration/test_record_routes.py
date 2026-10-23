@@ -104,6 +104,8 @@ def test_validation_follows_p3a_and_never_echoes_values(probe: Probe) -> None:
     assert validation["stage_patient"] == 422
     assert validation["blank_first_name"] == 422
     assert validation["phone_only"] == 201
+    assert validation["nul_name"] == 422
+    assert validation["website_credentials"] == 422
     assert validation["normalised"] == "mixed.case@example.test"
 
 
