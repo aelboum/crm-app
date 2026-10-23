@@ -29,8 +29,25 @@ EXPECTED = {
     f"POST {MEMBER}/reactivate": "membership:reactivate",
     f"POST {MEMBER}/revoke": "membership:revoke",
 }
-# Membership and role changes (gate G-LOCK); every other product route reads.
+# Membership and role changes (gate G-LOCK): Owner and Admin only.
 CHANGING = {key for key in EXPECTED if not key.startswith("GET ")}
+
+# Contact and company records (slice 3A, decision P3-A): reads for every role,
+# create and update (including archive and restore) for Owner, Admin and
+# Member, permanent delete for Owner and Admin (Q6).
+RECORDS: dict[str, str] = {}
+for _path, _resource in (("contacts", "crm_app.contact"), ("companies", "crm_app.company")):
+    _collection = f"/v1/workspaces/{{tenant_id}}/{_path}"
+    _item = f"{_collection}/{{record_id}}"
+    RECORDS |= {
+        f"POST {_collection}": f"{_resource}:create",
+        f"GET {_item}": f"{_resource}:read",
+        f"PATCH {_item}": f"{_resource}:update",
+        f"POST {_item}/archive": f"{_resource}:update",
+        f"POST {_item}/restore": f"{_resource}:update",
+        f"DELETE {_item}": f"{_resource}:delete",
+    }
+EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 
 _PROBE = (
     "import json\n"
@@ -60,14 +77,15 @@ def _product_policies(tmp_path: Path) -> dict[str, tuple[str, str, bool]]:
 
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
     policies = _product_policies(tmp_path)
-    assert {key: detail for key, (_, detail, _) in policies.items()} == EXPECTED
+    assert {key: detail for key, (_, detail, _) in policies.items()} == EXPECTED | RECORDS
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
-    assert {key for key in policies if not key.startswith("GET ")} == CHANGING
+    changing = {key for key in policies if not key.startswith("GET ")}
+    assert changing == CHANGING | {key for key in RECORDS if not key.startswith("GET ")}
 
 
 def test_route_permissions_are_registered() -> None:
-    for detail in EXPECTED.values():
+    for detail in (EXPECTED | RECORDS).values():
         resource, _, action = detail.rpartition(":")
         assert (resource, action) in PERMISSIONS
 
@@ -89,3 +107,18 @@ def test_frontend_routes_are_public_and_read_only(tmp_path: Path) -> None:
     assert not any(
         key.split(" ", 1)[1].startswith("/app") for key in policies if key not in FRONTEND
     )
+
+
+def test_record_routes_follow_the_role_matrix() -> None:
+    for key, detail in RECORDS.items():
+        resource, _, action = detail.rpartition(":")
+        holders = {
+            role for role, template in ROLE_TEMPLATES.items() if (resource, action) in template
+        }
+        expected = {
+            "read": set(Role),
+            "create": EDITORS,
+            "update": EDITORS,
+            "delete": {Role.OWNER, Role.ADMIN},
+        }[action]
+        assert holders == expected, key

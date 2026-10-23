@@ -30,10 +30,13 @@ TITLE = "crm-app"
 def create_app() -> FastAPI:
     validate_settings(Process.APP)
     # Imported only after validation: SaaS-OS resolves configuration at import time.
+    from fastapi.exceptions import RequestValidationError  # noqa: PLC0415
     from saas_os.api.platform import build_platform_app  # noqa: PLC0415
 
     from crm_app.api.access import router as access_router  # noqa: PLC0415
+    from crm_app.api.errors import validation_error  # noqa: PLC0415
     from crm_app.api.members import router as members_router  # noqa: PLC0415
+    from crm_app.api.records import router as records_router  # noqa: PLC0415
     from crm_app.api.spa import router as spa_router  # noqa: PLC0415
     from crm_app.api.workspaces import router as workspaces_router  # noqa: PLC0415
     from crm_app.purge import register_purge_participants  # noqa: PLC0415
@@ -41,8 +44,11 @@ def create_app() -> FastAPI:
     # A purge run from this process must also purge product data (crm_app.purge).
     register_purge_participants()
     app = build_platform_app(title=TITLE, version=__version__)
+    # Rejected values are personal data: 422 bodies never echo them.
+    app.add_exception_handler(RequestValidationError, validation_error)
     app.include_router(workspaces_router)
     app.include_router(access_router)
     app.include_router(members_router)
+    app.include_router(records_router)
     app.include_router(spa_router)
     return app

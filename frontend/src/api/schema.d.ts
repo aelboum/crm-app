@@ -118,6 +118,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Company */
+        post: operations["create_company_v1_workspaces__tenant_id__companies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/companies/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company */
+        get: operations["get_company_v1_workspaces__tenant_id__companies__record_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Company */
+        delete: operations["delete_company_v1_workspaces__tenant_id__companies__record_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Company */
+        patch: operations["update_company_v1_workspaces__tenant_id__companies__record_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/companies/{record_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Company */
+        post: operations["archive_company_v1_workspaces__tenant_id__companies__record_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/companies/{record_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Company */
+        post: operations["restore_company_v1_workspaces__tenant_id__companies__record_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Contact */
+        post: operations["create_contact_v1_workspaces__tenant_id__contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Contact */
+        get: operations["get_contact_v1_workspaces__tenant_id__contacts__record_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Contact */
+        delete: operations["delete_contact_v1_workspaces__tenant_id__contacts__record_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Contact */
+        patch: operations["update_contact_v1_workspaces__tenant_id__contacts__record_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Contact */
+        post: operations["archive_contact_v1_workspaces__tenant_id__contacts__record_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Contact */
+        post: operations["restore_contact_v1_workspaces__tenant_id__contacts__record_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/members": {
         parameters: {
             query?: never;
@@ -242,6 +382,207 @@ export interface components {
             membership_id: string;
             /** Roles */
             roles: string[];
+        };
+        /**
+         * CompanyCreate
+         * @description `domain` is derived from `website` when it is not given.
+         */
+        CompanyCreate: {
+            /** City */
+            city?: string | null;
+            /** Country Code */
+            country_code?: string | null;
+            /** Domain */
+            domain?: string | null;
+            /** Industry */
+            industry?: string | null;
+            /** Name */
+            name: string;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Website */
+            website?: string | null;
+        };
+        /** CompanyOut */
+        CompanyOut: {
+            /** Archived At */
+            archived_at: string | null;
+            /** City */
+            city: string | null;
+            /** Country Code */
+            country_code: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /** Domain */
+            domain: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Industry */
+            industry: string | null;
+            /** Name */
+            name: string;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Phone */
+            phone: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By User Id */
+            updated_by_user_id: string | null;
+            /** Version */
+            version: number;
+            /** Website */
+            website: string | null;
+        };
+        /** CompanySummary */
+        CompanySummary: {
+            /** Archived */
+            archived: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * CompanyUpdate
+         * @description Fields left out are unchanged; `null` clears an optional field. The
+         *     domain is not re-derived when only the website changes.
+         */
+        CompanyUpdate: {
+            /** City */
+            city?: string | null;
+            /** Country Code */
+            country_code?: string | null;
+            /** Domain */
+            domain?: string | null;
+            /** Industry */
+            industry?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Website */
+            website?: string | null;
+        };
+        /** ContactCreate */
+        ContactCreate: {
+            /** City */
+            city?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** First Name */
+            first_name: string;
+            /** Job Title */
+            job_title?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+            /**
+             * Lifecycle Stage
+             * @default lead
+             */
+            lifecycle_stage: string;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Source
+             * @default manual
+             */
+            source: string;
+        };
+        /** ContactOut */
+        ContactOut: {
+            /** Archived At */
+            archived_at: string | null;
+            /** City */
+            city: string | null;
+            company: components["schemas"]["CompanySummary"] | null;
+            /** Company Id */
+            company_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /** Email */
+            email: string | null;
+            /** First Name */
+            first_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Job Title */
+            job_title: string | null;
+            /** Last Name */
+            last_name: string | null;
+            /** Lifecycle Stage */
+            lifecycle_stage: string;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By User Id */
+            updated_by_user_id: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * ContactUpdate
+         * @description Fields left out are unchanged; `null` clears an optional field.
+         */
+        ContactUpdate: {
+            /** City */
+            city?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** First Name */
+            first_name?: string | null;
+            /** Job Title */
+            job_title?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+            /** Lifecycle Stage */
+            lifecycle_stage?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Source */
+            source?: string | null;
         };
         /** CurrentUserResponse */
         CurrentUserResponse: {
@@ -505,6 +846,428 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Access"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_company_v1_workspaces__tenant_id__companies_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_v1_workspaces__tenant_id__companies__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_company_v1_workspaces__tenant_id__companies__record_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_company_v1_workspaces__tenant_id__companies__record_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_company_v1_workspaces__tenant_id__companies__record_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_company_v1_workspaces__tenant_id__companies__record_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contact_v1_workspaces__tenant_id__contacts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_contact_v1_workspaces__tenant_id__contacts__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_contact_v1_workspaces__tenant_id__contacts__record_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_contact_v1_workspaces__tenant_id__contacts__record_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_contact_v1_workspaces__tenant_id__contacts__record_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_contact_v1_workspaces__tenant_id__contacts__record_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
                 };
             };
             /** @description Validation Error */
