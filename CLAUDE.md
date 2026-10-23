@@ -86,9 +86,9 @@ At project start, record the exact dependency source and pin in project
 documentation. Treat the pin as immutable unless the owner explicitly
 authorizes a change.
 
-Approved pin (decision K3, moved by decision K3.1):
-`saas-os @ git+https://github.com/aelboum/saas-os@5905156a99a4526e5071ce091a58667c08b0a019`
-(release v0.3.0). Import only from the `saas_os` public surface:
+Approved pin (decision K3, moved by decisions K3.1 and K3.2):
+`saas-os @ git+https://github.com/aelboum/saas-os@b03d87a5272924d1e413c144dc5c3b41ac430580`
+(release v0.5.0). Import only from the `saas_os` public surface:
 `saas_os.api.*`, `saas_os.inference`, `saas_os.contracts`, and the
 `__init__` exports of `saas_os.core.*`, `saas_os.infra.*`, and
 `saas_os.control_plane.*`. Start from SaaS-OS's

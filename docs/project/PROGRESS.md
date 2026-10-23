@@ -4,7 +4,8 @@ The verified current state of the project. `ROADMAP.md` defines the
 destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
-**Last updated:** 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
+**Last updated:** 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2).
+Earlier: 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
 first local commits, decision K2.1; remote, push and first CI run,
 decision K2.2; Claude Design inspection, D-DES and K5.1; Phase 2
 decisions P2-A to P2-E approved)
@@ -124,6 +125,27 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## SaaS-OS upgrade to v0.5.0 (decision K3.2, 2026-10-23)
+
+On the new pin `b03d87a` every check was run again, locally on Windows,
+in a separate worktree of the branch `deps/saas-os-v0.5.0`:
+
+| Check | Result |
+| --- | --- |
+| `uv lock` | Only the saas-os entry changed (0.3.0 → 0.5.0); 72 packages, the other 71 unchanged |
+| `uv sync --locked`, `uv lock --check`, `uv pip check` | Exit 0; installed `saas-os` 0.5.0, `direct_url.json` commit `b03d87a…`, not editable; all installed packages compatible |
+| `ruff format --check .` / `ruff check .` | 61 files already formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| `pytest tests/unit` | 92 passed (includes the pin test, now asserting `b03d87a`, and the import-surface test) |
+| `pytest tests/integration` (CI settings, disposable PostgreSQL 16 and Redis 7 containers, `01-roles.sh`) | 55 passed: foundation 7, owner protection 8, provisioning 8, tenant-table guard 11, workspace routes 21; containers removed afterwards |
+| detect-secrets hook | Exit 0, after replacing the audited false-positive hash of the pin SHA in `.secrets.baseline` |
+| pip-audit (hashed export, SaaS-OS excluded) | "No known vulnerabilities found" |
+| Clean copy: trackable files copied to a fresh temporary directory, empty uv cache | `uv lock --check` and `uv sync --locked` exit 0; installed commit `b03d87a…`; `uv pip check` clean; unit tests 92 passed |
+| Clean pip install of the pinned reference in a new Python 3.13 environment | `pip freeze` prints the reference; version 0.5.0; `direct_url.json` commit `b03d87a…`; `pip check` clean |
+
+Not run for this move: `tests/identity` (opt-in, needs the local
+ZITADEL) and the frontend checks (no frontend file changed).
+
 ## Criterion 9: CI on the pushed commit (2026-10-21)
 
 GitHub Actions run 39652641595 (`push` to `main`), head commit
@@ -174,7 +196,7 @@ stopped; that commit changes only `.github/workflows/ci.yml`.
 | Frontend framework not chosen (P-6) | Frontend work | Resolved 2026-10-22: React + Vite SPA (`DECISIONS.md` P-6.1) |
 | Missing designs (states, a generic CRM version, membership, consent) | Frontend work on MVP screens | Design requests in `DESIGN-INSPECTION.md` §6, before standalone Claude Design closes on 2026-12-14 |
 | No email provider configured | Real invitation delivery (P2-C) and the MVP email channel | An approved transactional email provider and credentials; until then nothing may be shown as sent |
-| Purge participants outside the approved import surface | Removal of product data on tenant purge, before the first tenant table | Owner decision on a narrowly scoped exception or another supported path (P2-D) |
+| Purge participants outside the approved import surface | Removal of product data on tenant purge, before the first tenant table | Since K3.2 the pinned SaaS-OS v0.5.0 exports the registration API from `saas_os.core.tenancy`. Still needed: the participant and its tests under gate G1 (Q-purge), as separately approved work |
 | ZITADEL v4.19.5 instead of the proposed v4.19.0 | Recorded under P-4 | Owner confirmation |
 
 ## Open questions recorded for later phases
