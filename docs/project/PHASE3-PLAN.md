@@ -1,14 +1,16 @@
 # Phase 3 Plan — Contacts and Companies
 
-**Status:** Design specification, 2026-10-22. **Planning only.** No
-tenant-owned table, migration, purge participant or persistent CRM feature
-may be built until gate G1 passes (`PHASE2-PLAN.md` §9.4, §14): a SaaS-OS
-release exports purge-participant registration publicly
-(aelboum/saas-os#87) and the owner approves the pin move.
+**Status:** Design specification, 2026-10-22; updated 2026-10-23.
+Gate G1 passed on 2026-10-23 (`DECISIONS.md` G1): SaaS-OS v0.5.0 exports
+purge-participant registration, the pin moved to it (K3.2) and
+`crm_app/purge.py` is registered and tested. **Slice 3A backend (stages
+3A.1–3A.3, §19) is approved** (decision P3-A). Everything else in this plan
+is still planning only and needs its own approval.
 
 **Markers:**
-- **[V]** verified against the pinned SaaS-OS v0.3.0
-  (`5905156a99a4526e5071ce091a58667c08b0a019`) or this repository;
+- **[V]** verified against the pinned SaaS-OS (v0.3.0 `5905156` when
+  written; re-checked against v0.5.0 `b03d87a` on 2026-10-23 for the rows
+  of §2) or this repository;
 - **[R]** recommendation;
 - **[A]** assumption that needs owner confirmation;
 - **[U]** unknown or missing upstream.
@@ -66,10 +68,10 @@ release exports purge-participant registration publicly
 | Models | `Base`, `Mapped`, `mapped_column`, `ForeignKey`, `select` from `saas_os.infra.db`. The consumer guide asks product code outside `migrations/` not to import SQLAlchemy directly |
 | Migrations | the product's own Alembic history after `run_core_migrations()` (already in `crm_app.migrate`) |
 | Audit | `saas_os.core.audit_log.record_in_transaction(session, *, caller, tenant_id, action, resource_type, resource_id, metadata)`. Metadata ≤ 8 KB, with a credential-key denylist; it does **not** block personal data, so the product must keep PII out |
-| Background jobs | `register_tenant_job`, `enqueue_job` (at-least-once, 3 tries, then dead letter; no job ID or idempotency key), `TenantJobContext.tenant_id`, `tenant_job_session` |
+| Background jobs | `saas_os.infra.jobs`: `register_tenant_job`, `enqueue_job` (at-least-once, 3 tries, then dead letter; no job ID or idempotency key), `TenantJobContext.tenant_id`. The job session fence is `saas_os.core.tenancy.tenant_job_session` (not `infra.jobs`) |
 | Idempotent requests | `saas_os.core.idempotency.run_idempotent(...)` and `api.dependencies.get_idempotency_key` |
 | Rate limits | `saas_os.infra.ratelimit.enforce_rate_limit(key, config=...)`. `require_permission` already limits per tenant and path |
-| Purge | **Not public** (`core.tenancy.purge_participants`). `purge_tenant` deletes only Core tables; product rows remain unless a participant is registered. **Gate G1** |
+| Purge | Public since v0.5.0: `saas_os.core.tenancy.register_purge_participant`, `registered_purge_participant_names`, `TenantPurgeParticipant`. `purge_tenant` deletes Core tables, then runs registered participants; `crm_app/purge.py` is this product's (G1, passed 2026-10-23) |
 | File storage | **None** [U]. Import and export avoid storing files (§9, §10) |
 | Pagination or search helpers | **None**; product-owned |
 | GDPR export or erasure hooks | **None** [U]; product-owned (§11) |
@@ -213,10 +215,12 @@ member is later suspended or removed, the value stays and the UI shows
 
 ## 5. Purge participation (gate G1)
 
-As specified in `PHASE2-PLAN.md` §9.4, using **only** the public API that
-#87 adds:
-- `crm_app/purge.py` registers one participant in `create_app()`, the
-  worker and the operator command's `--setup`.
+As specified in `PHASE2-PLAN.md` §9.4, using **only** the public API of
+SaaS-OS v0.5.0 (#87, #94):
+- `crm_app/purge.py` registers one participant, `crm_app.crm_data`, in
+  `create_app()`, the worker and the operator command's `--setup`
+  (done, G1). Each new table is added to its `PURGE_TABLES` in the change
+  that creates the table.
 - **Deletion order:** `activity`, then `contact_tag`/`company_tag`, then
   `import_row`, `import_job`, `contact`, `company`, `tag`,
   `custom_field_definition`.
@@ -231,9 +235,9 @@ As specified in `PHASE2-PLAN.md` §9.4, using **only** the public API that
   - the guard lists every tenant table.
 - **Operator rule unchanged:** never `--no-product-participants`.
 
-**[U]** The exact registration function name, and whether participants
-receive a session or the tenant ID, depend on #87's final API. §5 is
-updated when it lands; no internal import is used meanwhile.
+Resolved by v0.5.0: participants receive only the tenant ID and open
+their own `tenant_session_scope`; registration is
+`register_purge_participant()` (`DECISIONS.md` G1).
 
 ## 6. API
 
@@ -545,7 +549,7 @@ phone width, with contrast checks.
 
 | Dependency | Blocks | Status |
 | --- | --- | --- |
-| G1: SaaS-OS public purge registration (#87) and an approved pin move | every table and migration (S1 onwards) | **Blocked**, upstream |
+| G1: SaaS-OS public purge registration (#87) and an approved pin move | every table and migration (S1 onwards) | **Passed** 2026-10-23 (K3.2, G1) |
 | Import permission decision (§9.5) | S7 | Owner |
 | Fixed stages and sources (§3.3), archive as update and the note-author rule (§6.2) | S1, S2 | Owner |
 | `pg_trgm` approval | S3b only | Owner (optional) |
@@ -558,7 +562,7 @@ phone width, with contrast checks.
 
 | Step | Content | Exit evidence |
 | --- | --- | --- |
-| S0 | Pin move to the SaaS-OS release with #87; upgrade checks | CI green on the new pin |
+| S0 | Pin move to the SaaS-OS release with #87; upgrade checks | **Done**: v0.5.0 (K3.2), purge participant (G1) |
 | S1 | Migration: all §3 tables, RLS, grants, indexes; purge participant; guard lists updated | guard and purge integration tests pass |
 | S2 | Contacts and companies CRUD, archive, restore, delete, tags, custom fields; audit | CRUD, role-matrix and cross-tenant tests |
 | S3 | Lists: cursor, search (3a), filters, sorting | paging and performance tests |
@@ -596,3 +600,163 @@ phone width, with contrast checks.
    Members too (§9.5)?
 5. Import row retention of 7 days (§9.3)?
 6. Optional: `pg_trgm` for substring search (§7); a phone library (§6.3).
+
+## 19. Slice 3A — contact and company records (approved 2026-10-23, P3-A)
+
+Approved: backend stages 3A.1–3A.3. Not approved: 3A.4 (frontend), notes,
+activity, tags, custom fields, import, export, merge, provisioning a real
+workspace. Where §3–§16 say more, 3A implements only what is below; the
+rest stays planning.
+
+### 19.1 Decisions (P3-A)
+1. Contact stages are fixed: `lead`, `prospect`, `customer`, `inactive`
+   (labels Lead, Prospect, Customer, Inactive). Stored as text with a
+   `CHECK`; a later migration may make them per-workspace without changing
+   the API.
+2. Contact sources are fixed: `manual`, `import`, `form`, `referral`,
+   `other`. Users may set only `manual`, `referral` or `other`; `import`
+   and `form` are reserved for records the system creates in later slices.
+3. Duplicate active contact emails and duplicate active company domains
+   are rejected by database-enforced uniqueness. Archived records are
+   excluded; names may repeat.
+4. A contact needs an email or a phone number (database `CHECK`).
+5. 3A starts before Phase 2 closes. No Phase 2 work or review is waived
+   or marked complete.
+
+### 19.2 Tables (migration `0002_contacts_companies`)
+
+Both tables: `id uuid PRIMARY KEY` (generated by the application),
+`tenant_id uuid NOT NULL REFERENCES core.tenants(id)` (Core keeps tenant
+rows as tombstones, so the key never blocks purge), `UNIQUE (tenant_id,
+id)`, `owner_user_id`, `created_by_user_id`, `updated_by_user_id` (plain
+`uuid`, no key into Core), `created_at`, `updated_at`, `version integer
+NOT NULL DEFAULT 1 CHECK (version >= 1)`, `archived_at`. Forced RLS
+(`tenant_rls_statements`) and `SELECT, INSERT, UPDATE, DELETE` for the
+runtime role only, in the same migration.
+
+- **`company`:** `name` (1–200, trimmed), `domain` (≤ 253, normalised,
+  §19.4), `website` (≤ 2048, `http`/`https`), `phone` (≤ 32), `industry`
+  (≤ 100), `city` (≤ 100), `country_code` (`^[A-Z]{2}$`). Unique index
+  `company_active_domain_key (tenant_id, domain) WHERE archived_at IS NULL
+  AND domain IS NOT NULL`.
+- **`contact`:** `first_name` (1–200, trimmed), `last_name` (≤ 200),
+  `email` (≤ 320, normalised, §19.4), `phone` (≤ 32), `job_title`
+  (≤ 200), `city` (≤ 100), `lifecycle_stage` (default `lead`), `source`
+  (default `manual`), `company_id`. `CHECK (email IS NOT NULL OR phone IS
+  NOT NULL)`. Foreign key `(tenant_id, company_id) → company (tenant_id,
+  id) ON DELETE SET NULL (company_id)` (PostgreSQL 15+; CI and local run
+  16). Unique index `contact_active_email_key (tenant_id, email) WHERE
+  archived_at IS NULL AND email IS NOT NULL`.
+- Optional text is `NULL`, never `''` (`CHECK`s reject empty and
+  untrimmed values).
+- **Indexes** (all lead with `tenant_id`): list orders (§19.5), owner,
+  `contact (tenant_id, company_id)` for the foreign key, and
+  `text_pattern_ops` prefix indexes for search.
+- **Purge:** `PURGE_TABLES = ("contact", "company")` (child first), in the
+  same change. `crm_app.models` declares both tables; the participant
+  imports it itself before resolving them, so the installed operator
+  process needs nothing from API start-up.
+- **Rollback:** the migration only adds tables. Its downgrade drops
+  `contact` then `company`, deleting their rows: for test and development
+  databases only. No production exists; once it does, fixes go forward.
+
+### 19.3 Workspace identity
+
+Routes are `/v1/workspaces/{tenant_id}/…`, each with exactly one
+`require_permission`. The path value is only the request: SaaS-OS's
+`get_tenant_context` admits it only for a caller with a membership there in
+a tenant open to principals (otherwise the same 404), and `can()` requires
+that membership to be active. After that, handlers use `context.tenant_id`
+only; every query runs in `tenant_session_scope(context.tenant_id)` with an
+explicit `tenant_id` predicate as well as RLS, and every write takes
+`lock_open_tenant(session, tenant_id)` first. A record ID from another
+workspace gives the same 404 as an unknown ID.
+
+### 19.4 Duplicates: one normalisation everywhere
+- **Email:** trimmed and lower-cased (whole address), then a syntax check;
+  stored only in that form (`CHECK (email = lower(btrim(email)))`).
+- **Domain:** trimmed, lower-cased, a trailing dot and a leading `www.`
+  removed, IDNA-encoded to ASCII; letters, digits, hyphens and dots only.
+  When absent it is derived from `website`.
+- The API checks for an active duplicate before writing, and the partial
+  unique index decides under concurrency. A unique violation on
+  `contact_active_email_key` / `company_active_domain_key` is mapped by
+  constraint name to 409 `duplicate_email` / `duplicate_domain` with the
+  existing active record's ID, read in a fresh transaction. Create,
+  update and restore all go through the same mapping.
+
+### 19.5 Lists
+- **Orders** (allow-listed, `asc` or `desc`): contacts `name` =
+  `(last_name, first_name, id)`, companies `name` = `(name, id)`, with names
+  compared in PostgreSQL's ICU root collation `"und-x-icu"` (case- and
+  accent-insensitive at the primary level; product code cannot import
+  SQLAlchemy's `lower()`, and the collation needs no extra column). A
+  contact without a last name sorts last ascending and first descending,
+  as PostgreSQL places NULLs. Both `created_at` and `updated_at` =
+  `(column, id)`. `id` is always the last key, so the order is total and
+  deterministic. The contacts of one company are the contact list with
+  `company_id`; there is no separate route.
+- **Cursor:** URL-safe base64 of a small JSON object holding the order,
+  the direction, a hash of the filters and the last row's key values.
+  Parsing is strict: at most 1,024 characters, exact fields and types, and
+  the order, direction and filter hash must match the request; otherwise
+  400 `invalid_cursor`. It is not signed: RLS and the workspace predicate
+  confine any cursor to the caller's workspace, so a forged cursor can only
+  skip within data the caller may already read.
+- **Consistency:** keyset paging never repeats or skips a row whose order
+  key does not change while paging. Rows created, archived, deleted or
+  re-ordered (renamed, updated) during paging may appear on a later page,
+  appear twice or be missed; there is no snapshot across requests.
+- **Search `q`:** 1–100 characters, prefix match, case-insensitive, `%`,
+  `_` and `\` escaped: contacts on first name, last name and email,
+  companies on name and domain. **Filters:** contacts `lifecycle_stage`,
+  `owner` (user ID or `me`), `company_id`; both `archived=false|true|all`
+  (default `false`). `limit` 1–200, default 50. `approximate_total` is
+  exact up to 10,000.
+
+### 19.6 Writes
+- 422 responses list each error's location, message and type only; the
+  rejected value (`input`) is never echoed, for every route.
+- Request bodies forbid unknown fields; `tenant_id`, `version`,
+  `archived_at`, audit columns and (for contacts) `source` values other
+  than the three user values are refused.
+- `PATCH` requires `If-Match: <version>` (428 `version_required` when
+  missing, 409 `stale_version` when it differs).
+- `POST` accepts an optional `Idempotency-Key`
+  (`saas_os.core.idempotency.run_idempotent`). The stored result is the new
+  record's ID only, never its content; a replay returns the record's
+  current state.
+- `owner_user_id` must be an active member (`saas_os.core.identity.get_membership`).
+- Every change writes its audit entry with `record_in_transaction` in the
+  same transaction: action `crm_app.contact.created` (and so on), the
+  record ID, and changed field names only.
+- Permissions are the existing catalogue (no new permission, so #88 and
+  G7 are not involved): read, create, update (also archive and restore),
+  delete (Owner and Admin, permanent).
+
+### 19.7 Stages
+| Stage | Content | Gate to the next |
+| --- | --- | --- |
+| 3A.1 | Migration, models, guard lists, `PURGE_TABLES`; RLS, foreign-key, rollback and real purge tests | Guard, RLS, FK, rollback and purge tests pass |
+| 3A.2 | Service layer and routes: create, read, update, archive, restore, delete; validation, idempotency, audit | Role matrix, cross-workspace 404, duplicate (incl. concurrent), version and validation tests pass |
+| 3A.3 | Lists: cursor, search, filters, sorting | Paging, filter, search and injection tests pass |
+
+Each stage is reviewed on its own; commits and pushes need separate
+approval.
+
+### 19.8 Known limitations of slice 3A (2026-10-23)
+- An `Idempotency-Key` is scoped to the workspace and operation: another
+  member sending the same key and body gets the first result back.
+- Deleting a company clears its contacts' `company_id` through the foreign
+  key without raising their `version`.
+- Phone numbers are stored as typed (trimmed, character-checked); no E.164.
+- A record owner's membership is checked when the record is written; a
+  later suspension or removal leaves the value in place.
+- List performance with 100,000 contacts (§7 target) is not yet measured.
+- Owners are shown as user IDs until member profiles exist (Phase 2 S5).
+- Keyset paging does not snapshot: rows created, changed or archived while
+  someone pages may be missed or appear twice (§19.5).
+- The list integration test raises SaaS-OS's per-route rate limit for its
+  own process only (`RATE_LIMIT_REQUESTS_PER_WINDOW`), because it pages
+  about 100 times on one path; product code and other tests keep the
+  default of 60 per minute.

@@ -714,6 +714,36 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `PHASE3-PLAN.md` S1 each need their own approval; the open questions in
   `PHASE3-PLAN.md` §18 remain open.
 
+## P3-A — Phase 3 slice 3A approved
+
+- **Status:** Approved by the owner, 2026-10-23: "I approve Phase 3 slice
+  3A backend stages 3A.1–3A.3", with the conditions below. Plan:
+  `PHASE3-PLAN.md` §19.
+- **Decisions:**
+  1. Contact stages are fixed for now: Lead, Prospect, Customer, Inactive.
+  2. Contact sources are fixed: Manual, Import, Form, Referral, Other. In
+     slice 3A users may choose only Manual, Referral or Other; Import and
+     Form are reserved for system-created records in later slices.
+  3. Duplicate active contact emails and duplicate active company domains
+     are rejected through database-enforced uniqueness. Archived records
+     are excluded; names may repeat.
+  4. A contact must have an email or a phone number.
+  5. The slice begins before Phase 2 closes. No outstanding Phase 2 work or
+     security review is waived or marked complete.
+- **Interpretation recorded with it (from Q6):** archive and restore are
+  updates (Owner, Admin, Member); permanent delete is Owner and Admin.
+- **Conditions:** route path IDs are never authorization (the SaaS-OS
+  `require_permission` pattern, `PHASE3-PLAN.md` §19.3); duplicate
+  normalisation, partial unique indexes, conflict handling and 409s are
+  consistent (§19.4); cursor parsing, tie-breaking and paging consistency
+  are specified (§19.5); the installed operator process loads the product
+  tables without API start-up, and the real purge path is tested; each new
+  table joins `PURGE_TABLES` in the change that creates it; tests run only
+  against the disposable test database.
+- **Not approved:** stage 3A.4 (frontend), notes, imports, exports, custom
+  fields, tags and other deferred features; provisioning a real
+  workspace; commits and pushes (each needs separate approval).
+
 ## P-6.1 — Frontend framework chosen
 
 - **Status:** Approved by the owner, 2026-10-22 (recommendation in
