@@ -50,6 +50,34 @@ serves the built frontend itself (`crm_app.api.spa`).
 `/healthz` and `/readyz` report liveness and readiness. All local services
 listen on `127.0.0.1` only.
 
+## Purging a workspace (operators)
+
+Purging permanently deletes a workspace's data. There is no route for it;
+an operator runs SaaS-OS's command, after the workspace was marked deleted
+(`saas-os-operator delete-tenant`, by an enrolled platform operator):
+
+```bash
+uv run saas-os-operator purge-tenant --tenant <id> --actor <user id> \
+    --setup crm_app.purge:register_purge_participants --confirm <id>
+```
+
+- **`--setup crm_app.purge:register_purge_participants` is required.** It
+  registers this product's participant, `crm_app.crm_data`, which deletes
+  the workspace's CRM data (`src/crm_app/purge.py`; decision G1).
+- **Never use `--no-product-participants` for this product.** SaaS-OS
+  offers it for products that keep no data of their own. Here it would
+  purge the platform's records, mark the workspace purged and leave CRM
+  rows behind, and a later run would not remove them (it reports the
+  workspace as already purged). It is not a supported procedure, and
+  nothing in this product can block it; the rule is procedural (decision
+  Q-purge).
+- If the purge fails, the workspace stays `PURGING` and a
+  `tenant.purge_failed` audit entry records the failing step. Run the same
+  command again.
+- With `ENVIRONMENT=production`, SaaS-OS also requires
+  `--confirm-production`. Purging a real workspace needs the owner's
+  authorization.
+
 ### Local identity (ZITADEL)
 
 ```bash

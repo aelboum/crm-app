@@ -179,8 +179,9 @@ def test_the_runtime_role_holds_exactly_crud_on_every_product_table(
 def test_every_tenant_table_is_covered_by_tenant_purge(
     owner_connection: psycopg.Connection,
 ) -> None:
-    """Until gate G1 is met, `PURGE_COVERED_TABLES` is empty, so this keeps
-    every tenant-owned table out."""
+    """`PURGE_COVERED_TABLES` is the purge participant's manifest
+    (`crm_app.purge.PURGE_TABLES`), so a tenant-owned table the participant
+    does not delete fails here."""
     tenant_tables = _tenant_tables(owner_connection, SCHEMA)
     assert purge_violations(tenant_tables, PURGE_COVERED_TABLES) == []
 

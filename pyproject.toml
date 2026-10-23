@@ -10,8 +10,8 @@ classifiers = [
     "Private :: Do Not Upload",
 ]
 dependencies = [
-    # Decisions K3 and K3.1 (docs/project/DECISIONS.md): exactly one SaaS-OS
-    # requirement, pinned to the exact commit of release v0.3.0. Never a
+    # Decisions K3, K3.1 and K3.2 (docs/project/DECISIONS.md): exactly one
+    # SaaS-OS requirement, pinned to the exact commit of release v0.5.0. Never a
     # branch or a tag, never an editable or local-path install. Changing it
     # requires a new approved decision; tests/unit/test_dependency_pin.py
     # asserts the manifest, the lockfile and the installed commit.

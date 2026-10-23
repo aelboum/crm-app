@@ -181,8 +181,13 @@ steps, with an audited reason.
 
 ## 6. Status and next step
 
-- **Blocker:** unchanged. G1 waits on an upstream release with a public
-  registration API.
+- **Outcome (2026-10-23):** SaaS-OS v0.5.0 shipped Option A (#94; #87
+  closed). Option B was not adopted: registration stays explicit. The
+  pin moved to v0.5.0 (K3.2) and the participant of §5 is in
+  `crm_app/purge.py`; G1 passed (`DECISIONS.md` G1). §1–§4 are kept as
+  the record of the request.
+- **Blocker (historical):** G1 waited on an upstream release with a
+  public registration API.
 - **Posted 2026-10-22 with the owner's approval:**
   https://github.com/aelboum/saas-os/issues/87#issuecomment-6339887993.
   It is the owner's edited text, plus a reference to CONSUMER-GUIDE §11

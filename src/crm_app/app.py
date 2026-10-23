@@ -36,7 +36,10 @@ def create_app() -> FastAPI:
     from crm_app.api.members import router as members_router  # noqa: PLC0415
     from crm_app.api.spa import router as spa_router  # noqa: PLC0415
     from crm_app.api.workspaces import router as workspaces_router  # noqa: PLC0415
+    from crm_app.purge import register_purge_participants  # noqa: PLC0415
 
+    # A purge run from this process must also purge product data (crm_app.purge).
+    register_purge_participants()
     app = build_platform_app(title=TITLE, version=__version__)
     app.include_router(workspaces_router)
     app.include_router(access_router)

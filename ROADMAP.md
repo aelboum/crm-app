@@ -362,14 +362,14 @@ Use the actual language and tooling selected after discovery.
 
 * **Done and CI-verified** (commit `a069a6a1675802139e8862d0f639388d521b95c7`, GitHub Actions run 39675570028): the four role templates and permission catalogue; registration of the granted permissions in the migration step (no roles created or granted anywhere); structural guards that keep tenant-owned tables out and fix the RLS, privilege and purge-coverage rules for future ones; two read-only routes, `GET /v1/workspaces/{id}` and `GET /v1/workspaces/{id}/members`, with backend permission checks.
 * **Frontend (F1, 2026-10-22, decision P-6.1):** React single-page app served by the API under `/app`: sign-in, opening a workspace, and member management with Owner confirmations and refusal messages (`PHASE2-PLAN.md` §11.3). Not yet exercised in a real browser against ZITADEL.
-* **Remaining work:** invitations; workspace settings (locale, time zone, currency); the workspace directory; the first tenant-owned tables with RLS negative tests; the purge participant; the Phase 2 security review.
+* **Remaining work:** invitations; workspace settings (locale, time zone, currency); the workspace directory; the first tenant-owned tables with RLS negative tests; the Phase 2 security review. The purge participant is done (2026-10-23, decision G1).
 * **Blocked by gates** (`PHASE2-PLAN.md` §14):
-  * **G1:** tenant-owned tables, until SaaS-OS provides a supported public purge-registration API in an approved pin, with the required safeguards and tests (decision Q-purge).
+  * **G1:** passed 2026-10-23 (`DECISIONS.md` G1): SaaS-OS v0.5.0's public registration API is pinned (K3.2) and the product's purge participant is registered and tested. Each tenant-owned table still needs its own approval, manifest entry and RLS tests.
   * **G2:** the provisioning command is implemented and validated against the test database (commit `19e7dce`, CI run 39742030028 green); provisioning any real workspace needs owner authorization.
   * **G-LOCK:** Owner-, role- and membership-changing routes are implemented with a per-workspace lock; local concurrency tests against the test database show the last active Owner is never removed (commit `19e7dce`). Paths outside the product are covered by an operator rule only (`PHASE2-PLAN.md` §5.4). CI run 39742030028 green.
   * **G3/G4:** real invitation delivery needs an email provider (Q3); Q4 and Q5 were decided 2026-10-22, but the flow also needs G1 for its product table.
 * **External dependencies:** two upstream SaaS-OS requests were opened on 2026-10-22: purge-participant registration (aelboum/saas-os#87, blocks G1) and adding permissions to existing workspaces (aelboum/saas-os#88).
-* **Not yet proven:** runtime RLS isolation of product data and purge correctness (no tenant-owned table exists).
+* **Not yet proven:** runtime RLS isolation of product data (no tenant-owned table exists). Purge correctness is proven on a probe table, not yet on a product table.
 
 ## Objectives
 
@@ -440,7 +440,7 @@ Test that:
 
 # 8. Phase 3 — Core CRM
 
-**Status:** Not started; build-ready design in `docs/project/PHASE3-PLAN.md` (2026-10-22, planning only). Building waits on gate G1 (aelboum/saas-os#87) and the owner questions in its §18.
+**Status:** Not started; build-ready design in `docs/project/PHASE3-PLAN.md` (2026-10-22, planning only). Gate G1 passed 2026-10-23; building waits on the owner questions in its §18 and approval of its first slice.
 
 ## Objectives
 

@@ -22,7 +22,11 @@ def run(argv: list[str] | None = None) -> int:
     from saas_os.api.worker import main as platform_worker_main  # noqa: PLC0415
 
     from crm_app.jobs import JOB_FUNCTIONS  # noqa: PLC0415
+    from crm_app.purge import register_purge_participants  # noqa: PLC0415
 
+    # No platform job purges a tenant today; registering keeps any future
+    # purge in this process from leaving product rows behind (gate G1).
+    register_purge_participants()
     return platform_worker_main(argv, extra_functions=JOB_FUNCTIONS)
 
 

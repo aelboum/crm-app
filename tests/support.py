@@ -8,6 +8,8 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
+from crm_app.purge import PURGE_TABLES
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Every setting this product or SaaS-OS reads. A child process starts with
@@ -52,10 +54,10 @@ PRODUCT_TABLES: frozenset[str] = frozenset()
 # guards.
 GLOBAL_TABLES: frozenset[str] = frozenset()
 
-# Tenant-owned tables whose rows a tenant purge removes. It becomes the
-# purge participant's manifest once gate G1 settles how participants are
-# registered; it is deliberately not a purge interface of its own.
-PURGE_COVERED_TABLES: frozenset[str] = frozenset()
+# Tenant-owned tables whose rows a tenant purge removes: the purge
+# participant's own manifest (`crm_app.purge.PURGE_TABLES`), so the guard
+# checks what the participant actually deletes.
+PURGE_COVERED_TABLES: frozenset[str] = frozenset(PURGE_TABLES)
 
 
 def clean_environment(overrides: Mapping[str, str] | None = None) -> dict[str, str]:

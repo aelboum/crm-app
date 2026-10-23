@@ -1108,7 +1108,7 @@ under concurrency (G-LOCK).
 | Gate | Blocks | Needs |
 | --- | --- | --- |
 | G0 | All Phase 2 implementation | Owner approval of this plan |
-| G1 | First tenant-owned table (S4, S5) | The acceptance criteria in §9.4: a SaaS-OS release with a public purge-registration API and an approved pin move (Q-purge decided 2026-10-21: upstream first) |
+| G1 | First tenant-owned table (S4, S5) | **Passed 2026-10-23** (`DECISIONS.md` G1): SaaS-OS v0.5.0 pinned (K3.2), S4 done (`crm_app/purge.py`, `tests/integration/test_purge.py`). Each new table still needs its manifest entry and RLS tests |
 | G-Q6 | Registering the catalogue (S1b) and any route (S3, S7) | **Passed 2026-10-21** (Q6 approved) |
 | G-LOCK | Any route that removes, demotes, suspends or revokes an Owner, or assigns Owner (S7) | **Passed 2026-10-22**: §5.4 concurrency tests pass locally and in CI run 39742030028; operator rule in §5.4 |
 | G2 | Automated role setup / provisioning command (S6) | **Passed 2026-10-22** for the command and its test-database validation (§11.2). Provisioning any real workspace still needs owner authorization |

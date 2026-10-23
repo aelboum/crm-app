@@ -662,6 +662,58 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   - The upstream request (`PHASE2-PLAN.md` Appendix A) stays unsent
     unless separately authorized.
 
+## G1 — Purge participant registered; gate passed
+
+- **Status:** Passed 2026-10-23. The owner approved the plan ("Go") to
+  build the participant on the v0.5.0 public API and to record G1 as
+  passed once its tests pass. Implements Q-purge; nothing in Q-purge
+  changes.
+- **What exists:**
+  - `crm_app/purge.py`: one participant, `crm_app.crm_data`, registered
+    with `saas_os.core.tenancy.register_purge_participant` (public since
+    v0.5.0, decision K3.2). No internal SaaS-OS module is imported.
+  - It runs every delete in one `tenant_session_scope(tenant_id)`
+    transaction, in manifest order (children first), then re-reads every
+    manifest table and raises `PurgeIncompleteError` if a row remains. A
+    manifest table that is not mapped also raises, never skips.
+  - `register_purge_participants()` registers it and refuses unless the
+    process holds exactly `("crm_app.crm_data",)`. It is called by
+    `create_app()`, by the worker before it starts, and by the operator
+    command through
+    `saas-os-operator purge-tenant --setup crm_app.purge:register_purge_participants`.
+    SaaS-OS documents that no route or worker job purges a tenant
+    (CONSUMER-GUIDE §11); the worker registers anyway, as §9.4 criterion
+    3 asks.
+  - The manifest `PURGE_TABLES` is empty: no tenant-owned table exists.
+    `tests/support.py` derives `PURGE_COVERED_TABLES` from it, so the
+    coverage guard fails for any tenant-owned table the participant does
+    not delete.
+- **Evidence (2026-10-23, local, disposable test database):**
+  `tests/integration/test_purge.py`, against PostgreSQL with a probe
+  table built like a product table (forced RLS, DML grants), dropped
+  afterwards:
+  - the installed operator command refuses without `--setup`, and with
+    it purges the workspace with `participant_names == ["crm_app.crm_data"]`;
+  - a purge deletes the purged workspace's rows and leaves another
+    workspace's rows; a second purge reports `already_purged`;
+  - a failing participant leaves the workspace `PURGING` with one
+    `tenant.purge_failed` (`participant_error`, `participant:<name>`),
+    and a re-run completes;
+  - rows left behind (a trigger cancelling deletes) and an unmapped
+    manifest table each fail the purge with `PurgeIncompleteError`.
+
+  Unit tests cover the name, the manifest, identifier checks,
+  idempotent and exact registration, and registration in `create_app()`
+  and the worker.
+- **Still required for each tenant-owned table** (from Q-purge and
+  `PHASE2-PLAN.md` §9.4): a migration with forced RLS and the grants
+  rule, a `PURGE_TABLES` entry in deletion order, and its own RLS
+  negative tests. The operator rule stands: this product's workspaces are
+  never purged with `--no-product-participants`.
+- **Not decided here:** which tables come first. `PHASE2-PLAN.md` S5 and
+  `PHASE3-PLAN.md` S1 each need their own approval; the open questions in
+  `PHASE3-PLAN.md` §18 remain open.
+
 ## P-6.1 — Frontend framework chosen
 
 - **Status:** Approved by the owner, 2026-10-22 (recommendation in

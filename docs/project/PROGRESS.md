@@ -480,3 +480,21 @@ Not yet tried in a real browser against ZITADEL (done since; see below).
     frontend, integration, security).
 - **SaaS-OS #87:** the owner-approved comment was posted
   (issuecomment-6339887993). No reply yet. G1 stays closed.
+
+## Gate G1: purge participant (2026-10-23)
+
+SaaS-OS v0.5.0 (#94) exports the purge-registration API; the owner moved
+the pin to it (K3.2, crm-app pull request #1, `9bdf803`). On that pin:
+
+- `crm_app/purge.py`: participant `crm_app.crm_data`, registered in
+  `create_app()`, the worker and the operator's `--setup`; empty manifest
+  `PURGE_TABLES`, which is also the coverage guard's list.
+- Checks, run locally on Windows: `ruff format --check`, `ruff check`
+  (pass); `pyright` (0 errors); `lint-imports` (2 kept); unit tests 106
+  passed (14 new); integration tests against the disposable `crm_app_test`
+  database and local Redis: 60 passed (5 new, in `test_purge.py`), probe
+  schemas dropped afterwards.
+- Not run: `tests/identity` (needs the local ZITADEL) and the frontend
+  checks (no frontend file changed).
+- G1 recorded as passed (`DECISIONS.md` G1). No tenant-owned table
+  exists yet; each one still needs its own approval.

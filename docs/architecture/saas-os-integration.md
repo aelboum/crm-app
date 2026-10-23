@@ -49,14 +49,13 @@ enforced by `tests/unit/test_import_surface.py`.
 
 The scaffold's own imports of `saas_os.infra.db.config`,
 `saas_os.infra.db.rls` and `saas_os.core.tenancy.purge_participants` were
-replaced by the public `saas_os.infra.db` exports. The purge participant is
-deferred until the first tenant table exists. Its documented module path
-(`saas_os.core.tenancy.purge_participants`) is not a package `__init__`
-export. From v0.5.0, `saas_os.core.tenancy` exports
-`register_purge_participant`, `registered_purge_participant_names` and
-`TenantPurgeParticipant` (SaaS-OS #87, #94); this product does not use
-them yet. Registering the participant is gate G1's work (decision
-Q-purge), not part of the pin move.
+replaced by the public `saas_os.infra.db` exports. From v0.5.0,
+`saas_os.core.tenancy` exports `register_purge_participant`,
+`registered_purge_participant_names` and `TenantPurgeParticipant`
+(SaaS-OS #87, #94). `crm_app/purge.py` registers the product's participant,
+`crm_app.crm_data`, through them in `create_app()`, the worker and the
+operator command's `--setup crm_app.purge:register_purge_participants`
+(decision G1, 2026-10-23).
 
 ## Observed platform behaviour
 
