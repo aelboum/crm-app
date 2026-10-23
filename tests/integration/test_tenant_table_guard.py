@@ -1,17 +1,17 @@
 """Structural guards for the product schema, read from the PostgreSQL catalogs.
 
-No tenant-owned table exists yet (PHASE2-PLAN.md gate G1), so these tests
-prove that none was added early and fix the rules every future one must
-meet (`tests/catalog_rules.py`). They do not prove runtime isolation: that
-needs real tenant tables and the negative tests in PHASE2-PLAN.md §13.
+The product schema holds exactly the approved tables (`tests/support.py`
+`PRODUCT_TABLES`; P3-A: `company`, `contact`), and every tenant-owned one
+meets the rules in `tests/catalog_rules.py`. These tests read structure
+only; runtime isolation is proven in `test_crm_tables.py`.
 
 Facts come from `pg_namespace`, `pg_class`, `pg_attribute` and `pg_policy`,
 and privileges from `has_table_privilege` for the configured runtime role.
 Unlike `information_schema`, these do not hide rows from the querying role
-or omit grants made by another grantor. Because no product table exists,
-the self-tests at the end run the same queries and rules against a table
-SaaS-OS protects the same way (`core.role_permissions`), so the guard is
-shown to work rather than to pass on an empty result.
+or omit grants made by another grantor. The self-tests at the end run the
+same queries and rules against a table SaaS-OS protects the same way
+(`core.role_permissions`), so the guard is shown to work independently of
+the product's own tables.
 """
 
 from __future__ import annotations

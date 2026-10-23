@@ -21,10 +21,13 @@ job purges a tenant. So:
 schema, in deletion order (children before parents). The integration guard
 (`tests/integration/test_tenant_table_guard.py`) fails if a tenant-owned
 table is missing from it, so a new table cannot ship without being purged.
-It is empty while no tenant-owned table exists.
+
+The participant imports `crm_app.models` itself before resolving the
+manifest, so a process that never built the application (the installed
+operator command) still knows the product's tables.
 
 SaaS-OS resolves configuration at import time, so this module imports
-SaaS-OS only inside its functions.
+SaaS-OS (and `crm_app.models`) only inside its functions.
 """
 
 from __future__ import annotations
@@ -42,7 +45,8 @@ PARTICIPANT_NAME = "crm_app.crm_data"
 EXPECTED_PURGE_PARTICIPANTS: tuple[str, ...] = (PARTICIPANT_NAME,)
 
 SCHEMA = "crm_app"
-PURGE_TABLES: tuple[str, ...] = ()
+# Children before parents: `contact` references `company`.
+PURGE_TABLES: tuple[str, ...] = ("contact", "company")
 
 _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 
@@ -104,6 +108,8 @@ class CrmDataPurgeParticipant:
 
     def _table(self, table: str) -> Any:  # a SQLAlchemy Table; typed loosely to keep SQLAlchemy out
         from saas_os.infra.db import Base  # noqa: PLC0415
+
+        import crm_app.models  # noqa: F401, PLC0415 - registers the product tables
 
         key = f"{self._schema}.{table}"
         if key not in Base.metadata.tables:

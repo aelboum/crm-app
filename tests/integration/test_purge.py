@@ -4,11 +4,13 @@ Each step runs in a fresh interpreter (`purge_probe`, or the installed
 `saas-os-operator` command), because the purge-participant registry is per
 process; results are read back as the owner connection.
 
-No tenant-owned product table exists yet, so deletion is proven on a probe
-table, `<schema>.items`, created like a product table (forced Row-Level
-Security, DML for the runtime role) in its own schema, which is dropped
-afterwards. The participant under test is the product's own class
-(`CrmDataPurgeParticipant`), given the probe table as its manifest.
+The failure paths (a failing participant, rows left behind, an unmapped
+manifest table) are proven on a probe table, `<schema>.items`, created like a
+product table (forced Row-Level Security, DML for the runtime role) in its
+own schema, which is dropped afterwards. The participant under test is the
+product's own class (`CrmDataPurgeParticipant`), given the probe table as
+its manifest. The real contact and company purge is in
+`test_crm_tables.py`.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ pytestmark = pytest.mark.usefixtures("migrated")
 OPERATOR = Path(sys.executable).parent / (
     "saas-os-operator.exe" if os.name == "nt" else "saas-os-operator"
 )
+OPERATOR_SETUP = ("--setup", "crm_app.purge:register_purge_participants")
 
 
 def _probe(env: dict[str, str], *args: str) -> dict[str, object]:
@@ -116,7 +119,7 @@ def test_the_operator_command_purges_with_the_products_participant(
     assert refused.returncode == 2, refused.stderr
     assert _status(owner_connection, tenant) == "deleted"
 
-    purged = _operator(env, tenant, actor, "--setup", "crm_app.purge:register_purge_participants")
+    purged = _operator(env, tenant, actor, *OPERATOR_SETUP)
     assert purged.returncode == 0, purged.stderr
     result = json.loads(purged.stdout)["result"]
     assert result["participant_names"] == list(EXPECTED_PURGE_PARTICIPANTS)

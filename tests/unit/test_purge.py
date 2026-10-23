@@ -21,7 +21,14 @@ from crm_app.purge import (
     PURGE_TABLES,
     CrmDataPurgeParticipant,
 )
-from tests.support import PLACEHOLDER_SETTINGS, PURGE_COVERED_TABLES, clean_environment, run_python
+from tests.support import (
+    GLOBAL_TABLES,
+    PLACEHOLDER_SETTINGS,
+    PRODUCT_TABLES,
+    PURGE_COVERED_TABLES,
+    clean_environment,
+    run_python,
+)
 
 # SaaS-OS's participant-name grammar (CONSUMER-GUIDE §11).
 SAAS_OS_NAME = re.compile(r"[a-z0-9][a-z0-9._-]{0,99}")
@@ -44,6 +51,22 @@ def test_the_manifest_is_what_the_table_guard_checks() -> None:
     assert CRM_DATA_PURGE_PARTICIPANT.tables == PURGE_TABLES
     assert frozenset(PURGE_TABLES) == PURGE_COVERED_TABLES
     assert len(set(PURGE_TABLES)) == len(PURGE_TABLES)
+
+
+def test_every_approved_product_table_is_purged_children_first() -> None:
+    assert frozenset(PURGE_TABLES) == PRODUCT_TABLES - GLOBAL_TABLES
+    assert PURGE_TABLES.index("contact") < PURGE_TABLES.index("company")
+
+
+def test_the_manifest_resolves_to_the_mapped_tables_in_a_fresh_process(tmp_path: Path) -> None:
+    """What the installed operator process does: no application is built, so
+    the participant itself must make the product tables known."""
+    out = _run(
+        "from crm_app.purge import CRM_DATA_PURGE_PARTICIPANT as p\n"
+        "print([p._table(t).fullname for t in p.tables])\n",
+        tmp_path,
+    )
+    assert out == repr([f"crm_app.{t}" for t in PURGE_TABLES])
 
 
 @pytest.mark.parametrize("bad", ["Contacts", "contacts;drop", "1contacts", "", "crm.contacts"])

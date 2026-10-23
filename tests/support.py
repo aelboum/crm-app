@@ -41,12 +41,12 @@ PLACEHOLDER_SETTINGS = {
 }
 
 
-# Tables the product schema `crm_app` may contain. Empty until the purge
-# decision (PHASE2-PLAN.md gate G1) is approved: the guards in
+# Tables the product schema `crm_app` may contain, each approved by a
+# decision (P3-A: `company`, `contact`). The guards in
 # `tests/unit/test_schema_guard.py` and
 # `tests/integration/test_tenant_table_guard.py` fail if a migration adds a
 # table that is not listed here.
-PRODUCT_TABLES: frozenset[str] = frozenset()
+PRODUCT_TABLES: frozenset[str] = frozenset({"company", "contact"})
 
 # Product tables that deliberately hold no tenant data and so carry no
 # `tenant_id`. Every other product table must be tenant-owned; listing a
