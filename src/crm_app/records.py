@@ -33,6 +33,7 @@ from saas_os.core.identity import get_membership
 from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
 from saas_os.infra.db import IntegrityError, Session, delete, select, tenant_session_scope
 
+from crm_app.domains import paging
 from crm_app.domains.membership import ACTIVE
 from crm_app.models import Company, Contact
 
@@ -289,6 +290,157 @@ def get(kind: Kind, scope: Scope, record_id: uuid.UUID) -> Record:
     with tenant_session_scope(scope.workspace) as session:
         row = _load(session, kind, scope, record_id, lock=False)
         return _records(session, scope, kind, [row])[0]
+
+
+# --- Lists (PHASE3-PLAN.md §19.5) -----------------------------------------------------
+
+ORDER_COLLATION = "und-x-icu"  # as in migration 0002's order indexes
+TOTAL_CAP = 10_000
+
+
+@dataclass(frozen=True)
+class ListQuery:
+    """A validated list request. Every value is already checked by the API."""
+
+    order: str = "name"
+    direction: str = "asc"
+    limit: int = 50
+    cursor: str | None = None
+    q: str | None = None
+    archived: str = "false"
+    stages: tuple[str, ...] = ()
+    owners: tuple[uuid.UUID, ...] = ()
+    companies: tuple[uuid.UUID, ...] = ()
+
+    def filters(self) -> dict[str, object]:
+        return {
+            "q": self.q,
+            "archived": self.archived,
+            "stages": sorted(self.stages),
+            "owners": sorted(str(owner) for owner in self.owners),
+            "companies": sorted(str(company) for company in self.companies),
+        }
+
+
+@dataclass(frozen=True)
+class Page:
+    items: list[Record]
+    next_cursor: str | None
+    total: int
+    total_capped: bool
+
+
+@dataclass(frozen=True)
+class _OrderKey:
+    expression: Any  # the column, collated where names are compared
+    column: Any  # the plain column, for NULL tests
+    attribute: str
+    nullable: bool = False
+
+
+def _order(kind: Kind, order: str) -> list[_OrderKey]:
+    model = kind.model
+    identity = _OrderKey(model.id, model.id, "id")
+    if order != "name":
+        column = getattr(model, order)
+        return [_OrderKey(column, column, order), identity]
+    if kind is CONTACT:
+        return [
+            _OrderKey(
+                Contact.last_name.collate(ORDER_COLLATION), Contact.last_name, "last_name", True
+            ),
+            _OrderKey(
+                Contact.first_name.collate(ORDER_COLLATION), Contact.first_name, "first_name"
+            ),
+            identity,
+        ]
+    return [_OrderKey(Company.name.collate(ORDER_COLLATION), Company.name, "name"), identity]
+
+
+def _after(keys: Sequence[_OrderKey], values: Sequence[Any], *, ascending: bool) -> Any:
+    """Rows strictly after `values` in the order `keys` define. PostgreSQL
+    puts NULLs last ascending and first descending; a nullable key follows
+    that rule, so the predicate matches `ORDER BY` exactly."""
+    key, value = keys[0], values[0]
+    if len(keys) == 1:
+        return key.expression > value if ascending else key.expression < value
+    rest = _after(keys[1:], values[1:], ascending=ascending)
+    if value is None:
+        tied = key.column.is_(None) & rest
+        return tied if ascending else tied | key.column.is_not(None)
+    beyond = key.expression > value if ascending else key.expression < value
+    condition = beyond | ((key.expression == value) & rest)
+    if key.nullable and ascending:
+        condition = condition | key.column.is_(None)
+    return condition
+
+
+def _conditions(kind: Kind, scope: Scope, query: ListQuery) -> list[Any]:
+    model = kind.model
+    conditions: list[Any] = [model.tenant_id == scope.workspace]
+    if query.archived == "false":
+        conditions.append(model.archived_at.is_(None))
+    elif query.archived == "true":
+        conditions.append(model.archived_at.is_not(None))
+    if query.owners:
+        conditions.append(model.owner_user_id.in_(query.owners))
+    if query.q:
+        lowered = query.q.lower()
+        if kind is CONTACT:
+            conditions.append(
+                Contact.first_name.istartswith(query.q, autoescape=True)
+                | Contact.last_name.istartswith(query.q, autoescape=True)
+                | Contact.email.startswith(lowered, autoescape=True)
+            )
+        else:
+            conditions.append(
+                Company.name.istartswith(query.q, autoescape=True)
+                | Company.domain.startswith(lowered, autoescape=True)
+            )
+    if kind is CONTACT and query.stages:
+        conditions.append(Contact.lifecycle_stage.in_(query.stages))
+    if kind is CONTACT and query.companies:
+        conditions.append(Contact.company_id.in_(query.companies))
+    return conditions
+
+
+def list_records(kind: Kind, scope: Scope, query: ListQuery) -> Page:
+    """One page in a total, deterministic order (the row ID breaks ties).
+    Raises `paging.InvalidCursor` for a cursor issued for another order,
+    direction or filter set."""
+    filters = paging.filter_hash(query.filters())
+    after = (
+        paging.decode(query.cursor, kind.name, query.order, query.direction, filters)
+        if query.cursor
+        else None
+    )
+    keys = _order(kind, query.order)
+    ascending = query.direction == "asc"
+    model = kind.model
+    with tenant_session_scope(scope.workspace) as session:
+        conditions = _conditions(kind, scope, query)
+        counted = session.execute(select(model.id).where(*conditions).limit(TOTAL_CAP + 1)).all()
+        statement = select(model).where(*conditions)
+        if after is not None:
+            statement = statement.where(_after(keys, after, ascending=ascending))
+        statement = statement.order_by(
+            *(key.expression.asc() if ascending else key.expression.desc() for key in keys)
+        ).limit(query.limit + 1)
+        rows = list(session.execute(statement).scalars())
+        more = len(rows) > query.limit
+        rows = rows[: query.limit]
+        items = _records(session, scope, kind, rows)
+        # Read the last key while the row is still attached to the session.
+        last_key = tuple(getattr(rows[-1], key.attribute) for key in keys) if rows else None
+    next_cursor = None
+    if more and last_key is not None:
+        next_cursor = paging.encode(kind.name, query.order, query.direction, filters, last_key)
+    return Page(
+        items=items,
+        next_cursor=next_cursor,
+        total=min(len(counted), TOTAL_CAP),
+        total_capped=len(counted) > TOTAL_CAP,
+    )
 
 
 # --- Writes ----------------------------------------------------------------------

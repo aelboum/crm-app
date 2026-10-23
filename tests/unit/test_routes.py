@@ -40,6 +40,7 @@ for _path, _resource in (("contacts", "crm_app.contact"), ("companies", "crm_app
     _collection = f"/v1/workspaces/{{tenant_id}}/{_path}"
     _item = f"{_collection}/{{record_id}}"
     RECORDS |= {
+        f"GET {_collection}": f"{_resource}:read",
         f"POST {_collection}": f"{_resource}:create",
         f"GET {_item}": f"{_resource}:read",
         f"PATCH {_item}": f"{_resource}:update",

@@ -25,12 +25,13 @@ import re
 import uuid
 from collections.abc import Callable
 from datetime import datetime
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Literal, Self
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     ValidationInfo,
     field_validator,
     model_validator,
@@ -40,6 +41,7 @@ from saas_os.api.dependencies import get_idempotency_key, require_permission
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
 
 from crm_app import records
+from crm_app.domains import paging
 from crm_app.domains import records as values
 from crm_app.records import COMPANY, CONTACT, Kind, RecordError, Scope
 
@@ -47,6 +49,9 @@ router = APIRouter(prefix="/v1/workspaces")
 
 IdempotencyKey = Annotated[str | None, Depends(get_idempotency_key)]
 IfMatch = Annotated[str | None, Header(alias="If-Match")]
+
+DEFAULT_LIMIT = 50
+MAX_LIMIT = 200
 
 _IF_MATCH = re.compile(r'(?:W/)?"?([0-9]{1,9})"?')
 # A ceiling before normalisation, so oversized input is refused early.
@@ -366,3 +371,105 @@ def _add_routes(
 
 _add_routes(CONTACT, "contacts", ContactCreate, ContactUpdate, ContactOut)
 _add_routes(COMPANY, "companies", CompanyCreate, CompanyUpdate, CompanyOut)
+
+
+# --- Lists (PHASE3-PLAN.md §19.5) ----------------------------------------------------
+
+_MAX_VALUES = 20  # per repeatable filter
+
+Order = Literal["name", "created_at", "updated_at"]
+Direction = Literal["asc", "desc"]
+Archived = Literal["false", "true", "all"]
+Stage = Literal["lead", "prospect", "customer", "inactive"]
+
+
+class _ListParams(_Strict):
+    """Query parameters shared by both lists; unknown parameters are refused."""
+
+    q: str | None = Field(default=None, max_length=100)
+    owner: list[str] = Field(default_factory=list, max_length=_MAX_VALUES)
+    archived: Archived = "false"
+    sort: Order = "name"
+    direction: Direction = "asc"
+    limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+    cursor: str | None = Field(default=None, max_length=paging.CURSOR_MAX)
+
+
+class ContactListParams(_ListParams):
+    lifecycle_stage: list[Stage] = Field(default_factory=list, max_length=_MAX_VALUES)
+    company_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)
+
+
+class CompanyListParams(_ListParams):
+    pass
+
+
+class ContactPage(BaseModel):
+    items: list[ContactOut]
+    next_cursor: str | None
+    total: int
+    total_capped: bool
+
+
+class CompanyPage(BaseModel):
+    items: list[CompanyOut]
+    next_cursor: str | None
+    total: int
+    total_capped: bool
+
+
+def _owners(raw: list[str], context: RequestContext) -> tuple[uuid.UUID, ...]:
+    """User IDs, where `me` is the caller."""
+    owners: list[uuid.UUID] = []
+    for value in raw:
+        if value == "me":
+            owners.append(context.actor_id)
+            continue
+        try:
+            owners.append(uuid.UUID(value))
+        except ValueError:
+            raise HTTPException(422, detail={"code": "invalid_owner_filter"}) from None
+    return tuple(owners)
+
+
+def _query(params: _ListParams, context: RequestContext, **extra: Any) -> records.ListQuery:
+    q = params.q.strip() if params.q else ""
+    return records.ListQuery(
+        order=params.sort,
+        direction=params.direction,
+        limit=params.limit,
+        cursor=params.cursor,
+        q=q or None,
+        archived=params.archived,
+        owners=_owners(params.owner, context),
+        **extra,
+    )
+
+
+def _page(kind: Kind, context: RequestContext, query: records.ListQuery) -> records.Page:
+    try:
+        return records.list_records(kind, _scope(context), query)
+    except paging.InvalidCursor:
+        raise HTTPException(400, detail={"code": "invalid_cursor"}) from None
+
+
+@router.get("/{tenant_id}/contacts", response_model=ContactPage, tags=["contacts"])
+def list_contacts(
+    context: Annotated[RequestContext, Depends(require_permission(CONTACT.resource, "read"))],
+    params: Annotated[ContactListParams, Query()],
+) -> Any:
+    query = _query(
+        params,
+        context,
+        stages=tuple(params.lifecycle_stage),
+        companies=tuple(params.company_id),
+    )
+    return _page(CONTACT, context, query)
+
+
+@router.get("/{tenant_id}/companies", response_model=CompanyPage, tags=["companies"])
+def list_companies(
+    context: Annotated[RequestContext, Depends(require_permission(COMPANY.resource, "read"))],
+    params: Annotated[CompanyListParams, Query()],
+) -> Any:
+    return _page(COMPANY, context, _query(params, context))

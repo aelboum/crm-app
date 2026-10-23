@@ -125,7 +125,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List Companies */
+        get: operations["list_companies_v1_workspaces__tenant_id__companies_get"];
         put?: never;
         /** Create Company */
         post: operations["create_company_v1_workspaces__tenant_id__companies_post"];
@@ -195,7 +196,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List Contacts */
+        get: operations["list_contacts_v1_workspaces__tenant_id__contacts_get"];
         put?: never;
         /** Create Contact */
         post: operations["create_contact_v1_workspaces__tenant_id__contacts_post"];
@@ -447,6 +449,17 @@ export interface components {
             /** Website */
             website: string | null;
         };
+        /** CompanyPage */
+        CompanyPage: {
+            /** Items */
+            items: components["schemas"]["CompanyOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+            /** Total Capped */
+            total_capped: boolean;
+        };
         /** CompanySummary */
         CompanySummary: {
             /** Archived */
@@ -557,6 +570,17 @@ export interface components {
             updated_by_user_id: string | null;
             /** Version */
             version: number;
+        };
+        /** ContactPage */
+        ContactPage: {
+            /** Items */
+            items: components["schemas"]["ContactOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+            /** Total Capped */
+            total_capped: boolean;
         };
         /**
          * ContactUpdate
@@ -859,6 +883,47 @@ export interface operations {
             };
         };
     };
+    list_companies_v1_workspaces__tenant_id__companies_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                owner?: string[];
+                archived?: "false" | "true" | "all";
+                sort?: "name" | "created_at" | "updated_at";
+                direction?: "asc" | "desc";
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_company_v1_workspaces__tenant_id__companies_post: {
         parameters: {
             query?: never;
@@ -1057,6 +1122,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contacts_v1_workspaces__tenant_id__contacts_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                owner?: string[];
+                archived?: "false" | "true" | "all";
+                sort?: "name" | "created_at" | "updated_at";
+                direction?: "asc" | "desc";
+                limit?: number;
+                cursor?: string | null;
+                lifecycle_stage?: ("lead" | "prospect" | "customer" | "inactive")[];
+                company_id?: string[];
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPage"];
                 };
             };
             /** @description Validation Error */
