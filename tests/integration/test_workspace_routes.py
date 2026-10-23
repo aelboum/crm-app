@@ -105,6 +105,12 @@ def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> 
         "reactivate_member": False,
         "revoke_member": False,
         "manage_owners": False,
+        "create_contact": False,
+        "update_contact": False,
+        "delete_contact": False,
+        "create_company": False,
+        "update_company": False,
+        "delete_company": False,
     }
     assert owner["membership_id"] != reader["membership_id"]
 
