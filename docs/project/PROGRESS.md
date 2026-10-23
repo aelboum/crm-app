@@ -498,3 +498,27 @@ the pin to it (K3.2, crm-app pull request #1, `9bdf803`). On that pin:
   checks (no frontend file changed).
 - G1 recorded as passed (`DECISIONS.md` G1). No tenant-owned table
   exists yet; each one still needs its own approval.
+
+## Phase 3 slice 3A backend (2026-10-23 to 2026-10-24)
+
+Decision P3-A; plan `PHASE3-PLAN.md` §19. Pushed to `main`:
+
+| Commit | Content |
+| --- | --- |
+| `cde18ec` | P3-A decision; `PHASE3-PLAN.md` corrections and §19 |
+| `2a6ea5b` | 3A.1: migration 0002 (`company`, `contact`), RLS, constraints, `PURGE_TABLES`, isolation, rollback and real operator-purge tests |
+| `dad9132` | 3A.2: record service and API, validation, audit, idempotency, permission and route tests |
+| `58cb900` | 3A.3: keyset lists, search, filters, sorting, list tests |
+| `8724359` | Pre-push review fixes: idempotency keys scoped to the member; company deletion unlinks contacts as versioned, audited changes; FK race mapped to 422; deadlocks to 409 |
+| `b288a4b` | Frontend lockfile: zod 4.6.5 -> 4.6.7 (GHSA-mrhx-c7xc-m3w5, dev-only via eslint-plugin-react-hooks) |
+
+- Each 3A commit was checked on its own exported tree before it was
+  committed: 3A.1 unit 108 / integration 89; 3A.2 unit 148 / integration
+  103; 3A.3 unit 170 / integration 121 (all against the disposable
+  `crm_app_test` database). The review fix: unit 171 / integration 126.
+- CI: run 40034894076 on `8724359` passed quality, integration and
+  security; the frontend job failed only its `npm audit` step on the new
+  zod advisory. Run 40036417310 on `b288a4b` passed all four jobs.
+- Not run: `tests/identity` (needs the local ZITADEL).
+- Known limitations: `PHASE3-PLAN.md` §19.8.
+- Next: 3A.4, the Contacts and Companies screens.
