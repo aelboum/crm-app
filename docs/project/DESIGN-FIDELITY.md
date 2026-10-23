@@ -61,8 +61,8 @@ L243-247):
 | Settings › Team & roles (`ScreenSettings.dc.html` L11-27, L54-68) | `/app/w/{id}/settings` | 2 | **Implemented; compared (§4)** |
 | Settings › My profile (`ScreenSettings.dc.html` L43-52) | `/app/w/{id}/settings?section=profile` | 2 | **Implemented, read-only parts; compared (§4a)** |
 | Settings › other sections (business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
-| Contacts (`ScreenContacts`) | `/contacts` | 3 | Design spec in `PHASE3-PLAN.md` §13; placeholder page (G1) |
-| Companies (`ScreenCompanies`) | `/companies` | 3 | Same as Contacts |
+| Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values, not yet in a browser |
+| Companies (`ScreenCompanies`) | `/companies` | 3 | List, drawer with the company's people, and create/edit dialog (§4c); compared from source values, not yet in a browser |
 | Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | Placeholder |
 | Tasks (`ScreenTasks`) | `/tasks` | 4 | Placeholder |
 | Inbox (`ScreenConversations`) | `/inbox` | 6 | Placeholder |
@@ -332,6 +332,67 @@ strip):
   at phone width against the design (the design defines no phone
   layout).
 
+## 4c. Contacts and Companies (slice 3A.4, 2026-10-24)
+
+Built from `ScreenContacts.dc.html` (list L12-97, drawer L194-222, dialog
+L224-247) and `ScreenCompanies.dc.html`, read from the export zip without
+extracting it. Values below were taken from the source; they have **not**
+been measured in a browser yet (§6).
+
+**Matched from source values:** page padding `20px 28px 40px`, gap 14 and
+max width 1480 / 1320 px; eyebrow 12 px; title 22 px / 650 / -0.015em with
+a 16 px count; 32 px secondary and primary buttons; 280 px search box;
+dashed filter buttons that turn solid accent when active, with 16 px
+checkbox menus; view tabs 36 px with a 2 px accent underline; table card
+radius 10; 36 px uppercase 11.5 px header on `#FAFAFB`; 48 px rows with
+`#F1F2F4` dividers, `#F7F8FA` hover and accent-soft selection; 30 px
+avatars in the design's six colour pairs (square `#F1F2F4` for companies);
+stage pills with the design's colours; 22 px owner dots; 440 px drawer
+with an 18 % scrim, a `100px 1fr` field list and 46 px avatar; dialogs of
+560 px (contact) and 500 px (company) with a two-column 14 px grid, 34 px
+inputs, accent focus ring, `#D6453D` invalid border and 12 px `#A3302A`
+messages; the design's validation texts.
+
+**Deliberate differences:**
+- *Data model (P2-E, P3-A):* the dental "Patient" stage is "Customer"
+  (same colours); sources are the P3-A list (Manual, Referral, Other for
+  people; Import and Form shown only when the system set them); no score,
+  tags, custom fields, notes or activity, so their columns, cards, tag
+  pills and timeline are left out.
+- *Views:* "Assigned to me" instead of a named person; "Hot (80+)",
+  "Recall due" and "+ Save view" are left out (no score, no recall, no
+  saved views); an "Archived" view is added so archived contacts can be
+  restored. Companies get an Active/Archived switch instead of industry
+  chips (industry is free text and the API has no industry filter).
+- *Not built, shown honestly:* Import and Export are disabled buttons
+  named "not available yet"; quick actions (Message, Call, Book, Deal), the
+  bulk bar, the columns picker, opportunities, pipeline and "Won" are left
+  out, and the drawer says what is not available.
+- *Paging:* "Load more" by cursor instead of page numbers (the API pages
+  by keyset cursor); the count reads "N of M" up to 10,000, then "10,000+".
+- *Columns:* contacts show Name (with email or phone), Stage, Owner,
+  Company, Source and Updated; companies show Company (with domain),
+  Industry, Owner, City and Updated. Sorting is by name or last update,
+  the API's allow-list.
+- *Owners* show as "You" or "Member <id>", because member names are not
+  stored yet (PHASE2-PLAN.md §6.5).
+- *Full record page:* not built; the drawer holds every stored field and
+  the edit, archive, restore and delete actions. The companies drawer
+  lists the company's people; choosing one opens it in Contacts.
+- *Archive, restore and permanent delete* are added (the design has none);
+  delete asks for confirmation and is shown only to roles that may delete.
+- *Contrast:* the count, placeholders and unchecked checkbox border use
+  darker greys than the design so they meet WCAG contrast.
+
+**Tests:** `frontend/src/records/records.test.tsx` (jsdom): listing,
+read-only permissions, search/stage/view filters reaching the API,
+create with validation and an idempotency key, duplicate refusal with
+"Open existing", edit sending only changed fields with `If-Match`, the
+stale-version message, delete only after confirmation, cursor paging,
+the companies list, the people list opening a contact, and the company
+dialog; axe scans of both lists report no violations (contrast is not
+measurable in jsdom).
+
 ## 5. Accessibility and quality evidence (2026-10-22)
 
 - **Lighthouse** (Chrome DevTools, desktop 1280×800, snapshot mode):
@@ -362,7 +423,9 @@ strip):
 
 - Pixel-difference overlays: no image library is installed, so geometry
   was compared numerically instead.
-- The Contacts and Companies screens; they wait on G1.
+- The Contacts and Companies screens in a real browser: they are built
+  (§4c) and tested in jsdom with an axe scan, but not yet measured against
+  the design export or checked with ZITADEL sign-in.
 - Screen reader output (only the accessibility tree was checked).
 - The design reference at 390 px beyond the overflow measurement.
 - Firefox and Safari.

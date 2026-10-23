@@ -14,6 +14,8 @@ import { ApiError } from "./api/client";
 import { keys } from "./api/queries";
 import { LoadError } from "./components/StateNotice";
 import { HomePage, isWorkspaceId } from "./pages/HomePage";
+import { CompaniesPage } from "./records/CompaniesPage";
+import { ContactsPage } from "./records/ContactsPage";
 import { type SettingsSection, SettingsPage } from "./pages/WorkspacePage";
 import { AppFrame, PlaceholderPage, PlainLayout } from "./shell/AppFrame";
 import { findSection, SETTINGS_SLUG } from "./shell/navigation";
@@ -78,10 +80,34 @@ const workspaceIndexRoute = createRoute({
   },
 });
 
+interface SectionSearch {
+  section?: SettingsSection;
+  /** The contact or company whose preview is open. */
+  record?: string;
+}
+
 function SectionPage() {
   const { workspaceId, section: slug } = sectionRoute.useParams();
-  const { section: settingsSection } = sectionRoute.useSearch();
+  const { section: settingsSection, record } = sectionRoute.useSearch();
   const navigate = sectionRoute.useNavigate();
+  const openRecord = (next: string | null) => {
+    void navigate({ search: next ? { record: next } : {} });
+  };
+  if (slug === "contacts") {
+    return <ContactsPage workspaceId={workspaceId} openId={record ?? null} onOpen={openRecord} />;
+  }
+  if (slug === "companies") {
+    return (
+      <CompaniesPage
+        workspaceId={workspaceId}
+        openId={record ?? null}
+        onOpen={openRecord}
+        onOpenContact={(id) => {
+          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+        }}
+      />
+    );
+  }
   // Settings holds Team & roles and My profile today; every other module is
   // the design's placeholder.
   if (slug === SETTINGS_SLUG) {
@@ -102,9 +128,12 @@ function SectionPage() {
 const sectionRoute = createRoute({
   getParentRoute: () => workspaceRoute,
   path: "$section",
-  // Only known settings sections are accepted; anything else shows the default.
-  validateSearch: (search: Record<string, unknown>): { section?: SettingsSection } =>
-    search.section === "profile" ? { section: "profile" } : {},
+  // Only known settings sections and well-formed record IDs are accepted;
+  // anything else is dropped.
+  validateSearch: (search: Record<string, unknown>): SectionSearch => ({
+    ...(search.section === "profile" ? { section: "profile" as const } : {}),
+    ...(typeof search.record === "string" && isWorkspaceId(search.record) ? { record: search.record } : {}),
+  }),
   component: SectionPage,
 });
 

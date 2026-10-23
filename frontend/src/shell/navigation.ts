@@ -47,6 +47,13 @@ const soon = (slug: string, label: MessageId, icon: LucideIcon, why: MessageId):
   unavailable: why,
 });
 
+const built = (slug: string, label: MessageId, icon: LucideIcon): Section => ({
+  slug,
+  label,
+  icon,
+  unavailable: null,
+});
+
 export const GROUPS: Group[] = [
   {
     key: "g0",
@@ -60,8 +67,8 @@ export const GROUPS: Group[] = [
     key: "crm",
     label: "nav.group.crm",
     sections: [
-      soon("contacts", "nav.contacts", Users, "soon.crm"),
-      soon("companies", "nav.companies", Building2, "soon.crm"),
+      built("contacts", "nav.contacts", Users),
+      built("companies", "nav.companies", Building2),
       soon("opportunities", "nav.opportunities", Kanban, "soon.sales"),
       soon("tasks", "nav.tasks", SquareCheckBig, "soon.sales"),
     ],

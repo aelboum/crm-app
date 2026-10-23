@@ -26,20 +26,23 @@ const signedIn: Handler = (method, path) => {
 
 describe("app frame", () => {
   it("shows the design's navigation, marking every module that is not built", async () => {
-    renderApp(`/w/${WS}/contacts`, signedIn);
+    renderApp(`/w/${WS}/opportunities`, signedIn);
     const nav = await screen.findByRole("navigation", { name: "Workspace" });
     for (const group of ["CRM", "Scheduling", "Marketing", "AI", "Insights"]) {
       expect(within(nav).getByRole("button", { name: group })).toHaveAttribute("aria-expanded", "true");
     }
-    const contacts = within(nav).getByRole("link", { name: /Contacts/ });
-    expect(contacts).toHaveAttribute("aria-current", "page");
-    expect(contacts).toHaveTextContent("soon");
+    const opportunities = within(nav).getByRole("link", { name: /Opportunities/ });
+    expect(opportunities).toHaveAttribute("aria-current", "page");
+    expect(opportunities).toHaveTextContent("soon");
+    // Contacts and Companies are built (slice 3A), so they carry no marker.
+    expect(within(nav).getByRole("link", { name: "Contacts" })).not.toHaveTextContent("soon");
+    expect(within(nav).getByRole("link", { name: "Companies" })).not.toHaveTextContent("soon");
     expect(within(nav).getByRole("link", { name: "Settings" })).not.toHaveTextContent("soon");
   });
 
   it("opens the design's placeholder page for a module that is not built", async () => {
-    renderApp(`/w/${WS}/contacts`, signedIn);
-    expect(await screen.findByRole("heading", { level: 1, name: "Contacts" })).toBeInTheDocument();
+    renderApp(`/w/${WS}/opportunities`, signedIn);
+    expect(await screen.findByRole("heading", { level: 1, name: "Opportunities" })).toBeInTheDocument();
     expect(screen.getByText("Not available yet")).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });

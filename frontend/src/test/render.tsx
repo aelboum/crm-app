@@ -12,6 +12,15 @@ export interface Sent {
   body: unknown;
 }
 
+/** The request headers the app chose to send (If-Match, Idempotency-Key). */
+export interface SentHeaders {
+  method: string;
+  path: string;
+  headers: Record<string, string>;
+}
+
+const APP_HEADERS = ["if-match", "idempotency-key"];
+
 interface Reply {
   status: number;
   body?: unknown;
@@ -27,6 +36,7 @@ const json = ({ status, body }: Reply) =>
 /** Renders the whole app at `path` (under /app) with `fetch` answered by `handler`. */
 export function renderApp(path: string, handler: Handler) {
   const sent: Sent[] = [];
+  const headersSent: SentHeaders[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -35,6 +45,13 @@ export function renderApp(path: string, handler: Handler) {
       const body: unknown = text ? JSON.parse(text) : undefined;
       const where = url.pathname + url.search;
       sent.push({ method: request.method, path: where, body });
+      const headers = Object.fromEntries(
+        APP_HEADERS.flatMap((name) => {
+          const value = request.headers.get(name);
+          return value === null ? [] : [[name, value]];
+        }),
+      );
+      headersSent.push({ method: request.method, path: where, headers });
       return json(
         handler(request.method, where, body) ?? { status: 404, body: { detail: "Not Found" } },
       );
@@ -42,7 +59,7 @@ export function renderApp(path: string, handler: Handler) {
   );
   const router = createAppRouter(createMemoryHistory({ initialEntries: [`/app${path}`] }));
   const view = render(<App router={router} queryClient={createQueryClient()} />);
-  return { ...view, sent, router };
+  return { ...view, sent, headersSent, router };
 }
 
 /** axe violations in the rendered document, as `id: help` strings. */
