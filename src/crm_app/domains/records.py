@@ -29,6 +29,8 @@ INDUSTRY_MAX = 100
 WEBSITE_MAX = 2048
 DOMAIN_MAX = 253
 
+NOTE_MAX = 10_000
+
 _EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 _PHONE = re.compile(r"\+?[0-9(][0-9 ()./-]*")
 _DOMAIN = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+")
@@ -53,6 +55,25 @@ def text(value: str | None, maximum: int, *, required: bool = False) -> str | No
     if len(trimmed) > maximum:
         raise InvalidValue(f"must be at most {maximum} characters")
     return trimmed
+
+
+# Control characters a note may not hold: all but tab and line feed (the
+# migration 0003 `note_body_check` refuses the same set).
+_NOTE_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+
+
+def note_body(value: str) -> str:
+    """A note as stored (decision P3-B, `PHASE3-PLAN.md` §21.1): plain text,
+    line breaks as LF, trimmed of spaces, tabs and line breaks at both ends,
+    1..10,000 characters, no control character other than tab and LF."""
+    normalised = value.replace("\r\n", "\n").replace("\r", "\n").strip(" \t\n")
+    if _NOTE_CONTROL.search(normalised):
+        raise InvalidValue("must not contain control characters")
+    if not normalised:
+        raise InvalidValue("is required")
+    if len(normalised) > NOTE_MAX:
+        raise InvalidValue(f"must be at most {NOTE_MAX} characters")
+    return normalised
 
 
 def email(value: str | None) -> str | None:

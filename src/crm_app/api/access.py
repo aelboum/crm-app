@@ -38,6 +38,12 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "create_company": ("crm_app.company", "create"),
     "update_company": ("crm_app.company", "update"),
     "delete_company": ("crm_app.company", "delete"),
+    # Notes (slice 3B, decision P3-B D3): adding one, and changing any note
+    # rather than only one's own. Each note also carries `can_edit` and
+    # `can_delete` for the caller.
+    "create_note": ("crm_app.activity", "create"),
+    "edit_any_note": ("crm_app.activity", "update"),
+    "delete_any_note": ("crm_app.activity", "delete"),
 }
 
 

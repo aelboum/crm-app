@@ -47,9 +47,19 @@ for _path, _resource in (("contacts", "crm_app.contact"), ("companies", "crm_app
         f"POST {_item}/archive": f"{_resource}:update",
         f"POST {_item}/restore": f"{_resource}:update",
         f"DELETE {_item}": f"{_resource}:delete",
-        # The record's history (slice 3B, decision P3-B): every role.
+        # The record's history and notes (slice 3B, decision P3-B): reads for
+        # every role; adding notes for Owner, Admin and Member.
         f"GET {_item}/activity": "crm_app.activity:read",
+        f"GET {_item}/notes": "crm_app.activity:read",
+        f"POST {_item}/notes": "crm_app.activity:create",
     }
+# Editing and deleting a note: declared with `activity:create`; the service
+# allows the author or a holder of `activity:update`/`activity:delete` (D3).
+_NOTE = "/v1/workspaces/{tenant_id}/notes/{note_id}"
+RECORDS |= {
+    f"PATCH {_NOTE}": "crm_app.activity:create",
+    f"DELETE {_NOTE}": "crm_app.activity:create",
+}
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 
 _PROBE = (

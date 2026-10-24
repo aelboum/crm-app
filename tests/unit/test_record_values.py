@@ -149,3 +149,63 @@ def test_a_nul_character_is_refused_everywhere(check: object) -> None:
 def test_a_website_with_credentials_is_refused(url: str) -> None:
     with pytest.raises(values.InvalidValue):
         values.website(url)
+
+
+# --- Notes (decision P3-B, PHASE3-PLAN.md §21.1) ----------------------------------
+
+NOTES_MIGRATION = (
+    REPO_ROOT / "src" / "crm_app" / "migrations" / "versions" / "0003_notes_activity.py"
+)
+
+
+@pytest.mark.parametrize(
+    ("raw", "stored"),
+    [
+        ("Called.", "Called."),
+        ("  Line one\r\nLine two\rLine three \n\t", "Line one\nLine two\nLine three"),
+        ("\tIndented\n\n  kept inside", "Indented\n\n  kept inside"),
+        ("<b>not html</b> & 'quotes'", "<b>not html</b> & 'quotes'"),
+        ("x" * 10_000, "x" * 10_000),
+    ],
+)
+def test_a_note_is_normalised_to_plain_lf_text(raw: str, stored: str) -> None:
+    assert values.note_body(raw) == stored
+
+
+@pytest.mark.parametrize(
+    "raw", ["", " \n\t ", "x" * 10_001, "bell\x07", "nul\0", "escape\x1b[0m", "del\x7f"]
+)
+def test_an_invalid_note_is_refused_without_echoing_it(raw: str) -> None:
+    with pytest.raises(values.InvalidValue) as refused:
+        values.note_body(raw)
+    assert raw.strip() == "" or raw[:4] not in str(refused.value)
+
+
+def test_the_note_migration_matches_these_rules() -> None:
+    tree = ast.parse(NOTES_MIGRATION.read_text(encoding="utf-8"))
+    constants = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id in {"STAGES", "NOTE_MAX", "UPDATED_FIELDS"}
+    }
+    assert constants["STAGES"] == values.STAGES
+    assert constants["NOTE_MAX"] == values.NOTE_MAX
+    # Every plain field of either record (`crm_app.records` CONTACT and
+    # COMPANY) may appear in an `updated` entry; stage, owner and company
+    # changes have their own kinds. `test_history.py` exercises the writes.
+    assert set(constants["UPDATED_FIELDS"]) == {
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "job_title",
+        "city",
+        "source",
+        "name",
+        "domain",
+        "website",
+        "industry",
+        "country_code",
+    }

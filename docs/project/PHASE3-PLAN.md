@@ -873,6 +873,6 @@ Both: `id uuid PRIMARY KEY`, `tenant_id` referencing `core.tenants`,
 | --- | --- | --- |
 | 3B.1 | Migration, models, RLS, guard (append-only rule), purge order, backfill | Done (see `PROGRESS.md`) |
 | 3B.2 | Activity written by every record change; activity routes | Done (see `PROGRESS.md`) |
-| 3B.3 | Note routes, D3 rule, concurrency, idempotency, audit, `/access` flags | Planned |
+| 3B.3 | Note routes, D3 rule, concurrency, idempotency, audit, `/access` flags | Done (see `PROGRESS.md`) |
 | 3B.4 | Notes and Activity sections in both drawers | Planned |
 | 3B.5 | Security review, performance, browser check, documentation | Planned |

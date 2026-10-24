@@ -622,3 +622,36 @@ be absent on append-only tables.
   table. Unit 185 passed; integration 186 passed (177 in the full run plus
   the 9 history tests, which failed there on a result-to-dict bug, fixed and
   re-run).
+
+### 3B.3 note routes (2026-10-24)
+
+- `crm_app.notes` and `crm_app.api.notes`: list and add notes on a contact
+  or company (`activity:read`, `activity:create`); edit (`If-Match`) and
+  permanently delete a note (`PATCH`/`DELETE /notes/{id}`, declared with
+  `activity:create`). The service allows the author, or a caller holding
+  `activity:update`/`activity:delete` read with SaaS-OS `can()` (D3); others
+  get 403 `not_note_author`. Each note carries `can_edit`/`can_delete` for
+  the caller; `/access` reports `create_note`, `edit_any_note`,
+  `delete_any_note`.
+- Text: plain text normalised once (`domains.records.note_body`: LF line
+  breaks, trimmed, 1-10,000 characters, no control characters other than
+  tab and LF), mirrored by the database `CHECK`; refusals never echo it.
+- Adding locks the record, so a note is never added to a record archived
+  or deleted meanwhile; editing locks the record for the archived check
+  (D8). Adding a note leaves the record's version unchanged. `POST`
+  accepts an `Idempotency-Key` scoped to the acting member.
+- Every change writes its history (`note_added`, `note_deleted`) and its
+  audit entry (`crm_app.note.created`/`.updated`/`.deleted`, metadata
+  `record_type` and `record_id` only) in the same transaction. Deleting a
+  note removes its text and its `note_added` entry (D4).
+- Tests: `test_note_routes.py` (who may add, read, edit and delete;
+  per-caller rights; concurrent edits; text rules and storage; history
+  excerpts and deleted text; archived records; idempotency including a
+  concurrent pair; other workspaces; paging; record deletion; audit
+  metadata without text) and unit tests for the text rules and their match
+  with migration 0003. The note probe raises the per-route rate limit for
+  its own process only, as the list test does. Unit 198 passed;
+  integration 198 passed.
+- Not tested directly: a member moved to Read-only cannot change their own
+  older notes; this follows from the routes requiring `activity:create`
+  (route-policy test) and `_rights` returning none without it.
