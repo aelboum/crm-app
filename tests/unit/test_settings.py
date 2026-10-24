@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from saas_os.infra.secrets import get_secrets_provider
 
-from crm_app.settings import ConfigurationError, Process, validate_settings
+from crm_app.settings import ConfigurationError, Process, signup_enabled, validate_settings
 from tests.support import CONFIG_NAMES, PLACEHOLDER_SETTINGS
 
 MARKER = "do-not-leak-7f3a"
@@ -241,3 +241,66 @@ def test_the_end_session_endpoint_is_optional_and_checked_when_set() -> None:
     assert _problems(Process.APP, production) == [
         "OIDC_END_SESSION_ENDPOINT must use https in production."
     ]
+
+
+# --- Self-service signup (decision S-1, docs/project/SIGNUP-PLAN.md) -----------
+
+SIGNUP_ON = {
+    **PLACEHOLDER_SETTINGS,
+    "SIGNUP_ENABLED": "true",
+    "SIGNUP_MAX_WORKSPACES_PER_USER": "3",
+    "SIGNUP_MAX_PER_DAY": "50",
+    "TRUST_PROXY_HEADERS": "true",
+}
+
+
+def test_signup_is_off_unless_switched_on() -> None:
+    assert signup_enabled(PLACEHOLDER_SETTINGS) is False
+    for off in ("false", "0", "no", "off", ""):
+        assert signup_enabled({"SIGNUP_ENABLED": off}) is False
+    assert signup_enabled({"SIGNUP_ENABLED": "TRUE"}) is True
+    # Anything unrecognised is refused at start-up and never reads as on.
+    assert signup_enabled({"SIGNUP_ENABLED": "maybe"}) is False
+    assert _problems(Process.APP, {**PLACEHOLDER_SETTINGS, "SIGNUP_ENABLED": "maybe"}) == [
+        "SIGNUP_ENABLED must be true or false."
+    ]
+
+
+def test_switching_signup_on_needs_both_limits_and_the_trusted_proxy() -> None:
+    _validate(Process.APP, SIGNUP_ON)
+    bare = {**PLACEHOLDER_SETTINGS, "SIGNUP_ENABLED": "true"}
+    assert _problems(Process.APP, bare) == [
+        "SIGNUP_ENABLED=true needs SIGNUP_MAX_WORKSPACES_PER_USER.",
+        "SIGNUP_ENABLED=true needs SIGNUP_MAX_PER_DAY.",
+        "SIGNUP_ENABLED=true needs TRUST_PROXY_HEADERS=true behind the edge proxy.",
+    ]
+    assert _problems(Process.APP, {**SIGNUP_ON, "TRUST_PROXY_HEADERS": "false"}) == [
+        "SIGNUP_ENABLED=true needs TRUST_PROXY_HEADERS=true behind the edge proxy."
+    ]
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "two", "1.5", "²", "٣"])
+def test_signup_limits_must_be_positive_whole_numbers(value: str) -> None:
+    for name in ("SIGNUP_MAX_WORKSPACES_PER_USER", "SIGNUP_MAX_PER_DAY"):
+        # Checked even while signup is off, so a bad value never waits to surface.
+        assert _problems(Process.APP, {**PLACEHOLDER_SETTINGS, name: value}) == [
+            f"{name} must be a whole number of at least 1."
+        ]
+
+
+def test_signup_is_refused_in_production_until_the_launch_gates_pass() -> None:
+    production = {
+        **SIGNUP_ON,
+        "ENVIRONMENT": "production",
+        "OIDC_ISSUER_URL": "https://identity.invalid",
+        "PUBLIC_APP_ORIGIN": "https://app.invalid",
+    }
+    assert _problems(Process.APP, production) == [
+        "SIGNUP_ENABLED=true is refused in production until the signup launch gates "
+        "pass (docs/project/SIGNUP-PLAN.md)."
+    ]
+    _validate(Process.APP, {**production, "SIGNUP_ENABLED": "false"})
+
+
+def test_only_the_application_checks_the_signup_settings() -> None:
+    _validate(Process.WORKER, {**PLACEHOLDER_SETTINGS, "SIGNUP_ENABLED": "maybe"})

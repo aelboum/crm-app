@@ -30,6 +30,10 @@ CONFIG_NAMES = (
     "INVITATION_DELIVERY",
     "EMAIL_PROVIDER",
     "EMAIL_DEFAULT_SENDER",
+    "TRUST_PROXY_HEADERS",
+    "SIGNUP_ENABLED",
+    "SIGNUP_MAX_WORKSPACES_PER_USER",
+    "SIGNUP_MAX_PER_DAY",
 )
 
 # Syntactically valid settings that point at nothing reachable.

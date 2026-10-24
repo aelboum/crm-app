@@ -35,6 +35,18 @@ decisions P2-A to P2-E approved)
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
 - **Phase 3:** slices 3A and 3B done; 3C and later not started.
+- **Self-service signup (decision S-1, 2026-10-24):** planned in
+  `SIGNUP-PLAN.md`; supersedes P2-C's exclusion. Verified on 2026-10-24:
+  baseline `f3e08f5` = `origin/main`, SaaS-OS pin `b03d87a` unchanged.
+  Implemented (commit approved by the owner 2026-10-24): `SIGNUP_ENABLED` and the two limit settings with start-up
+  rules in `crm_app.settings` (off by default; refused in production until
+  the launch gates pass; requires `TRUST_PROXY_HEADERS=true`), their unit
+  tests, and `.env.example` documentation. No endpoint, table, migration,
+  ZITADEL configuration or screen exists for signup yet.
+  - **L4:** investigated through the local edge. It does not reproduce
+    locally; forged `X-Forwarded-For` is ignored. Reduced, not closed
+    (`SIGNUP-PLAN.md` §5).
+  - **Launch gates LG-1 to LG-10 open** (`SIGNUP-PLAN.md` §7).
 - **Branded sign-in (2026-10-24, owner-approved before slice 3C):** the
   signed-out screens of `/app` and invitation links are a LeadStack
   sign-in screen after the design's `LeadStack Signup.dc.html`

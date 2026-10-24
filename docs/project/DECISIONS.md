@@ -935,6 +935,92 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not approved:** a SaaS-OS change or pin move; the self-service
   sign-up of the design's `LeadStack Signup.dc.html` (excluded by P2-C).
 
+## S-1 — Self-service signup (approved 2026-10-24)
+
+- **Status:** Approved by the owner, 2026-10-24, as the direction for
+  implementation planning, after the read-only signup audit
+  (`SIGNUP-PLAN.md` §1). **Supersedes** P2-C's condition "No public
+  self-service tenant creation in this phase" and the P2-G "Not approved"
+  note on the design's sign-up. Every other part of P2-C stands: workspace
+  creation and role setup use supported mechanisms only, and invitations are
+  never simulated.
+- **Decisions:**
+  1. **Policy:** self-service signup is an approved capability. It is off by
+     default (`SIGNUP_ENABLED`) and must not be enabled in production until
+     every launch gate in `SIGNUP-PLAN.md` §7 has evidence. Invitations stay
+     supported; accepting one never creates a workspace.
+  2. **v1 journey:**
+     - sign-in screen → **Create account**;
+     - ZITADEL-hosted registration, credentials, email verification and
+       password reset;
+     - a verified email required by LeadStack;
+     - workspace name;
+     - provisioning with the first user as Owner, permissions verified,
+       activation last;
+     - enter the workspace.
+
+     Not in v1: agency or business type, templates, team invitations during
+     onboarding, phone numbers, trial promises, Google or Microsoft sign-in.
+  3. **Architecture:**
+     - Signup UI, workflow, workspace creation and onboarding belong to
+       LeadStack.
+     - ZITADEL keeps credentials and email verification.
+     - SaaS-OS provisioning and authorization primitives are reused.
+     - There is no LeadStack password or identity system.
+     - No SaaS-OS change or pin move.
+     - Signup is separate from sign-in and invitation acceptance.
+     - Provisioning is idempotent and recoverable.
+  4. **Abuse prevention:**
+     - Security finding L4 is resolved before public signup.
+     - Per-user and per-client-address limits fail closed.
+     - Edge rate limiting, plus a WAF or equivalent bot protection, in
+       public deployments; CAPTCHA is evaluated, not assumed.
+     - The `SIGNUP_ENABLED` kill switch, default off.
+     - Configurable per-user workspace and platform signup limits.
+     - The caller never selects a parent tenant, role or authority.
+  5. **Identity:**
+     - One shared customer ZITADEL organisation, subject to verifying its
+       isolation.
+     - MFA required for workspace Owners before public production signup.
+     - The current password policy is kept unless the security review
+       finds a concrete reason to change it.
+     - Lockout and other existing controls are not weakened.
+  6. **Email:**
+     - Mailpit for local ZITADEL email testing.
+     - The production provider, a verified sending domain and SPF/DKIM are
+       launch dependencies.
+     - The provider and domain are **not selected** (Q3).
+  7. **Terms, privacy and retention:**
+     - No public signup without published Terms of Service and Privacy
+       Policy URLs.
+     - Only required, approved consent evidence is recorded.
+     - Incomplete signup attempts expire after a proposed 7 days.
+     - ZITADEL users are never deleted automatically. Deletion would need a
+       separate decision, because LeadStack does not call ZITADEL's
+       administrative API.
+  8. **Existing members:** a verified user may create additional
+     workspaces within the per-user and platform limits, enforced by the
+     API.
+- **Implemented with this decision (2026-10-24):**
+  - `SIGNUP_ENABLED`, `SIGNUP_MAX_WORKSPACES_PER_USER` and
+    `SIGNUP_MAX_PER_DAY` start-up validation in `crm_app.settings`:
+    - the limits have no defaults and are required when signup is on;
+    - `TRUST_PROXY_HEADERS=true` is required when signup is on;
+    - signup is refused in production until the launch gates pass.
+  - Unit tests for these rules.
+  - The L4 investigation (`SIGNUP-PLAN.md` §5): L4 is reduced, not closed.
+- **Open:** launch gates LG-1 to LG-10 (`SIGNUP-PLAN.md` §7). Among them:
+  - the email provider and domain;
+  - the Terms and Privacy URLs;
+  - verification of the ZITADEL organisation;
+  - how Owner MFA is enforced;
+  - the edge and WAF;
+  - the numeric limits;
+  - identity deletion;
+  - unproven ZITADEL behaviour.
+- **Not approved:** a ZITADEL administrative API integration; automatic
+  identity deletion; enabling signup in production; any SaaS-OS change.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

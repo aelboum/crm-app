@@ -139,6 +139,7 @@ def validate_settings(
     problems.extend(_check_role_names(env))
     if process is Process.APP:
         problems.extend(_check_invitation_delivery(env))
+        problems.extend(_check_signup(env, production=production))
         if env.get("OIDC_END_SESSION_ENDPOINT"):
             problems.extend(
                 _check_http_url(
@@ -237,6 +238,54 @@ def _check_invitation_delivery(env: Mapping[str, str]) -> list[str]:
     if delivery == "email" and env.get("EMAIL_PROVIDER") not in ("smtp", "mailpit"):
         return ["INVITATION_DELIVERY=email needs EMAIL_PROVIDER set to smtp or mailpit."]
     return []
+
+
+# Boolean spellings SaaS-OS accepts for its own switches (TRUST_PROXY_HEADERS).
+_TRUE = frozenset({"1", "true", "yes", "on"})
+_FALSE = frozenset({"0", "false", "no", "off"})
+
+# Self-service signup (decision S-1, docs/project/SIGNUP-PLAN.md). Both limits
+# have no default: whoever turns signup on chooses them (launch gate LG-6).
+SIGNUP_LIMITS = ("SIGNUP_MAX_WORKSPACES_PER_USER", "SIGNUP_MAX_PER_DAY")
+
+
+def _flag(env: Mapping[str, str], name: str) -> bool | None:
+    """`False` when unset, `None` when set to something that is not a boolean."""
+    raw = env.get(name, "").strip().lower()
+    if not raw or raw in _FALSE:
+        return False
+    return True if raw in _TRUE else None
+
+
+def signup_enabled(env: Mapping[str, str] | None = None) -> bool:
+    """The signup kill switch (`SIGNUP_ENABLED`); off unless set to true."""
+    return _flag(os.environ if env is None else env, "SIGNUP_ENABLED") is True
+
+
+def _check_signup(env: Mapping[str, str], *, production: bool) -> list[str]:
+    problems: list[str] = []
+    enabled = _flag(env, "SIGNUP_ENABLED")
+    if enabled is None:
+        problems.append("SIGNUP_ENABLED must be true or false.")
+    for name in SIGNUP_LIMITS:
+        raw = env.get(name, "").strip()
+        if raw and not (raw.isascii() and raw.isdigit() and int(raw) >= 1):
+            problems.append(f"{name} must be a whole number of at least 1.")
+        elif not raw and enabled:
+            problems.append(f"SIGNUP_ENABLED=true needs {name}.")
+    if not enabled:
+        return problems
+    if production:
+        # Lifted only by the change that records every launch gate as passed.
+        problems.append(
+            "SIGNUP_ENABLED=true is refused in production until the signup launch "
+            "gates pass (docs/project/SIGNUP-PLAN.md)."
+        )
+    if _flag(env, "TRUST_PROXY_HEADERS") is not True:
+        # Without it every visitor behind the edge shares one rate-limit key
+        # (security finding L4), so per-client signup limits would not hold.
+        problems.append("SIGNUP_ENABLED=true needs TRUST_PROXY_HEADERS=true behind the edge proxy.")
+    return problems
 
 
 def _check_role_names(env: Mapping[str, str]) -> list[str]:
