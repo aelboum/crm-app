@@ -1022,7 +1022,9 @@ any real workspace is provisioned.
 | S8 | Done: `GET /v1/workspaces` without a table; start page list and header switcher |
 | S9 | Done: invitations in manual-link mode (Q4), SaaS-OS acceptance, role confirmation (Q5), revocation, email delivery behind `INVITATION_DELIVERY`; real production delivery waits on Q3 |
 | S10 | Done: workspace settings API and Settings › Business profile |
-| S11 | Security reviews done (`PHASE2-SECURITY-REVIEW.md`); CI green on every increment; the ZITADEL sign-in test still has to run on current code |
+| S11 | Done: security reviews and browser verification (`PHASE2-SECURITY-REVIEW.md`, every finding fixed or dispositioned); integration suite 229 passed; ZITADEL sign-in test passed; owner's browser sign-in from `/app` passed after the P2-G sign-out fix; CI green on every increment, last `5c06d48` (run 40094376772) |
+
+**Phase 2 is complete (2026-10-24).** Self-service sign-up (`LeadStack Signup.dc.html`) stays excluded by P2-C; the production email provider (Q3) and the Phase 13 items accepted in the security review remain.
 
 ## 12. Security and privacy considerations
 

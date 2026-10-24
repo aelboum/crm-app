@@ -4,8 +4,8 @@ The verified current state of the project. `ROADMAP.md` defines the
 destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
-**Last updated:** 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2).
-Earlier: 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
+**Last updated:** 2026-10-24 (Phase 2 complete, decisions P2-F and P2-G).
+Earlier: 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2); 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
 first local commits, decision K2.1; remote, push and first CI run,
 decision K2.2; Claude Design inspection, D-DES and K5.1; Phase 2
 decisions P2-A to P2-E approved)
@@ -25,9 +25,16 @@ decisions P2-A to P2-E approved)
   (GitHub Actions run 39652641595, 2026-10-21), which meets acceptance
   criterion 9 (decision K2.2). CI also passed on `13d6685` (run
   39653421776).
-- **Phase 2 — Identity, workspaces and tenant isolation:** not started.
-  Its decisions P2-A to P2-E were approved on 2026-10-21 with conditions
-  (`DECISIONS.md`); implementation needs an approved Phase 2 plan.
+- **Phase 2 — Identity, workspaces and tenant isolation:** complete,
+  2026-10-24. Verified on current code: integration suite against
+  `crm_app_test`, 229 passed; ZITADEL sign-in test (`tests/identity`),
+  1 passed; the owner's browser sign-in from the LeadStack start page
+  `/app` through ZITADEL and back (`/auth/me` 200 with the user ID only),
+  and sign-out ending both the application and ZITADEL sessions (decision
+  P2-G). CI passed on `5c06d48` (run 40094376772). Security findings are
+  fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
+  are deferred to Phase 13.
+- **Phase 3:** slices 3A and 3B done; 3C and later not started.
 
 ## Repository state
 
