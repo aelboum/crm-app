@@ -159,6 +159,10 @@ def test_email_mode_sends_through_the_provider_and_never_returns_the_link(probe:
     assert failure["status_listed"] == ["revoked"]  # nothing usable left behind
 
 
+def test_the_pending_cap_holds_when_creates_race(probe: Probe) -> None:
+    assert probe["cap_race"] == [201, 201, 409, 409]
+
+
 def test_no_token_reaches_logs_listings_or_audit(
     ran: Probe, owner_connection: psycopg.Connection
 ) -> None:

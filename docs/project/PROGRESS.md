@@ -812,3 +812,16 @@ Slice 3B is complete; details and accepted limitations in
 - Not done: removing intent rows of long-expired invitations (they hold
   IDs and a role only and go with the workspace's purge); a per-workspace
   cleanup can follow.
+
+### Phase 2: review of the completion work (2026-10-24)
+
+Independent read-only review of the directory, settings and invitations:
+no critical or high finding (`PHASE2-SECURITY-REVIEW.md`, "Review of the
+Phase 2 completion work"). Fixed: the pending cap now holds under
+concurrency (per-workspace advisory lock; new integration test); the
+intent is recorded before an email is sent and a failed clean-up is
+logged without secrets; the Owner rule moved into the service; a waiting
+invitation is also forgotten on sign-out. Accepted with reasons: the two
+transactions behind an invitation, the provider seeing emailed tokens
+(production TLS is enforced by SaaS-OS), and the directory's per-workspace
+reads.

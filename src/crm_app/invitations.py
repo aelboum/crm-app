@@ -24,8 +24,10 @@ browsers do not send to servers or in `Referer`.
 
 Rules: Owner and Admin invite (`invitation:create`); only a holder of
 `crm_app.owner:manage` (Owner) may invite an Owner, as for every other
-Owner change (§5.4); at most `MAX_PENDING` pending invitations per
-workspace; one pending invitation per address (SaaS-OS).
+Owner change (§5.4), checked here so every caller gets the rule; at most
+`MAX_PENDING` pending invitations per workspace, kept under concurrency by
+a per-workspace advisory lock around the check and the creation; one
+pending invitation per address (SaaS-OS).
 
 SaaS-OS resolves configuration at import time; only code that runs after
 validation imports this module.
@@ -33,6 +35,7 @@ validation imports this module.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -62,18 +65,21 @@ from saas_os.core.identity import (
     list_invitations_for_tenant,
     revoke_invitation,
 )
+from saas_os.core.rbac import can
 from saas_os.core.tenancy import (
     TenantClosedError,
     TenantNotFoundError,
     get_tenant,
     lock_open_tenant,
 )
-from saas_os.infra.db import select, tenant_session_scope
+from saas_os.infra.db import acquire_tenant_advisory_lock, select, tenant_session_scope
 
 from crm_app.models import InvitationIntent
 from crm_app.records import RecordError, RecordNotFoundError, Scope
 from crm_app.roles import Role
 from crm_app.settings import invitation_delivery
+
+_log = logging.getLogger(__name__)
 
 RESOURCE = "crm_app.invitation"
 MAX_PENDING = 100
@@ -88,6 +94,12 @@ class InvitationRefusedError(RecordError):
 
 def _refused(status: int, code: str) -> InvitationRefusedError:
     return InvitationRefusedError(status, code)
+
+
+@dataclass(frozen=True)
+class _Created:
+    invitation: Invitation
+    token: str
 
 
 @dataclass(frozen=True)
@@ -171,17 +183,32 @@ def _send(email: str, workspace: uuid.UUID, link: str, expires_at: datetime) -> 
         raise _refused(502, "delivery_failed")
 
 
-def create(scope: Scope, email: str, role: Role, *, may_invite_owner: bool, origin: str) -> Created:
-    """Invite `email` to the workspace with the intended `role`."""
-    if role is Role.OWNER and not may_invite_owner:
-        raise _refused(403, "role_not_allowed")
-    if _pending_count(scope) >= MAX_PENDING:
-        raise _refused(409, "too_many_pending")
-    delivery = invitation_delivery()
-    try:
+def _create_locked(scope: Scope, email: str) -> _Created:
+    """Creates the SaaS-OS invitation while holding a per-workspace lock, so
+    the pending cap holds when invitations are created at the same time
+    (the lock is released when this transaction ends)."""
+    with tenant_session_scope(scope.workspace) as session:
+        lock_open_tenant(session, scope.workspace)
+        acquire_tenant_advisory_lock(session, scope.workspace, f"{RESOURCE}.create")
+        if _pending_count(scope) >= MAX_PENDING:
+            raise _refused(409, "too_many_pending")
         invitation, token = create_invitation(
             scope.workspace, email, caller=UserCaller(scope.actor)
         )
+        return _Created(invitation, token)
+
+
+def create(scope: Scope, email: str, role: Role, *, origin: str) -> Created:
+    """Invite `email` to the workspace with the intended `role`. The intent
+    is recorded before any email is sent, so a delivered link always has
+    one; if anything fails, the invitation is revoked."""
+    if role is Role.OWNER and not can(
+        actor_id=scope.actor, tenant_id=scope.workspace, action="manage", resource="crm_app.owner"
+    ):
+        raise _refused(403, "role_not_allowed")
+    delivery = invitation_delivery()
+    try:
+        created = _create_locked(scope, email)
     except DuplicateInvitationError:
         raise _refused(409, "duplicate_invitation") from None
     except InvalidInvitationEmailError:
@@ -190,13 +217,14 @@ def create(scope: Scope, email: str, role: Role, *, may_invite_owner: bool, orig
         raise _refused(403, "not_authorized") from None
     except (TenantClosedError, TenantNotFoundError):
         raise RecordNotFoundError from None
-    link = _link(origin, scope.workspace, token)
+    invitation = created.invitation
+    link = _link(origin, scope.workspace, created.token)
     try:
+        intent = _record_intent(scope, invitation, role, delivery)
         if delivery == "email":
             _send(invitation.invited_email, scope.workspace, link, invitation.expires_at)
-        intent = _record_intent(scope, invitation, role, delivery)
     except Exception:
-        # Leave no usable invitation behind that the product cannot describe.
+        # Leave no usable invitation behind: not described, or not delivered.
         _revoke_quietly(scope, invitation.id)
         raise
     return Created(
@@ -210,8 +238,16 @@ def _revoke_quietly(scope: Scope, invitation_id: uuid.UUID) -> None:
     is what the caller reports."""
     try:
         revoke_invitation(scope.workspace, invitation_id, caller=UserCaller(scope.actor))
-    except Exception:  # noqa: BLE001 - the original failure matters more
-        return
+    except Exception as exc:  # noqa: BLE001 - the original failure matters more
+        # IDs and the error class only: never the link, token or address.
+        _log.warning(
+            "invitation_cleanup_revoke_failed",
+            extra={
+                "tenant_id": str(scope.workspace),
+                "invitation_id": str(invitation_id),
+                "error": type(exc).__name__,
+            },
+        )
 
 
 def _record_intent(

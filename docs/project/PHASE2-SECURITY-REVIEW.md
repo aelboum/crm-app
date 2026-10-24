@@ -81,3 +81,35 @@ The owner reviewed this record and decided every open item: M1, L1, L2
 and L3 are fixed with tests in CI; L4, L5 and I1 are accepted and deferred
 to Phase 13; the I2 policy points are decided as recorded in the table,
 and the `/access` defect in I2 is fixed. No finding remains open.
+
+## Review of the Phase 2 completion work (2026-10-24, decision P2-F)
+
+Read-only review by an independent reviewer of the workspace directory
+(`5f8e475`), workspace settings (`d833deb`) and invitations (`b3bf1d4`),
+including the SaaS-OS code they rely on. **No critical or high finding.**
+Verified sound: the token exists only in the manual-mode response or the
+email body, never stored, logged, audited or listed, carried in the URL
+fragment, and the create response is `no-store`; SaaS-OS re-checks
+`invitation:create`/`:revoke` inside its calls; only an Owner invites an
+Owner; every lookup is workspace-scoped (another workspace's invitation is
+404); the email subject cannot inject headers; both new tables have forced
+RLS, exact grants and purge coverage; the settings first-save race is
+handled; the directory checks the caller's own active membership before
+showing a name, excludes the platform tenant and fails closed when its
+rate limiter is down; the new screens render addresses as text and take no
+redirect target from input; Mailpit binds to 127.0.0.1 and is pinned.
+
+| ID | Severity | Finding | Status |
+| --- | --- | --- | --- |
+| R2-M1 | Medium | The pending-invitation cap was checked without a lock, so concurrent creates could exceed it | **Fixed**: the check and the creation run under a per-workspace advisory lock (`acquire_tenant_advisory_lock`); integration test of four concurrent creates against a cap two above the pending count (two succeed, two 409) |
+| R2-L1 | Low | In email mode the intent was written after sending; if that write and the clean-up revoke both failed, a delivered link had no intent | **Fixed**: the intent is recorded before anything is sent; a failed clean-up revoke is logged with IDs and the error class only |
+| R2-L2 | Low | The invitation and its intent are written in two transactions | Accepted: an invitation without intent is never delivered (R2-L1) and acceptance grants no role (Q5) |
+| R2-L3 | Low | A pending token stays in the tab's sessionStorage if the person abandons the flow | **Reduced**: also cleared on sign-out; exposure needs same-origin script (blocked by the CSP) and the token is bound to the invited verified email |
+| R2-L4 | Low | In email mode the token passes through the mail provider | Accepted for Phase 13: SaaS-OS requires SMTP TLS when `ENVIRONMENT=production` (`SMTP_REQUIRE_TLS` default); the production provider is chosen before launch (Q3) |
+| R2-I1 | Info | The directory reads one membership per open workspace; timing reveals roughly how many workspaces exist | Accepted (P2-F 2): rate-limited per person; the index table of `PHASE2-PLAN.md` §6.4 replaces it at scale |
+| R2-I2 | Info | The Owner check for invitations lived in the route | **Fixed**: moved into `crm_app.invitations`, so every caller gets it |
+| R2-I3 | Info | Role confirmation reuses the members role route | Covered: that route's Owner rules are proven by `test_owner_protection.py` and the role-matrix tests (an Admin cannot grant Owner) |
+
+Listing every invitation of a workspace on each create and list (the cost
+part of R2-M1) remains; the cap and the per-inviter limit bound it, and an
+expired-invitation clean-up can follow.

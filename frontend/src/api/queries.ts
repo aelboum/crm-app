@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError, type Role, unwrap } from "./client";
+import { forgetInvitation } from "./pendingInvitation";
 import type { components } from "./schema";
 
 export const PAGE_SIZE = 50;
@@ -138,6 +139,7 @@ export function useSignOut() {
     onSuccess: () => {
       client.clear();
       client.setQueryData(keys.me, null);
+      forgetInvitation();
     },
   });
 }

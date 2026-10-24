@@ -14,7 +14,9 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -223,6 +225,21 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             ],
         }
         os.environ["INVITATION_DELIVERY"] = "manual"
+
+        # --- The pending cap holds when creates race (security review M1) ---------
+        pending_now = sum(
+            i["status"] == "pending"
+            for i in client.get(f"{base}/invitations", headers=auth("Owner")).json()["items"]
+        )
+        crm_app.invitations.MAX_PENDING = pending_now + 2
+        barrier = threading.Barrier(4)
+
+        def racing_invite(n: int) -> int:
+            barrier.wait()
+            return invite(_address(f"race{n}"), "Member").status_code
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            result["cap_race"] = sorted(pool.map(racing_invite, range(4)))
 
     print("RESULT " + json.dumps(result, default=str))
 

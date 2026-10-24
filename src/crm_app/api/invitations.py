@@ -5,8 +5,8 @@
     POST /v1/workspaces/{tenant_id}/invitations/{invitation_id}/revoke   invitation:revoke
 
 Owner and Admin hold all three (Q6). Inviting an Owner also needs
-`crm_app.owner:manage` (Owner only), checked here with SaaS-OS `can()`, as
-for every other Owner change. Creating is rate-limited per inviter.
+`crm_app.owner:manage` (Owner only), checked by `crm_app.invitations` with
+SaaS-OS `can()`, as for every other Owner change. Creating is rate-limited per inviter.
 
 Acceptance is SaaS-OS's own route, mounted by `create_app()`:
 `POST /v1/tenants/{tenant_id}/invitations/accept` (signed in, the session's
@@ -30,7 +30,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
 from saas_os.api.errors import rate_limited, service_unavailable
-from saas_os.core.rbac import can
 from saas_os.infra.ratelimit import (
     RateLimitBackendError,
     RateLimitExceededError,
@@ -124,18 +123,11 @@ def list_invitations(tenant_id: uuid.UUID, context: ReadInvitations) -> Any:
 
 @router.post("/{tenant_id}/invitations", status_code=201, response_model=CreatedInvitation)
 def create_invitation(tenant_id: uuid.UUID, body: InvitationIn, context: CreateInvitation) -> Any:
-    may_invite_owner = can(
-        actor_id=context.actor_id,
-        tenant_id=context.tenant_id,
-        action="manage",
-        resource="crm_app.owner",
-    )
     try:
         created = invitations.create(
             _scope(context),
             body.email,
             Role(body.role),
-            may_invite_owner=may_invite_owner,
             origin=os.environ["PUBLIC_APP_ORIGIN"].rstrip("/"),
         )
     except RecordError as exc:
