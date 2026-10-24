@@ -369,7 +369,7 @@ Use the actual language and tooling selected after discovery.
   * **G-LOCK:** Owner-, role- and membership-changing routes are implemented with a per-workspace lock; local concurrency tests against the test database show the last active Owner is never removed (commit `19e7dce`). Paths outside the product are covered by an operator rule only (`PHASE2-PLAN.md` §5.4). CI run 39742030028 green.
   * **G3/G4:** real invitation delivery needs an email provider (Q3); Q4 and Q5 were decided 2026-10-22, but the flow also needs G1 for its product table.
 * **External dependencies:** two upstream SaaS-OS requests were opened on 2026-10-22: purge-participant registration (aelboum/saas-os#87, blocks G1) and adding permissions to existing workspaces (aelboum/saas-os#88).
-* **Proven since (slice 3A, 2026-10-23):** runtime RLS isolation of product data on the first tenant-owned tables (`contact`, `company`): as the runtime role, no rows without or with another workspace set, no writes into another workspace, composite foreign keys refusing cross-workspace links with RLS bypassed, every record route answering another workspace's IDs with 404, and the operator purge removing exactly one workspace's rows (`tests/integration/test_crm_tables.py`, `test_record_routes.py`, `test_record_lists.py`). The Phase 2 security review is still open.
+* **Proven since (slice 3A, 2026-10-23):** runtime RLS isolation of product data on the first tenant-owned tables (`contact`, `company`): as the runtime role, no rows without or with another workspace set, no writes into another workspace, composite foreign keys refusing cross-workspace links with RLS bypassed, every record route answering another workspace's IDs with 404, and the operator purge removing exactly one workspace's rows (`tests/integration/test_crm_tables.py`, `test_record_routes.py`, `test_record_lists.py`). Phase 2 security review: done read-only on 2026-10-24 (`docs/project/PHASE2-SECURITY-REVIEW.md`): no critical or high finding; its two evidence gaps and two defects are fixed; it awaits the owner's review and does not complete Phase 2.
 
 ## Objectives
 
@@ -440,7 +440,7 @@ Test that:
 
 # 8. Phase 3 — Core CRM
 
-**Status:** In progress. Slice 3A backend (stages 3A.1–3A.3: contact and company tables, record API, lists) is done and CI-verified (commits `2a6ea5b`, `dad9132`, `58cb900`, `8724359`; GitHub Actions run 40036417310 on `b288a4b`, all four jobs green). Decision P3-A; plan `docs/project/PHASE3-PLAN.md` §19. Next: 3A.4 (Contacts and Companies screens). Tags, custom fields, notes, activity, import and export are not started.
+**Status:** In progress. Slice 3A backend (stages 3A.1–3A.3: contact and company tables, record API, lists) is done and CI-verified (commits `2a6ea5b`, `dad9132`, `58cb900`, `8724359`; GitHub Actions run 40036417310 on `b288a4b`, all four jobs green). Decision P3-A; plan `docs/project/PHASE3-PLAN.md` §19. Slice 3A.4 (Contacts and Companies screens) is done and CI-verified (commits `77f2c29`, `d20f743`, hardening `8787e6c`; run 40042487578 on `5288398`, all four jobs green); not yet checked in a real browser. Tags, custom fields, notes, activity, import and export are not started and need the owner's approval (proposed slices in `PHASE3-PLAN.md` §20).
 
 ## Objectives
 

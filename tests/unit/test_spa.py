@@ -51,6 +51,11 @@ def test_nothing_outside_the_build_or_hidden_is_served(dist: Path) -> None:
     assert resolve(dist, ".env") is None
 
 
+def test_a_path_with_a_nul_byte_is_not_found(dist: Path) -> None:
+    assert resolve(dist, "assets/a\0.js") is None
+    assert resolve(dist, "\0") is None
+
+
 def test_without_a_build_nothing_is_served(tmp_path: Path) -> None:
     assert resolve(tmp_path, "") is None
 

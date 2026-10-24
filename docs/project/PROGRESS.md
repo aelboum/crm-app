@@ -544,3 +544,15 @@ Decision P3-A; plan `PHASE3-PLAN.md` §19. Pushed to `main`:
 - Read-only security review of the slice: no critical or high finding;
   four low findings fixed, the rest recorded with reasons
   (`PHASE3-PLAN.md` §19.8).
+- Pushed `8787e6c` (hardening; CI run 40041973473 passed quality,
+  integration and security, but the frontend job failed its `npm audit`
+  step on two new undici advisories) and `5288398` (undici 8.11.2 ->
+  8.12.3 in the lockfile only; run 40042487578, all four jobs green).
+- Phase 2 security review (read-only): `PHASE2-SECURITY-REVIEW.md`. No
+  critical or high finding. Fixed: removed members proven refused with a
+  live session (M1), mixed Owner races (L1), NUL bytes in static paths
+  (L2), `Cache-Control: no-store` on API and sign-in responses (L3).
+  Deployment points L4, L5 and I1 are for Phase 13. Phase 2 stays open.
+- Next recommended: the owner reviews the screens in a browser and
+  `PHASE2-SECURITY-REVIEW.md`, and chooses the next Phase 3 slice
+  (`PHASE3-PLAN.md` §20; export needs no new table).

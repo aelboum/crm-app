@@ -31,7 +31,9 @@ def probe(integration_env: dict[str, str], tmp_path_factory: pytest.TempPathFact
     return json.loads(line.removeprefix("RESULT "))
 
 
-@pytest.mark.parametrize("scenario", ["revoke", "suspend", "drop_role"])
+@pytest.mark.parametrize(
+    "scenario", ["revoke", "suspend", "drop_role", "revoke_vs_drop_role", "both_step_down"]
+)
 def test_two_owners_removing_each_other_leave_exactly_one_active_owner(
     probe: Probe, scenario: str
 ) -> None:

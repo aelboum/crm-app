@@ -64,6 +64,19 @@ def _file(path: Path, cache: str) -> FileResponse:
     return FileResponse(path, headers={**SECURITY_HEADERS, "Cache-Control": cache})
 
 
+def _inside(root: Path, requested: str) -> Path | None:
+    """`requested` resolved under `root`, or `None` when it names a hidden
+    file, leaves `root` or cannot name a file at all (a NUL byte makes
+    resolving raise ValueError)."""
+    if "\0" in requested or any(part.startswith(".") for part in Path(requested).parts):
+        return None
+    try:
+        candidate = (root / requested).resolve()
+    except (OSError, ValueError):
+        return None
+    return candidate if candidate.is_relative_to(root) else None
+
+
 def resolve(root: Path, requested: str) -> tuple[Path, str] | None:
     """The file to send for `/app/<requested>` and its cache policy, or
     `None` for 404. Paths outside `root` and hidden files are never served;
@@ -73,10 +86,8 @@ def resolve(root: Path, requested: str) -> tuple[Path, str] | None:
         return None
     if not requested:
         return index, REVALIDATE
-    if any(part.startswith(".") for part in Path(requested).parts):
-        return None
-    candidate = (root / requested).resolve()
-    if not candidate.is_relative_to(root):
+    candidate = _inside(root, requested)
+    if candidate is None:
         return None
     if candidate.is_file() and candidate != index:
         inside = candidate.relative_to(root).parts

@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
 
     from crm_app.api.access import router as access_router  # noqa: PLC0415
     from crm_app.api.errors import validation_error  # noqa: PLC0415
+    from crm_app.api.headers import NoStoreMiddleware  # noqa: PLC0415
     from crm_app.api.members import router as members_router  # noqa: PLC0415
     from crm_app.api.records import router as records_router  # noqa: PLC0415
     from crm_app.api.spa import router as spa_router  # noqa: PLC0415
@@ -46,6 +47,8 @@ def create_app() -> FastAPI:
     app = build_platform_app(title=TITLE, version=__version__)
     # Rejected values are personal data: 422 bodies never echo them.
     app.add_exception_handler(RequestValidationError, validation_error)
+    # Responses with personal data are never stored by browsers or proxies.
+    app.add_middleware(NoStoreMiddleware)
     app.include_router(workspaces_router)
     app.include_router(access_router)
     app.include_router(members_router)

@@ -136,6 +136,52 @@ def main() -> None:
                 rounds.append({"statuses": statuses, "active_owners": _active_owners(ws.id)})
             result[f"race_{scenario}"] = rounds
 
+        # Mixed races (Phase 2 security review L1): the same lock must order
+        # different operations too. A revokes B while B drops A's Owner role;
+        # and both Owners step down at once.
+        mixed: dict[str, list[dict[str, object]]] = {
+            "revoke_vs_drop_role": [],
+            "both_step_down": [],
+        }
+        for _ in range(ROUNDS):
+            ws = _workspace({"second": Role.OWNER})
+            first_owner, second_owner = ws.people["owner"], ws.people["second"]
+
+            def drop(who: str, target: Person, ws: Workspace = ws) -> int:
+                path = f"{target.membership_id}/roles/Owner?confirm_owner_change=true"
+                return call("DELETE", ws, who, path)
+
+            statuses = race(
+                lambda ws=ws, b=second_owner: call(
+                    "POST", ws, "owner", f"{b.membership_id}/revoke", confirm
+                ),
+                lambda a=first_owner: drop("second", a),
+            )
+            mixed["revoke_vs_drop_role"].append(
+                {"statuses": statuses, "active_owners": _active_owners(ws.id)}
+            )
+
+            ws = _workspace({"second": Role.OWNER})
+            first_owner, second_owner = ws.people["owner"], ws.people["second"]
+            statuses = race(
+                lambda ws=ws, a=first_owner: call(
+                    "DELETE",
+                    ws,
+                    "owner",
+                    f"{a.membership_id}/roles/Owner?confirm_owner_change=true",
+                ),
+                lambda ws=ws, b=second_owner: call(
+                    "DELETE",
+                    ws,
+                    "second",
+                    f"{b.membership_id}/roles/Owner?confirm_owner_change=true",
+                ),
+            )
+            mixed["both_step_down"].append(
+                {"statuses": statuses, "active_owners": _active_owners(ws.id)}
+            )
+        result |= {f"race_{name}": rounds for name, rounds in mixed.items()}
+
         # Transfer: grant Owner to an Admin, then the original Owner steps down.
         ws = _workspace({"admin": Role.ADMIN})
         admin = ws.people["admin"]

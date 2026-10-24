@@ -41,7 +41,16 @@ from crm_app.roles import ROLE_TEMPLATES, Role
 
 PROVISIONING = SystemCaller(SystemAuthority.PROVISIONING)
 ISSUER = "https://identity.invalid/route-probe"
-CALLERS = (None, "owner", "reader", "roleless", "outsider", "other_owner")
+CALLERS = (
+    None,
+    "owner",
+    "reader",
+    "roleless",
+    "outsider",
+    "other_owner",
+    "suspended",
+    "revoked",
+)
 
 
 @dataclass(frozen=True)
@@ -90,11 +99,19 @@ def main() -> None:
     add_tenant_membership(a.id, roleless, caller=PROVISIONING)
     outsider = _new_user()
     owner_caller = UserCaller(a.owner_id)
+    # Read-only members with a session, then suspended or revoked: the
+    # session they already hold must stop working on the next request.
     suspended = _new_user()
     suspended_membership = add_tenant_membership(a.id, suspended, caller=PROVISIONING)
-    suspend_membership(a.id, suspended_membership.id, caller=owner_caller)
+    assign_role(a.id, suspended_membership.id, a.role_ids[Role.READ_ONLY], caller=owner_caller)
     revoked = _new_user()
     revoked_membership = add_tenant_membership(a.id, revoked, caller=PROVISIONING)
+    assign_role(a.id, revoked_membership.id, a.role_ids[Role.READ_ONLY], caller=owner_caller)
+    removed_tokens = {
+        "suspended": issue_session(suspended)[1],
+        "revoked": issue_session(revoked)[1],
+    }
+    suspend_membership(a.id, suspended_membership.id, caller=owner_caller)
     revoke_membership(a.id, revoked_membership.id, caller=owner_caller)
 
     users = {
@@ -104,7 +121,7 @@ def main() -> None:
         "outsider": outsider,
         "other_owner": b.owner_id,
     }
-    tokens = {name: issue_session(user)[1] for name, user in users.items()}
+    tokens = {name: issue_session(user)[1] for name, user in users.items()} | removed_tokens
 
     def headers(caller: str | None) -> dict[str, str]:
         return {"Authorization": f"Bearer {tokens[caller]}"} if caller else {}
@@ -125,7 +142,9 @@ def main() -> None:
 
         listed = client.get(members, headers=headers("reader")).json()["items"]
         owner_listed = client.get(members, headers=headers("owner")).json()
-        shown = client.get(workspace, headers=headers("owner")).json()
+        shown_response = client.get(workspace, headers=headers("owner"))
+        shown = shown_response.json()
+        api_cache = shown_response.headers.get("cache-control")
         access_seen = {
             c: client.get(access, headers=headers(c)).json() for c in ("owner", "reader")
         }
@@ -171,6 +190,7 @@ def main() -> None:
         "other_owner_listed": str(b.owner_id) in {item["user_id"] for item in listed},
         "access_seen": access_seen,
         "frontend": frontend,
+        "api_cache": api_cache,
     }
     print("RESULT " + json.dumps(result))
 

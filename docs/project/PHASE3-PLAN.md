@@ -780,3 +780,23 @@ approval.
   own process only (`RATE_LIMIT_REQUESTS_PER_WINDOW`), because it pages
   about 100 times on one path; product code and other tests keep the
   default of 60 per minute.
+
+## 20. Proposed next slices (planning only, awaiting approval)
+
+Slice 3A is complete (backend and screens). The rest of Phase 3 adds new
+tenant-owned tables, so each slice needs the owner's approval (G1 decision:
+every new table needs its own approval, `PURGE_TABLES` entry and RLS
+tests). Proposed order, smallest first; designs are in §3-§13.
+
+| Slice | Content | Tables | Decisions needed first |
+| --- | --- | --- | --- |
+| 3B | Notes and the activity timeline on contacts and companies (§3.2 `activity`, §6.1 notes routes, §13 Notes tab) | `activity` | Note edit/delete rule: Q6 gives edit and delete to Owner and Admin only (§18 Q3 resolved that way unless amended) |
+| 3C | Tags: vocabulary, assignment, tag filter (§3.2 `tag`, `contact_tag`, `company_tag`) | 3 | Who manages the vocabulary: §6.2 proposes `workspace:update` (Owner, Admin) |
+| 3D | Custom field definitions and values (§3.2, JSON values validated against definitions) | `custom_field_definition` plus a `custom_fields` column | A migration adding `custom_fields jsonb` to both tables |
+| 3E | CSV export (§10): synchronous, bounded, audited, rate-limited; Owner and Admin (`crm_data:export`, already in the catalogue) | none | None beyond approval |
+| 3F | CSV import (§9) with preview, commit job, resume | `import_job`, `import_row` | §18 Q4 import permission (a new permission must exist before the first real workspace, or #88 is needed), §18 Q5 row retention |
+
+Recommended next: 3E (export) needs no table and no new decision, then
+3B (notes and activity), which the design's record page leans on most.
+Optional, independent: `pg_trgm` substring search (§18 Q6) and a phone
+library (§18 Q6).

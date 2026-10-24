@@ -48,6 +48,18 @@ def test_non_members_and_other_workspaces_get_the_same_404(probe: Probe, route: 
 
 
 @pytest.mark.parametrize("route", ["workspace", "members", "access"])
+def test_suspended_and_revoked_members_lose_access_with_a_live_session(
+    probe: Probe, route: str
+) -> None:
+    """Their sessions were issued while they were active members; after
+    suspension or revocation the next request is refused (SaaS-OS `can()`
+    requires an active membership). They still hold a membership row, so
+    the answer is 403 rather than the non-member 404."""
+    assert probe[route]["suspended"] == 403
+    assert probe[route]["revoked"] == 403
+
+
+@pytest.mark.parametrize("route", ["workspace", "members", "access"])
 def test_anonymous_callers_are_refused(probe: Probe, route: str) -> None:
     assert probe[route]["anonymous"] == 401
 
@@ -124,3 +136,7 @@ def test_the_frontend_is_served_from_the_api_origin(probe: Probe) -> None:
     assert frontend["missing_asset"] == 404
     assert frontend["head"] == [200, "", 200]
     assert frontend["traversal"] == 404
+
+
+def test_api_responses_are_never_cached(probe: Probe) -> None:
+    assert probe["api_cache"] == "no-store"
