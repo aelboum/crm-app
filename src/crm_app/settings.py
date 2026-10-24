@@ -137,6 +137,8 @@ def validate_settings(
     problems.extend(_check_http_url(values, "OIDC_ISSUER_URL", require_https=production))
     problems.extend(_check_origin(values, require_https=production))
     problems.extend(_check_role_names(env))
+    if process is Process.APP:
+        problems.extend(_check_invitation_delivery(env))
 
     if problems:
         raise ConfigurationError(process, problems)
@@ -203,6 +205,29 @@ def _check_origin(values: Mapping[str, str], *, require_https: bool) -> list[str
         parts.path not in ("", "/") or parts.query or parts.fragment or parts.username
     ):
         return ["PUBLIC_APP_ORIGIN must be an origin only (scheme, host and optional port)."]
+    return []
+
+
+INVITATION_DELIVERIES = ("manual", "email")
+
+
+def invitation_delivery(env: Mapping[str, str] | None = None) -> str:
+    """How invitation links reach the invitee (decisions Q4, P2-F 3):
+    `manual` (the default) shows the link once to the inviter, labelled not
+    sent; `email` sends it through SaaS-OS `core.email` (`EMAIL_PROVIDER`
+    `smtp`, or `mailpit` in development only)."""
+    source = os.environ if env is None else env
+    return source.get("INVITATION_DELIVERY") or "manual"
+
+
+def _check_invitation_delivery(env: Mapping[str, str]) -> list[str]:
+    delivery = invitation_delivery(env)
+    if delivery not in INVITATION_DELIVERIES:
+        return [f"INVITATION_DELIVERY must be one of {list(INVITATION_DELIVERIES)}."]
+    if delivery == "email" and not env.get("EMAIL_DEFAULT_SENDER", "").strip():
+        return ["INVITATION_DELIVERY=email needs EMAIL_DEFAULT_SENDER."]
+    if delivery == "email" and env.get("EMAIL_PROVIDER") not in ("smtp", "mailpit"):
+        return ["INVITATION_DELIVERY=email needs EMAIL_PROVIDER set to smtp or mailpit."]
     return []
 
 

@@ -33,6 +33,11 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "manage_owners": ("crm_app.owner", "manage"),
     # Workspace settings (decision P2-F 1).
     "update_workspace": ("crm_app.workspace", "update"),
+    # Invitations (decisions Q4, Q5, P2-F); inviting an Owner also needs
+    # manage_owners.
+    "read_invitations": ("invitation", "read"),
+    "create_invitation": ("invitation", "create"),
+    "revoke_invitation": ("invitation", "revoke"),
     # Contact and company records (slice 3A, decision P3-A): create, update
     # (which covers archive and restore) and permanent delete.
     "create_contact": ("crm_app.contact", "create"),

@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { FieldError, Form, Input, Label, TextField } from "react-aria-components";
 
+import { pendingInvitation } from "../api/invitations";
 import { useDirectory, useMe } from "../api/queries";
 import { EmptyState, Loading, LoadError } from "../components/StateNotice";
 import { Button, buttonClass } from "../components/ui/Button";
@@ -101,8 +102,18 @@ export function HomePage() {
       </section>
     );
   }
+  const waiting = pendingInvitation();
   return (
     <>
+      {waiting ? (
+        // Sign-in always lands here; an invitation opened before it waits in this tab.
+        <div className="notice info row" role="status">
+          <p>{t("accept.pending")}</p>
+          <Link className={buttonClass("primary", "sm")} to="/invite/$workspaceId" params={{ workspaceId: waiting.workspaceId }}>
+            {t("accept.continue")}
+          </Link>
+        </div>
+      ) : null}
       <WorkspaceList />
       <OpenWorkspace />
     </>

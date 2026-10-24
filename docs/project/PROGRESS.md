@@ -765,3 +765,50 @@ Slice 3B is complete; details and accepted limitations in
   frontend (`BusinessSettings.test.tsx`, with an axe scan). Unit 217 and
   frontend 60 passed locally; the integration tests run in CI while the
   local services are stopped.
+
+### Phase 2: invitations (2026-10-24, decisions Q4, Q5, P2-F)
+
+- Migration `0005_invitation_intent`: per invitation the intended role, the
+  inviter and the delivery (`manual` or `email`); no token, link or
+  address. Forced RLS, CRUD grants, `PURGE_TABLES` entry.
+- `crm_app.invitations` and `crm_app.api.invitations`: list (`invitation:
+  read`), create (`invitation:create`, rate-limited per inviter, at most
+  100 pending per workspace, inviting an Owner needs `crm_app.owner:manage`)
+  and revoke (`invitation:revoke`); Owner and Admin hold all three. SaaS-OS
+  creates the invitation (hashed token, 7-day expiry, one pending per
+  address). Delivery by `INVITATION_DELIVERY` (validated at start-up):
+  `manual` (default, Q4) returns the link once, labelled not sent; `email`
+  sends it through SaaS-OS `send_email` and, if the provider refuses,
+  revokes the invitation and answers 502 `delivery_failed`. The link is
+  `/app/invite/<workspace>#<token>`; the token is never stored, logged,
+  audited or listed. `crm_app.invitation.intent_recorded` is audited with
+  the role and delivery.
+- Acceptance is SaaS-OS's route, now mounted:
+  `POST /v1/tenants/{id}/invitations/accept` (signed in, verified email
+  equal to the invited one, once; one 404 for every refusal). The new
+  member has no role (Q5) and appears as "Awaiting role" with "Give <role>
+  role", which uses the existing role route and its Owner rules.
+- Frontend: Invite dialog (Admins cannot pick Owner), the link dialog
+  ("Not sent — deliver it yourself", copy button, shown once), the
+  Invitations card with Revoke, members shown by their invited address,
+  and the acceptance page `/app/invite/<workspace>`: the token is taken
+  from the fragment, removed from the address bar, kept only in this tab's
+  sessionStorage across sign-in, and forgotten once used; the start page
+  offers to continue a waiting invitation.
+- Local development: `INVITATION_DELIVERY`, `EMAIL_PROVIDER`,
+  `MAILPIT_SMTP_HOST` and `EMAIL_DEFAULT_SENDER` documented in
+  `.env.example`; an opt-in Mailpit service (`--profile mail`, the same
+  pinned image SaaS-OS uses) catches invitation emails.
+- Tests: unit (settings for delivery, route policies), integration
+  (`test_invitations.py`: role matrix, the Owner rule, manual links,
+  validation and duplicates, acceptance bound to the verified email and
+  used once, awaiting role and Admin confirmation, revocation, email mode
+  with SaaS-OS's `FakeEmailProvider` including a failed send that revokes,
+  no token in logs, listings, audit or the intent table, runtime-role RLS
+  and table `CHECK`s), frontend (`Invitations.test.tsx`,
+  `InvitePage.test.tsx`, with axe scans). Unit 220 and frontend 70 passed
+  locally; the integration tests run in CI while the local services are
+  stopped.
+- Not done: removing intent rows of long-expired invitations (they hold
+  IDs and a role only and go with the workspace's purge); a per-workspace
+  cleanup can follow.

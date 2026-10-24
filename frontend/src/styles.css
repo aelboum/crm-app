@@ -746,3 +746,8 @@ a.btn-primary:hover { filter: brightness(0.94); }
   display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid #eef0f3;
   background: #fafafb; border-radius: 0 0 10px 10px;
 }
+
+/* Invitations (decisions Q4, Q5, P2-F). */
+.invite-link { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.invite-link .form-input { flex: 1; font-size: 12px; }
+.member-row > .btn { flex: none; }

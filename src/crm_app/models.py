@@ -1,7 +1,7 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies`, `0003_notes_activity` and
-`0004_workspace_settings` own the schema: the constraints, the partial
+Migrations `0002_contacts_companies` to `0005_invitation_intent` own the
+schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
 services read and write, and register every table in SaaS-OS's shared
@@ -167,3 +167,18 @@ class WorkspaceSettings(Base):
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
+
+
+class InvitationIntent(Base):
+    """The role an invitation is for and how its link was delivered
+    (migration 0005, decisions Q4, Q5, P2-F 1). No token, link or email."""
+
+    __tablename__ = "invitation_intent"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    invitation_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    role: Mapped[str] = mapped_column(Text)
+    invited_by_user_id: Mapped[uuid.UUID] = mapped_column()
+    delivery: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

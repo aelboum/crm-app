@@ -14,6 +14,7 @@ import { ApiError } from "./api/client";
 import { keys } from "./api/queries";
 import { LoadError } from "./components/StateNotice";
 import { HomePage, isWorkspaceId } from "./pages/HomePage";
+import { InvitePage } from "./pages/InvitePage";
 import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
 import { type SettingsSection, SettingsPage } from "./pages/WorkspacePage";
@@ -32,6 +33,18 @@ const homeRoute = createRoute({
   getParentRoute: () => plainRoute,
   path: "/",
   component: HomePage,
+});
+
+function InviteRoutePage() {
+  const { workspaceId } = inviteRoute.useParams();
+  return <InvitePage workspaceId={workspaceId} />;
+}
+
+// An invitation link (decisions Q4, Q5): /app/invite/<workspace>#<token>.
+const inviteRoute = createRoute({
+  getParentRoute: () => plainRoute,
+  path: "/invite/$workspaceId",
+  component: InviteRoutePage,
 });
 
 const notFound = <LoadError error={new ApiError(404)} onRetry={() => undefined} />;
@@ -153,7 +166,7 @@ const sectionRoute = createRoute({
 });
 
 const routeTree = rootRoute.addChildren([
-  plainRoute.addChildren([homeRoute]),
+  plainRoute.addChildren([homeRoute, inviteRoute]),
   workspaceRoute.addChildren([workspaceIndexRoute, sectionRoute]),
 ]);
 

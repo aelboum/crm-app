@@ -205,3 +205,24 @@ def test_outside_development_secrets_come_from_the_process_environment(
     with pytest.raises(ConfigurationError) as caught:
         validate_settings(Process.WORKER)
     assert caught.value.problems == ["DATABASE_URL is not set."]
+
+
+def test_invitation_delivery_defaults_to_manual_and_accepts_only_known_modes() -> None:
+    _validate(Process.APP, PLACEHOLDER_SETTINGS)  # unset: manual (decision Q4)
+    _validate(Process.APP, {**PLACEHOLDER_SETTINGS, "INVITATION_DELIVERY": "manual"})
+    problems = _problems(Process.APP, {**PLACEHOLDER_SETTINGS, "INVITATION_DELIVERY": "sms"})
+    assert problems == ["INVITATION_DELIVERY must be one of ['manual', 'email']."]
+
+
+def test_email_delivery_needs_a_sender_and_an_explicit_provider() -> None:
+    email = {**PLACEHOLDER_SETTINGS, "INVITATION_DELIVERY": "email"}
+    assert _problems(Process.APP, email) == [
+        "INVITATION_DELIVERY=email needs EMAIL_DEFAULT_SENDER."
+    ]
+    with_sender = {**email, "EMAIL_DEFAULT_SENDER": "crm@example.test"}
+    assert _problems(Process.APP, with_sender) == [
+        "INVITATION_DELIVERY=email needs EMAIL_PROVIDER set to smtp or mailpit."
+    ]
+    _validate(Process.APP, {**with_sender, "EMAIL_PROVIDER": "mailpit"})
+    # The worker sends no invitations, so it does not check the setting.
+    _validate(Process.WORKER, {**PLACEHOLDER_SETTINGS, "INVITATION_DELIVERY": "sms"})

@@ -66,6 +66,16 @@ RECORDS |= {
 }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 
+# Invitations (decisions Q4, Q5, P2-F): reading, creating and revoking are
+# for Owner and Admin only; inviting an Owner is checked again in the
+# handler (`crm_app.owner:manage`).
+_INVITATIONS = "/v1/workspaces/{tenant_id}/invitations"
+INVITATIONS = {
+    f"GET {_INVITATIONS}": "invitation:read",
+    f"POST {_INVITATIONS}": "invitation:create",
+    f"POST {_INVITATIONS}/{{invitation_id}}/revoke": "invitation:revoke",
+}
+
 _PROBE = (
     "import json\n"
     "from crm_app.app import create_app\n"
@@ -106,15 +116,19 @@ def test_the_directory_needs_only_a_signed_in_person(tmp_path: Path) -> None:
 
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
     policies = {k: v for k, v in _product_policies(tmp_path).items() if k != DIRECTORY}
-    assert {key: detail for key, (_, detail, _) in policies.items()} == EXPECTED | RECORDS
+    assert {key: detail for key, (_, detail, _) in policies.items()} == (
+        EXPECTED | RECORDS | INVITATIONS
+    )
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
     changing = {key for key in policies if not key.startswith("GET ")}
-    assert changing == CHANGING | {key for key in RECORDS if not key.startswith("GET ")}
+    assert changing == CHANGING | {
+        key for key in RECORDS | INVITATIONS if not key.startswith("GET ")
+    }
 
 
 def test_route_permissions_are_registered() -> None:
-    for detail in (EXPECTED | RECORDS).values():
+    for detail in (EXPECTED | RECORDS | INVITATIONS).values():
         resource, _, action = detail.rpartition(":")
         assert (resource, action) in PERMISSIONS
 
@@ -151,3 +165,12 @@ def test_record_routes_follow_the_role_matrix() -> None:
             "delete": {Role.OWNER, Role.ADMIN},
         }[action]
         assert holders == expected, key
+
+
+def test_invitation_routes_are_for_owners_and_admins() -> None:
+    for key, detail in INVITATIONS.items():
+        resource, _, action = detail.rpartition(":")
+        holders = {
+            role for role, template in ROLE_TEMPLATES.items() if (resource, action) in template
+        }
+        assert holders == {Role.OWNER, Role.ADMIN}, key

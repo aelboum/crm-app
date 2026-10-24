@@ -84,6 +84,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenants/{tenant_id}/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept */
+        post: operations["accept_v1_tenants__tenant_id__invitations_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces": {
         parameters: {
             query?: never;
@@ -351,6 +368,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invitations */
+        get: operations["list_invitations_v1_workspaces__tenant_id__invitations_get"];
+        put?: never;
+        /** Create Invitation */
+        post: operations["create_invitation_v1_workspaces__tenant_id__invitations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/invitations/{invitation_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Invitation */
+        post: operations["revoke_invitation_v1_workspaces__tenant_id__invitations__invitation_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/members": {
         parameters: {
             query?: never;
@@ -498,6 +550,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptInvitationRequest */
+        AcceptInvitationRequest: {
+            /** Token */
+            token: string;
+        };
+        /** AcceptedInvitationResponse */
+        AcceptedInvitationResponse: {
+            /** Status */
+            status: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
         /** Access */
         Access: {
             /** Actions */
@@ -785,6 +852,12 @@ export interface components {
             /** Source */
             source?: string | null;
         };
+        /** CreatedInvitation */
+        CreatedInvitation: {
+            invitation: components["schemas"]["InvitationOut"];
+            /** Link */
+            link: string | null;
+        };
         /** CurrentUserResponse */
         CurrentUserResponse: {
             /**
@@ -812,6 +885,57 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InvitationIn */
+        InvitationIn: {
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "Owner" | "Admin" | "Member" | "Read-only";
+        };
+        /** InvitationList */
+        InvitationList: {
+            /** Items */
+            items: components["schemas"]["InvitationOut"][];
+        };
+        /** InvitationOut */
+        InvitationOut: {
+            /** Accepted By User Id */
+            accepted_by_user_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delivery */
+            delivery: ("manual" | "email") | null;
+            /** Email */
+            email: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Invited By User Id
+             * Format: uuid
+             */
+            invited_by_user_id: string;
+            /** Role */
+            role: ("Owner" | "Admin" | "Member" | "Read-only") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted" | "expired" | "revoked";
         };
         /** Member */
         Member: {
@@ -1076,6 +1200,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurrentUserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_v1_tenants__tenant_id__invitations_accept_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptedInvitationResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1905,6 +2066,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invitations_v1_workspaces__tenant_id__invitations_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invitation_v1_workspaces__tenant_id__invitations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedInvitation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_invitation_v1_workspaces__tenant_id__invitations__invitation_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationOut"];
                 };
             };
             /** @description Validation Error */

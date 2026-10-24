@@ -28,7 +28,9 @@ import { useToast } from "../components/ui/Toast";
 import { en, type MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { BusinessSettings } from "./BusinessSettings";
+import { type Invitation, useInvitations } from "../api/invitations";
 import { availableActions, highestRole, type MemberAction } from "../members/actions";
+import { InvitationsCard, InviteDialog } from "../members/Invitations";
 
 /*
  * Settings › Team & roles, reproduced from the design (ScreenSettings.dc.html:
@@ -102,14 +104,24 @@ function MemberActions({
 function MemberRow({
   member,
   access,
+  invitation,
   onAction,
 }: {
   member: Member;
   access: Access;
+  /** The accepted invitation this member joined with, if the caller may see it. */
+  invitation: Invitation | undefined;
   onAction: (pending: Pending) => void;
 }) {
   const t = useT();
   const isSelf = member.membership_id === access.membership_id;
+  // Decision Q5: a member who joined by invitation has no role until an
+  // Owner or Admin confirms the intended one, in one action.
+  const awaiting = member.status === "active" && member.roles.length === 0;
+  const intended = awaiting && invitation?.role ? invitation.role : null;
+  const confirm = intended
+    ? availableActions(member, access).find((action) => action.key === `assign-${intended}`)
+    : undefined;
   return (
     <li className="member-row">
       <span className="member-avatar" aria-hidden="true">
@@ -117,8 +129,13 @@ function MemberRow({
       </span>
       <div className="member-text">
         <div className="member-name">
-          <span className="mono">{t("members.id", { id: shortId(member.membership_id) })}</span>
+          {invitation ? (
+            <span>{invitation.email}</span>
+          ) : (
+            <span className="mono">{t("members.id", { id: shortId(member.membership_id) })}</span>
+          )}
           {isSelf ? <Badge tone="accent">{t("members.you")}</Badge> : null}
+          {awaiting ? <Badge tone="pending">{t("members.awaitingRole")}</Badge> : null}
         </div>
         <div className="member-sub">
           {member.status === "active" ? (
@@ -139,6 +156,17 @@ function MemberRow({
           ))
         )}
       </span>
+      {confirm ? (
+        <Button
+          size="sm"
+          variant="primary"
+          onPress={() => {
+            onAction({ member, action: confirm });
+          }}
+        >
+          {t("members.confirmRole", { role: intended ?? "" })}
+        </Button>
+      ) : null}
       <MemberActions member={member} access={access} onAction={onAction} />
     </li>
   );
@@ -146,10 +174,17 @@ function MemberRow({
 
 function MembersCard({ workspaceId, access }: { workspaceId: string; access: Access }) {
   const t = useT();
-  const toast = useToast();
   const [offset, setOffset] = useState(0);
   const canRead = access.actions.read_members === true;
   const members = useMembers(workspaceId, offset, canRead);
+  const canSeeInvitations = access.actions.read_invitations === true;
+  const invitations = useInvitations(workspaceId, canSeeInvitations);
+  const joinedBy = new Map(
+    (invitations.data?.items ?? [])
+      .filter((invitation) => invitation.status === "accepted" && invitation.accepted_by_user_id)
+      .map((invitation) => [invitation.accepted_by_user_id, invitation]),
+  );
+  const [inviting, setInviting] = useState(false);
   const change = useMemberChange(workspaceId);
   const [pending, setPending] = useState<Pending | null>(null);
   const result = useRef<HTMLDivElement>(null);
@@ -205,6 +240,7 @@ function MembersCard({ workspaceId, access }: { workspaceId: string; access: Acc
                 key={member.membership_id}
                 member={member}
                 access={access}
+                invitation={joinedBy.get(member.user_id)}
                 onAction={(next) => {
                   change.reset();
                   if (next.action.confirm) setPending(next);
@@ -248,20 +284,23 @@ function MembersCard({ workspaceId, access }: { workspaceId: string; access: Acc
   }
 
   return (
+    <>
     <section className="settings-card" aria-labelledby="members-card-title">
       <div className="settings-card-head">
         <h2 id="members-card-title" className="settings-card-title">
           {count || t("members.title")}
         </h2>
-        <AriaButton
-          className="invite-button"
-          onPress={() => {
-            toast(t("members.inviteUnavailable"));
-          }}
-        >
-          <UserPlus size={14} aria-hidden="true" />
-          {t("members.invite")}
-        </AriaButton>
+        {access.actions.create_invitation === true ? (
+          <AriaButton
+            className="invite-button"
+            onPress={() => {
+              setInviting(true);
+            }}
+          >
+            <UserPlus size={14} aria-hidden="true" />
+            {t("members.invite")}
+          </AriaButton>
+        ) : null}
       </div>
       <div role="status" aria-live="polite" tabIndex={-1} ref={result} className="result-region">
         {change.isSuccess ? <p className="notice info">{t("action.done")}</p> : null}
@@ -279,7 +318,24 @@ function MembersCard({ workspaceId, access }: { workspaceId: string; access: Acc
           if (pending) submit(pending);
         }}
       />
+      {inviting ? (
+        <InviteDialog
+          workspaceId={workspaceId}
+          access={access}
+          onClose={() => {
+            setInviting(false);
+          }}
+        />
+      ) : null}
     </section>
+    {canSeeInvitations && invitations.data ? (
+      <InvitationsCard
+        workspaceId={workspaceId}
+        invitations={invitations.data.items}
+        canRevoke={access.actions.revoke_invitation === true}
+      />
+    ) : null}
+    </>
   );
 }
 
