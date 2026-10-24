@@ -44,7 +44,8 @@ decisions P2-A to P2-E approved)
   Login V2 on `localhost:8000` and Back returned to a usable screen;
   phone width 390 px emulated. No backend, SaaS-OS or identity-provider
   configuration changed; P2-C unchanged (no sign-up, no public workspace
-  creation, no Google or Microsoft sign-in).
+  creation, no Google or Microsoft sign-in). Commit `04a4bb6`; CI passed
+  (run 40097066377, all four jobs).
   - **Not verified in this change:** a full browser sign-in with a
     password (covered by the identity test through ZITADEL's session
     API and by the owner's earlier browser check of the same flow);

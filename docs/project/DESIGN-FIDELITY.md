@@ -481,7 +481,7 @@ is no public sign-up, and the footer tells a visitor without an account
 to ask an Owner or Admin for an invitation. The aside's one-line product
 description is new copy, not from the design.
 
-**Checks (2026-10-24):**
+**Checks (2026-10-24; commit `04a4bb6`, CI run 40097066377 green):**
 - Vitest (`HomePage.test.tsx`, `InvitePage.test.tsx`): branded screen,
   link target, no header or sign-out while signed out, no input, form,
   sign-up, Google or Microsoft text and only the skip link besides
