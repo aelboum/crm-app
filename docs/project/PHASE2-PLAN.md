@@ -1013,6 +1013,16 @@ any real workspace is provisioned.
   is deferred.
 - English only.
 
+### 11.4 Completion status (2026-10-24, decision P2-F)
+
+| Step | Status |
+| --- | --- |
+| S5 | Done as approved: `workspace_settings` (0004) and `invitation_intent` (0005), each with forced RLS, grants, purge entry and RLS tests; no directory index table (P2-F 2); `member_profile` not built (members who joined by invitation show their invited address to Owners and Admins) |
+| S8 | Done: `GET /v1/workspaces` without a table; start page list and header switcher |
+| S9 | Done: invitations in manual-link mode (Q4), SaaS-OS acceptance, role confirmation (Q5), revocation, email delivery behind `INVITATION_DELIVERY`; real production delivery waits on Q3 |
+| S10 | Done: workspace settings API and Settings › Business profile |
+| S11 | Security reviews done (`PHASE2-SECURITY-REVIEW.md`); CI green on every increment; the ZITADEL sign-in test still has to run on current code |
+
 ## 12. Security and privacy considerations
 
 - Isolation is enforced twice: permission checks in the API and forced
