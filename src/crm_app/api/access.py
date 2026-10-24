@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
+from saas_os.api.errors import not_found
 from saas_os.core.identity import get_membership
 from saas_os.core.rbac import can, list_membership_roles, list_roles
 
@@ -58,8 +59,10 @@ def get_access(tenant_id: uuid.UUID, context: ReadWorkspace) -> Access:
     workspace = context.tenant_id
     membership = get_membership(workspace, context.actor_id)
     if membership is None:
-        # require_permission admitted the caller, so the row existed a moment ago.
-        raise RuntimeError("membership disappeared after authorization")
+        # Removed between `require_permission` and this read: answer as for
+        # any non-member (the same 404 SaaS-OS gives), never a server error
+        # (PHASE2-SECURITY-REVIEW.md I2, decision P2-F).
+        raise not_found("tenant")
     names = {role.id: role.name for role in list_roles(workspace)}
     roles = sorted(
         names[a.role_id]

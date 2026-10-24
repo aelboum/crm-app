@@ -882,6 +882,34 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   other deferred scope; production deployment or releases; any SaaS-OS pin
   change. Phase 2 stays open.
 
+## P2-F — Completing Phase 2 (approved 2026-10-24)
+
+- **Status:** Approved by the owner, 2026-10-24, after the Phase 2
+  baseline and plan. The owner set the priority: complete Phase 2 before
+  any further Phase 3 work.
+- **Decisions:**
+  1. **Tables:** `invitation_intent` (the intended role of an invitation,
+     Q4/Q5) and `workspace_settings` (locale, time zone, currency) are
+     approved, each with forced RLS, a `PURGE_TABLES` entry and RLS
+     negative tests (gate G1 rule).
+  2. **Workspace directory without a new table:** the directory lists the
+     open workspaces and checks the caller's membership in each through
+     public SaaS-OS calls; nothing new is stored. The index table of
+     `PHASE2-PLAN.md` §6.4 (gate G5) is not built; it can replace this if
+     the number of workspaces grows.
+  3. **Email:** Phase 2 closes on Q4's manual-link mode. Sending goes
+     through SaaS-OS `core.email` when configured (fake provider in tests,
+     Mailpit for local development); no real email is sent anywhere. The
+     production provider (Q3) is chosen before launch.
+  4. **Security review (`PHASE2-SECURITY-REVIEW.md`):** L4, L5 and I1 are
+     accepted for now and deferred to Phase 13. Policy points I2: Admins
+     may suspend, revoke and change the roles of other Admins (as Q6);
+     12-hour sessions without an idle timeout stay for now; sign-in and
+     sign-out are logged by SaaS-OS rather than audited; the `/access`
+     500 when a membership vanishes mid-request is fixed.
+- **Not approved:** Phase 3C or other Phase 3 feature work; a production
+  email provider; a SaaS-OS pin change.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

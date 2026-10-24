@@ -692,3 +692,22 @@ Slice 3B is complete; details and accepted limitations in
 - Phase 2 remains open: invitations and the email provider, workspace
   settings and the directory, the ZITADEL sign-in test run, and the
   owner's review of `PHASE2-SECURITY-REVIEW.md`.
+
+### Phase 2 completion: decisions and first increment (2026-10-24)
+
+- Priority changed by the owner: complete Phase 2 before Phase 3C or other
+  Phase 3 work. Baseline verified: `main` = `origin/main` = `3e7110d`,
+  clean; CI green on the last three commits; SaaS-OS v0.5.0.
+- Decision P2-F (`DECISIONS.md`): tables `invitation_intent` and
+  `workspace_settings` approved; the directory is built without a table;
+  Phase 2 closes on Q4's manual-link invitations (Mailpit locally, fake
+  provider in tests, production provider before launch); security-review
+  items L4, L5, I1 accepted for Phase 13 and the I2 policy points decided.
+- Fixed: `/access` answered 500 when a membership was removed between the
+  permission check and the handler; it now gives the same 404 as for any
+  non-member (`tests/unit/test_access.py`).
+- `PHASE2-SECURITY-REVIEW.md` now records the owner's review: no finding
+  remains open.
+- The local CRM containers (database, Redis, edge, ZITADEL) stopped during
+  this session, apparently under memory pressure; local integration tests
+  and the ZITADEL test wait for them. CI runs the integration suite.

@@ -28,10 +28,10 @@ deployment or policy points recorded for Phase 13.
 | L1 | Low (evidence) | Owner races covered only same-operation pairs | **Fixed**: two mixed races (A revokes B while B drops A's Owner role; both Owners step down at once), five rounds each; every round leaves exactly one active Owner and exactly one success |
 | L2 | Low | `/app/<path>` with a NUL byte could raise a 500 | **Fixed**: `crm_app.api.spa` refuses it (404); unit test |
 | L3 | Low | Authenticated JSON had no `Cache-Control` | **Fixed**: `NoStoreMiddleware` sets `no-store` on `/v1/` and `/auth/` responses that set none; unit and integration tests |
-| L4 | Low (deployment) | Behind Caddy, SaaS-OS's pre-login rate limit keys on the proxy address unless `TRUST_PROXY_HEADERS` is set, so one client could exhaust `/auth/login` for everyone | Phase 13: set and document `TRUST_PROXY_HEADERS` for the production proxy topology only |
-| L5 | Low (platform) | SaaS-OS's route rate limit is per workspace and path, so one member can use a route's budget for the whole workspace | Phase 13: consider a per-actor limit; platform behaviour, not product code |
-| I1 | Info (local) | The local edge serves ZITADEL's console on the application origin; bootstrap tokens are long-lived; local Redis has no password (bound to 127.0.0.1) | Phase 13: keep the identity console off the application origin in production |
-| I2 | Info (policy) | Admins may suspend, revoke and promote other Admins (only Owners are protected); sessions last 12 hours with no idle timeout; sign-in and sign-out are logged, not audited (platform); `/access` can answer 500 if a membership vanishes mid-request | Recorded; product decisions for later phases |
+| L4 | Low (deployment) | Behind Caddy, SaaS-OS's pre-login rate limit keys on the proxy address unless `TRUST_PROXY_HEADERS` is set, so one client could exhaust `/auth/login` for everyone | **Accepted, deferred to Phase 13** (owner, P2-F): set and document `TRUST_PROXY_HEADERS` for the production proxy topology only |
+| L5 | Low (platform) | SaaS-OS's route rate limit is per workspace and path, so one member can use a route's budget for the whole workspace | **Accepted, deferred to Phase 13** (owner, P2-F): consider a per-actor limit; platform behaviour, not product code |
+| I1 | Info (local) | The local edge serves ZITADEL's console on the application origin; bootstrap tokens are long-lived; local Redis has no password (bound to 127.0.0.1) | **Accepted, deferred to Phase 13** (owner, P2-F): keep the identity console off the application origin in production |
+| I2 | Info (policy) | Admins may suspend, revoke and promote other Admins (only Owners are protected); sessions last 12 hours with no idle timeout; sign-in and sign-out are logged, not audited (platform); `/access` can answer 500 if a membership vanishes mid-request | **Decided** (owner, P2-F): Admins managing Admins stays (as Q6); 12-hour sessions without idle timeout stay for now; sign-in and sign-out stay logged by SaaS-OS; the `/access` 500 is **fixed** (same 404 as a non-member; `tests/unit/test_access.py`) |
 
 ## Checked and found sound
 
@@ -73,5 +73,11 @@ deployment or policy points recorded for Phase 13.
 | No known critical cross-tenant vulnerability remains | This review and the slice 3A review | None known |
 
 Remaining for Phase 2 itself: invitations (G3/G4), workspace settings,
-the workspace directory (G5), a run of the identity test against ZITADEL,
-and the owner's review of this record.
+the workspace directory, and a run of the identity test against ZITADEL.
+
+## Owner review (2026-10-24, decision P2-F)
+
+The owner reviewed this record and decided every open item: M1, L1, L2
+and L3 are fixed with tests in CI; L4, L5 and I1 are accepted and deferred
+to Phase 13; the I2 policy points are decided as recorded in the table,
+and the `/access` defect in I2 is fixed. No finding remains open.
