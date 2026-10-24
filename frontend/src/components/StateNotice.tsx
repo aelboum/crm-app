@@ -41,7 +41,8 @@ export function Unavailable({ title, body }: { title: string; body: string }) {
 }
 
 /** The failure state of a read. 401, 403 and 404 each get their own message; nothing else is shown. */
-export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+/** `notFound` replaces the workspace-level 404 message when the missing thing is a single record. */
+export function LoadError({ error, onRetry, notFound }: { error: unknown; onRetry: () => void; notFound?: string }) {
   const t = useT();
   const status = error instanceof ApiError ? error.status : undefined;
   if (status === 401) {
@@ -55,7 +56,7 @@ export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => v
     );
   }
   const message =
-    status === 404 ? t("state.notFound") : status === 403 ? t("state.denied") : t("state.error");
+    status === 404 ? (notFound ?? t("state.notFound")) : status === 403 ? t("state.denied") : t("state.error");
   return (
     <div className="notice error row" role="alert">
       <p>{message}</p>

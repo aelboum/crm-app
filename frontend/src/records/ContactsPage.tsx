@@ -225,7 +225,11 @@ export function ContactsPage({
         ) : items.length === 0 ? (
           <EmptyState
             title={filtered ? t("contacts.empty.filtered") : view === "archived" ? t("contacts.empty.archived") : t("contacts.empty.none")}
-            {...(filtered ? { body: t("contacts.empty.filteredBody") } : {})}
+            {...(filtered
+              ? { body: t("contacts.empty.filteredBody") }
+              : view === "all"
+                ? { body: t("contacts.empty.noneBody") }
+                : {})}
           />
         ) : (
           <div className="table-scroll">
@@ -385,7 +389,7 @@ function ContactDrawer({
       {contact.isPending ? (
         <Loading />
       ) : contact.isError || !record ? (
-        <LoadError error={contact.error} onRetry={() => void contact.refetch()} />
+        <LoadError error={contact.error} onRetry={() => void contact.refetch()} notFound={t("contact.notFound")} />
       ) : (
         <>
           <div className="drawer-identity">
@@ -448,6 +452,8 @@ function ContactDrawer({
           <p className="drawer-note">{t("contact.notBuilt")}</p>
           <ConfirmDialog
             isOpen={confirmDelete}
+            title={t("contact.deleteTitle")}
+            confirmLabel={t("records.deleteSubmit")}
             message={t("contact.deleteConfirm", { name: fullName(record) })}
             onCancel={() => { setConfirmDelete(false); }}
             onConfirm={() => {

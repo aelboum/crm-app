@@ -556,3 +556,27 @@ Decision P3-A; plan `PHASE3-PLAN.md` §19. Pushed to `main`:
 - Next recommended: the owner reviews the screens in a browser and
   `PHASE2-SECURITY-REVIEW.md`, and chooses the next Phase 3 slice
   (`PHASE3-PLAN.md` §20; export needs no new table).
+
+### Browser check of Contacts and Companies (2026-10-24)
+
+The owner approved a browser check. The local app was started against the
+local development database (migrations applied first, no output), the
+owner signed in through local ZITADEL, and the owner created a local test
+workspace with `crm_app.provision` ("Local test workspace", test data only).
+
+- Checked in Chrome at desktop width, no console errors: company create
+  with required-name validation, domain derived from the website and the
+  country code upper-cased; New > Contact; contact validation (email or
+  phone), create with company, stage and owner; duplicate email in a
+  different case refused with "Open existing"; edit; Open leads view;
+  search; Stage filter and Clear; archive, restore and confirmed delete;
+  a company's people opening the contact. The audit log recorded every
+  change with the signed-in user as actor.
+- Fixed from the check: a 1 px vertical scrollbar beside the view tabs;
+  New-menu labels truncated; the delete confirmation now says
+  "Delete contact?" / "Delete company?" with a "Delete permanently" button;
+  empty lists say records appear there; opening a deleted record's link
+  said the workspace did not exist and now says the record no longer
+  exists (new test).
+- Not checked: phone width (the browser window could not be resized),
+  "Load more" (too few records), Firefox and Safari.

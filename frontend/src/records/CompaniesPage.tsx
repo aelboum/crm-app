@@ -192,6 +192,7 @@ export function CompaniesPage({
                   ? t("companies.empty.archived")
                   : t("companies.empty.none")
             }
+            {...(!filtered && view !== "archived" ? { body: t("companies.empty.noneBody") } : {})}
           />
         ) : (
           <div className="table-scroll">
@@ -361,7 +362,7 @@ function CompanyDrawer({
       {company.isPending ? (
         <Loading />
       ) : company.isError || !record ? (
-        <LoadError error={company.error} onRetry={() => void company.refetch()} />
+        <LoadError error={company.error} onRetry={() => void company.refetch()} notFound={t("company.notFound")} />
       ) : (
         <>
           <div className="drawer-identity">
@@ -448,6 +449,8 @@ function CompanyDrawer({
           <p className="drawer-note">{t("company.notBuilt")}</p>
           <ConfirmDialog
             isOpen={confirmDelete}
+            title={t("company.deleteTitle")}
+            confirmLabel={t("records.deleteSubmit")}
             message={t("company.deleteConfirm", { name: record.name })}
             onCancel={() => { setConfirmDelete(false); }}
             onConfirm={() => {

@@ -61,8 +61,8 @@ L243-247):
 | Settings › Team & roles (`ScreenSettings.dc.html` L11-27, L54-68) | `/app/w/{id}/settings` | 2 | **Implemented; compared (§4)** |
 | Settings › My profile (`ScreenSettings.dc.html` L43-52) | `/app/w/{id}/settings?section=profile` | 2 | **Implemented, read-only parts; compared (§4a)** |
 | Settings › other sections (business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
-| Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values, not yet in a browser |
-| Companies (`ScreenCompanies`) | `/companies` | 3 | List, drawer with the company's people, and create/edit dialog (§4c); compared from source values, not yet in a browser |
+| Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values; flows checked in Chrome at desktop width |
+| Companies (`ScreenCompanies`) | `/companies` | 3 | List, drawer with the company's people, and create/edit dialog (§4c); compared from source values; flows checked in Chrome at desktop width |
 | Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | Placeholder |
 | Tasks (`ScreenTasks`) | `/tasks` | 4 | Placeholder |
 | Inbox (`ScreenConversations`) | `/inbox` | 6 | Placeholder |
@@ -423,9 +423,10 @@ measurable in jsdom).
 
 - Pixel-difference overlays: no image library is installed, so geometry
   was compared numerically instead.
-- The Contacts and Companies screens in a real browser: they are built
-  (§4c) and tested in jsdom with an axe scan, but not yet measured against
-  the design export or checked with ZITADEL sign-in.
+- The Contacts and Companies screens at phone width in a real browser,
+  and their geometry measured against the design export. They were
+  exercised in Chrome at desktop width after a ZITADEL sign-in on
+  2026-10-24 (`PROGRESS.md`).
 - Screen reader output (only the accessibility tree was checked).
 - The design reference at 390 px beyond the overflow measurement.
 - Firefox and Safari.

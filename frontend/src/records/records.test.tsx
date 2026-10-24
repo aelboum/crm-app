@@ -286,15 +286,30 @@ describe("contacts", () => {
     );
     const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
     await user.click(await within(drawer).findByRole("button", { name: "Delete permanently" }));
-    const confirm = await screen.findByRole("alertdialog");
+    const confirm = await screen.findByRole("alertdialog", { name: "Delete contact?" });
     expect(sent.filter((r) => r.method === "DELETE")).toEqual([]);
-    await user.click(within(confirm).getByRole("button", { name: "Confirm" }));
+    await user.click(within(confirm).getByRole("button", { name: "Delete permanently" }));
     await waitFor(() => {
       expect(sent.filter((r) => r.method === "DELETE")).toEqual([
         { method: "DELETE", path: `/v1/workspaces/${WS}/contacts/${SAM}`, body: undefined },
       ]);
     });
     expect(await screen.findByText("Deleted permanently")).toBeInTheDocument();
+  });
+
+  it("says a deleted contact is gone, not that the workspace is missing", async () => {
+    const gone = "d0000000-0000-4000-8000-0000000000ff";
+    renderApp(
+      `/w/${WS}/contacts?record=${gone}`,
+      crm(OWNER_ACTIONS, (method, path) =>
+        method === "GET" && path === `/v1/workspaces/${WS}/contacts/${gone}`
+          ? { status: 404, body: { detail: "Not Found" } }
+          : undefined,
+      ),
+    );
+    const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
+    expect(await within(drawer).findByText(/This contact no longer exists/)).toBeInTheDocument();
+    expect(within(drawer).queryByText(/workspace does not exist/)).toBeNull();
   });
 
   it("loads the next page by cursor", async () => {

@@ -149,7 +149,8 @@ p { margin: 0; }
   box-shadow: 0 12px 32px rgb(22 27 38 / 14%); padding: 6px; outline: none;
 }
 .ws-menu { width: 340px; }
-.create-menu { width: 248px; }
+/* Wide enough for "Appointment" beside "Not available yet" without truncation. */
+.create-menu { width: 292px; }
 .help-menu { width: 260px; }
 .profile-menu { width: 252px; }
 .notif-panel { width: 360px; padding: 0; overflow: hidden; }
@@ -535,9 +536,12 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .records-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .records-actions .btn { gap: 6px; }
 
-.view-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+/* The base line is an inset shadow, not a border, so the active underline can
+   cover it without overflowing the scroll box (a negative margin showed a
+   1px vertical scrollbar). */
+.view-tabs { display: flex; gap: 2px; box-shadow: inset 0 -1px 0 var(--line); overflow-x: auto; overflow-y: hidden; }
 .view-tab {
-  height: 36px; padding: 0 12px; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  height: 36px; padding: 0 12px; border: none; border-bottom: 2px solid transparent;
   background: transparent; font: inherit; font-weight: 500; color: #687082; cursor: pointer; white-space: nowrap;
 }
 .view-tab.active { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
