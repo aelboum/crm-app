@@ -16,6 +16,11 @@ Settings (instance defaults, so every organisation inherits them):
   unlocks the user in the ZITADEL console);
 - two-factor authentication stays optional.
 
+And on this project's OIDC application (the one with `OIDC_CLIENT_ID`):
+- `<PUBLIC_APP_ORIGIN>/app` is an allowed post-sign-out address, so signing
+  out of the application also ends the ZITADEL session (OIDC RP-initiated
+  logout, decision P2-F; `crm_app.api.sign_out`).
+
 Uses the bootstrap machine user's token from `deploy/local/.bootstrap/`
 (untracked). The token is read from the file and never printed.
 """
@@ -78,7 +83,78 @@ def main() -> int:
     lockout = _call(base, token, "GET", "/admin/v1/policies/lockout")["policy"]
     applied = {k: login.get(k, False) for k in LOGIN_CHANGES} | {k: lockout.get(k) for k in LOCKOUT}
     print("local ZITADEL sign-in settings:", json.dumps(applied, sort_keys=True))
-    return 0 if applied == LOGIN_CHANGES | LOCKOUT else 1
+    sign_out = _allow_post_logout_redirect(base, token)
+    print("post-sign-out address allowed:", sign_out)
+    return 0 if applied == LOGIN_CHANGES | LOCKOUT and sign_out else 1
+
+
+# Fields `UpdateApplication` would reset if omitted (as SaaS-OS's local
+# bootstrap re-sends them for the same reason).
+_PRESERVED_OIDC = (
+    "responseTypes",
+    "grantTypes",
+    "applicationType",
+    "authMethodType",
+    "clockSkew",
+    "loginVersion",
+    "idTokenUserinfoAssertion",
+)
+
+
+def _all(base: str, token: str, path: str, filters: list[dict], key: str) -> list[dict]:
+    items: list[dict] = []
+    while True:
+        page = _call(
+            base,
+            token,
+            "POST",
+            path,
+            {
+                "pagination": {"offset": str(len(items)), "limit": 100, "asc": True},
+                "filters": filters,
+            },
+        )
+        batch = page.get(key, [])
+        items.extend(batch)
+        if len(batch) < 100:
+            return items
+
+
+def _allow_post_logout_redirect(base: str, token: str) -> bool:
+    """Adds `<PUBLIC_APP_ORIGIN>/app` to the application's post-logout
+    redirect URIs, keeping everything else; idempotent."""
+    client_id = os.environ["OIDC_CLIENT_ID"]
+    target = os.environ.get("PUBLIC_APP_ORIGIN", "http://localhost:8000").rstrip("/") + "/app"
+    projects = _all(base, token, "/zitadel.project.v2.ProjectService/ListProjects", [], "projects")
+    for project in projects:
+        applications = _all(
+            base,
+            token,
+            "/zitadel.application.v2.ApplicationService/ListApplications",
+            [{"projectIdFilter": {"projectId": project["projectId"]}}],
+            "applications",
+        )
+        for app in applications:
+            oidc = app.get("oidcConfiguration") or {}
+            if oidc.get("clientId") != client_id:
+                continue
+            current = oidc.get("postLogoutRedirectUris") or []
+            if target not in current:
+                kept = {key: oidc[key] for key in _PRESERVED_OIDC if key in oidc}
+                _call(
+                    base,
+                    token,
+                    "POST",
+                    "/zitadel.application.v2.ApplicationService/UpdateApplication",
+                    {
+                        "applicationId": app["applicationId"],
+                        "projectId": project["projectId"],
+                        "oidcConfiguration": kept | {"postLogoutRedirectUris": [*current, target]},
+                    },
+                )
+            return True
+    print("refusing: no application with OIDC_CLIENT_ID found", file=sys.stderr)
+    return False
 
 
 if __name__ == "__main__":

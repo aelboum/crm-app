@@ -3,12 +3,24 @@
 Runs only with `CRM_APP_IDENTITY_TEST=1` and the development settings
 exported, with the `identity` Compose profile running and the OIDC
 application bootstrapped (README.md, "Local identity"). It starts the real
-application server, signs in as ZITADEL's first-instance administrator
-through ZITADEL's own login pages, and checks the session SaaS-OS issues.
+application server behind the `edge` proxy and signs in as ZITADEL's
+first-instance administrator through the real OIDC flow: the application's
+`/auth/login` starts an authorization request (PKCE, state, nonce), ZITADEL
+checks the administrator's password and issues the code, and the
+application's `/auth/callback` exchanges it and issues the SaaS-OS session.
 
-ZITADEL's login pages are third-party HTML, so this test is deliberately
-opt-in: a ZITADEL upgrade may change them. Nothing secret is printed or
-asserted on; the password comes from the environment.
+ZITADEL's Login V2 pages are a JavaScript application that a plain HTTP
+client cannot drive, so the test does what those pages do on the server
+side (decision P2-F, owner, 2026-10-24): it creates a ZITADEL session with
+the user and password checks and finalises the authorization request
+through ZITADEL's v2 API, authenticated with the local login client's
+token (`deploy/local/.bootstrap/login-client.pat`, written by ZITADEL's
+first-instance setup, git-ignored). The login pages themselves are checked
+by a manual browser sign-in.
+
+Nothing secret is printed or asserted on: the password and the token come
+from the environment and the bootstrap file, and are checked to be absent
+from the server's log.
 """
 
 from __future__ import annotations
@@ -19,9 +31,8 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterator
-from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
@@ -35,30 +46,6 @@ pytestmark = pytest.mark.skipif(
 
 # Never printed, and checked to be absent from the server's log.
 _SECRET_NAMES = ("ZITADEL_FIRSTINSTANCE_ADMIN_PASSWORD", "POSTGRES_PASSWORD", "APP_DB_PASSWORD")
-
-
-class _FirstForm(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.action: str | None = None
-        self.fields: dict[str, str] = {}
-        self.buttons: list[tuple[str | None, str]] = []
-        self._inside = False
-        self._done = False
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        values = {key: value or "" for key, value in attrs}
-        if tag == "form" and not self._done:
-            self.action, self._inside = values.get("action", ""), True
-        elif self._inside and tag in ("input", "button"):
-            if tag == "button" or values.get("type") == "submit":
-                self.buttons.append((values.get("name"), values.get("value", "")))
-            elif values.get("name"):
-                self.fields[values["name"]] = values.get("value", "")
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag == "form" and self._inside:
-            self._inside, self._done = False, True
 
 
 def _login_name() -> str:
@@ -75,10 +62,19 @@ def _port_is_free(host: str, port: int) -> bool:
         return probe.connect_ex((host, port)) != 0
 
 
+def _app_port() -> int:
+    """The port the `edge` proxy forwards the public origin to (decision
+    D-IDL, `deploy/local/Caddyfile`: `CRM_APP_UPSTREAM`, default
+    `http://host.docker.internal:8001`). The public origin's own port
+    belongs to the proxy, which also serves ZITADEL's login on that origin."""
+    upstream = os.environ.get("CRM_APP_UPSTREAM", "http://host.docker.internal:8001")
+    return urlsplit(upstream).port or 80
+
+
 @pytest.fixture
 def app_server(tmp_path: Path) -> Iterator[tuple[str, Path]]:
     origin = os.environ["PUBLIC_APP_ORIGIN"]
-    port = urlsplit(origin).port or 80
+    port = _app_port()
     assert _port_is_free("127.0.0.1", port), f"port {port} is already in use"
     log_path = tmp_path / "server.log"
     with log_path.open("w", encoding="utf-8") as log:
@@ -120,24 +116,60 @@ def app_server(tmp_path: Path) -> Iterator[tuple[str, Path]]:
                 server.wait(timeout=30)
 
 
+# The local login client's token (ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH in
+# deploy/local/compose.yaml): what ZITADEL's own Login V2 uses for these calls.
+_LOGIN_CLIENT_PAT = Path(
+    os.environ.get(
+        "CRM_APP_LOGIN_CLIENT_PAT_PATH",
+        str(REPO_ROOT / "deploy" / "local" / ".bootstrap" / "login-client.pat"),
+    )
+)
+
+
 def _sign_in(client: httpx.Client, origin: str) -> None:
-    password = os.environ["ZITADEL_FIRSTINSTANCE_ADMIN_PASSWORD"]
-    response = client.get(f"{origin}/auth/login")
-    for _ in range(8):
-        if urlsplit(str(response.url)).netloc == urlsplit(origin).netloc:
-            return
-        form = _FirstForm()
-        form.feed(response.text)
-        assert form.action is not None, f"no form at {urlsplit(str(response.url)).path}"
-        data = dict(form.fields)
-        if "loginName" in data:
-            data["loginName"] = _login_name()
-        if "password" in data:
-            data["password"] = password
-        if any(name == "skip" for name, _ in form.buttons):
-            data["skip"] = "true"  # the optional second-factor setup prompt
-        response = client.post(urljoin(str(response.url), form.action), data=data)
-    pytest.fail("the login flow did not return to the application")
+    """The OIDC sign-in, completing ZITADEL's part through its v2 API as its
+    Login V2 does: create a session with the user and password checks, then
+    finalise the authorization request with it and follow the callback."""
+    issuer = os.environ["OIDC_ISSUER_URL"].rstrip("/")
+    token = _LOGIN_CLIENT_PAT.read_text(encoding="utf-8").strip()
+    zitadel = {"Authorization": f"Bearer {token}"}
+
+    # The application starts the flow; ZITADEL sends the browser to Login V2
+    # with the authorization request's ID.
+    started = client.get(f"{origin}/auth/login")
+    login_page = urlsplit(str(started.url))
+    assert login_page.path.startswith("/ui/v2/login"), "ZITADEL did not show its login"
+    request_id = parse_qs(login_page.query)["requestId"][0].removeprefix("oidc_")
+
+    session = client.post(
+        f"{issuer}/v2/sessions",
+        headers=zitadel,
+        json={
+            "checks": {
+                "user": {"loginName": _login_name()},
+                "password": {"password": os.environ["ZITADEL_FIRSTINSTANCE_ADMIN_PASSWORD"]},
+            }
+        },
+    )
+    assert session.status_code in (200, 201), f"session not created: {session.status_code}"
+    created = session.json()
+
+    finalised = client.post(
+        f"{issuer}/v2/oidc/auth_requests/{request_id}",
+        headers=zitadel,
+        json={
+            "session": {
+                "sessionId": created["sessionId"],
+                "sessionToken": created["sessionToken"],
+            }
+        },
+    )
+    assert finalised.status_code == 200, f"authorization not finalised: {finalised.status_code}"
+
+    # Back to the application's callback, which exchanges the code.
+    landed = client.get(finalised.json()["callbackUrl"])
+    assert urlsplit(str(landed.url)).netloc == urlsplit(origin).netloc
+    assert not urlsplit(str(landed.url)).path.startswith("/auth/callback")
 
 
 def test_login_session_and_logout(app_server: tuple[str, Path]) -> None:
@@ -157,6 +189,15 @@ def test_login_session_and_logout(app_server: tuple[str, Path]) -> None:
         assert refused.status_code == 403
         assert client.get(f"{origin}/auth/me").status_code == 200
 
+        # Where the frontend sends the browser next, to end ZITADEL's session
+        # too (decision P2-F): the issuer's own end-session endpoint.
+        sign_out_url = client.get(f"{origin}/v1/sign-out-url").json()["url"]
+        if os.environ.get("OIDC_END_SESSION_ENDPOINT"):
+            discovered = client.get(
+                f"{os.environ['OIDC_ISSUER_URL'].rstrip('/')}/.well-known/openid-configuration"
+            ).json()["end_session_endpoint"]
+            assert sign_out_url.split("?")[0] == discovered
+
         logged_out = client.post(f"{origin}/auth/logout", headers={"Origin": origin})
         assert logged_out.status_code < 400
         assert client.get(f"{origin}/auth/me").status_code == 401
@@ -166,3 +207,4 @@ def test_login_session_and_logout(app_server: tuple[str, Path]) -> None:
         value = os.environ.get(name)
         if value:
             assert value not in log, f"{name} appeared in the server log"
+    assert _LOGIN_CLIENT_PAT.read_text(encoding="utf-8").strip() not in log

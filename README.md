@@ -92,7 +92,9 @@ uv run saas-os-local-identity --zitadel-url "$OIDC_ISSUER_URL" \
 Put the printed `OIDC_CLIENT_ID` in `.env` and restart the application.
 Then apply the project's sign-in settings (no self-registration, no
 username probing, lockout after 5 failures; decision D-IDL.1):
-`uv run python deploy/local/configure-zitadel.py`. A locked-out user is
+`uv run python deploy/local/configure-zitadel.py` (it also registers
+`<PUBLIC_APP_ORIGIN>/app` as the post-sign-out address, so signing out ends
+the ZITADEL session too; decision P2-G). A locked-out user is
 unlocked in the ZITADEL console (`http://localhost:8000/ui/console`).
 In Git Bash on Windows, export `MSYS2_ENV_CONV_EXCL=AUTH_POST_LOGIN_PATH`
 before starting it: otherwise Git Bash rewrites `/app` into a Windows path

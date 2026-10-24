@@ -1005,8 +1005,9 @@ any real workspace is provisioned.
 **Not verified or known limits:**
 - Browser validation against local ZITADEL done 2026-10-22 (PROGRESS.md):
   two defects fixed (focus loss after removal, stale data after
-  sign-out). Open: sign-out leaves the ZITADEL session alive (Appendix C)
-  and `HEAD /app` returns 405.
+  sign-out). Sign-out leaving the ZITADEL session alive is reduced by
+  decision P2-G (residual accepted for Phase 13, Appendix C). Open:
+  `HEAD /app` returns 405.
 - Colour contrast is not measured automatically.
 - Members are shown by ID, because there is no member profile (§6.5, G1).
 - The JavaScript bundle is about 564 kB (176 kB gzipped); code splitting
@@ -1281,7 +1282,10 @@ provisioned afterwards (§7.5).
 ## Appendix C — Upstream request draft: end the provider session on sign-out (not sent)
 
 Prepared 2026-10-22 from the browser validation. **Not sent; no issue or
-pull request exists.** Sending it needs separate authorization.
+pull request exists.** Sending it needs separate authorization. Since
+2026-10-24 the product sends the browser to the end-session endpoint
+itself (decision P2-G); this request remains for the `id_token_hint`,
+which would end the provider session without a click.
 
 **Title:** `POST /auth/logout` should be able to end the OIDC provider
 session (RP-initiated logout)

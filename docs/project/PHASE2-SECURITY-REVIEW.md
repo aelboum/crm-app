@@ -110,6 +110,24 @@ redirect target from input; Mailpit binds to 127.0.0.1 and is pinned.
 | R2-I2 | Info | The Owner check for invitations lived in the route | **Fixed**: moved into `crm_app.invitations`, so every caller gets it |
 | R2-I3 | Info | Role confirmation reuses the members role route | Covered: that route's Owner rules are proven by `test_owner_protection.py` and the role-matrix tests (an Admin cannot grant Owner) |
 
+## Browser verification (2026-10-24, decisions P2-F and P2-G)
+
+The owner signed in through the real LeadStack start page (`/app`, "Sign
+in to continue", then ZITADEL's Login V2) while the reviewer watched the
+pages, `/auth/me` and the sign-out; the password was typed by the owner
+only. Two findings:
+
+| ID | Severity | Finding | Status |
+| --- | --- | --- | --- |
+| B-M1 | Medium | Signing out of LeadStack ended only the application session; ZITADEL's session survived, so the next "Sign in" completed without a password (first seen 2026-10-22, Appendix C) | **Reduced** (P2-G 1): sign-out continues to ZITADEL's end-session endpoint and back to `/app`; verified in the browser that the next "Sign in" asks for the login name again. Residual, **accepted as Low for Phase 13** by the owner (P2-G 2): ZITADEL's page waits for the account to be chosen; the no-click form needs `id_token_hint` from SaaS-OS (Appendix C) |
+| B-L1 | Low | After sign-out the start page kept showing the workspace list until reloaded (no data reachable: `/auth/me` 401) | **Fixed**: the page is left by a full navigation, which drops everything held in memory |
+
+Earlier in the same check, one manual end of the ZITADEL session was
+followed by a sign-in without a password; the browser most likely held a
+second ZITADEL session from an earlier sign-in, each end-session ending
+one. After the fix, sign-out then "Sign in" asked for the login name on
+both runs.
+
 Listing every invitation of a workspace on each create and list (the cost
 part of R2-M1) remains; the cap and the per-inviter limit bound it, and an
 expired-invitation clean-up can follow.

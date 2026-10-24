@@ -226,3 +226,18 @@ def test_email_delivery_needs_a_sender_and_an_explicit_provider() -> None:
     _validate(Process.APP, {**with_sender, "EMAIL_PROVIDER": "mailpit"})
     # The worker sends no invitations, so it does not check the setting.
     _validate(Process.WORKER, {**PLACEHOLDER_SETTINGS, "INVITATION_DELIVERY": "sms"})
+
+
+def test_the_end_session_endpoint_is_optional_and_checked_when_set() -> None:
+    _validate(Process.APP, {**PLACEHOLDER_SETTINGS, "OIDC_END_SESSION_ENDPOINT": ""})
+    assert _problems(
+        Process.APP, {**PLACEHOLDER_SETTINGS, "OIDC_END_SESSION_ENDPOINT": "not a url"}
+    ) == ["OIDC_END_SESSION_ENDPOINT must be an http:// or https:// URL with a host."]
+    production = {
+        **PLACEHOLDER_SETTINGS,
+        "ENVIRONMENT": "production",
+        "OIDC_END_SESSION_ENDPOINT": "http://identity.invalid/oidc/v1/end_session",
+    }
+    assert _problems(Process.APP, production) == [
+        "OIDC_END_SESSION_ENDPOINT must use https in production."
+    ]

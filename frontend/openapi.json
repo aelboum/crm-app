@@ -1668,6 +1668,26 @@
         "title": "SettingsUpdate",
         "type": "object"
       },
+      "SignOutTarget": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "SignOutTarget",
+        "type": "object"
+      },
       "StatusChange": {
         "properties": {
           "confirm_owner_change": {
@@ -1923,6 +1943,27 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/sign-out-url": {
+      "get": {
+        "operationId": "sign_out_url_v1_sign_out_url_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignOutTarget"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sign Out Url",
+        "tags": [
+          "session"
         ]
       }
     },

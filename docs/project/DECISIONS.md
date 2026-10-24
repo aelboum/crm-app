@@ -910,6 +910,31 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not approved:** Phase 3C or other Phase 3 feature work; a production
   email provider; a SaaS-OS pin change.
 
+## P2-G — Ending the identity provider's session on sign-out (approved 2026-10-24)
+
+- **Status:** Approved by the owner, 2026-10-24, after the Phase 2 browser
+  verification found that signing out of LeadStack left the ZITADEL
+  session alive, so the next "Sign in" completed without a password.
+- **Decisions:**
+  1. **Fix in the product, without SaaS-OS changes:** after SaaS-OS's
+     `POST /auth/logout`, the frontend reads `GET /v1/sign-out-url` and
+     sends the browser to the provider's end-session endpoint (OIDC
+     RP-Initiated Logout) with the public client ID and the fixed return
+     address `<PUBLIC_APP_ORIGIN>/app`. The endpoint is configuration
+     (`OIDC_END_SESSION_ENDPOINT`, checked at start-up, https in
+     production); without it the start page is reloaded. The return
+     address is registered on the OIDC application
+     (`deploy/local/configure-zitadel.py` locally; by the deployment in
+     production).
+  2. **Residual accepted as Low, Phase 13:** without an `id_token_hint`
+     ZITADEL's sign-out page waits for the person to choose the account;
+     closing the tab there leaves the provider session alive. SaaS-OS
+     does not give the application the ID token, so the no-click form
+     waits on the upstream request in `PHASE2-PLAN.md` Appendix C (not
+     sent; sending needs separate authorization).
+- **Not approved:** a SaaS-OS change or pin move; the self-service
+  sign-up of the design's `LeadStack Signup.dc.html` (excluded by P2-C).
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

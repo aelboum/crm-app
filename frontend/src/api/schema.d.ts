@@ -84,6 +84,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sign-out-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sign Out Url */
+        get: operations["sign_out_url_v1_sign_out_url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenants/{tenant_id}/invitations/accept": {
         parameters: {
             query?: never;
@@ -1059,6 +1076,11 @@ export interface components {
             /** Time Zone */
             time_zone?: string | null;
         };
+        /** SignOutTarget */
+        SignOutTarget: {
+            /** Url */
+            url: string | null;
+        };
         /** StatusChange */
         StatusChange: {
             /**
@@ -1209,6 +1231,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_out_url_v1_sign_out_url_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignOutTarget"];
                 };
             };
         };

@@ -37,7 +37,14 @@ import {
   Popover,
 } from "react-aria-components";
 
-import { useAccess, useDirectory, useMe, useSignOut, useWorkspace } from "../api/queries";
+import {
+  useAccess,
+  useDirectory,
+  useMe,
+  useSignOut,
+  useWorkspace,
+} from "../api/queries";
+import { leaveAfterSignOut } from "../api/signOut";
 import { useT } from "../i18n/useT";
 import { highestRole } from "../members/actions";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
@@ -58,7 +65,10 @@ const SIDEBAR_ID = "workspace-sidebar";
 /** Up to two letters for a workspace tile, as in the design. */
 export function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  const letters = words.length > 1 ? `${words[0]?.[0] ?? ""}${words[1]?.[0] ?? ""}` : name.slice(0, 2);
+  const letters =
+    words.length > 1
+      ? `${words[0]?.[0] ?? ""}${words[1]?.[0] ?? ""}`
+      : name.slice(0, 2);
   return letters.toUpperCase();
 }
 
@@ -88,7 +98,12 @@ function useSignOutAndLeave() {
     signOut,
     // Leave the current page so nothing from the ended session stays on screen.
     run: () => {
-      signOut.mutate(undefined, { onSuccess: () => void navigate({ to: "/" }) });
+      signOut.mutate(undefined, {
+        onSuccess: () => {
+          void navigate({ to: "/" });
+          void leaveAfterSignOut();
+        },
+      });
     },
   };
 }
@@ -111,7 +126,11 @@ export function PlainLayout() {
                 {t("app.signOutFailed")}
               </span>
             ) : null}
-            <AriaButton className="header-text-button" isDisabled={signOut.isPending} onPress={run}>
+            <AriaButton
+              className="header-text-button"
+              isDisabled={signOut.isPending}
+              onPress={run}
+            >
               <LogOut size={15} aria-hidden="true" />
               {t("app.signOut")}
             </AriaButton>
@@ -133,18 +152,28 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
   const name = workspace.data?.name ?? "";
   // The caller's other workspaces (decision P2-F 2); opening one is
   // authorized on its own, the list grants nothing.
-  const others = (directory.data?.items ?? []).filter((item) => item.id !== workspaceId);
+  const others = (directory.data?.items ?? []).filter(
+    (item) => item.id !== workspaceId,
+  );
   return (
     <MenuTrigger>
       <AriaButton className="ws-switcher">
-        <span className="ws-tile" data-mark={name ? initials(name) : ""} aria-hidden="true" />
+        <span
+          className="ws-tile"
+          data-mark={name ? initials(name) : ""}
+          aria-hidden="true"
+        />
         <span className="ws-text">
           <span className="ws-name">{name}</span>
           <span className="ws-kind">{t("ws.kind")}</span>
         </span>
         <ChevronsUpDown size={14} className="ws-chevron" aria-hidden="true" />
       </AriaButton>
-      <Popover className="menu-popover ws-menu" placement="bottom start" offset={6}>
+      <Popover
+        className="menu-popover ws-menu"
+        placement="bottom start"
+        offset={6}
+      >
         <Menu
           className="menu"
           aria-label={t("ws.menu")}
@@ -154,13 +183,26 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
               return;
             }
             const target = others.find((item) => item.id === key);
-            if (target) void navigate({ to: "/w/$workspaceId", params: { workspaceId: target.id } });
+            if (target)
+              void navigate({
+                to: "/w/$workspaceId",
+                params: { workspaceId: target.id },
+              });
           }}
         >
           <MenuSection>
             <Header className="menu-header">{t("ws.current")}</Header>
-            <MenuItem id="current" className="menu-item" isDisabled textValue={name}>
-              <span className="ws-tile small" data-mark={name ? initials(name) : ""} aria-hidden="true" />
+            <MenuItem
+              id="current"
+              className="menu-item"
+              isDisabled
+              textValue={name}
+            >
+              <span
+                className="ws-tile small"
+                data-mark={name ? initials(name) : ""}
+                aria-hidden="true"
+              />
               <span className="menu-item-label">{name}</span>
             </MenuItem>
           </MenuSection>
@@ -168,8 +210,17 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
             <MenuSection>
               <Header className="menu-header">{t("ws.yours")}</Header>
               {others.map((item) => (
-                <MenuItem key={item.id} id={item.id} className="menu-item" textValue={item.name}>
-                  <span className="ws-tile small" data-mark={initials(item.name)} aria-hidden="true" />
+                <MenuItem
+                  key={item.id}
+                  id={item.id}
+                  className="menu-item"
+                  textValue={item.name}
+                >
+                  <span
+                    className="ws-tile small"
+                    data-mark={initials(item.name)}
+                    aria-hidden="true"
+                  />
                   <span className="menu-item-label">{item.name}</span>
                 </MenuItem>
               ))}
@@ -199,27 +250,51 @@ interface CreateItem {
 const CREATE_ITEMS: CreateItem[] = [
   { id: "contact", icon: UserPlus, label: "create.contact", key: "C" },
   { id: "opportunity", icon: Kanban, label: "create.opportunity", key: "O" },
-  { id: "appointment", icon: CalendarPlus, label: "create.appointment", key: "A" },
-  { id: "conversation", icon: MessageSquarePlus, label: "create.conversation", key: "M" },
+  {
+    id: "appointment",
+    icon: CalendarPlus,
+    label: "create.appointment",
+    key: "A",
+  },
+  {
+    id: "conversation",
+    icon: MessageSquarePlus,
+    label: "create.conversation",
+    key: "M",
+  },
   { id: "task", icon: SquareCheckBig, label: "create.task", key: "T" },
 ];
 
-function CreateMenu({ workspaceId, workspaceName }: { workspaceId: string; workspaceName: string }) {
+function CreateMenu({
+  workspaceId,
+  workspaceName,
+}: {
+  workspaceId: string;
+  workspaceName: string;
+}) {
   const t = useT();
   const navigate = useNavigate();
   const access = useAccess(workspaceId);
-  const available = new Set(access.data?.actions.create_contact === true ? ["contact"] : []);
+  const available = new Set(
+    access.data?.actions.create_contact === true ? ["contact"] : [],
+  );
   return (
     <MenuTrigger>
       <AriaButton className="new-button">
         <Plus size={16} aria-hidden="true" />
         <span className="new-label">{t("create.new")}</span>
       </AriaButton>
-      <Popover className="menu-popover create-menu" placement="bottom end" offset={6}>
+      <Popover
+        className="menu-popover create-menu"
+        placement="bottom end"
+        offset={6}
+      >
         <Menu
           className="menu"
           aria-label={t("create.new")}
-          disabledKeys={CREATE_ITEMS.map((c) => c.id).filter((id) => !available.has(id))}
+          disabledKeys={CREATE_ITEMS.map((c) => c.id).filter(
+            (id) => !available.has(id),
+          )}
           onAction={(key) => {
             if (key === "contact") {
               void navigate({
@@ -231,7 +306,9 @@ function CreateMenu({ workspaceId, workspaceName }: { workspaceId: string; works
           }}
         >
           <MenuSection>
-            <Header className="menu-header">{t("create.in", { name: workspaceName })}</Header>
+            <Header className="menu-header">
+              {t("create.in", { name: workspaceName })}
+            </Header>
             {CREATE_ITEMS.map((item) => {
               const Icon = item.icon;
               return (
@@ -240,12 +317,16 @@ function CreateMenu({ workspaceId, workspaceName }: { workspaceId: string; works
                   id={item.id}
                   className="menu-item"
                   textValue={
-                    available.has(item.id) ? t(item.label) : `${t(item.label)} (${t("nav.soon")})`
+                    available.has(item.id)
+                      ? t(item.label)
+                      : `${t(item.label)} (${t("nav.soon")})`
                   }
                 >
                   <Icon size={15} className="menu-icon" aria-hidden="true" />
                   <span className="menu-item-label">{t(item.label)}</span>
-                  {available.has(item.id) ? null : <span className="menu-soon">{t("nav.soon")}</span>}
+                  {available.has(item.id) ? null : (
+                    <span className="menu-soon">{t("nav.soon")}</span>
+                  )}
                 </MenuItem>
               );
             })}
@@ -263,7 +344,11 @@ function Notifications() {
       <AriaButton className="icon-button" aria-label={t("notif.button")}>
         <Bell size={17} aria-hidden="true" />
       </AriaButton>
-      <Popover className="menu-popover notif-panel" placement="bottom end" offset={6}>
+      <Popover
+        className="menu-popover notif-panel"
+        placement="bottom end"
+        offset={6}
+      >
         <Dialog className="notif-dialog" aria-label={t("notif.title")}>
           <div className="notif-head">
             <span className="notif-title">{t("notif.title")}</span>
@@ -279,12 +364,27 @@ function HelpMenu() {
   const t = useT();
   return (
     <MenuTrigger>
-      <AriaButton className="icon-button help-button" aria-label={t("help.button")}>
+      <AriaButton
+        className="icon-button help-button"
+        aria-label={t("help.button")}
+      >
         <CircleHelp size={17} aria-hidden="true" />
       </AriaButton>
-      <Popover className="menu-popover help-menu" placement="bottom end" offset={6}>
-        <Menu className="menu" aria-label={t("help.button")} disabledKeys={["center"]}>
-          <MenuItem id="center" className="menu-item" textValue={`${t("help.center")} (${t("nav.soon")})`}>
+      <Popover
+        className="menu-popover help-menu"
+        placement="bottom end"
+        offset={6}
+      >
+        <Menu
+          className="menu"
+          aria-label={t("help.button")}
+          disabledKeys={["center"]}
+        >
+          <MenuItem
+            id="center"
+            className="menu-item"
+            textValue={`${t("help.center")} (${t("nav.soon")})`}
+          >
             <CircleHelp size={15} className="menu-icon" aria-hidden="true" />
             <span className="menu-item-label">{t("help.center")}</span>
             <span className="menu-soon">{t("nav.soon")}</span>
@@ -313,7 +413,11 @@ function ProfileMenu({ workspaceId }: { workspaceId: string }) {
             <User size={15} />
           </span>
         </AriaButton>
-        <Popover className="menu-popover profile-menu" placement="bottom end" offset={6}>
+        <Popover
+          className="menu-popover profile-menu"
+          placement="bottom end"
+          offset={6}
+        >
           <Menu
             className="menu"
             aria-label={t("profile.button")}
@@ -327,17 +431,31 @@ function ProfileMenu({ workspaceId }: { workspaceId: string }) {
                 <span className="profile-name">{t("profile.signedIn")}</span>
                 {role ? <span className="profile-role">{role}</span> : null}
               </Header>
-              <MenuItem id="profile" className="menu-item" textValue={`${t("profile.preferences")} (${t("nav.soon")})`}>
+              <MenuItem
+                id="profile"
+                className="menu-item"
+                textValue={`${t("profile.preferences")} (${t("nav.soon")})`}
+              >
                 <User size={15} className="menu-icon" aria-hidden="true" />
-                <span className="menu-item-label">{t("profile.preferences")}</span>
+                <span className="menu-item-label">
+                  {t("profile.preferences")}
+                </span>
                 <span className="menu-soon">{t("nav.soon")}</span>
               </MenuItem>
-              <MenuItem id="security" className="menu-item" textValue={`${t("profile.security")} (${t("nav.soon")})`}>
+              <MenuItem
+                id="security"
+                className="menu-item"
+                textValue={`${t("profile.security")} (${t("nav.soon")})`}
+              >
                 <Shield size={15} className="menu-icon" aria-hidden="true" />
                 <span className="menu-item-label">{t("profile.security")}</span>
                 <span className="menu-soon">{t("nav.soon")}</span>
               </MenuItem>
-              <MenuItem id="signout" className="menu-item" textValue={t("app.signOut")}>
+              <MenuItem
+                id="signout"
+                className="menu-item"
+                textValue={t("app.signOut")}
+              >
                 <LogOut size={15} className="menu-icon" aria-hidden="true" />
                 <span className="menu-item-label">{t("app.signOut")}</span>
               </MenuItem>
@@ -379,7 +497,9 @@ function NavItem({
         ) : (
           <span className="visually-hidden">{label}</span>
         )}
-        {section.unavailable && open ? <span className="nav-soon">{t("nav.soonLower")}</span> : null}
+        {section.unavailable && open ? (
+          <span className="nav-soon">{t("nav.soonLower")}</span>
+        ) : null}
         {section.unavailable && !open ? (
           <span className="visually-hidden">{` (${t("nav.soon")})`}</span>
         ) : null}
@@ -423,9 +543,15 @@ function Navigation({
                 )}
               </AriaButton>
             ) : null}
-            {group.label && !open && index > 0 ? <div className="nav-divider" aria-hidden="true" /> : null}
+            {group.label && !open && index > 0 ? (
+              <div className="nav-divider" aria-hidden="true" />
+            ) : null}
             {groupOpen ? (
-              <ul className="nav-list" id={listId} aria-label={group.label ? t(group.label) : undefined}>
+              <ul
+                className="nav-list"
+                id={listId}
+                aria-label={group.label ? t(group.label) : undefined}
+              >
                 {group.sections.map((section) => (
                   <NavItem
                     key={section.slug}
@@ -462,12 +588,19 @@ function SidebarFooter({
         to="/w/$workspaceId/$section"
         params={{ workspaceId, section: SETTINGS_SLUG }}
         className="nav-item nav-settings"
-        activeProps={{ className: "nav-item nav-settings active-settings", "aria-current": "page" }}
+        activeProps={{
+          className: "nav-item nav-settings active-settings",
+          "aria-current": "page",
+        }}
         title={t("nav.settings")}
         onClick={onNavigate}
       >
         <Settings size={16} aria-hidden="true" />
-        {open ? <span>{t("nav.settings")}</span> : <span className="visually-hidden">{t("nav.settings")}</span>}
+        {open ? (
+          <span>{t("nav.settings")}</span>
+        ) : (
+          <span className="visually-hidden">{t("nav.settings")}</span>
+        )}
       </Link>
       {sidebar.narrow ? null : (
         <AriaButton
@@ -482,14 +615,22 @@ function SidebarFooter({
           ) : (
             <PanelLeftClose size={16} aria-hidden="true" />
           )}
-          {open ? <span aria-hidden="true">{t("nav.collapseShort")}</span> : null}
+          {open ? (
+            <span aria-hidden="true">{t("nav.collapseShort")}</span>
+          ) : null}
         </AriaButton>
       )}
     </div>
   );
 }
 
-function Sidebar({ workspaceId, sidebar }: { workspaceId: string; sidebar: SidebarState }) {
+function Sidebar({
+  workspaceId,
+  sidebar,
+}: {
+  workspaceId: string;
+  sidebar: SidebarState;
+}) {
   const t = useT();
   if (sidebar.narrow) {
     const close = () => {
@@ -505,13 +646,22 @@ function Sidebar({ workspaceId, sidebar }: { workspaceId: string; sidebar: Sideb
         <Modal className="sidebar-overlay">
           <Dialog className="sidebar" aria-label={t("nav.label")}>
             <div className="sidebar-overlay-head">
-              <AriaButton className="icon-button" aria-label={t("nav.close")} onPress={close}>
+              <AriaButton
+                className="icon-button"
+                aria-label={t("nav.close")}
+                onPress={close}
+              >
                 <X size={16} aria-hidden="true" />
               </AriaButton>
             </div>
             <nav aria-label={t("nav.label")} className="nav">
               <Navigation workspaceId={workspaceId} open onNavigate={close} />
-              <SidebarFooter workspaceId={workspaceId} sidebar={sidebar} open onNavigate={close} />
+              <SidebarFooter
+                workspaceId={workspaceId}
+                sidebar={sidebar}
+                open
+                onNavigate={close}
+              />
             </nav>
           </Dialog>
         </Modal>
@@ -525,14 +675,29 @@ function Sidebar({ workspaceId, sidebar }: { workspaceId: string; sidebar: Sideb
       aria-label={t("nav.label")}
       className={open ? "sidebar nav" : "sidebar nav collapsed"}
     >
-      <Navigation workspaceId={workspaceId} open={open} onNavigate={() => undefined} />
-      <SidebarFooter workspaceId={workspaceId} sidebar={sidebar} open={open} onNavigate={() => undefined} />
+      <Navigation
+        workspaceId={workspaceId}
+        open={open}
+        onNavigate={() => undefined}
+      />
+      <SidebarFooter
+        workspaceId={workspaceId}
+        sidebar={sidebar}
+        open={open}
+        onNavigate={() => undefined}
+      />
     </nav>
   );
 }
 
 /** Everything inside one workspace: header, sidebar and the section page. */
-export function AppFrame({ workspaceId, children }: { workspaceId: string; children: ReactNode }) {
+export function AppFrame({
+  workspaceId,
+  children,
+}: {
+  workspaceId: string;
+  children: ReactNode;
+}) {
   const t = useT();
   const sidebar = useSidebar();
   const workspace = useWorkspace(workspaceId);
@@ -573,7 +738,10 @@ export function AppFrame({ workspaceId, children }: { workspaceId: string; child
           </AriaButton>
         </div>
         <div className="header-actions">
-          <CreateMenu workspaceId={workspaceId} workspaceName={workspace.data?.name ?? ""} />
+          <CreateMenu
+            workspaceId={workspaceId}
+            workspaceName={workspace.data?.name ?? ""}
+          />
           <Notifications />
           <HelpMenu />
           <ProfileMenu workspaceId={workspaceId} />
@@ -601,11 +769,15 @@ export function PlaceholderPage({ section }: { section: Section }) {
   const group = findGroup(section.slug);
   return (
     <div className="placeholder-page">
-      {group?.label ? <p className="placeholder-group">{t(group.label)}</p> : null}
+      {group?.label ? (
+        <p className="placeholder-group">{t(group.label)}</p>
+      ) : null}
       <h1 className="placeholder-title">{t(section.label)}</h1>
       <div className="placeholder-card">
         <span className="placeholder-badge">{t("unavailable.kicker")}</span>
-        <p className="placeholder-desc">{section.unavailable ? t(section.unavailable) : null}</p>
+        <p className="placeholder-desc">
+          {section.unavailable ? t(section.unavailable) : null}
+        </p>
         <p className="placeholder-note">{t("unavailable.note")}</p>
       </div>
     </div>

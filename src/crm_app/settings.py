@@ -139,6 +139,14 @@ def validate_settings(
     problems.extend(_check_role_names(env))
     if process is Process.APP:
         problems.extend(_check_invitation_delivery(env))
+        if env.get("OIDC_END_SESSION_ENDPOINT"):
+            problems.extend(
+                _check_http_url(
+                    {"OIDC_END_SESSION_ENDPOINT": env["OIDC_END_SESSION_ENDPOINT"]},
+                    "OIDC_END_SESSION_ENDPOINT",
+                    require_https=production,
+                )
+            )
 
     if problems:
         raise ConfigurationError(process, problems)
