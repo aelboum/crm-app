@@ -55,7 +55,8 @@ def test_the_manifest_is_what_the_table_guard_checks() -> None:
 
 def test_every_approved_product_table_is_purged_children_first() -> None:
     assert frozenset(PURGE_TABLES) == PRODUCT_TABLES - GLOBAL_TABLES
-    assert PURGE_TABLES.index("contact") < PURGE_TABLES.index("company")
+    order = PURGE_TABLES.index
+    assert order("activity") < order("note") < order("contact") < order("company")
 
 
 def test_the_manifest_resolves_to_the_mapped_tables_in_a_fresh_process(tmp_path: Path) -> None:

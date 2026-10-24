@@ -800,3 +800,79 @@ Recommended next: 3E (export) needs no table and no new decision, then
 3B (notes and activity), which the design's record page leans on most.
 Optional, independent: `pg_trgm` substring search (§18 Q6) and a phone
 library (§18 Q6).
+
+## 21. Slice 3B — notes and activity (approved 2026-10-24, P3-B)
+
+Decisions D1-D9 are in `DECISIONS.md` (P3-B). Where §3.2, §6 and §12 say
+otherwise, this section wins: notes and history are two tables, not one.
+
+### 21.1 Tables (migration `0003_notes_activity`)
+
+Both: `id uuid PRIMARY KEY`, `tenant_id` referencing `core.tenants`,
+`UNIQUE (tenant_id, id)`, exactly one of `contact_id`/`company_id`
+(`num_nonnulls = 1`), each by a composite key `(tenant_id, x_id)` with
+`ON DELETE CASCADE`, forced RLS from `tenant_rls_statements`, and both in
+`PURGE_TABLES` (order `activity`, `note`, `contact`, `company`).
+
+- **`note`:** `body` (plain text, 1-10,000 characters, trimmed of spaces,
+  tabs and line breaks at both ends, LF line breaks only, no control
+  character other than tab and LF), `author_user_id`, `updated_by_user_id`,
+  `created_at`, `updated_at`, `version`. Runtime role: SELECT, INSERT,
+  UPDATE, DELETE. Index per parent: `(tenant_id, parent, created_at DESC,
+  id DESC)`.
+- **`activity`:** `kind` (`created`, `updated`, `archived`, `restored`,
+  `stage_changed`, `owner_changed`, `company_linked`, `company_unlinked`,
+  `note_added`, `note_deleted`), `actor_user_id` (NULL for system changes),
+  `occurred_at`, and kind-specific payload, each enforced by a `CHECK`:
+  - `fields` (`updated` only): a JSON array of 1-12 names from an
+    allow-list; never values. Stage, owner and company changes have their
+    own kinds and are not in the list.
+  - `stage_from`/`stage_to` (`stage_changed`, contacts only): the fixed
+    P3-A stages, different from each other.
+  - `owner_from`/`owner_to` (`owner_changed` only): user IDs, different.
+  - `company_ref_id` (`company_linked`/`company_unlinked`, contacts only):
+    no key, because the company may later be deleted.
+  - `note_id` (`note_added` only): composite key to `note`, `ON DELETE
+    CASCADE`, so deleting a note removes its `note_added` entry (D4).
+  - Runtime role: SELECT, INSERT, DELETE, **no UPDATE** (D6). The table
+    guard requires UPDATE to be absent for `APPEND_ONLY_TABLES`. DELETE
+    stays for purge and the cascades. Index per parent `(tenant_id, parent,
+    occurred_at DESC, id DESC)`, and `(tenant_id, note_id)` for the cascade.
+- **Backfill (D7):** the upgrade adds one `created` entry per existing
+  contact and company from its `created_at` and `created_by_user_id`,
+  workspace by workspace with `app.tenant_id` set, so forced RLS admits it
+  whether or not the migration role bypasses RLS.
+- **Rollback:** the downgrade drops both tables and their rows, for test
+  and development databases only; never a production recovery path.
+
+### 21.2 Writes and routes (3B.2, 3B.3)
+
+- Every contact or company change writes its activity entries in the same
+  transaction as the change and its audit entry; a failure rolls back all
+  three. An update writes `updated` for the plain fields that changed,
+  plus `stage_changed`, `owner_changed` or `company_linked`/`_unlinked` as
+  applicable; a no-op writes nothing. Deleting a company writes
+  `company_unlinked` on each contact it unlinks.
+- `GET /contacts/{id}/activity`, `GET /companies/{id}/activity`
+  (`activity:read`): newest first, keyset cursor, `limit` 1-100 (default
+  20). A `note_added` item carries the note's first 280 characters.
+- `GET` and `POST /contacts/{id}/notes` and `/companies/{id}/notes`;
+  `PATCH` and `DELETE /notes/{note_id}`. Creating needs `activity:create`
+  and accepts an `Idempotency-Key` scoped to the acting member; refused
+  with 409 `record_archived` on an archived record (D8). Editing needs
+  `If-Match` (428/409 as for records). Edit and delete are declared with
+  `activity:create` and the service allows the author or a holder of
+  `activity:update`/`activity:delete` (D3); otherwise 403
+  `not_note_author`. Deleting writes `note_deleted`; audit entries
+  `crm_app.note.created`/`.updated`/`.deleted` carry IDs only.
+- Adding a note leaves the record's version and `updated_at` unchanged.
+
+### 21.3 Increments
+
+| Step | Content | Status |
+| --- | --- | --- |
+| 3B.1 | Migration, models, RLS, guard (append-only rule), purge order, backfill | Done (see `PROGRESS.md`) |
+| 3B.2 | Activity written by every record change; activity routes | Planned |
+| 3B.3 | Note routes, D3 rule, concurrency, idempotency, audit, `/access` flags | Planned |
+| 3B.4 | Notes and Activity sections in both drawers | Planned |
+| 3B.5 | Security review, performance, browser check, documentation | Planned |

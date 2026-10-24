@@ -30,10 +30,16 @@ class Policy:
     with_check: str | None
 
 
-def privilege_violations(table: str, held: Mapping[str, bool]) -> list[str]:
+def privilege_violations(
+    table: str, held: Mapping[str, bool], *, append_only: bool = False
+) -> list[str]:
+    """Exactly CRUD, or for an append-only table (decision P3-B D6) exactly
+    SELECT, INSERT and DELETE: UPDATE is then forbidden, not optional."""
+    required = tuple(p for p in REQUIRED_PRIVILEGES if not (append_only and p == "UPDATE"))
+    forbidden = FORBIDDEN_PRIVILEGES + (("UPDATE",) if append_only else ())
     unchecked = [p for p in CHECKED_PRIVILEGES if p not in held]
-    missing = [p for p in REQUIRED_PRIVILEGES if p in held and not held[p]]
-    excess = [p for p in FORBIDDEN_PRIVILEGES if held.get(p)]
+    missing = [p for p in required if p in held and not held[p]]
+    excess = [p for p in forbidden if held.get(p)]
     return (
         [f"{table}: privilege {p} was not checked" for p in unchecked]
         + [f"{table}: runtime role lacks {p}" for p in missing]

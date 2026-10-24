@@ -47,6 +47,21 @@ def test_each_missing_crud_privilege_fails() -> None:
         ]
 
 
+def test_an_append_only_table_must_lack_update_and_hold_the_rest() -> None:
+    append_only = {**CRUD_ONLY, "UPDATE": False}
+    assert privilege_violations("activity", append_only, append_only=True) == []
+    assert privilege_violations("activity", CRUD_ONLY, append_only=True) == [
+        "activity: runtime role holds forbidden UPDATE"
+    ]
+    for privilege in ("SELECT", "INSERT", "DELETE"):
+        held = {**append_only, privilege: False}
+        assert privilege_violations("activity", held, append_only=True) == [
+            f"activity: runtime role lacks {privilege}"
+        ]
+    # Without the flag, the same grants are a missing UPDATE.
+    assert privilege_violations("activity", append_only) == ["activity: runtime role lacks UPDATE"]
+
+
 def test_an_unchecked_privilege_fails_instead_of_passing() -> None:
     assert privilege_violations("contacts", {}) == [
         f"contacts: privilege {p} was not checked" for p in CHECKED_PRIVILEGES

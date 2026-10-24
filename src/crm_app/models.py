@@ -1,10 +1,11 @@
-"""Mappings of this product's tables (`PHASE3-PLAN.md` §19.2).
+"""Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migration `0002_contacts_companies` owns the schema: the constraints, the
-partial unique indexes and the Row-Level Security policies live there, and
-these classes never create tables. They declare the columns the services
-read and write, and register both tables in SaaS-OS's shared metadata, which
-`crm_app.purge` resolves its manifest against.
+Migrations `0002_contacts_companies` and `0003_notes_activity` own the
+schema: the constraints, the partial unique indexes, the grants and the
+Row-Level Security policies live there, and these classes never create
+tables. They declare the columns the services read and write, and register
+every table in SaaS-OS's shared metadata, which `crm_app.purge` resolves its
+manifest against.
 
 The foreign key into `core.tenants` exists in the database only: declaring it
 here would make every flush depend on Core's own table definitions being
@@ -21,6 +22,7 @@ import uuid
 from datetime import datetime
 
 from saas_os.infra.db import (
+    JSON,
     Base,
     DateTime,
     ForeignKeyConstraint,
@@ -80,3 +82,72 @@ class Contact(_Record, Base):
     lifecycle_stage: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(Text)
     company_id: Mapped[uuid.UUID | None] = mapped_column()
+
+
+def _parent_keys(table: str) -> tuple[ForeignKeyConstraint, ForeignKeyConstraint]:
+    """A note or activity entry belongs to exactly one contact or company."""
+    return (
+        ForeignKeyConstraint(
+            ["tenant_id", "contact_id"],
+            [f"{SCHEMA}.contact.tenant_id", f"{SCHEMA}.contact.id"],
+            name=f"{table}_contact_fkey",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "company_id"],
+            [f"{SCHEMA}.company.tenant_id", f"{SCHEMA}.company.id"],
+            name=f"{table}_company_fkey",
+            ondelete="CASCADE",
+        ),
+    )
+
+
+class Note(Base):
+    """A plain-text note on one contact or company (decision P3-B)."""
+
+    __tablename__ = "note"
+    __table_args__ = (*_parent_keys("note"), {"schema": SCHEMA})
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    company_id: Mapped[uuid.UUID | None] = mapped_column()
+    body: Mapped[str] = mapped_column(Text)
+    author_user_id: Mapped[uuid.UUID] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class Activity(Base):
+    """One entry of a record's history. The application only inserts these:
+    the runtime role holds no UPDATE on the table (decision P3-B D6)."""
+
+    __tablename__ = "activity"
+    __table_args__ = (
+        *_parent_keys("activity"),
+        ForeignKeyConstraint(
+            ["tenant_id", "note_id"],
+            [f"{SCHEMA}.note.tenant_id", f"{SCHEMA}.note.id"],
+            name="activity_note_fkey",
+            ondelete="CASCADE",
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    company_id: Mapped[uuid.UUID | None] = mapped_column()
+    kind: Mapped[str] = mapped_column(Text)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Field names only (an allow-list in migration 0003), never values.
+    fields: Mapped[list[str] | None] = mapped_column(JSON)
+    stage_from: Mapped[str | None] = mapped_column(Text)
+    stage_to: Mapped[str | None] = mapped_column(Text)
+    owner_from: Mapped[uuid.UUID | None] = mapped_column()
+    owner_to: Mapped[uuid.UUID | None] = mapped_column()
+    company_ref_id: Mapped[uuid.UUID | None] = mapped_column()
+    note_id: Mapped[uuid.UUID | None] = mapped_column()

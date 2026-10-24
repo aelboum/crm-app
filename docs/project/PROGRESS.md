@@ -580,3 +580,24 @@ workspace with `crm_app.provision` ("Local test workspace", test data only).
   exists (new test).
 - Not checked: phone width (the browser window could not be resized),
   "Load more" (too few records), Firefox and Safari.
+
+### Slice 3B approved; 3B.1 schema (2026-10-24)
+
+The owner approved slice 3B (decision P3-B, D1-D9; Q6 amended by D3).
+3B.1 adds migration `0003_notes_activity`: the `note` and `activity`
+tables with forced RLS, composite keys to their record, `ON DELETE
+CASCADE` from the record (and from the note for `note_added`), payload
+`CHECK`s for D5, a backfill of one `created` entry per existing record
+(D7), and the runtime role without UPDATE on `activity` (D6). Both tables
+are in `PURGE_TABLES` and the guard lists; the guard now requires UPDATE to
+be absent on append-only tables.
+
+- Tests (disposable `crm_app_test`): visibility only inside the own
+  workspace; no writes into another workspace; the runtime role cannot
+  UPDATE or TRUNCATE `activity`; cross-workspace record and note references
+  refused with RLS bypassed; note text and payload rules; cascades from a
+  deleted note and record, also as the runtime role; the real operator
+  purge removes all four tables for that workspace only; the backfill and
+  rollback from 0003 to 0002 and back.
+- Results: unit 185 passed; integration 177 passed.
+- No application route uses the tables yet (3B.2 and 3B.3).

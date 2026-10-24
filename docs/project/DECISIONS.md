@@ -638,6 +638,10 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Scope:** product policy only. It does not authorize implementing every
   route; each route still needs its gate (G1, G2, G-LOCK, G3/G4 in
   `PHASE2-PLAN.md` §14).
+- **Amended 2026-10-24 (P3-B D3):** a note's author may edit and
+  permanently delete their own note, whatever their role, as long as they
+  still hold `crm_app.activity:create` (Owner, Admin, Member). Owners and
+  Admins may edit and delete any note. The rest of Q6 is unchanged.
 
 ## Q-purge — Purge integration
 
@@ -844,6 +848,39 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
     complexity);
   - production settings;
   - Login V2's own response headers (see PROGRESS, 2026-10-22).
+
+## P3-B — Phase 3 slice 3B (notes and activity) approved
+
+- **Status:** Approved by the owner, 2026-10-24: "I approve proceeding with
+  Phase 3B (Notes and Activity), based on the submitted plan and the
+  decisions below." Plan: `PHASE3-PLAN.md` §21.
+- **Decisions:**
+  - **D1:** notes and activity in the existing contact and company drawers;
+    the full record page and its tabs are deferred.
+  - **D2:** two tenant-owned tables, `note` and `activity`.
+  - **D3:** authors may edit and permanently delete their own notes; Owners
+    and Admins may edit and permanently delete any note. This amends Q6
+    (see the Q6 amendment).
+  - **D4:** note deletion is permanent with no undo. The note text and its
+    `note_added` entry are removed; a minimal `note_deleted` entry stays
+    while the record exists. The deleted text is never kept in activity or
+    audit metadata.
+  - **D5:** the event kinds and payload limits of the plan. Ordinary
+    updates record field names only; stage changes may record the fixed
+    stage values; owner changes may record user IDs; no other field value
+    and no note text.
+  - **D6:** activity entries cannot be changed by application operations;
+    the purge mechanism and parent-record deletion still remove them; no
+    purge bypass and no weakening of tenant isolation.
+  - **D7:** one `created` entry backfilled per existing contact and company,
+    from the original creation time and creator.
+  - **D8:** on an archived record, notes and history stay readable; adding
+    or editing a note needs the record restored first; deletion follows D3.
+  - **D9:** each independently validated increment may be committed and
+    pushed without routine approval.
+- **Not approved:** tags, custom fields, imports, exports, automation, AI and
+  other deferred scope; production deployment or releases; any SaaS-OS pin
+  change. Phase 2 stays open.
 
 ## Ledger of other recorded facts
 

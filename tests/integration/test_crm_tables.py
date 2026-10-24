@@ -308,8 +308,9 @@ _TABLES = (
 def test_the_migration_rolls_back_and_forward(
     env: dict[str, str], owner_connection: psycopg.Connection, tmp_path: Path
 ) -> None:
-    """Last in this module: drops both tables (and their rows), then applies
-    the migration again, leaving the schema as the other tests need it."""
+    """Last in this module: drops every product table (and its rows), then
+    applies the migrations again, leaving the schema as the other tests need
+    it."""
     down = run_python(_DOWNGRADE.format(path=str(MIGRATIONS_DIR)), env, tmp_path)
     try:
         assert down.returncode == 0, down.stderr
@@ -320,4 +321,6 @@ def test_the_migration_rolls_back_and_forward(
     assert {name for (name,) in owner_connection.execute(_TABLES).fetchall()} == {
         "company",
         "contact",
+        "note",
+        "activity",
     }

@@ -1,9 +1,11 @@
 """Structural guards for the product schema, read from the PostgreSQL catalogs.
 
 The product schema holds exactly the approved tables (`tests/support.py`
-`PRODUCT_TABLES`; P3-A: `company`, `contact`), and every tenant-owned one
-meets the rules in `tests/catalog_rules.py`. These tests read structure
-only; runtime isolation is proven in `test_crm_tables.py`.
+`PRODUCT_TABLES`; P3-A: `company`, `contact`; P3-B: `note`, `activity`), and
+every tenant-owned one meets the rules in `tests/catalog_rules.py`
+(`activity` is append-only: its runtime role must lack UPDATE). These tests
+read structure only; runtime isolation is proven in `test_crm_tables.py` and
+`test_note_activity_tables.py`.
 
 Facts come from `pg_namespace`, `pg_class`, `pg_attribute` and `pg_policy`,
 and privileges from `has_table_privilege` for the configured runtime role.
@@ -29,7 +31,12 @@ from tests.catalog_rules import (
     purge_violations,
     rls_violations,
 )
-from tests.support import GLOBAL_TABLES, PRODUCT_TABLES, PURGE_COVERED_TABLES
+from tests.support import (
+    APPEND_ONLY_TABLES,
+    GLOBAL_TABLES,
+    PRODUCT_TABLES,
+    PURGE_COVERED_TABLES,
+)
 
 SCHEMA = "crm_app"
 # A platform table created with `tenant_rls_statements` (SaaS-OS migration
@@ -166,13 +173,13 @@ def test_every_tenant_table_has_forced_rls_and_the_platform_policy(
     assert problems == []
 
 
-def test_the_runtime_role_holds_exactly_crud_on_every_product_table(
+def test_the_runtime_role_holds_exactly_its_privileges_on_every_product_table(
     runtime_role: str, owner_connection: psycopg.Connection
 ) -> None:
     problems: list[str] = []
     for table in sorted(_tables(owner_connection, SCHEMA)):
         held = _privileges(owner_connection, runtime_role, SCHEMA, table)
-        problems += privilege_violations(table, held)
+        problems += privilege_violations(table, held, append_only=table in APPEND_ONLY_TABLES)
     assert problems == []
 
 
