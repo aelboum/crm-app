@@ -146,7 +146,7 @@ describe("workspace members", () => {
     await user.click(screen.getByRole("button", { name: "Your account" }));
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
 
-    expect(await screen.findByRole("heading", { name: "Sign in to continue" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Sign in to LeadStack" })).toBeVisible();
     expect(screen.queryByText("Acme")).toBeNull();
     expect(screen.queryByText("3 members")).toBeNull();
   });

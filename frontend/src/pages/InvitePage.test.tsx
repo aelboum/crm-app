@@ -29,6 +29,8 @@ describe("accepting an invitation", () => {
   it("keeps the link through sign-in and clears it from the address bar", async () => {
     openLink(() => ({ status: 401, body: { detail: "Not authenticated" } }));
     expect(await screen.findByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
+    expect(screen.getByRole("heading", { level: 1, name: "Sign in to accept your invitation" })).toBeVisible();
+    expect(screen.getByText(/the email address the invitation was sent to/)).toBeVisible();
     expect(globalThis.location.hash).toBe("");
     expect(sessionStorage.getItem("crm.pendingInvitation")).toContain(TOKEN);
     expect(await accessibilityViolations()).toEqual([]);
@@ -62,6 +64,12 @@ describe("accepting an invitation", () => {
     openLink(signedIn(), false);
     expect(await screen.findByText(/link is incomplete/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Accept invitation" })).toBeNull();
+  });
+
+  it("explains an incomplete link to a signed-out visitor too", async () => {
+    openLink(() => ({ status: 401, body: { detail: "Not authenticated" } }), false);
+    expect(await screen.findByText(/link is incomplete/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
   });
 
   it("brings the person back to a waiting invitation after sign-in", async () => {

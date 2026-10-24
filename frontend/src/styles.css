@@ -178,6 +178,49 @@ p { margin: 0; }
 .frame-main { flex: 1; min-width: 0; min-height: 0; overflow: auto; background: var(--canvas); }
 .frame-main:focus, .plain-main:focus { outline: none; }
 .plain-main { max-width: 960px; margin: 0 auto; padding: 32px var(--space-6); }
+
+/* --- Sign-in: LeadStack Signup.dc.html L23-50, L118-125 -------------------- */
+/* The design's 340 px dark column and centred panel, 13.5/1.5 text. The panel
+   is narrower than the design's 560 px (one action, no form) and centred
+   vertically. Below 760 px the column becomes a brand bar above the panel. */
+.signin-main { min-height: 100vh; }
+.signin-main:focus { outline: none; }
+.signin { min-height: 100vh; display: flex; font-size: 13.5px; line-height: 1.5; }
+.signin-aside {
+  flex: 0 1 340px; min-width: 280px; background: var(--ink); color: #fff; padding: 32px 28px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.signin-brand { display: flex; align-items: center; gap: 10px; }
+.signin-tile { width: 30px; height: 30px; border-radius: 8px; font-size: 13px; }
+.signin-brand-name { font-weight: 650; font-size: 15px; }
+.signin-tagline { color: #d4d8de; font-size: 14px; max-width: 280px; text-wrap: pretty; }
+.signin-aside-fill { flex: 1; }
+.signin-aside-note { font-size: 12px; color: #a9b0be; text-wrap: pretty; }
+.signin-panel { flex: 1 1 520px; min-width: 0; display: flex; justify-content: center; align-items: center; padding: 48px 24px; }
+.signin-body { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 18px; }
+.signin-kicker { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.signin-head h1 { margin: 4px 0 6px; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.25; text-wrap: pretty; }
+.signin-sub { color: var(--ink-2); text-wrap: pretty; }
+.signin-button {
+  height: 42px; border-radius: var(--radius-inner); background: var(--accent); color: #fff; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+}
+.signin-button:hover { filter: brightness(0.94); }
+.signin-button[aria-disabled="true"] { cursor: progress; filter: none; opacity: 0.85; }
+.signin-spinner { border-color: rgb(255 255 255 / 40%); border-top-color: #fff; }
+.signin-help { font-size: 12px; color: var(--muted); text-wrap: pretty; }
+.signin-notice { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.signin-footer {
+  font-size: 12.5px; color: var(--muted); text-align: center; padding-top: 14px; border-top: 1px solid var(--line);
+  text-wrap: pretty;
+}
+@media (max-width: 759px) {
+  .signin { flex-direction: column; }
+  .signin-aside { flex: none; min-width: 0; padding: 14px 16px; }
+  .signin-tagline, .signin-aside-fill, .signin-aside-note { display: none; }
+  .signin-panel { flex: 1 0 auto; align-items: flex-start; padding: 32px 16px 40px; }
+  .signin-head h1 { font-size: 23px; }
+}
 .sidebar {
   width: var(--sidebar-w); flex: none; background: var(--sidebar); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; min-height: 0;

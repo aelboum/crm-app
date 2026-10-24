@@ -113,29 +113,37 @@ export function PlainLayout() {
   const t = useT();
   const me = useMe();
   const { signOut, run } = useSignOutAndLeave();
+  // Until a session is known the pages show the full-page sign-in screen,
+  // which carries the brand itself (pages/SignInScreen.tsx).
+  if (!me.data) {
+    return (
+      <>
+        <SkipLink />
+        <main id="main" className="signin-main" tabIndex={-1}>
+          <Outlet />
+        </main>
+      </>
+    );
+  }
   return (
     <>
       <SkipLink />
       <header className="app-header">
         <Brand />
         <span className="header-fill" />
-        {me.data ? (
-          <>
-            {signOut.isError ? (
-              <span role="alert" className="field-error">
-                {t("app.signOutFailed")}
-              </span>
-            ) : null}
-            <AriaButton
-              className="header-text-button"
-              isDisabled={signOut.isPending}
-              onPress={run}
-            >
-              <LogOut size={15} aria-hidden="true" />
-              {t("app.signOut")}
-            </AriaButton>
-          </>
+        {signOut.isError ? (
+          <span role="alert" className="field-error">
+            {t("app.signOutFailed")}
+          </span>
         ) : null}
+        <AriaButton
+          className="header-text-button"
+          isDisabled={signOut.isPending}
+          onPress={run}
+        >
+          <LogOut size={15} aria-hidden="true" />
+          {t("app.signOut")}
+        </AriaButton>
       </header>
       <main id="main" className="plain-main" tabIndex={-1}>
         <Outlet />

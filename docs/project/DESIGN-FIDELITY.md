@@ -72,7 +72,8 @@ L243-247):
 | Reports (`ScreenReports`) | `/reports` | 10 | Placeholder |
 | Home / Dashboard (`ScreenDashboard`) | `/home` | needs CRM data | Placeholder |
 | Agency views: Workspaces, Templates (empty), Team, Billing | none yet | 11 (agency model undecided, P2-B) | Not implemented |
-| Signup (`LeadStack Signup.dc.html`) | none yet | P2-C | Not implemented |
+| Sign-in (account step of `LeadStack Signup.dc.html`, L23-50, L118-125) | `/app` and `/app/invite/{id}` when signed out | 2 (approved 2026-10-24) | **Implemented; compared (§4e)** |
+| Self-service signup (the rest of `LeadStack Signup.dc.html`) | none | P2-C | Not implemented; excluded by P2-C |
 | ⌘K palette (`LeadStack CRM.dc.html` L257-281), toast | frame | 2 | Toast implemented. Palette implemented with page navigation only; **compared (§4b)** |
 
 ## 2. Recorded gaps and ambiguities in the source
@@ -429,6 +430,74 @@ the stale-version message, delete after confirmation, the read-only and
 archived views, and the discard prompt; an axe scan of the drawer reports
 no violations.
 
+## 4e. Branded sign-in (2026-10-24)
+
+**Scope (owner approval, 2026-10-24):** a LeadStack-branded sign-in screen
+from the sign-in parts of `LeadStack Signup.dc.html`, before slice 3C.
+Decision P2-C is unchanged: there is no self-service signup and no public
+workspace creation.
+
+**Implemented** (`frontend/src/pages/SignInScreen.tsx`, styles under
+"Sign-in" in `styles.css`):
+- Shown on `/app` and on invitation links whenever no session is known
+  (while the session is checked, when it is absent, and when the check
+  fails). The application header is shown only to a signed-in person.
+- The one action is a **Sign in** link to the existing `/auth/login`
+  (SaaS-OS OIDC: PKCE, state, nonce). Credentials are entered only on
+  ZITADEL's Login V2 pages; the screen has no form or input (SaaS-OS
+  ADR-0026 was rejected).
+- States: "Checking your session…"; a failed session check with
+  **Try again** and sign-in still offered; after a click the link shows a
+  spinner, announces "Opening the sign-in page…" and ignores further
+  clicks; returning with the browser's Back button (back/forward cache)
+  makes it usable again. Modified clicks (new tab) are left alone.
+- An invitation link without its token shows "This invitation link is
+  incomplete" on the same screen.
+
+**Compared with the source (values from the file):**
+
+| Element | Design | Implemented |
+| --- | --- | --- |
+| Layout | `flex-wrap` row: aside `flex: 0 1 340px`, min 280; main `flex: 1 1 520px`, padding 48/24 | Same widths and padding; below 760 px a column with the aside as a 58 px brand bar (the design only wraps) |
+| Aside | `#161B26`, white, padding 32/28, gap 28 | Same (`--ink`) |
+| Brand | 30 px tile, radius 8, accent, 700 13 px "LS"; name 650 15 px | Same |
+| Aside foot note | 12 px `#A9B0BE` | Same colour and size; text replaced (below) |
+| Text | Geist 13.5/1.5, `#161B26` | Same |
+| Kicker | Geist Mono 12 px `#687082` ("Step 1 of 7") | Same face and size, `--muted` `#5F6778` for contrast; text "LeadStack CRM" |
+| Title | 26 px, 650, -0.02em, margin 4/0/6 | Same; 23 px below 760 px |
+| Subtitle | `#454D5C` | Same |
+| Primary action | 40 px, radius 8, accent, white 600, arrow-right icon | 42 px (the design's height for the account step's main buttons), full width, same colours and icon |
+| Helper text | 12 px `#687082`, "Password and two-factor are handled by our identity provider." | 12 px `--muted`, same meaning |
+| Footer line | 12.5 px `#687082`, centred, above a `#E3E6EA` rule | Same |
+| Content width | max 560 px, top-aligned | max 420 px, centred vertically (one action instead of a form) |
+
+**Left out on purpose:** the step rail, "Continue with Google/Microsoft"
+(no such provider integration exists or is approved; D-IDL.1 turned
+external providers off), the name and work-email fields, "Create your
+LeadStack account", "Free for 14 days", "Already have an account?", and
+the prototype disclaimer. They belong to self-service signup (P2-C). In
+their place the aside says accounts are created by invitation and there
+is no public sign-up, and the footer tells a visitor without an account
+to ask an Owner or Admin for an invitation. The aside's one-line product
+description is new copy, not from the design.
+
+**Checks (2026-10-24):**
+- Vitest (`HomePage.test.tsx`, `InvitePage.test.tsx`): branded screen,
+  link target, no header or sign-out while signed out, no input, form,
+  sign-up, Google or Microsoft text and only the skip link besides
+  **Sign in**, the redirecting state and second-click guard, the
+  back/forward-cache reset, the session-check loading and failure states
+  with retry, sign-out from the start page (`POST /auth/logout`, then
+  `GET /v1/sign-out-url`, then the sign-in screen); axe without
+  violations on the screen and its error state.
+- Chrome at 1280×609 (desktop window): layout as in the table, the Tab
+  order skip link → **Sign in** with the 2 px focus outline, no
+  horizontal scroll, no console errors; **Sign in** showed the
+  redirecting state and reached ZITADEL Login V2 on `localhost:8000`;
+  Back returned to a usable screen.
+- Phone, 390×844 emulated in Chrome (DevTools): column layout, brand
+  bar 58 px, action 358 px wide, page width 390 (no horizontal scroll).
+
 ## 5. Accessibility and quality evidence (2026-10-22)
 
 - **Lighthouse** (Chrome DevTools, desktop 1280×800, snapshot mode):
@@ -466,3 +535,6 @@ no violations.
 - Screen reader output (only the accessibility tree was checked).
 - The design reference at 390 px beyond the overflow measurement.
 - Firefox and Safari.
+- Sign-in: a real phone (only emulation), a screen reader, and the
+  provider's error pages (a failed or cancelled sign-in ends on
+  SaaS-OS's plain JSON answer at `/auth/callback`; see `PROGRESS.md`).

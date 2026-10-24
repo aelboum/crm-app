@@ -10,10 +10,10 @@ import {
   useAcceptInvitation,
 } from "../api/invitations";
 import { useMe } from "../api/queries";
-import { Loading, LoadError } from "../components/StateNotice";
 import { Button, buttonClass } from "../components/ui/Button";
 import { useT } from "../i18n/useT";
 import { isWorkspaceId } from "./HomePage";
+import { SignInScreen } from "./SignInScreen";
 
 /*
  * Accepting an invitation (decisions Q4, Q5; SaaS-OS ADR-0046). The link is
@@ -44,24 +44,20 @@ export function InvitePage({ workspaceId }: { workspaceId: string }) {
   const accept = useAcceptInvitation();
   const [pending] = useState(() => (isWorkspaceId(workspaceId) ? takeFromLink(workspaceId) : null));
 
+  if (!me.data) {
+    return (
+      <SignInScreen
+        me={me}
+        title={t("accept.signInTitle")}
+        body={pending ? t("accept.signedOut") : undefined}
+        notice={pending ? undefined : <p className="notice error signin-notice">{t("accept.missing")}</p>}
+      />
+    );
+  }
+
   let content;
   if (!pending) {
     content = <p className="notice error">{t("accept.missing")}</p>;
-  } else if (me.isPending) {
-    content = <Loading />;
-  } else if (me.isError) {
-    content = <LoadError error={me.error} onRetry={() => void me.refetch()} />;
-  } else if (me.data === null) {
-    content = (
-      <>
-        <p className="muted">{t("accept.signedOut")}</p>
-        <div className="row">
-          <a className={buttonClass("primary")} href="/auth/login">
-            {t("home.signIn")}
-          </a>
-        </div>
-      </>
-    );
   } else if (accept.isSuccess) {
     content = (
       <>

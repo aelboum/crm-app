@@ -8,6 +8,7 @@ import { EmptyState, Loading, LoadError } from "../components/StateNotice";
 import { Button, buttonClass } from "../components/ui/Button";
 import { useT } from "../i18n/useT";
 import { initials } from "../shell/AppFrame";
+import { SignInScreen } from "./SignInScreen";
 
 const WORKSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -87,20 +88,8 @@ function OpenWorkspace() {
 export function HomePage() {
   const t = useT();
   const me = useMe();
-  if (me.isPending) return <Loading />;
-  if (me.isError) return <LoadError error={me.error} onRetry={() => void me.refetch()} />;
-  if (me.data === null) {
-    return (
-      <section className="card" aria-labelledby="signin-heading">
-        <h1 id="signin-heading">{t("home.signedOut.title")}</h1>
-        <p className="muted">{t("home.signedOut.body")}</p>
-        <div className="row">
-          <a className={buttonClass("primary")} href="/auth/login">
-            {t("home.signIn")}
-          </a>
-        </div>
-      </section>
-    );
+  if (!me.data) {
+    return <SignInScreen me={me} title={t("home.signedOut.title")} body={t("home.signedOut.body")} />;
   }
   const waiting = pendingInvitation();
   return (

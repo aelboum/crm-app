@@ -35,6 +35,29 @@ decisions P2-A to P2-E approved)
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
 - **Phase 3:** slices 3A and 3B done; 3C and later not started.
+- **Branded sign-in (2026-10-24, owner-approved before slice 3C):** the
+  signed-out screens of `/app` and invitation links are a LeadStack
+  sign-in screen after the design's `LeadStack Signup.dc.html`
+  (`DESIGN-FIDELITY.md` §4e). Verified: frontend tests, lint, type check
+  and build; backend gates unchanged and green; the ZITADEL sign-in test
+  (`tests/identity`), 1 passed; in Chrome, **Sign in** reached ZITADEL
+  Login V2 on `localhost:8000` and Back returned to a usable screen;
+  phone width 390 px emulated. No backend, SaaS-OS or identity-provider
+  configuration changed; P2-C unchanged (no sign-up, no public workspace
+  creation, no Google or Microsoft sign-in).
+  - **Not verified in this change:** a full browser sign-in with a
+    password (covered by the identity test through ZITADEL's session
+    API and by the owner's earlier browser check of the same flow);
+    Firefox, Safari, a real phone and a screen reader.
+  - **Open gap, owner decision needed:** SaaS-OS answers a failed or
+    cancelled sign-in at `/auth/callback` (and a refused `/auth/login`)
+    with plain JSON (`400 Invalid login callback.`, 401, 502 or 503), not
+    a LeadStack page. The product can only change this by wrapping
+    those platform responses or by an upstream SaaS-OS change.
+  - **Local note:** starting the server from Git Bash without
+    `MSYS2_ENV_CONV_EXCL=AUTH_POST_LOGIN_PATH` (README) makes
+    `/auth/login` answer "Authentication is not configured"; seen again
+    during this check, not a product defect.
 
 ## Repository state
 
