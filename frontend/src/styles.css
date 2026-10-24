@@ -663,6 +663,43 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .drawer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .drawer-note { margin: 0; font-size: 12px; color: #687082; }
 
+/* Notes and activity in the drawers (decision P3-B; ScreenContacts.dc.html
+   L181-187 note composer and cards, L155-164 timeline). Note text keeps its
+   line breaks; it is text, never HTML. */
+.drawer-section > .btn { align-self: flex-start; margin-top: 8px; }
+.note-composer { border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.note-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.note-composer textarea, .note-edit textarea {
+  width: 100%; min-height: 80px; border: none; outline: none; padding: 10px 12px; resize: vertical;
+  background: #fffdf5; font: inherit; color: var(--ink);
+}
+.note-composer textarea::placeholder { color: #687082; }
+.note-composer-bar {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px;
+  border-top: 1px solid #eef0f3; background: #fafafb;
+}
+.note-composer-bar .note-error { flex: 1; }
+.note-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.note-card { padding: 12px 14px; border: 1px solid #f0e6c4; background: #fffbeb; border-radius: 8px; }
+.note-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-meta { margin: 6px 0 0; font-size: 12px; color: #7a6a3a; }
+.note-edit { border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; background: #fff; }
+.note-edit .note-actions { padding: 6px 8px; border-top: 1px solid #eef0f3; background: #fafafb; justify-content: flex-end; }
+.note-actions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.note-error { margin: 6px 0 0; font-size: 12px; color: var(--risk-fg); }
+.activity-list { list-style: none; margin: 0; padding: 0; }
+.activity-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f5f6f8; }
+.activity-icon {
+  width: 24px; height: 24px; flex: none; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  background: #eef0f3; color: #454d5c;
+}
+.activity-note_added .activity-icon, .activity-note_deleted .activity-icon { background: #fff4d6; color: #8a6a12; }
+.activity-stage_changed .activity-icon { background: #e7f5ec; color: #1a6b3c; }
+.activity-text { flex: 1; min-width: 0; }
+.activity-what { margin: 0; }
+.activity-excerpt { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #454d5c; font-size: 12.5px; }
+.activity-meta { margin: 2px 0 0; font-size: 12px; color: #687082; }
+
 /* The design's record dialogs are 560 px (contact) and 500 px (company). */
 .modal:has(#contact-form) { max-width: 560px; }
 .modal:has(#company-form) { max-width: 500px; }

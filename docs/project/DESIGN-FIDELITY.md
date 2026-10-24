@@ -357,8 +357,8 @@ messages; the design's validation texts.
 - *Data model (P2-E, P3-A):* the dental "Patient" stage is "Customer"
   (same colours); sources are the P3-A list (Manual, Referral, Other for
   people; Import and Form shown only when the system set them); no score,
-  tags, custom fields, notes or activity, so their columns, cards, tag
-  pills and timeline are left out.
+  tags or custom fields, so their columns, cards and tag pills are left
+  out. Notes and activity arrived in slice 3B (§4d).
 - *Views:* "Assigned to me" instead of a named person; "Hot (80+)",
   "Recall due" and "+ Save view" are left out (no score, no recall, no
   saved views); an "Archived" view is added so archived contacts can be
@@ -392,6 +392,41 @@ stale-version message, delete only after confirmation, cursor paging,
 the companies list, the people list opening a contact, and the company
 dialog; axe scans of both lists report no violations (contrast is not
 measurable in jsdom).
+
+## 4d. Notes and activity in the drawers (slice 3B.4, 2026-10-24)
+
+**Source:** `ScreenContacts.dc.html` L181-187 (note composer and cards) and
+L155-164, L218-219 (timeline). Decision P3-B D1 puts both in the existing
+drawers; the design shows them on the full record page, which is deferred.
+
+**Matches:** the composer (placeholder "Write a note… visible to your team
+only", `#FFFDF5` text area, `#FAFAFB` bar with a primary "Add note"), the
+note card (`#FFFBEB` with a `#F0E6C4` border, 8 px radius, text with its
+line breaks, author and time in `#7A6A3A` at 12 px), and the timeline row
+(24 px tinted icon square, text, then meta in `#687082`; notes in the
+note tint).
+
+**Deliberate differences:**
+- Placement in the drawers, newest first, five at a time with "Show
+  more"; no Overview/Activity/Notes tabs and no activity filter chips
+  (only record and note events exist).
+- Edit and Delete on each note for its author and for Owners and Admins
+  (D3), which the design does not show; delete asks for confirmation;
+  "Edited" marks a changed note. Closing a drawer with unsaved note text
+  asks "Discard note?".
+- History is worded from field names, stages, owners and companies only
+  (D5): "Updated email and city", "Stage changed from Lead to Customer";
+  never field values. People appear as "You" or "Member xxxxxxxx" until
+  member names exist.
+- Archived records show their notes with "Restore this contact to add or
+  edit notes." instead of the composer (D8).
+
+**Tests:** `frontend/src/records/notes.test.tsx` (jsdom): markup in a note
+shown as text (no element created), history wording, adding with an
+idempotency key, editing with `If-Match` and only on one's own note,
+the stale-version message, delete after confirmation, the read-only and
+archived views, and the discard prompt; an axe scan of the drawer reports
+no violations.
 
 ## 5. Accessibility and quality evidence (2026-10-22)
 

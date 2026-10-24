@@ -42,6 +42,7 @@ import {
   StagePill,
   When,
 } from "./parts";
+import { ActivitySection, NotesSection } from "./NotesSection";
 import { useDebounced } from "./useDebounced";
 
 /*
@@ -273,6 +274,7 @@ export function CompaniesPage({
           meId={meId}
           canUpdate={can("update_company")}
           canDelete={can("delete_company")}
+          canAddNote={can("create_note")}
           onClose={() => { onOpen(null); }}
           onEdit={(company) => { setDialog({ company }); }}
           onOpenContact={onOpenContact}
@@ -303,6 +305,7 @@ function CompanyDrawer({
   meId,
   canUpdate,
   canDelete,
+  canAddNote,
   onClose,
   onEdit,
   onOpenContact,
@@ -312,6 +315,7 @@ function CompanyDrawer({
   meId: string | undefined;
   canUpdate: boolean;
   canDelete: boolean;
+  canAddNote: boolean;
   onClose: () => void;
   onEdit: (company: Company) => void;
   onOpenContact: (id: string) => void;
@@ -323,6 +327,13 @@ function CompanyDrawer({
   const lifecycle = useLifecycle(workspaceId, "companies");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  // An unsaved note: closing asks first (PHASE3-PLAN.md §21).
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const close = () => {
+    if (draftOpen) setConfirmDiscard(true);
+    else onClose();
+  };
   const record = company.data;
   const contacts = (people.data?.pages ?? []).flatMap((page) => page.items);
 
@@ -349,7 +360,7 @@ function CompanyDrawer({
   return (
     <Drawer
       title={t("company.preview")}
-      onClose={onClose}
+      onClose={close}
       headerActions={
         record && canUpdate ? (
           <Button size="sm" onPress={() => { onEdit(record); }}>
@@ -446,7 +457,27 @@ function CompanyDrawer({
               ) : null}
             </div>
           ) : null}
+          <NotesSection
+            workspaceId={workspaceId}
+            kind="companies"
+            id={id}
+            meId={meId}
+            canAdd={canAddNote}
+            onDirtyChange={setDraftOpen}
+          />
+          <ActivitySection workspaceId={workspaceId} kind="companies" id={id} meId={meId} />
           <p className="drawer-note">{t("company.notBuilt")}</p>
+          <ConfirmDialog
+            isOpen={confirmDiscard}
+            title={t("notes.discardTitle")}
+            confirmLabel={t("notes.discard")}
+            message={t("notes.discardConfirm")}
+            onCancel={() => { setConfirmDiscard(false); }}
+            onConfirm={() => {
+              setConfirmDiscard(false);
+              onClose();
+            }}
+          />
           <ConfirmDialog
             isOpen={confirmDelete}
             title={t("company.deleteTitle")}

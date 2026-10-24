@@ -655,3 +655,17 @@ be absent on append-only tables.
 - Not tested directly: a member moved to Read-only cannot change their own
   older notes; this follows from the routes requiring `activity:create`
   (route-policy test) and `_rights` returning none without it.
+
+### 3B.4 drawer notes and activity (2026-10-24)
+
+- `frontend/src/api/notes.ts` (queries and mutations; note keys under the
+  record's key, so record changes also refresh its history) and
+  `frontend/src/records/NotesSection.tsx` (Notes and Activity sections),
+  used by the contact and company drawers. The "not available yet" lines
+  no longer mention notes and activity. Design comparison:
+  `DESIGN-FIDELITY.md` §4d.
+- Note text is rendered as React text with `white-space: pre-wrap`; no
+  HTML is ever inserted. Controls follow the API's per-note
+  `can_edit`/`can_delete` and `/access` `create_note`.
+- Tests: `notes.test.tsx`, 8 tests including an axe scan. Frontend 51
+  passed; typecheck, lint and build pass.

@@ -23,6 +23,7 @@ import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
+import { ActivitySection, NotesSection } from "./NotesSection";
 import {
   Avatar,
   Drawer,
@@ -302,6 +303,7 @@ export function ContactsPage({
           meId={meId}
           canUpdate={can("update_contact")}
           canDelete={can("delete_contact")}
+          canAddNote={can("create_note")}
           onClose={() => { onOpen(null); }}
           onEdit={(contact) => { setDialog({ contact }); }}
         />
@@ -334,6 +336,7 @@ function ContactDrawer({
   meId,
   canUpdate,
   canDelete,
+  canAddNote,
   onClose,
   onEdit,
 }: {
@@ -342,6 +345,7 @@ function ContactDrawer({
   meId: string | undefined;
   canUpdate: boolean;
   canDelete: boolean;
+  canAddNote: boolean;
   onClose: () => void;
   onEdit: (contact: Contact) => void;
 }) {
@@ -350,6 +354,13 @@ function ContactDrawer({
   const contact = useContact(workspaceId, id);
   const lifecycle = useLifecycle(workspaceId, "contacts");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // An unsaved note: closing asks first (PHASE3-PLAN.md §21).
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const close = () => {
+    if (draftOpen) setConfirmDiscard(true);
+    else onClose();
+  };
   const [refusal, setRefusal] = useState<string | null>(null);
   const record = contact.data;
 
@@ -376,7 +387,7 @@ function ContactDrawer({
   return (
     <Drawer
       title={t("contact.preview")}
-      onClose={onClose}
+      onClose={close}
       headerActions={
         record && canUpdate ? (
           <Button size="sm" onPress={() => { onEdit(record); }}>
@@ -449,7 +460,27 @@ function ContactDrawer({
               ) : null}
             </div>
           ) : null}
+          <NotesSection
+            workspaceId={workspaceId}
+            kind="contacts"
+            id={id}
+            meId={meId}
+            canAdd={canAddNote}
+            onDirtyChange={setDraftOpen}
+          />
+          <ActivitySection workspaceId={workspaceId} kind="contacts" id={id} meId={meId} />
           <p className="drawer-note">{t("contact.notBuilt")}</p>
+          <ConfirmDialog
+            isOpen={confirmDiscard}
+            title={t("notes.discardTitle")}
+            confirmLabel={t("notes.discard")}
+            message={t("notes.discardConfirm")}
+            onCancel={() => { setConfirmDiscard(false); }}
+            onConfirm={() => {
+              setConfirmDiscard(false);
+              onClose();
+            }}
+          />
           <ConfirmDialog
             isOpen={confirmDelete}
             title={t("contact.deleteTitle")}
