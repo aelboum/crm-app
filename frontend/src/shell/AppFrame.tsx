@@ -37,7 +37,7 @@ import {
   Popover,
 } from "react-aria-components";
 
-import { useAccess, useMe, useSignOut, useWorkspace } from "../api/queries";
+import { useAccess, useDirectory, useMe, useSignOut, useWorkspace } from "../api/queries";
 import { useT } from "../i18n/useT";
 import { highestRole } from "../members/actions";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
@@ -55,7 +55,8 @@ import { type SidebarState, useSidebar } from "./useSidebar";
 
 const SIDEBAR_ID = "workspace-sidebar";
 
-function initials(name: string): string {
+/** Up to two letters for a workspace tile, as in the design. */
+export function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const letters = words.length > 1 ? `${words[0]?.[0] ?? ""}${words[1]?.[0] ?? ""}` : name.slice(0, 2);
   return letters.toUpperCase();
@@ -128,7 +129,11 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
   const t = useT();
   const navigate = useNavigate();
   const workspace = useWorkspace(workspaceId);
+  const directory = useDirectory();
   const name = workspace.data?.name ?? "";
+  // The caller's other workspaces (decision P2-F 2); opening one is
+  // authorized on its own, the list grants nothing.
+  const others = (directory.data?.items ?? []).filter((item) => item.id !== workspaceId);
   return (
     <MenuTrigger>
       <AriaButton className="ws-switcher">
@@ -144,7 +149,12 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
           className="menu"
           aria-label={t("ws.menu")}
           onAction={(key) => {
-            if (key === "other") void navigate({ to: "/" });
+            if (key === "other") {
+              void navigate({ to: "/" });
+              return;
+            }
+            const target = others.find((item) => item.id === key);
+            if (target) void navigate({ to: "/w/$workspaceId", params: { workspaceId: target.id } });
           }}
         >
           <MenuSection>
@@ -154,6 +164,17 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
               <span className="menu-item-label">{name}</span>
             </MenuItem>
           </MenuSection>
+          {others.length > 0 ? (
+            <MenuSection>
+              <Header className="menu-header">{t("ws.yours")}</Header>
+              {others.map((item) => (
+                <MenuItem key={item.id} id={item.id} className="menu-item" textValue={item.name}>
+                  <span className="ws-tile small" data-mark={initials(item.name)} aria-hidden="true" />
+                  <span className="menu-item-label">{item.name}</span>
+                </MenuItem>
+              ))}
+            </MenuSection>
+          ) : null}
           <MenuSection>
             <MenuItem id="other" className="menu-item menu-footer-item">
               {t("ws.other")}

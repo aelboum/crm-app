@@ -145,6 +145,32 @@ describe("app frame", () => {
     ).toBeInTheDocument();
   });
 
+  it("switches to another of the caller's workspaces from the workspace menu", async () => {
+    const user = userEvent.setup();
+    const OTHER = "66666666-2222-4333-8444-555555555555";
+    const withDirectory: Handler = (method, path, body) =>
+      path === "/v1/workspaces"
+        ? {
+            status: 200,
+            body: {
+              items: [
+                { id: WS, name: "Acme Studio" },
+                { id: OTHER, name: "Beta Ltd" },
+              ],
+            },
+          }
+        : signedIn(method, path, body);
+    const { router } = renderApp(`/w/${WS}/settings`, withDirectory);
+    await screen.findByText("Acme Studio", { selector: ".ws-name" });
+    await user.click(screen.getByRole("button", { name: /Client workspace/ }));
+    // The menu is named by its trigger (the current workspace).
+    const menu = await screen.findByRole("menu", { name: /Acme Studio/ });
+    await user.click(await within(menu).findByRole("menuitem", { name: /Beta Ltd/ }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(new RegExp(`^/w/${OTHER}`));
+    });
+  });
+
   it("shows an empty notifications panel rather than invented notifications", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/settings`, signedIn);

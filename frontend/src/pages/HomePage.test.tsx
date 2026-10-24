@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +10,38 @@ describe("home", () => {
     const link = await screen.findByRole("link", { name: "Sign in" });
     expect(link).toHaveAttribute("href", "/auth/login");
     expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("lists the caller's workspaces as links, by name", async () => {
+    renderApp("/", (_, path) => {
+      if (path === "/auth/me") return { status: 200, body: { user_id: "u" } };
+      if (path === "/v1/workspaces") {
+        return {
+          status: 200,
+          body: {
+            items: [
+              { id: "11111111-2222-4333-8444-555555555555", name: "Acme BV" },
+              { id: "66666666-2222-4333-8444-555555555555", name: "Beta Ltd" },
+            ],
+          },
+        };
+      }
+      return undefined;
+    });
+    const list = await screen.findByRole("list");
+    const links = await within(list).findAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(["Acme BV", "Beta Ltd"]);
+    expect(links[0]).toHaveAttribute("href", "/app/w/11111111-2222-4333-8444-555555555555");
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("says so when the caller belongs to no workspace", async () => {
+    renderApp("/", (_, path) => {
+      if (path === "/auth/me") return { status: 200, body: { user_id: "u" } };
+      if (path === "/v1/workspaces") return { status: 200, body: { items: [] } };
+      return undefined;
+    });
+    expect(await screen.findByText(/not a member of any workspace yet/)).toBeInTheDocument();
   });
 
   it("opens a workspace by ID once the ID is well formed", async () => {

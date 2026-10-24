@@ -25,6 +25,8 @@ PUBLIC_PACKAGES = frozenset(
         "saas_os.infra.secrets",
         "saas_os.infra.observability",
         "saas_os.infra.egress",
+        # Per-person limits on the directory and invitations (PHASE2-PLAN.md §8.2).
+        "saas_os.infra.ratelimit",
         "saas_os.core.identity",
         "saas_os.core.tenancy",
         "saas_os.core.rbac",

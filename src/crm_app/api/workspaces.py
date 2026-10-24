@@ -9,6 +9,12 @@ workspace used afterwards is `context.tenant_id`, never the raw path value.
 
 Changing memberships or roles is deliberately not offered here: those
 routes wait for the last-Owner safeguard (PHASE2-PLAN.md §5.4, §11.1).
+
+`GET /v1/workspaces` is the directory (`crm_app.directory`, decision
+P2-F 2): it needs only a signed-in person (SaaS-OS's `authenticated`
+policy), lists the workspaces where they are an active member, and grants
+nothing; it is rate-limited per person because it reads every open
+workspace's membership of the caller.
 """
 
 from __future__ import annotations
@@ -19,11 +25,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from saas_os.api.context import RequestContext
-from saas_os.api.dependencies import require_permission
+from saas_os.api.dependencies import get_current_actor, require_permission
+from saas_os.api.errors import rate_limited, service_unavailable
 from saas_os.core.identity import list_tenant_members
 from saas_os.core.rbac import can, list_membership_roles, list_roles
 from saas_os.core.tenancy import get_tenant
+from saas_os.infra.ratelimit import (
+    RateLimitBackendError,
+    RateLimitExceededError,
+    enforce_rate_limit,
+    get_ratelimit_config,
+)
 
+from crm_app import directory
 from crm_app.domains.membership import MANAGE_SUSPENDED, visible_statuses
 
 router = APIRouter(prefix="/v1/workspaces", tags=["workspaces"])
@@ -52,6 +66,42 @@ class MemberPage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+_RETRY_AFTER_SECONDS = 5
+
+
+async def _directory_caller(
+    actor_id: Annotated[uuid.UUID, Depends(get_current_actor)],
+) -> uuid.UUID:
+    """The signed-in person, after a per-person limit on the directory; a
+    limiter failure refuses rather than allows."""
+    try:
+        await enforce_rate_limit(f"workspace-directory:{actor_id}", config=get_ratelimit_config())
+    except RateLimitExceededError as exc:
+        raise rate_limited(exc.retry_after_seconds) from None
+    except RateLimitBackendError:
+        raise service_unavailable(_RETRY_AFTER_SECONDS) from None
+    return actor_id
+
+
+class DirectoryEntry(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
+class Directory(BaseModel):
+    items: list[DirectoryEntry]
+
+
+@router.get("", response_model=Directory)
+def list_my_workspaces(
+    actor_id: Annotated[uuid.UUID, Depends(_directory_caller)],
+) -> Directory:
+    """The caller's workspaces (active memberships in workspaces that admit
+    their members), by name. Listing grants nothing."""
+    entries = directory.list_workspaces(actor_id)
+    return Directory(items=[DirectoryEntry(id=e.id, name=e.name) for e in entries])
 
 
 @router.get("/{tenant_id}", response_model=Workspace)

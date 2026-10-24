@@ -6,6 +6,7 @@ export const PAGE_SIZE = 50;
 
 export const keys = {
   me: ["me"] as const,
+  directory: ["directory"] as const,
   workspace: (id: string) => ["workspace", id] as const,
   access: (id: string) => ["workspace", id, "access"] as const,
   members: (id: string, offset: number) => ["workspace", id, "members", offset] as const,
@@ -20,6 +21,16 @@ export function useMe() {
       if (result.response.status === 401) return null;
       return unwrap(result);
     },
+  });
+}
+
+/** The caller's workspaces (decision P2-F 2). Listing grants nothing: each
+ *  workspace is still authorized on its own when opened. */
+export function useDirectory(enabled = true) {
+  return useQuery({
+    queryKey: keys.directory,
+    enabled,
+    queryFn: async () => unwrap(await api.GET("/v1/workspaces")),
   });
 }
 

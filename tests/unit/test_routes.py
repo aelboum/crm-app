@@ -88,8 +88,20 @@ def _product_policies(tmp_path: Path) -> dict[str, tuple[str, str, bool]]:
     return {k: v for k, v in _policies(tmp_path).items() if PRODUCT_PREFIX in k}
 
 
+# The workspace directory (decision P2-F 2): the one product route that
+# needs only a signed-in person, because it names no workspace. It lists the
+# caller's own active memberships and grants nothing.
+DIRECTORY = "GET /v1/workspaces"
+
+
+def test_the_directory_needs_only_a_signed_in_person(tmp_path: Path) -> None:
+    kind, _, accepts_api_key = _product_policies(tmp_path)[DIRECTORY]
+    assert kind == "authenticated"
+    assert not accepts_api_key
+
+
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
-    policies = _product_policies(tmp_path)
+    policies = {k: v for k, v in _product_policies(tmp_path).items() if k != DIRECTORY}
     assert {key: detail for key, (_, detail, _) in policies.items()} == EXPECTED | RECORDS
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())

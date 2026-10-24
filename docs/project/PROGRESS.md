@@ -711,3 +711,27 @@ Slice 3B is complete; details and accepted limitations in
 - The local CRM containers (database, Redis, edge, ZITADEL) stopped during
   this session, apparently under memory pressure; local integration tests
   and the ZITADEL test wait for them. CI runs the integration suite.
+
+### Phase 2: workspace directory (2026-10-24, decision P2-F 2)
+
+- `GET /v1/workspaces` (`crm_app.directory`, `crm_app.api.workspaces`):
+  the signed-in person's workspaces, by name, ID and name only. No table:
+  it reads the open workspaces from SaaS-OS and keeps those where the
+  person holds an ACTIVE membership and that still admit members; the
+  SaaS-OS platform tenant is left out. The route needs only a signed-in
+  person (SaaS-OS `authenticated` policy, the one such product route,
+  pinned by `tests/unit/test_routes.py`) and is rate-limited per person
+  (`saas_os.infra.ratelimit`, now on the import allow-list as a public
+  package). Listing grants nothing: each workspace is still authorized on
+  its own.
+- Frontend: the start page lists "Your workspaces" as links (with an empty
+  state) above "Open by ID"; the header's workspace menu lists the other
+  workspaces and switches to the chosen one.
+- Tests: `tests/integration/test_directory.py` (active memberships only;
+  suspended, revoked and closed workspaces and strangers' workspaces are
+  left out; an outsider gets an empty list and no session gets 401; listing
+  grants nothing: suspended and revoked 403, closed and foreign 404);
+  unit route-policy test; frontend `HomePage.test.tsx` (list, links, empty
+  state, axe) and `AppFrame.test.tsx` (switching). Unit 200 passed;
+  frontend 56 passed. The local services were stopped, so the integration
+  tests ran in CI only.
