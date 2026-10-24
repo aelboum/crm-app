@@ -47,7 +47,8 @@ EXPECTED_PURGE_PARTICIPANTS: tuple[str, ...] = (PARTICIPANT_NAME,)
 SCHEMA = "crm_app"
 # Children before parents: `activity` references `note`, `contact` and
 # `company`; `note` references both records; `contact` references `company`.
-PURGE_TABLES: tuple[str, ...] = ("activity", "note", "contact", "company")
+# `workspace_settings` references no product table.
+PURGE_TABLES: tuple[str, ...] = ("activity", "note", "contact", "company", "workspace_settings")
 
 _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 

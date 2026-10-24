@@ -735,3 +735,33 @@ Slice 3B is complete; details and accepted limitations in
   state, axe) and `AppFrame.test.tsx` (switching). Unit 200 passed;
   frontend 56 passed. The local services were stopped, so the integration
   tests ran in CI only.
+
+### Phase 2: workspace settings (2026-10-24, decision P2-F 1)
+
+- Migration `0004_workspace_settings`: one row per workspace (`tenant_id`
+  primary key) with locale (BCP 47), time zone (IANA) and default currency
+  (ISO 4217), shape `CHECK`s, forced RLS, CRUD grants, and a
+  `PURGE_TABLES` entry. No row means the defaults: `en`,
+  `Europe/Amsterdam`, `EUR` (first market, K5). Times stay stored in UTC.
+- `GET /v1/workspaces/{id}/settings` (`crm_app.workspace:read`, every role)
+  and `PATCH` (`crm_app.workspace:update`, Owner and Admin) with
+  `If-Match` (version 0 before the first save; two first saves at once
+  leave one winner and a 409 for the other). Values are validated against
+  the full IANA and ISO 4217 lists and normalised
+  (`crm_app.domains.settings`); refusals never echo them. Each save is
+  audited (`crm_app.workspace_settings.updated`, field names only).
+  `/access` reports `update_workspace`.
+- Frontend: Settings › Business profile (the design's card): workspace
+  name shown read-only (SaaS-OS has no rename), language and region, time
+  zone and default currency with a live example, Save with the version,
+  the stale-version message with "Load the latest", and read-only for
+  Members and Read-only members. The design's phone, email, website,
+  address and hours are named as not available.
+- Tests: unit (`test_settings_values.py`: normalisation, refusals without
+  echo, defaults, and the stored forms matching the migration's patterns;
+  route policies), integration (`test_workspace_settings.py`: defaults,
+  role matrix, normalisation, versions and the first-save race, refusals,
+  other workspaces, audit metadata, runtime-role RLS, table `CHECK`s), and
+  frontend (`BusinessSettings.test.tsx`, with an axe scan). Unit 217 and
+  frontend 60 passed locally; the integration tests run in CI while the
+  local services are stopped.

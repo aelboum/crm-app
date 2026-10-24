@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     from crm_app.api.notes import router as notes_router  # noqa: PLC0415
     from crm_app.api.records import router as records_router  # noqa: PLC0415
     from crm_app.api.spa import router as spa_router  # noqa: PLC0415
+    from crm_app.api.workspace_settings import router as settings_router  # noqa: PLC0415
     from crm_app.api.workspaces import router as workspaces_router  # noqa: PLC0415
     from crm_app.purge import register_purge_participants  # noqa: PLC0415
 
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     # Responses with personal data are never stored by browsers or proxies.
     app.add_middleware(NoStoreMiddleware)
     app.include_router(workspaces_router)
+    app.include_router(settings_router)
     app.include_router(access_router)
     app.include_router(members_router)
     app.include_router(records_router)

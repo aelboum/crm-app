@@ -27,6 +27,7 @@ import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
 import { en, type MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { BusinessSettings } from "./BusinessSettings";
 import { availableActions, highestRole, type MemberAction } from "../members/actions";
 
 /*
@@ -377,8 +378,14 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
 ];
 
 /** The settings sections that exist; every other one is marked "soon". */
-export type SettingsSection = "team" | "profile";
-const BUILT_SECTIONS: readonly string[] = ["team", "profile"];
+export type SettingsSection = "team" | "profile" | "business";
+const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business"];
+
+const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId }> = {
+  team: { title: "settings.team", desc: "settings.teamDesc" },
+  profile: { title: "settings.profile", desc: "settings.profileDesc" },
+  business: { title: "settings.business", desc: "settings.businessDesc" },
+};
 
 /**
  * Settings › My profile (ScreenSettings.dc.html L43-52). The role line is
@@ -467,6 +474,7 @@ export function SettingsPage({
   const access = useAccess(workspaceId);
   const workspace = useWorkspace(workspaceId);
   const isProfile = section === "profile";
+  const text = SECTION_TEXT[section];
   return (
     <div className="settings-layout">
       <nav className="settings-nav" aria-label={t("settings.title")}>
@@ -504,12 +512,8 @@ export function SettingsPage({
       <div className="settings-scroll">
         <div className="settings-content">
           <div className="settings-header">
-            <h1 className="settings-title">
-              {isProfile ? t("settings.profile") : t("settings.team")}
-            </h1>
-            <p className="settings-desc">
-              {isProfile ? t("settings.profileDesc") : t("settings.teamDesc")}
-            </p>
+            <h1 className="settings-title">{t(text.title)}</h1>
+            <p className="settings-desc">{t(text.desc)}</p>
           </div>
           {access.isPending ? <Loading /> : null}
           {access.isError ? (
@@ -518,7 +522,14 @@ export function SettingsPage({
           {access.data && isProfile ? (
             <ProfileSection access={access.data} workspaceName={workspace.data?.name ?? ""} />
           ) : null}
-          {access.data && !isProfile ? (
+          {access.data && section === "business" ? (
+            <BusinessSettings
+              workspaceId={workspaceId}
+              workspaceName={workspace.data?.name ?? ""}
+              canEdit={access.data.actions.update_workspace === true}
+            />
+          ) : null}
+          {access.data && section === "team" ? (
             <>
               <MembersCard workspaceId={workspaceId} access={access.data} />
               <RolePermissions />

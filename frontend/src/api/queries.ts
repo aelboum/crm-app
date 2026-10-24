@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError, type Role, unwrap } from "./client";
+import type { components } from "./schema";
 
 export const PAGE_SIZE = 50;
 
 export const keys = {
   me: ["me"] as const,
+  settings: (id: string) => ["workspace", id, "settings"] as const,
   directory: ["directory"] as const,
   workspace: (id: string) => ["workspace", id] as const,
   access: (id: string) => ["workspace", id, "access"] as const,
@@ -137,5 +139,31 @@ export function useSignOut() {
       client.clear();
       client.setQueryData(keys.me, null);
     },
+  });
+}
+
+export type WorkspaceSettings = components["schemas"]["SettingsOut"];
+export type WorkspaceSettingsUpdate = components["schemas"]["SettingsUpdate"];
+
+/** Locale, time zone and currency (decision P2-F 1); version 0 is the defaults. */
+export function useWorkspaceSettings(workspaceId: string) {
+  return useQuery({
+    queryKey: keys.settings(workspaceId),
+    queryFn: async () =>
+      unwrap(await api.GET("/v1/workspaces/{tenant_id}/settings", path(workspaceId))),
+  });
+}
+
+export function useSaveWorkspaceSettings(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation<WorkspaceSettings, ApiError, { version: number; changes: WorkspaceSettingsUpdate }>({
+    mutationFn: async ({ version, changes }) =>
+      unwrap(
+        await api.PATCH("/v1/workspaces/{tenant_id}/settings", {
+          params: { path: { tenant_id: workspaceId }, header: { "If-Match": `"${String(version)}"` } },
+          body: changes,
+        }),
+      ),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.settings(workspaceId) }),
   });
 }

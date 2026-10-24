@@ -1,11 +1,11 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` and `0003_notes_activity` own the
-schema: the constraints, the partial unique indexes, the grants and the
-Row-Level Security policies live there, and these classes never create
-tables. They declare the columns the services read and write, and register
-every table in SaaS-OS's shared metadata, which `crm_app.purge` resolves its
-manifest against.
+Migrations `0002_contacts_companies`, `0003_notes_activity` and
+`0004_workspace_settings` own the schema: the constraints, the partial
+unique indexes, the grants and the Row-Level Security policies live there,
+and these classes never create tables. They declare the columns the
+services read and write, and register every table in SaaS-OS's shared
+metadata, which `crm_app.purge` resolves its manifest against.
 
 The foreign key into `core.tenants` exists in the database only: declaring it
 here would make every flush depend on Core's own table definitions being
@@ -151,3 +151,19 @@ class Activity(Base):
     owner_to: Mapped[uuid.UUID | None] = mapped_column()
     company_ref_id: Mapped[uuid.UUID | None] = mapped_column()
     note_id: Mapped[uuid.UUID | None] = mapped_column()
+
+
+class WorkspaceSettings(Base):
+    """A workspace's locale, time zone and default currency (migration
+    0004, decision P2-F 1). No row means the product defaults."""
+
+    __tablename__ = "workspace_settings"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    locale: Mapped[str] = mapped_column(Text)
+    time_zone: Mapped[str] = mapped_column(Text)
+    currency: Mapped[str] = mapped_column(Text)
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)

@@ -42,11 +42,14 @@ PLACEHOLDER_SETTINGS = {
 
 
 # Tables the product schema `crm_app` may contain, each approved by a
-# decision (P3-A: `company`, `contact`; P3-B: `note`, `activity`). The guards
+# decision (P3-A: `company`, `contact`; P3-B: `note`, `activity`; P2-F:
+# `workspace_settings`). The guards
 # in `tests/unit/test_schema_guard.py` and
 # `tests/integration/test_tenant_table_guard.py` fail if a migration adds a
 # table that is not listed here.
-PRODUCT_TABLES: frozenset[str] = frozenset({"company", "contact", "note", "activity"})
+PRODUCT_TABLES: frozenset[str] = frozenset(
+    {"company", "contact", "note", "activity", "workspace_settings"}
+)
 
 # Tenant tables the application may only append to and delete from (P3-B D6:
 # the record history). The guard requires the runtime role to lack UPDATE on

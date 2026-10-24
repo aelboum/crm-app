@@ -31,6 +31,8 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "reactivate_member": ("membership", "reactivate"),
     "revoke_member": ("membership", "revoke"),
     "manage_owners": ("crm_app.owner", "manage"),
+    # Workspace settings (decision P2-F 1).
+    "update_workspace": ("crm_app.workspace", "update"),
     # Contact and company records (slice 3A, decision P3-A): create, update
     # (which covers archive and restore) and permanent delete.
     "create_contact": ("crm_app.contact", "create"),

@@ -117,6 +117,7 @@ def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> 
         "reactivate_member": False,
         "revoke_member": False,
         "manage_owners": False,
+        "update_workspace": False,
         "create_contact": False,
         "update_contact": False,
         "delete_contact": False,

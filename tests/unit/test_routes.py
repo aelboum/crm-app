@@ -23,6 +23,10 @@ EXPECTED = {
     "GET /v1/workspaces/{tenant_id}": "crm_app.workspace:read",
     "GET /v1/workspaces/{tenant_id}/members": "membership:read",
     "GET /v1/workspaces/{tenant_id}/access": "crm_app.workspace:read",
+    # Workspace settings (decision P2-F 1): read for every role, change for
+    # Owner and Admin.
+    "GET /v1/workspaces/{tenant_id}/settings": "crm_app.workspace:read",
+    "PATCH /v1/workspaces/{tenant_id}/settings": "crm_app.workspace:update",
     f"POST {MEMBER}/roles": "membership_role:create",
     f"DELETE {MEMBER}/roles/{{role}}": "membership_role:delete",
     f"POST {MEMBER}/suspend": "membership:suspend",

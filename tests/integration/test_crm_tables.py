@@ -323,4 +323,5 @@ def test_the_migration_rolls_back_and_forward(
         "contact",
         "note",
         "activity",
+        "workspace_settings",
     }

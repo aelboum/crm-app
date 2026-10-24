@@ -735,3 +735,14 @@ a.btn-primary:hover { filter: brightness(0.94); }
 }
 .workspace-link:hover { background: #f7f8fa; }
 .workspace-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Settings › Business profile (ScreenSettings.dc.html L28-40; decision P2-F 1). */
+.business-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.business-card > .profile-note, .business-card > .notice { margin: 0 20px 12px; }
+.business-fields {
+  padding: 18px 20px 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+}
+.business-footer {
+  display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid #eef0f3;
+  background: #fafafb; border-radius: 0 0 10px 10px;
+}
