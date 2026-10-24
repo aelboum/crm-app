@@ -601,3 +601,24 @@ be absent on append-only tables.
   rollback from 0003 to 0002 and back.
 - Results: unit 185 passed; integration 177 passed.
 - No application route uses the tables yet (3B.2 and 3B.3).
+
+### 3B.2 record history (2026-10-24)
+
+- Every contact and company change now writes its history in the same
+  transaction as the change and its audit entry (`crm_app.records`):
+  `created`; `updated` with the names of the plain fields;
+  `stage_changed`, `owner_changed`, `company_linked`/`company_unlinked`;
+  `archived`, `restored`; and `company_unlinked` on each contact a deleted
+  company unlinks. A no-op update writes nothing; a refused change writes
+  nothing.
+- `GET /contacts/{id}/activity` and `GET /companies/{id}/activity`
+  (`activity:read`, every role): newest first, keyset cursor bound to the
+  record, `limit` 1-100. Company links show the company's current name, or
+  none once it is deleted.
+- Tests: `test_history.py` (the full sequence of changes and their
+  payloads, no field values in responses, a refused change, company
+  changes, a deleted company, paging, cursor and parameter checks, every
+  role reads, outsiders and other workspaces get 404); the route-policy
+  table. Unit 185 passed; integration 186 passed (177 in the full run plus
+  the 9 history tests, which failed there on a result-to-dict bug, fixed and
+  re-run).

@@ -7,7 +7,10 @@ the workspace explicitly, so Row-Level Security and the predicate both
 confine it. Every write takes `lock_open_tenant` first, so no row is written
 while the workspace is being deleted or purged, and records its audit entry
 with `record_in_transaction` in the same transaction: the record ID and the
-names of the changed fields, never their values.
+names of the changed fields, never their values. The same transaction adds
+the record's user-visible history (`activity`, `PHASE3-PLAN.md` §21.2):
+field names, the fixed stages, member user IDs and company IDs only. A
+failure anywhere rolls back the change, its audit entry and its history.
 
 Values arrive already normalised (`crm_app.domains.records`). Duplicates
 (decision P3-A 3) are refused twice: by a check before the write, and by
@@ -44,7 +47,7 @@ from saas_os.infra.db import update as update_rows
 
 from crm_app.domains import paging
 from crm_app.domains.membership import ACTIVE
-from crm_app.models import Company, Contact
+from crm_app.models import Activity, Company, Contact
 
 
 @dataclass(frozen=True)
@@ -97,6 +100,11 @@ _SYSTEM_FIELDS = (
     "version",
     "archived_at",
 )
+
+
+# Changes with their own history kind; `updated` names only the other fields.
+_STAGE, _OWNER, _COMPANY = "lifecycle_stage", "owner_user_id", "company_id"
+_OWN_KIND = frozenset({_STAGE, _OWNER, _COMPANY})
 
 
 @dataclass(frozen=True)
@@ -176,6 +184,15 @@ def _load(session: Session, kind: Kind, scope: Scope, record_id: uuid.UUID, *, l
     if row is None:
         raise RecordNotFoundError
     return row
+
+
+def load_record(
+    session: Session, kind: Kind, scope: Scope, record_id: uuid.UUID, *, lock: bool = False
+) -> Row:
+    """The record in the caller's workspace, or `RecordNotFoundError` (also
+    for another workspace's ID). For notes and history (`crm_app.history`,
+    `crm_app.notes`), which hang off a record."""
+    return _load(session, kind, scope, record_id, lock=lock)
 
 
 def _active_with(
@@ -259,6 +276,72 @@ def _audit(session: Session, kind: Kind, scope: Scope, event: _Event) -> None:
         resource_id=str(event.record_id),
         metadata=dict(event.metadata or {}),
     )
+
+
+def history_entry(
+    kind: Kind, scope: Scope, record_id: uuid.UUID, event: str, **payload: Any
+) -> Activity:
+    """One history entry on a record, by the acting member, now. The
+    database's CHECKs refuse any payload outside decision P3-B D5."""
+    parent = {"contact_id": record_id} if kind is CONTACT else {"company_id": record_id}
+    return Activity(
+        id=uuid.uuid4(),
+        tenant_id=scope.workspace,
+        kind=event,
+        actor_user_id=scope.actor,
+        occurred_at=_now(),
+        **parent,
+        **payload,
+    )
+
+
+def _change_history(
+    kind: Kind, scope: Scope, row: Row, before: Mapping[str, Any]
+) -> list[Activity]:
+    """The entries for one update, from the changed fields' old values
+    (`before`) and the row now: `updated` with the names of the plain
+    fields, then one entry per stage, owner or company change."""
+    changed = set(before)
+    entries: list[Activity] = []
+    plain = sorted(changed - _OWN_KIND)
+    if plain:
+        entries.append(history_entry(kind, scope, row.id, "updated", fields=plain))
+    if _STAGE in changed:
+        entries.append(
+            history_entry(
+                kind,
+                scope,
+                row.id,
+                "stage_changed",
+                stage_from=before[_STAGE],
+                stage_to=getattr(row, _STAGE),
+            )
+        )
+    if _OWNER in changed:
+        entries.append(
+            history_entry(
+                kind,
+                scope,
+                row.id,
+                "owner_changed",
+                owner_from=before[_OWNER],
+                owner_to=getattr(row, _OWNER),
+            )
+        )
+    if _COMPANY in changed:
+        if before[_COMPANY] is not None:
+            entries.append(
+                history_entry(
+                    kind, scope, row.id, "company_unlinked", company_ref_id=before[_COMPANY]
+                )
+            )
+        if getattr(row, _COMPANY) is not None:
+            entries.append(
+                history_entry(
+                    kind, scope, row.id, "company_linked", company_ref_id=getattr(row, _COMPANY)
+                )
+            )
+    return entries
 
 
 def check_owner(scope: Scope, owner_user_id: uuid.UUID | None) -> None:
@@ -519,6 +602,7 @@ def create(
         _refuse_duplicate(session, kind, scope, row)
         session.add(row)
         session.flush()
+        session.add(history_entry(kind, scope, record_id, "created"))
         given = sorted(name for name, value in values.items() if value is not None)
         _audit(session, kind, scope, _Event("created", record_id, {"fields": given}))
         return {"id": str(record_id)}
@@ -569,6 +653,7 @@ def update(
         if row.version != expected_version:
             raise StaleVersionError(row.version)
         changed = {name for name, value in changes.items() if getattr(row, name) != value}
+        before = {name: getattr(row, name) for name in changed}
         for name in changed:
             setattr(row, name, changes[name])
         unique["value"] = getattr(row, kind.unique_field)
@@ -579,6 +664,7 @@ def update(
             _refuse_duplicate(session, kind, scope, row)
         _touch(row, scope)
         session.flush()
+        session.add_all(_change_history(kind, scope, row, before))
         _audit(session, kind, scope, _Event("updated", record_id, {"fields": sorted(changed)}))
 
     _write(kind, scope, lambda: unique.get("value"), apply)
@@ -600,7 +686,9 @@ def set_archived(kind: Kind, scope: Scope, record_id: uuid.UUID, *, archived: bo
             _refuse_duplicate(session, kind, scope, row)
         _touch(row, scope)
         session.flush()
-        _audit(session, kind, scope, _Event("archived" if archived else "restored", record_id))
+        verb = "archived" if archived else "restored"
+        session.add(history_entry(kind, scope, record_id, verb))
+        _audit(session, kind, scope, _Event(verb, record_id))
 
     _write(kind, scope, lambda: unique.get("value"), apply)
     return get(kind, scope, record_id)
@@ -610,6 +698,9 @@ def remove(kind: Kind, scope: Scope, record_id: uuid.UUID) -> None:
     """Permanent delete. Deleting a company first unlinks its contacts as an
     ordinary contact change: `company_id` cleared, a new version, the time
     and the actor, and an audit entry each. The contacts are kept.
+
+    Each unlinked contact gets a `company_unlinked` history entry. The
+    deleted record's own notes and history go with it (`ON DELETE CASCADE`).
 
     Lock order: the company row (`FOR UPDATE`), then the linked contact
     rows, by the same `UPDATE`. A concurrent contact update that links to
@@ -638,6 +729,11 @@ def remove(kind: Kind, scope: Scope, record_id: uuid.UUID) -> None:
                 ).scalars()
             )
             for contact_id in unlinked:
+                session.add(
+                    history_entry(
+                        CONTACT, scope, contact_id, "company_unlinked", company_ref_id=record_id
+                    )
+                )
                 _audit(
                     session,
                     CONTACT,
@@ -649,6 +745,7 @@ def remove(kind: Kind, scope: Scope, record_id: uuid.UUID) -> None:
                     ),
                 )
             metadata["unlinked_contacts"] = len(unlinked)
+            session.flush()  # the history entries, before their company goes
         model = kind.model
         session.execute(
             delete(model).where(model.tenant_id == scope.workspace, model.id == record_id)

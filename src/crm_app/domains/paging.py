@@ -40,6 +40,9 @@ ORDER_KEYS: Mapping[str, Mapping[str, Sequence[str]]] = {
         "created_at": ("datetime", "uuid"),
         "updated_at": ("datetime", "uuid"),
     },
+    # A record's history and notes, newest first (`PHASE3-PLAN.md` §21).
+    "activity": {"occurred_at": ("datetime", "uuid")},
+    "note": {"created_at": ("datetime", "uuid")},
 }
 
 Key = tuple[str | datetime | uuid.UUID | None, ...]

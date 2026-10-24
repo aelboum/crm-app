@@ -47,6 +47,8 @@ for _path, _resource in (("contacts", "crm_app.contact"), ("companies", "crm_app
         f"POST {_item}/archive": f"{_resource}:update",
         f"POST {_item}/restore": f"{_resource}:update",
         f"DELETE {_item}": f"{_resource}:delete",
+        # The record's history (slice 3B, decision P3-B): every role.
+        f"GET {_item}/activity": "crm_app.activity:read",
     }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 

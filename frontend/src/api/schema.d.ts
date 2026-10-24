@@ -155,6 +155,23 @@ export interface paths {
         patch: operations["update_company_v1_workspaces__tenant_id__companies__record_id__patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/companies/{record_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Company Activity */
+        get: operations["list_company_activity_v1_workspaces__tenant_id__companies__record_id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/companies/{record_id}/archive": {
         parameters: {
             query?: never;
@@ -224,6 +241,23 @@ export interface paths {
         head?: never;
         /** Update Contact */
         patch: operations["update_contact_v1_workspaces__tenant_id__contacts__record_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contact Activity */
+        get: operations["list_contact_activity_v1_workspaces__tenant_id__contacts__record_id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/workspaces/{tenant_id}/contacts/{record_id}/archive": {
@@ -384,6 +418,56 @@ export interface components {
             membership_id: string;
             /** Roles */
             roles: string[];
+        };
+        /**
+         * ActivityOut
+         * @description One history entry. Field names only, never values (D5).
+         */
+        ActivityOut: {
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /** Fields */
+            fields: string[] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "created" | "updated" | "archived" | "restored" | "stage_changed" | "owner_changed" | "company_linked" | "company_unlinked" | "note_added" | "note_deleted";
+            /** Note Excerpt */
+            note_excerpt: string | null;
+            /** Note Id */
+            note_id: string | null;
+            /** Note Truncated */
+            note_truncated: boolean;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Owner From */
+            owner_from: string | null;
+            /** Owner To */
+            owner_to: string | null;
+            /** Stage From */
+            stage_from: string | null;
+            /** Stage To */
+            stage_to: string | null;
+        };
+        /** ActivityPage */
+        ActivityPage: {
+            /** Items */
+            items: components["schemas"]["ActivityOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * CompanyCreate
@@ -1067,6 +1151,43 @@ export interface operations {
             };
         };
     };
+    list_company_activity_v1_workspaces__tenant_id__companies__record_id__activity_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     archive_company_v1_workspaces__tenant_id__companies__record_id__archive_post: {
         parameters: {
             query?: never;
@@ -1308,6 +1429,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contact_activity_v1_workspaces__tenant_id__contacts__record_id__activity_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPage"];
                 };
             };
             /** @description Validation Error */
