@@ -875,4 +875,46 @@ Both: `id uuid PRIMARY KEY`, `tenant_id` referencing `core.tenants`,
 | 3B.2 | Activity written by every record change; activity routes | Done (see `PROGRESS.md`) |
 | 3B.3 | Note routes, D3 rule, concurrency, idempotency, audit, `/access` flags | Done (see `PROGRESS.md`) |
 | 3B.4 | Notes and Activity sections in both drawers | Done (see `PROGRESS.md`) |
-| 3B.5 | Security review, performance, browser check, documentation | Planned |
+| 3B.5 | Security review, performance, browser check, documentation | Done (§21.4) |
+
+### 21.4 Review, performance and known limitations (2026-10-24)
+
+- **Security review** (read-only, by an independent reviewer): no critical
+  or high finding. Tenant scoping, the route policy and author rule,
+  history and audit contents, deleted note text, rendering as text, SQL
+  binding, append-only history, refusal bodies, idempotency and purge were
+  found sound. Fixed: an edit's response is now built inside its own
+  transaction, so a delete committed just after cannot turn a successful
+  edit into a 404; note edits and deletes now lock the record before the
+  note, the order every record change and its cascade take, which removes
+  a deadlock window. Accepted, with reasons:
+  - No per-record cap on notes. SaaS-OS limits every route to 60 requests
+    a minute per workspace and path; a cap or per-member limit belongs to
+    Phase 13 (with L5 in `PHASE2-SECURITY-REVIEW.md`).
+  - A note created and deleted by someone else within the same instant
+    can answer 404 to its creator; the note is then genuinely gone.
+  - The idempotency fingerprint is SaaS-OS's unsalted digest of the
+    request, readable only under RLS; the note text is not stored there.
+  - History shows the current name of a linked company and the start of
+    a live note to anyone with `activity:read`. Every role also holds
+    `contact:read` and `company:read` today; a future role that splits them
+    must gate these fields.
+- **Performance** (local disposable test database, Windows, Docker
+  PostgreSQL 16; not CI hardware), 105,000 notes and 110,000 history
+  entries in one workspace, one contact with 5,000 notes and 10,000
+  entries, 30 calls each: notes first page p95 12 ms (busy contact) and
+  11 ms (typical); history first page p95 14 ms (busy) and 29 ms
+  (typical); twenty pages deep at most 26 ms. All within the 300 ms target.
+- **Browser check** (Chrome, desktop width, local ZITADEL sign-in): add,
+  edit, delete and the archived view on a company and a contact; markup in
+  a note shown as text; history wording, the backfilled "Created" entry and
+  "Note deleted" after a delete. It found two problems, both fixed with
+  tests: Edit did not move focus into the text box (keyboard users were
+  left on a removed button), and closing the drawer during a changed edit
+  discarded it without asking.
+- **Known limitations:** people show as "You" or "Member xxxxxxxx" until
+  member names exist; history entries made in one change share a time and
+  their order within it is arbitrary; a member moved to Read-only cannot
+  change their older notes (by design, D3) and this is proven by the route
+  policy rather than a role-change test; phone width, Firefox and Safari
+  are not checked.

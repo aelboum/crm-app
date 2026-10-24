@@ -1,5 +1,5 @@
 import { Archive, ArchiveRestore, Building2, Flag, PenLine, Plus, StickyNote, Trash2, UserRound } from "lucide-react";
-import { type SyntheticEvent, useState } from "react";
+import { type SyntheticEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { ApiError } from "../api/client";
@@ -56,7 +56,8 @@ export function NotesSection({
   id: string;
   meId: string | undefined;
   canAdd: boolean;
-  /** Reports an unsaved draft, so the drawer can ask before closing it. */
+  /** Reports unsaved text (a new note or an edit), so the drawer can ask
+   *  before closing. */
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const t = useT();
@@ -71,12 +72,27 @@ export function NotesSection({
   const items = (notes.data?.pages ?? []).flatMap((page) => page.items);
   const archived = notes.data?.pages[0]?.record_archived ?? false;
   const headingId = `${kind}-${id}-notes`;
+  // Notes with an unsaved edit, by ID; with the draft, what closing would lose.
+  const [editsOpen, setEditsOpen] = useState<ReadonlySet<string>>(new Set());
+  const dirty = draft.trim() !== "" || editsOpen.size > 0;
+  useEffect(() => {
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+
+  const editChanged = useCallback((noteId: string, changed: boolean) => {
+    setEditsOpen((open) => {
+      if (open.has(noteId) === changed) return open;
+      const next = new Set(open);
+      if (changed) next.add(noteId);
+      else next.delete(noteId);
+      return next;
+    });
+  }, []);
 
   function change(value: string) {
     setDraft(value);
     setKey(newIdempotencyKey());
     setError(null);
-    onDirtyChange(value.trim() !== "");
   }
 
   function submit(event: SyntheticEvent) {
@@ -88,7 +104,6 @@ export function NotesSection({
         onSuccess: () => {
           setDraft("");
           setKey(newIdempotencyKey());
-          onDirtyChange(false);
           toast(t("notes.added"));
         },
         onError: (failure) => {
@@ -140,7 +155,15 @@ export function NotesSection({
       ) : (
         <ul className="note-list">
           {items.map((note) => (
-            <NoteCard key={note.id} workspaceId={workspaceId} kind={kind} recordId={id} note={note} meId={meId} />
+            <NoteCard
+              key={note.id}
+              workspaceId={workspaceId}
+              kind={kind}
+              recordId={id}
+              note={note}
+              meId={meId}
+              onEditChanged={editChanged}
+            />
           ))}
         </ul>
       )}
@@ -159,12 +182,15 @@ function NoteCard({
   recordId,
   note,
   meId,
+  onEditChanged,
 }: {
   workspaceId: string;
   kind: RecordKind;
   recordId: string;
   note: Note;
   meId: string | undefined;
+  /** Whether this note has an open edit that differs from the saved text. */
+  onEditChanged: (noteId: string, changed: boolean) => void;
 }) {
   const t = useT();
   const toast = useToast();
@@ -174,6 +200,33 @@ function NoteCard({
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fieldId = `note-${note.id}-edit`;
+  // Focus follows the edit: into the text (cursor at the end) on Edit, and
+  // back to the Edit button on Cancel or Save, so keyboard users never land
+  // on a control that no longer exists.
+  const isEditing = editing !== null;
+  const changed = editing !== null && editing !== note.body;
+  useEffect(() => {
+    onEditChanged(note.id, changed);
+  }, [note.id, changed, onEditChanged]);
+  useEffect(
+    () => () => {
+      onEditChanged(note.id, false);
+    },
+    [note.id, onEditChanged],
+  );
+  const field = useRef<HTMLTextAreaElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
+  useEffect(() => {
+    if (isEditing) {
+      const box = field.current;
+      box?.focus();
+      box?.setSelectionRange(box.value.length, box.value.length);
+    } else if (wasEditing.current) {
+      editButton.current?.focus();
+    }
+    wasEditing.current = isEditing;
+  }, [isEditing]);
 
   function save(event: SyntheticEvent) {
     event.preventDefault();
@@ -203,6 +256,7 @@ function NoteCard({
             {t("notes.editLabel")}
           </label>
           <textarea
+            ref={field}
             id={fieldId}
             value={editing}
             maxLength={NOTE_MAX}
@@ -240,6 +294,7 @@ function NoteCard({
         <div className="note-actions">
           {note.can_edit ? (
             <Button
+              ref={editButton}
               size="sm"
               variant="ghost"
               onPress={() => {

@@ -210,6 +210,7 @@ describe("notes and activity in the drawer", () => {
 
     await user.click(within(cards[0] as HTMLElement).getByRole("button", { name: /Edit/ }));
     const field = within(notes).getByRole("textbox", { name: "Note text" });
+    expect(field).toHaveFocus();
     await user.clear(field);
     await user.type(field, "Called twice.");
     await user.click(within(notes).getByRole("button", { name: "Save" }));
@@ -219,6 +220,9 @@ describe("notes and activity in the drawer", () => {
       ]);
     });
     expect(headersSent.find((r) => r.method === "PATCH")?.headers["if-match"]).toBe('"1"');
+    await waitFor(() => {
+      expect(within(cards[0] as HTMLElement).getByRole("button", { name: /Edit/ })).toHaveFocus();
+    });
   });
 
   it("explains an edit refused because someone changed the note meanwhile", async () => {
@@ -271,6 +275,30 @@ describe("notes and activity in the drawer", () => {
     expect(within(notes).queryByRole("textbox")).toBeNull();
     expect(within(notes).queryByRole("button", { name: /Edit/ })).toBeNull();
     expect(within(notes).getByRole("button", { name: /Delete/ })).toBeInTheDocument();
+  });
+
+  it("closes without asking when an opened edit is unchanged", async () => {
+    const user = userEvent.setup();
+    openSam();
+    const notes = await notesSection();
+    await within(notes).findByText("Called about the renewal.");
+    await user.click(within(notes).getAllByRole("button", { name: /Edit/ })[0] as HTMLElement);
+    await user.keyboard("{Escape}");
+    // Opening an edit without changing it loses nothing: no question.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Contact preview" })).toBeNull();
+    });
+  });
+
+  it("asks before closing the drawer with a changed edit", async () => {
+    const user = userEvent.setup();
+    openSam();
+    const notes = await notesSection();
+    await within(notes).findByText("Called about the renewal.");
+    await user.click(within(notes).getAllByRole("button", { name: /Edit/ })[0] as HTMLElement);
+    await user.keyboard(" More.");
+    await user.keyboard("{Escape}");
+    expect(await screen.findByRole("alertdialog", { name: "Discard note?" })).toBeInTheDocument();
   });
 
   it("asks before closing the drawer with an unsaved note", async () => {

@@ -175,20 +175,27 @@ def _write[T](scope: Scope, fn: Callable[[Session], T]) -> T:
         raise
 
 
-def _load_note(session: Session, scope: Scope, note_id: uuid.UUID) -> Note:
-    row = session.execute(
-        select(Note).where(Note.tenant_id == scope.workspace, Note.id == note_id).with_for_update()
-    ).scalar_one_or_none()
+def _load_note(session: Session, scope: Scope, note_id: uuid.UUID, *, lock: bool = False) -> Note:
+    query = select(Note).where(Note.tenant_id == scope.workspace, Note.id == note_id)
+    row = session.execute(query.with_for_update() if lock else query).scalar_one_or_none()
     if row is None:
         raise NoteNotFoundError
     return row
 
 
-def _parent_archived(session: Session, scope: Scope, note: Note, *, lock: bool = False) -> bool:
-    """Whether the note's record is archived; `lock` holds the record until
-    commit, so it cannot be archived between this check and an edit (D8)."""
+def _lock_note(session: Session, scope: Scope, note_id: uuid.UUID) -> tuple[Note, bool]:
+    """The note, locked, and whether its record is archived. Locks the record
+    first and then the note, the order every record change and its cascade
+    take, so a note change never deadlocks with a record change; the record
+    stays locked until commit, so it cannot be archived meanwhile (D8)."""
+    kind, record_id = _kind_of(_load_note(session, scope, note_id))
+    archived = load_record(session, kind, scope, record_id, lock=True).archived_at is not None
+    return _load_note(session, scope, note_id, lock=True), archived
+
+
+def _parent_archived(session: Session, scope: Scope, note: Note) -> bool:
     kind, record_id = _kind_of(note)
-    return load_record(session, kind, scope, record_id, lock=lock).archived_at is not None
+    return load_record(session, kind, scope, record_id).archived_at is not None
 
 
 # --- Reads -----------------------------------------------------------------------
@@ -313,25 +320,26 @@ def update_note(
     """Replace a note's text if it is still at `expected_version`. The
     same text is a no-op: no new version, no audit entry."""
 
-    def apply(session: Session) -> None:
-        note = _load_note(session, scope, note_id)
+    def apply(session: Session) -> dict[str, Any]:
+        note, archived = _lock_note(session, scope, note_id)
         if not _may_edit(note, scope, rights):
             raise NotNoteAuthorError
-        if _parent_archived(session, scope, note, lock=True):
+        if archived:
             raise RecordArchivedError
         if note.version != expected_version:
             raise StaleVersionError(note.version)
-        if note.body == body:
-            return
-        note.body = body
-        note.version += 1
-        note.updated_at = _now()
-        note.updated_by_user_id = scope.actor
-        session.flush()
-        _audit(session, scope, "updated", note)
+        if note.body != body:
+            note.body = body
+            note.version += 1
+            note.updated_at = _now()
+            note.updated_by_user_id = scope.actor
+            session.flush()
+            _audit(session, scope, "updated", note)
+        # Built in the writing transaction: a delete committed just after
+        # cannot turn a successful edit into a 404.
+        return _out(note, scope, rights, archived=False)
 
-    _write(scope, apply)
-    return get_note(scope, note_id, rights)
+    return _write(scope, apply)
 
 
 def delete_note(scope: Scope, note_id: uuid.UUID, *, rights: NoteRights) -> None:
@@ -339,7 +347,7 @@ def delete_note(scope: Scope, note_id: uuid.UUID, *, rights: NoteRights) -> None
     CASCADE`); a `note_deleted` entry without text records that it did."""
 
     def apply(session: Session) -> None:
-        note = _load_note(session, scope, note_id)
+        note, _ = _lock_note(session, scope, note_id)
         if not _may_delete(note, scope, rights):
             raise NotNoteAuthorError
         kind, record_id = _kind_of(note)

@@ -669,3 +669,26 @@ be absent on append-only tables.
   `can_edit`/`can_delete` and `/access` `create_note`.
 - Tests: `notes.test.tsx`, 8 tests including an axe scan. Frontend 51
   passed; typecheck, lint and build pass.
+
+### 3B.5 review, performance and browser check (2026-10-24)
+
+Slice 3B is complete; details and accepted limitations in
+`PHASE3-PLAN.md` §21.4.
+
+- Security review (read-only, independent): no critical or high finding.
+  Fixed: edit responses built in the writing transaction; record-then-note
+  lock order for note edits and deletes. Accepted with reasons: no
+  per-record note cap (route rate limit exists; Phase 13), a same-instant
+  create/delete 404, SaaS-OS's unsalted idempotency fingerprint, history
+  fields readable with `activity:read`.
+- Performance on the local disposable test database (105,000 notes,
+  110,000 history entries): every first page p95 at most 29 ms, twenty
+  pages deep at most 26 ms; rows removed afterwards.
+- Browser check in Chrome (desktop width, local ZITADEL sign-in) after
+  migrating the local development database to 0003 (backfill: one
+  `created` entry per existing record). Found and fixed: Edit now moves
+  focus into the text and back; a changed edit now also asks before the
+  drawer closes. The local test notes were deleted afterwards.
+- Phase 2 remains open: invitations and the email provider, workspace
+  settings and the directory, the ZITADEL sign-in test run, and the
+  owner's review of `PHASE2-SECURITY-REVIEW.md`.

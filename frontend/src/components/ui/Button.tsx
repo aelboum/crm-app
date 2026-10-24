@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { Button as AriaButton, type ButtonProps } from "react-aria-components";
 
 export type Variant = "primary" | "secondary" | "ghost" | "destructive";
@@ -11,6 +12,8 @@ export function buttonClass(variant: Variant = "secondary", size: Size = "md"): 
 interface Props extends ButtonProps {
   variant?: Variant;
   size?: Size;
+  /** For moving focus to the button (React 19 passes `ref` as a prop). */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 /** The design's button (primary, secondary, ghost, destructive; 28/32/34 px). */

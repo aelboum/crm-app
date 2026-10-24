@@ -412,8 +412,9 @@ note tint).
   (only record and note events exist).
 - Edit and Delete on each note for its author and for Owners and Admins
   (D3), which the design does not show; delete asks for confirmation;
-  "Edited" marks a changed note. Closing a drawer with unsaved note text
-  asks "Discard note?".
+  "Edited" marks a changed note. Closing a drawer with an unsaved new note
+  or a changed edit asks "Discard note?". Edit moves focus into the text;
+  Cancel and Save return it to the Edit button.
 - History is worded from field names, stages, owners and companies only
   (D5): "Updated email and city", "Stage changed from Lead to Customer";
   never field values. People appear as "You" or "Member xxxxxxxx" until
