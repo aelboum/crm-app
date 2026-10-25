@@ -51,6 +51,20 @@ decisions P2-A to P2-E approved)
     workspaces per user and 100 attempts per rolling 24 hours as
     configurable defaults (`SIGNUP_MAX_ATTEMPTS_PER_24H` replaces
     `SIGNUP_MAX_PER_DAY`).
+  - **Stage A4, local only (2026-10-24; re-verified 2026-10-25):** opt-in
+    ZITADEL registration, email verification and Mailpit, kept on across
+    runs by three `.env` settings (README.md). Browser-verified
+    (`SIGNUP-PLAN.md` §5a):
+    - registration from the LeadStack login build creates an active
+      identity with an unverified email;
+    - the verification email reaches Mailpit only;
+    - until verified, even the right password stops at "Verify user" and
+      no LeadStack session exists;
+    - the email's link opens the code page filled in; after Continue the
+      identity is verified and signed in, and the session carries
+      `verified_email`;
+    - sign-out, and sign-in again with the password, work;
+    - LeadStack's signup routes still answer 404 with a valid session.
   - **Signup-table security:** investigated (`SIGNUP-PLAN.md` §4a); owner
     decision pending.
 - **Branded sign-in (2026-10-24, owner-approved before slice 3C):** the

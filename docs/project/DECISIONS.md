@@ -1043,9 +1043,17 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      and ZITADEL email through the local Mailpit, in local development
      only. No production identity or email change; `SIGNUP_ENABLED` is
      not set.
-- **Implemented (2026-10-24):** the defaults and the rename in
-  `crm_app.settings`, with unit tests. The local Stage A4 setup is not
-  yet in the repository.
+- **Implemented (2026-10-24):**
+  - the defaults and the rename in `crm_app.settings`, with unit tests;
+  - opt-in local settings in `deploy/local/configure-zitadel.py`
+    (`ZITADEL_LOCAL_ALLOW_REGISTER`, `ZITADEL_LOCAL_SMTP`) and
+    `deploy/local/compose.yaml` (`ZITADEL_LOCAL_EMAIL_VERIFICATION`),
+    off by default, kept on across runs through `.env` (`.env.example`).
+    Registration is refused without the local Mailpit, and the script
+    reports every change to it;
+  - README instructions.
+
+  Browser results are in `SIGNUP-PLAN.md` §5a.
 - **Pending owner decisions:**
   - whether requests refused by the rate limits or by the cap itself also
     count as attempts (`SIGNUP-PLAN.md` §4 proposes not);

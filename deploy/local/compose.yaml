@@ -183,6 +183,10 @@ services:
       ZITADEL_SESSION_COOKIE_SECRET: ${ZITADEL_LOGIN_SESSION_COOKIE_SECRET:?set ZITADEL_LOGIN_SESSION_COOKIE_SECRET in .env}
       # ZITADEL picks its instance from Host: the public host, not `zitadel`.
       CUSTOM_REQUEST_HEADERS: Host:localhost,X-Forwarded-Proto:http
+      # "true" makes Login V2 refuse to finish a sign-in until the email is
+      # verified (decision S-1, Stage A4). Off by default, as before; the
+      # codes need an email provider (configure-zitadel.py, ZITADEL_LOCAL_SMTP).
+      EMAIL_VERIFICATION: ${ZITADEL_LOCAL_EMAIL_VERIFICATION:-false}
     volumes:
       - ./.bootstrap:/bootstrap:ro
     depends_on:

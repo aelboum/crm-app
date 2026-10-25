@@ -4,10 +4,12 @@
 direction for implementation planning. It supersedes P2-C's exclusion of
 public workspace creation.
 
-**Status (2026-10-25):** Stages A2, B and C done.
+**Status (2026-10-25):** Stages A, B and C done locally.
 - The signup settings and kill switch (A2) exist and are tested, with the
   owner's limits (S-1.1).
 - The L4 investigation (A1) is done; L4 is reduced, not closed (§5).
+- Local ZITADEL registration, email verification and Mailpit (A4) are
+  verified in a browser (§5a).
 - The signup backend (B, C) is built and verified: option A for the signup
   table and the counting rule (S-1.2, §4b).
 
@@ -516,11 +518,106 @@ proves both:
 - the application is reachable only through the edge;
 - two clients get independent limits, and a forged header is ignored.
 
+## 5a. Stage A4: local ZITADEL registration and email verification (2026-10-24)
+
+**Setup (local only):**
+- `deploy/local/configure-zitadel.py` gained two opt-in settings:
+  - `ZITADEL_LOCAL_ALLOW_REGISTER=true` sets the login policy's
+    `allowRegister`;
+  - `ZITADEL_LOCAL_SMTP=mailpit` adds the local Mailpit as ZITADEL's SMTP
+    provider (`mailpit:1025`, sender `zitadel@crm-app.localhost`) and
+    activates it; idempotent.
+- `deploy/local/compose.yaml` passes `EMAIL_VERIFICATION` to Login V2 from
+  `ZITADEL_LOCAL_EMAIL_VERIFICATION`.
+- All three default to off, so D-IDL.1's settings stand unless someone opts
+  in.
+- Applied to the local instance with all three on; read-back confirmed
+  `allowRegister: true` and the Mailpit provider active.
+- LeadStack signup stayed off (`SIGNUP_ENABLED` unset). No production
+  setting was touched.
+
+**Observed in Chrome, each user in its own isolated browser context:**
+
+| # | Scenario | Result |
+| --- | --- | --- |
+| 1 | Registration offered | "Register new user" appeared on Login V2 only after a reload (Login V2 caches settings briefly). The form asks for first and last name, email and passkey or password, under ZITADEL's password rules. No terms or privacy links (none configured, LG-2). |
+| 2 | Register U1 with verification **off** | U1 returned straight to `/app` signed in: `/auth/me` 200. The stored session has no `verified_email`. ZITADEL sent no email. |
+| 3 | Register U2 with verification **on** | Login V2 stopped at "Verify user" and sent a code ("Verify email", in Mailpit). `/auth/me` was 401: no LeadStack session before verification. |
+| 4 | Bypass: restart sign-in while unverified (`/auth/login`, choose the account, enter the password) | Back to "Verify user"; still no LeadStack session. A **new** code was sent. |
+| 5 | Enter the newest code | Returned to `/app` signed in; the session has `verified_email`. |
+| 6 | Sign out, then sign in with the password | Sign-out ended both sessions (ZITADEL's account-choice page, the known P2-G residual). Sign-in with the password returned to `/app`. |
+| 7 | Password reset | "Reset Password" sent a "Reset password" email to Mailpit (not completed). |
+| 8 | U1 (registered unverified) signs in with verification on | Stopped at "Verify user". |
+| 9 | U1's session from row 2, kept after verification was turned on | Still valid (`/auth/me` 200, no `verified_email`). |
+| 10 | Admin (verified at setup) signs in | Unaffected. Invited U2 and U1 as Members (manual links). |
+| 11 | U2 accepts | "You have joined the workspace"; invitation accepted. |
+| 12 | U1's unverified session tries to accept | Invitation **not** accepted (database read-back). The browser page closed before its message could be read; the acceptance route refuses sessions without `verified_email`. |
+
+**Answer: can an unverified identity obtain a usable LeadStack session?**
+- With `EMAIL_VERIFICATION` on: **no** (rows 3, 4 and 8).
+- With it off, or for a session issued before it was turned on: **yes**, a
+  session without `verified_email` (rows 2 and 9). That session can see
+  only the empty start page. It cannot accept an invitation (row 12), and
+  the planned signup endpoint refuses it (§4).
+- LeadStack's own `verified_email` check is therefore required, not
+  optional.
+
+**Findings for the security review (LG-8, LG-9):**
+1. Login V2 pages say "Create your Zitadel account" and "Login with
+   Zitadel": the provider's name is visible, against SaaS-OS ADR-0023's
+   aim of an invisible ZITADEL. Branding is a launch task.
+2. Login V2 puts the email and names in URL query strings
+   (`/register/password?email=…`, `/verify?loginName=…`). They reach browser
+   history, and any access log that records URLs. The production edge must
+   not log query strings for `/ui/v2/login`.
+3. Sessions issued while verification was off stay valid for their
+   lifetime, up to 12 hours (I2). Turning verification on in production
+   must happen before registration is opened, never afterwards.
+4. Each new sign-in by an unverified user sends another code (rows 4 and
+   8); repeated sign-ins could be used to flood an inbox. This needs the
+   edge rate limit on `/ui/v2/login` (LG-5).
+5. Not tested: registering with an email that already exists
+   (enumeration); passkey registration; completing a password reset;
+   organisation selection by scope.
+
+**Re-verified 2026-10-25** with the LeadStack login build (S-2), a new
+disposable identity on `crm-app.localhost` and the settings kept in `.env`:
+- "Create one" on the sign-in page leads to registration; the identity is
+  created active with an unverified email;
+- one "Verify email" message reached Mailpit, and nothing left the machine;
+- a fresh sign-in with the right password stopped at "Verify user" and sent
+  a second code; `/auth/me` was 401 throughout;
+- the email's link (`/ui/v2/login/verify` with code, user, organisation and
+  request) opened the code page filled in; after **Continue** ZITADEL
+  marked the email verified and the browser returned to `/app` signed in;
+  the session row carries the verified address;
+- sign-out, then sign-in with the password, worked without a new email;
+- `POST /v1/signups` and `GET /v1/signups/current` answered 404 with that
+  valid session (kill switch off);
+- `configure-zitadel.py`:
+  - refuses registration without `ZITADEL_LOCAL_SMTP=mailpit`;
+  - is idempotent with the opt-ins;
+  - without them, turns registration off **and says so**;
+  - with them, turns it back on.
+
+Not tested: the published `zitadel-login` image with these settings (only
+the LeadStack build was used this time; the published image was used on
+2026-10-24), and delivery to any real mailbox (by design).
+
+**Local state left in place:**
+- registration on, verification on, Mailpit running;
+- two throwaway test users, `signup-u1-44983a` and `signup-u2-44983a`,
+  both `@crm-app.localhost`; U2 is an Awaiting-role member of
+  "Local test workspace".
+
+To revert, rerun the script without the opt-in variables and recreate
+`zitadel-login` without `ZITADEL_LOCAL_EMAIL_VERIFICATION` (README).
+
 ## 6. Staged plan
 
 | Stage | Depends on | Content | Acceptance criteria |
 | --- | --- | --- | --- |
-| **A. Security and configuration** | S-1 | A1 L4 investigation (done, §5). A2 `SIGNUP_ENABLED` (default off) and both limits with the owner's defaults (done, S-1.1). A3 the application and edge rate-limit requirements (written: §4, LG-5). A4 local ZITADEL registration, email verification and Mailpit as ZITADEL's SMTP, by script and documented in the README; registration stays off unless explicitly enabled for local testing. | A1/A2: unit tests pass (`tests/unit/test_settings.py`); production refuses the switch. A4: locally, with Mailpit, a new person registers, receives a code in Mailpit, verifies, returns to `/app` with `verified_email`; unverified sign-in is refused; password reset email arrives; existing sign-in, sign-out and invitation acceptance still pass (identity test plus browser). |
+| **A. Security and configuration** | S-1 | A1 L4 investigation (done, §5). A2 `SIGNUP_ENABLED` (default off) and both limits with the owner's defaults (done, S-1.1). A3 the application and edge rate-limit requirements (written: §4, LG-5). A4 local ZITADEL registration, email verification and Mailpit as ZITADEL's SMTP, opt-in by script and compose settings, documented in the README (done and browser-verified, §5a). | A1/A2: unit tests pass (`tests/unit/test_settings.py`); production refuses the switch. A4: locally, with Mailpit, a new person registers, receives a code in Mailpit, verifies, returns to `/app` with `verified_email`; unverified sign-in is refused; password reset email arrives; existing sign-in, sign-out and invitation acceptance still pass (identity test plus browser). |
 | **B. Provisioning foundation** | A2 | **Status 2026-10-25: built with C, verified locally, uncommitted** (`crm_app.provisioning`; `test_provision.py` unchanged and green; the interruption, concurrency and activation tests run through signup in `test_signups.py`). Extract the steps of `provision.py` into a shared service. The operator CLI keeps its behaviour and output. The signup variant activates last, never accepts a parent, and seeds `workspace_settings` only if a decision asks for it. | `test_provision.py` unchanged and green. New tests: interruption after each step resumes correctly; two concurrent provisions of the same signup create one tenant; before activation the new tenant refuses every product action; after it, the Owner passes `can()` for `membership_role:create` and `crm_app.owner:manage` and counts as an administrator under ADR-0043. |
 | **C. Signup backend** | B; security review of the §4 table design | **Status 2026-10-25: built and verified locally** (§4b; `tests/integration/test_signups.py`, 26 tests, including the cap under concurrent requests released by a barrier). Migration for `crm_app.signup` (declared global, chosen access model); `POST /v1/signups`, `GET /v1/signups/current`; limits; rate limits; recovery and expiry job; structured events. | Integration tests: success; replay with the same key; a different key while one is open; parallel requests produce one workspace; per-user and daily caps hold under parallel requests; unverified session refused; kill switch off returns 404; limiter down returns 503; forged `parent_id`, `role`, `user_id` or `tenant_id` fields refused; cross-user read and write refused at API and repository level; cross-tenant isolation of the new workspace; crash at each step then resume; expiry after 7 days; logs and errors contain no email, token, code or workspace name; acceptance of an invitation creates no signup or tenant. |
 | **D. Frontend** | C | **Create account** on the sign-in screen (to `/auth/login`); the workspace-name step; progress, error, limit and kill-switch states; entry into the workspace. | Vitest for every state, axe clean; no input that collects credentials anywhere; invitation precedence; browser check at desktop and 390 px; sign-out unchanged. |
@@ -540,7 +637,7 @@ evidence. Start-up validation enforces this in code (`settings.py`).
 | LG-5 | Production edge: the application reachable only through the edge; L4 verified closed there (§5); edge rate limiting on `/ui/v2/login/register*`, `/auth/*` and `/v1/signups`; a WAF or equivalent bot protection deployed; CAPTCHA evaluated, not assumed | **Open** |
 | LG-6 | Signup limits | **Set (S-1.1):** 5 workspaces per user, 100 attempts per rolling 24 hours, as defaults. Counting rule confirmed (S-1.2, §4) and enforced in Stage C; revisit the numbers once real use and abuse have been observed. |
 | LG-7 | Abandoned identities: default is manual operator review, no automatic deletion; any deletion needs a separate decision (ADR-0023) | **Default recorded; deletion not approved** |
-| LG-8 | ZITADEL behaviour not yet proven locally: `EMAIL_VERIFICATION` enforcement; whether registration reveals an existing email (enumeration); whether the organisation scope selects the registration organisation; reported Login V2 registration defects (ZITADEL issues #12072, #11857) | **Open: Stage A4 tests** |
+| LG-8 | ZITADEL behaviour: `EMAIL_VERIFICATION` enforcement; enumeration through registration; organisation selection; Login V2 registration defects | **Partly proven locally (§5a):** verification is enforced, and an unverified identity gets no session while it is on. **Still open:** whether registering an existing email reveals it; organisation selection by scope; the findings in §5a (provider name shown, email in URLs, sessions that predate enforcement, a second code sent on each sign-in). |
 | LG-9 | Security review of the signup surface (Stage E) without open Critical or High findings | **Open** |
 | LG-10 | Operator runbook: turning signup off, reviewing failed signups, deleting abandoned `pending` workspaces | **Open** |
 

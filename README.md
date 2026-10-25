@@ -130,6 +130,29 @@ not signup is on:
 uv run python -m crm_app.signup_maintenance
 ```
 
+**Testing ZITADEL's own registration locally** (Stage A4; local development
+only, off unless you opt in). This is ZITADEL's registration and email
+verification, not LeadStack's signup: `SIGNUP_ENABLED` stays off. Uncomment
+the three `ZITADEL_LOCAL_*` lines of the Stage A4 block in `.env`, so every
+later run keeps them, then:
+
+```bash
+set -a; . ./.env; set +a
+docker compose -f deploy/local/compose.yaml --env-file .env --profile mail up -d mailpit
+uv run python deploy/local/configure-zitadel.py
+docker compose -f deploy/local/compose.yaml --env-file .env --profile identity up -d --wait zitadel-login
+```
+
+Login V2 then offers registration ("Register new user"; "Create one" on the
+LeadStack login build), after one reload because it caches its settings
+briefly, and refuses to finish a sign-in until the email is verified. Verification and password-reset emails arrive only in Mailpit at
+`http://127.0.0.1:58025` (Mailpit listens on 127.0.0.1 alone and delivers
+nothing). The script refuses registration without `ZITADEL_LOCAL_SMTP=mailpit`,
+and says so whenever it turns registration on or off. To return to the
+defaults, comment the three lines again, rerun the script and recreate
+`zitadel-login`. The Mailpit provider stays configured in ZITADEL but only
+matters while Mailpit runs.
+
 **Trying LeadStack branding on the login pages** (local only; off unless you
 opt in). Sets LeadStack's colours and logo (`deploy/local/branding/`), hides
 ZITADEL's watermark and the login-name suffix, and replaces every English

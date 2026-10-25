@@ -9,12 +9,26 @@ application never calls ZITADEL (SaaS-OS ADR-0023), and production settings
 are applied by the deployment, not by this script.
 
 Settings (instance defaults, so every organisation inherits them):
-- no self-registration: accounts come from invitations and provisioning;
+- no self-registration (unless opted in, below): accounts come from
+  invitations and provisioning;
 - no external identity providers: none is configured or approved;
 - unknown usernames are not revealed, so accounts cannot be enumerated;
 - lockout after 5 wrong passwords or one-time codes (an administrator
   unlocks the user in the ZITADEL console);
 - two-factor authentication stays optional.
+
+Opt-in for testing ZITADEL's own registration locally (decision S-1, Stage
+A4 of docs/project/SIGNUP-PLAN.md); both default to off, which keeps the
+settings above. Keep them in `.env` (README.md) so every run keeps them:
+- `ZITADEL_LOCAL_ALLOW_REGISTER=true` turns self-registration on; it
+  requires `ZITADEL_LOCAL_SMTP=mailpit`. A run without it turns
+  registration off again and says so;
+- `ZITADEL_LOCAL_SMTP=mailpit` makes the local Mailpit service (compose
+  profile `mail`) ZITADEL's active email provider, so verification and
+  password-reset codes land at http://127.0.0.1:58025 and nowhere else.
+Email verification itself is enforced by Login V2's `EMAIL_VERIFICATION`
+(compose.yaml, `ZITADEL_LOCAL_EMAIL_VERIFICATION`), not by this script.
+None of this is LeadStack's own signup (`SIGNUP_ENABLED`, which stays off).
 
 Opt-in trial of LeadStack branding on Login V2 (README.md, "Trying LeadStack
 branding on the login pages"); unset leaves branding untouched:
@@ -49,6 +63,16 @@ LOGIN_CHANGES = {
     "forceMfa": False,
 }
 LOCKOUT = {"maxPasswordAttempts": "5", "maxOtpAttempts": "5"}
+
+# The local Mailpit service, as ZITADEL's containers reach it on the
+# compose network (no TLS, no credentials: it delivers nowhere).
+MAILPIT_PROVIDER = {
+    "senderAddress": "zitadel@crm-app.localhost",
+    "senderName": "LeadStack (local)",
+    "tls": False,
+    "host": "mailpit:1025",
+    "description": "crm-app local mailpit",
+}
 
 LOGO_FILE = Path(__file__).resolve().parent / "branding" / "leadstack-logo.svg"
 
@@ -134,18 +158,42 @@ def main() -> int:
         print(f"refusing: {base} is not a local issuer", file=sys.stderr)
         return 2
     token = TOKEN_FILE.read_text(encoding="utf-8").strip()
+    # Empty counts as unset, as an empty line in .env would give.
+    register = os.environ.get("ZITADEL_LOCAL_ALLOW_REGISTER", "").strip().lower() or "false"
+    smtp = os.environ.get("ZITADEL_LOCAL_SMTP", "").strip().lower()
     branding = os.environ.get("ZITADEL_LOCAL_BRANDING", "").strip().lower()
-    if branding not in ("", *BRANDING):
+    if (
+        register not in ("true", "false")
+        or smtp not in ("", "mailpit")
+        or branding not in ("", *BRANDING)
+    ):
         print(
-            "refusing: ZITADEL_LOCAL_BRANDING must be leadstack, default or unset",
+            "refusing: ZITADEL_LOCAL_ALLOW_REGISTER must be true or false, "
+            "ZITADEL_LOCAL_SMTP must be mailpit or unset, "
+            "ZITADEL_LOCAL_BRANDING must be leadstack, default or unset",
             file=sys.stderr,
         )
         return 2
+    if register == "true" and smtp != "mailpit":
+        # Registration sends verification codes; they must stay local.
+        print(
+            "refusing: ZITADEL_LOCAL_ALLOW_REGISTER=true needs ZITADEL_LOCAL_SMTP=mailpit",
+            file=sys.stderr,
+        )
+        return 2
+    login_changes = LOGIN_CHANGES | {"allowRegister": register == "true"}
 
     current = _call(base, token, "GET", "/admin/v1/policies/login")["policy"]
-    wanted = {k: v for k, v in current.items() if k not in _NOT_UPDATABLE} | LOGIN_CHANGES
-    if any(current.get(k, False) != v for k, v in LOGIN_CHANGES.items()):
+    wanted = {k: v for k, v in current.items() if k not in _NOT_UPDATABLE} | login_changes
+    if any(current.get(k, False) != v for k, v in login_changes.items()):
         _call(base, token, "PUT", "/admin/v1/policies/login", wanted)
+    if current.get("allowRegister", False) != login_changes["allowRegister"]:
+        # Never silent: keep the opt-in in .env (README.md) to keep it on.
+        print(
+            "self-registration turned "
+            + ("ON (ZITADEL_LOCAL_ALLOW_REGISTER=true)" if register == "true" else "OFF")
+            + ("" if register == "true" else ": ZITADEL_LOCAL_ALLOW_REGISTER is not true")
+        )
 
     lockout = _call(base, token, "GET", "/admin/v1/policies/lockout")["policy"]
     if any(lockout.get(k) != v for k, v in LOCKOUT.items()):
@@ -153,14 +201,17 @@ def main() -> int:
 
     login = _call(base, token, "GET", "/admin/v1/policies/login")["policy"]
     lockout = _call(base, token, "GET", "/admin/v1/policies/lockout")["policy"]
-    applied = {k: login.get(k, False) for k in LOGIN_CHANGES} | {k: lockout.get(k) for k in LOCKOUT}
+    applied = {k: login.get(k, False) for k in login_changes} | {k: lockout.get(k) for k in LOCKOUT}
     print("local ZITADEL sign-in settings:", json.dumps(applied, sort_keys=True))
     sign_out = _allow_post_logout_redirect(base, token)
     print("post-sign-out address allowed:", sign_out)
+    mail = _use_mailpit(base, token) if smtp == "mailpit" else True
+    if smtp == "mailpit":
+        print("email provider: local mailpit active:", mail)
     brand = _apply_branding(base, token, branding) if branding else True
     if branding:
         print(f"login branding: {branding} applied:", brand)
-    return 0 if applied == LOGIN_CHANGES | LOCKOUT and sign_out and brand else 1
+    return 0 if applied == login_changes | LOCKOUT and sign_out and mail and brand else 1
 
 
 def _apply_branding(base: str, token: str, name: str) -> bool:
@@ -214,6 +265,25 @@ def _upload(base: str, token: str, path: str, file: Path) -> None:
     )
     with urllib.request.urlopen(request, timeout=30):  # noqa: S310
         pass
+
+
+def _use_mailpit(base: str, token: str) -> bool:
+    """Adds the Mailpit SMTP provider once and makes it the active one;
+    idempotent. Only one provider is active at a time in ZITADEL."""
+    found = _call(base, token, "POST", "/admin/v1/email/_search", {}).get("result", [])
+    ours = [p for p in found if p.get("description") == MAILPIT_PROVIDER["description"]]
+    provider_id = (
+        ours[0]["id"]
+        if ours
+        else _call(base, token, "POST", "/admin/v1/email/smtp", MAILPIT_PROVIDER)["id"]
+    )
+    current = next((p for p in ours if p.get("id") == provider_id), {})
+    if current.get("state") != "EMAIL_PROVIDER_ACTIVE":
+        _call(base, token, "POST", f"/admin/v1/email/{provider_id}/_activate", {})
+    after = _call(base, token, "POST", "/admin/v1/email/_search", {}).get("result", [])
+    return any(
+        p.get("id") == provider_id and p.get("state") == "EMAIL_PROVIDER_ACTIVE" for p in after
+    )
 
 
 # Fields `UpdateApplication` would reset if omitted (as SaaS-OS's local
