@@ -47,7 +47,7 @@ decisions P2-A to P2-E approved)
     locally; forged `X-Forwarded-For` is ignored. Reduced, not closed
     (`SIGNUP-PLAN.md` §5).
   - **Launch gates LG-1 to LG-10 open** (`SIGNUP-PLAN.md` §7).
-  - **S-1.1 (2026-10-24):** limits 5
+  - **S-1.1 (2026-10-24, committed `6ba67d4`):** limits 5
     workspaces per user and 100 attempts per rolling 24 hours as
     configurable defaults (`SIGNUP_MAX_ATTEMPTS_PER_24H` replaces
     `SIGNUP_MAX_PER_DAY`).
@@ -78,7 +78,8 @@ decisions P2-A to P2-E approved)
     `/auth/login` answer "Authentication is not configured"; seen again
     during this check, not a product defect.
 
-- **Self-service signup, Stages B and C (decision S-1.2, 2026-10-25):**
+- **Self-service signup, Stages B and C (decision S-1.2, 2026-10-25;
+  committed `13604fa`, CI run 40212699571 green):**
   - **Built:**
     - migration `0006_signup`: `crm_app.signup` (option A, forced RLS)
       and `crm_app.signup_attempt`;
@@ -121,7 +122,8 @@ decisions P2-A to P2-E approved)
     was restarted with `SIGNUP_ENABLED` unset.
 
 - **LeadStack sign-in pages (decision S-2, 2026-10-25; the crm-app part
-  committed, `crm-app-login` local only):**
+  committed `8c88357`, CI run 40217274678 green; `crm-app-login` local
+  only):**
   - **What exists:** `crm-app-login` is a local repository with no remote.
     It builds Login V2 v4.19.5 with a LeadStack overlay: 4 replaced and 6
     new files, the one-page form and the design's layout on every page.
@@ -174,6 +176,9 @@ decisions P2-A to P2-E approved)
     in CI (not written yet).
   - **Unchanged:** sign-out still stops on ZITADEL's "choose the account"
     page (P2-G residual, Low).
+- **Stage D (signup screens): not started.** LeadStack's own signup stays
+  off (`SIGNUP_ENABLED` unset, refused in production) and launch gates LG-1
+  to LG-10 remain open.
 
 ## Repository state
 
