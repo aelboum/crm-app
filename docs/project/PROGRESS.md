@@ -47,6 +47,12 @@ decisions P2-A to P2-E approved)
     locally; forged `X-Forwarded-For` is ignored. Reduced, not closed
     (`SIGNUP-PLAN.md` §5).
   - **Launch gates LG-1 to LG-10 open** (`SIGNUP-PLAN.md` §7).
+  - **S-1.1 (2026-10-24):** limits 5
+    workspaces per user and 100 attempts per rolling 24 hours as
+    configurable defaults (`SIGNUP_MAX_ATTEMPTS_PER_24H` replaces
+    `SIGNUP_MAX_PER_DAY`).
+  - **Signup-table security:** investigated (`SIGNUP-PLAN.md` §4a); owner
+    decision pending.
 - **Branded sign-in (2026-10-24, owner-approved before slice 3C):** the
   signed-out screens of `/app` and invitation links are a LeadStack
   sign-in screen after the design's `LeadStack Signup.dc.html`

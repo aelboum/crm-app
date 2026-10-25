@@ -33,7 +33,7 @@ CONFIG_NAMES = (
     "TRUST_PROXY_HEADERS",
     "SIGNUP_ENABLED",
     "SIGNUP_MAX_WORKSPACES_PER_USER",
-    "SIGNUP_MAX_PER_DAY",
+    "SIGNUP_MAX_ATTEMPTS_PER_24H",
 )
 
 # Syntactically valid settings that point at nothing reachable.

@@ -4,10 +4,15 @@
 direction for implementation planning. It supersedes P2-C's exclusion of
 public workspace creation.
 
-**Status (2026-10-24):** planned. Stage A has started: the signup settings
-and kill switch (A2) exist and are tested; the L4 investigation (A1) is
-done, and L4 is reduced, not closed (§5). Nothing else is implemented.
-Signup is off everywhere and refused in production by start-up validation.
+**Status (2026-10-24):** planned. Stage A has started.
+- The signup settings and kill switch (A2) exist and are tested, with the
+  owner's limits (S-1.1).
+- The L4 investigation (A1) is done; L4 is reduced, not closed (§5).
+- The signup-table security is investigated (§4a); the owner's decision is
+  pending.
+
+Nothing else is implemented. Signup is off everywhere and refused in
+production by start-up validation.
 
 **Design reference:** `LeadStack Signup.dc.html` (outside the repository,
 `DESIGN-FIDELITY.md`). It is a reference only. It is never served or
@@ -193,10 +198,49 @@ Notes on provisioning:
 - The same key returns the same signup.
 - Another request while a signup is open returns the open signup.
 - Concurrent requests serialise on the advisory lock and the unique index.
-- The per-user workspace count is checked inside the same lock, against
-  completed signups and the user's Owner memberships, so parallel requests
-  cannot exceed it.
-- The platform cap per UTC day is counted under a global advisory lock.
+- The limits below are checked under the same locks, so neither parallel
+  requests, retries nor different workspace details can exceed them.
+
+**Limits (decision S-1.1).** Both are enforced on the server, configurable,
+and fail closed. They are abuse ceilings, not targets or guarantees, and
+are adjusted once legitimate use and abuse have been observed.
+
+- **`SIGNUP_MAX_WORKSPACES_PER_USER`, default 5.**
+  - **What counts:** the workspaces this user holds through signup, plus the
+    user's open (unfinished) signup. Workspaces joined by invitation do not
+    count. A workspace that is deleted or purged stops counting.
+  - **When it is checked:** under the per-user advisory lock, before the
+    tenant is created. Concurrent requests, idempotent retries and
+    different workspace names all meet the same count.
+- **`SIGNUP_MAX_ATTEMPTS_PER_24H`, default 100.**
+  - **What counts as an attempt:** every authenticated `POST /v1/signups`
+    while signup is on that passes the per-user and per-client rate limits
+    and is not itself refused by this cap. It is counted before anything
+    else is checked, so these all count:
+    - an unverified email;
+    - an invalid name;
+    - a refusal by the per-user limit;
+    - an idempotent replay;
+    - a provisioning failure.
+  - **Not counted:**
+    - requests while signup is off;
+    - unauthenticated requests (401 before the handler);
+    - requests refused by a rate limit or by the cap itself. Counting those
+      would let one client hold the cap closed indefinitely; the rate
+      limits bound how fast any one user or address can feed the counter.
+  - **Reset behaviour:** a rolling window, not a calendar day. An attempt
+    stops counting exactly 24 hours after it was recorded, so capacity
+    frees up gradually.
+  - **Why not the SaaS-OS limiter:** its counter is fixed-window
+    (`saas_os.infra.ratelimit.limiter`: "Fixed-window counter, not a
+    sliding-window"), so it cannot provide a rolling window. The count
+    therefore needs a product-side store: a timestamp-only attempt record
+    (no personal data) counted under a global advisory lock. Postgres is
+    the preferred store; a Redis sorted set is the alternative (Stage C).
+  - **Unavailability:** if the counter store is unavailable, the request is
+    refused (503) and nothing is provisioned.
+- **Confirm with the owner:** whether attempts refused by the rate limits or
+  the cap should also count (§7, LG-6).
 
 **Rate limiting.** SaaS-OS limiter keys `signup:user:<id>` and
 `signup:client:<address>`, the address from `resolve_client_address`. Both
@@ -221,6 +265,42 @@ before its migration:**
     SELECT/INSERT/UPDATE, and every query scoped by the session's user ID.
 - Either way, tests must show one user can neither read nor change
   another's signups through the API or the repository.
+
+**§4a. Signup-table security: investigation (2026-10-24; owner decision
+pending).** Facts at the pin and in this repository:
+
+1. Product RLS today is SaaS-OS's `tenant_rls_statements`: one permissive
+   policy on `app.tenant_id`, set transaction-locally by SaaS-OS's tenant
+   session (`saas_os/infra/db/rls.py`, `session.py`). SaaS-OS sets **no**
+   per-user database setting.
+2. SaaS-OS exports `tenant_context_exclusion_statements` (public
+   `saas_os.infra.db`). It is a forced-RLS policy that makes rows visible
+   only in a transaction with **no** tenant context, used for its own
+   platform tables. It keeps signup rows out of every tenant-scoped
+   transaction, but on its own lets any non-tenant transaction read every
+   user's rows.
+3. This repository's guard treats every table with a `tenant_id` column as
+   tenant-owned: it must have the tenant policy and be covered by the purge
+   participant. A table declared global must *not* have `tenant_id`
+   (`tests/catalog_rules.py`). The guard also requires exactly
+   SELECT/INSERT/UPDATE/DELETE for the runtime role on every product table.
+   A signup row that records its new workspace therefore needs a guard
+   rule written for this case, not a renamed column to slip past the
+   existing rule.
+4. A foreign key from a signup row to `core.tenants` would block SaaS-OS's
+   purge of that tenant. Signup rows must be removed or detached by the
+   purge participant, or reference the tenant without a foreign key.
+
+Options:
+
+| Option | Access model | Trade-offs |
+| --- | --- | --- |
+| **A (recommended)** | Forced RLS. SaaS-OS's `tenant_context_exclusion_statements` policy, plus a **restrictive** product policy `user_id = current_setting('crm_app.signup_user_id')::uuid`, set transaction-locally by the signup repository from the session's user only. The recovery job sets it per row in its own transaction. Workspace ID column named for what it is, with a new guard rule for "pre-tenant global" tables (exactly these two policies, the CRUD rule, and inclusion in the purge participant). | Defence in depth matching the tenant pattern. Needs tests for connection reuse, a missing setting, a foreign setting and tenant-context exclusion. The setting is application-controlled, like `app.tenant_id`, so it guards against query mistakes, not against compromised application code. |
+| B | No RLS; exact privileges; every query scoped by the session's user ID in code. | Simplest, but it is the "casual exemption" S-1 rules out; isolation rests on code review alone. |
+| C | No pre-tenant table: create the tenant first and keep the state in a normal tenant-owned table. | Fails the recoverability requirement: a crash between creating the tenant and recording it leaves an orphan workspace no one can find, and "my open signup" needs a query across tenants. |
+
+The platform attempt counter (above) holds timestamps only and no user or
+tenant reference. Under option A it uses the exclusion policy alone.
 
 **Recovery.** A worker cron job resumes signups that have not finished
 after a threshold, using the same service. After a bounded number of
@@ -301,7 +381,7 @@ proves both:
 
 | Stage | Depends on | Content | Acceptance criteria |
 | --- | --- | --- | --- |
-| **A. Security and configuration** | S-1 | A1 L4 investigation (done, §5). A2 `SIGNUP_ENABLED` (default off) and both limits, with start-up rules (done). A3 the application and edge rate-limit requirements (written: §4, LG-5). A4 local ZITADEL registration, email verification and Mailpit as ZITADEL's SMTP, by script and documented in the README; registration stays off unless explicitly enabled for local testing. | A1/A2: unit tests pass (`tests/unit/test_settings.py`); production refuses the switch. A4: locally, with Mailpit, a new person registers, receives a code in Mailpit, verifies, returns to `/app` with `verified_email`; unverified sign-in is refused; password reset email arrives; existing sign-in, sign-out and invitation acceptance still pass (identity test plus browser). |
+| **A. Security and configuration** | S-1 | A1 L4 investigation (done, §5). A2 `SIGNUP_ENABLED` (default off) and both limits with the owner's defaults (done, S-1.1). A3 the application and edge rate-limit requirements (written: §4, LG-5). A4 local ZITADEL registration, email verification and Mailpit as ZITADEL's SMTP, by script and documented in the README; registration stays off unless explicitly enabled for local testing. | A1/A2: unit tests pass (`tests/unit/test_settings.py`); production refuses the switch. A4: locally, with Mailpit, a new person registers, receives a code in Mailpit, verifies, returns to `/app` with `verified_email`; unverified sign-in is refused; password reset email arrives; existing sign-in, sign-out and invitation acceptance still pass (identity test plus browser). |
 | **B. Provisioning foundation** | A2 | Extract the steps of `provision.py` into a shared service. The operator CLI keeps its behaviour and output. The signup variant activates last, never accepts a parent, and seeds `workspace_settings` only if a decision asks for it. | `test_provision.py` unchanged and green. New tests: interruption after each step resumes correctly; two concurrent provisions of the same signup create one tenant; before activation the new tenant refuses every product action; after it, the Owner passes `can()` for `membership_role:create` and `crm_app.owner:manage` and counts as an administrator under ADR-0043. |
 | **C. Signup backend** | B; security review of the §4 table design | Migration for `crm_app.signup` (declared global, chosen access model); `POST /v1/signups`, `GET /v1/signups/current`; limits; rate limits; recovery and expiry job; structured events. | Integration tests: success; replay with the same key; a different key while one is open; parallel requests produce one workspace; per-user and daily caps hold under parallel requests; unverified session refused; kill switch off returns 404; limiter down returns 503; forged `parent_id`, `role`, `user_id` or `tenant_id` fields refused; cross-user read and write refused at API and repository level; cross-tenant isolation of the new workspace; crash at each step then resume; expiry after 7 days; logs and errors contain no email, token, code or workspace name; acceptance of an invitation creates no signup or tenant. |
 | **D. Frontend** | C | **Create account** on the sign-in screen (to `/auth/login`); the workspace-name step; progress, error, limit and kill-switch states; entry into the workspace. | Vitest for every state, axe clean; no input that collects credentials anywhere; invitation precedence; browser check at desktop and 390 px; sign-out unchanged. |
@@ -319,7 +399,7 @@ evidence. Start-up validation enforces this in code (`settings.py`).
 | LG-3 | The shared customer ZITADEL organisation verified: registration lands only there; console and administrative roles are not granted to customers; login policy, lockout and `ignoreUnknownUsernames` apply to it | **Open: plan only** |
 | LG-4 | Owner MFA: the mechanism (for example ZITADEL `forceMfa` for the customer organisation, or a LeadStack check of the session's `multi_factor` before Owner actions) and its verification | **Open: mechanism not chosen** |
 | LG-5 | Production edge: the application reachable only through the edge; L4 verified closed there (§5); edge rate limiting on `/ui/v2/login/register*`, `/auth/*` and `/v1/signups`; a WAF or equivalent bot protection deployed; CAPTCHA evaluated, not assumed | **Open** |
-| LG-6 | Final numbers for `SIGNUP_MAX_WORKSPACES_PER_USER` and `SIGNUP_MAX_PER_DAY`. The repository has no convention to derive them from, so there are no defaults; the switch cannot be turned on without them | **Open: owner to set** |
+| LG-6 | Signup limits | **Set (S-1.1):** 5 workspaces per user, 100 attempts per rolling 24 hours, as defaults. Owner to confirm the counting rule in §4 (refused-by-limit requests not counted); revisit once real use and abuse have been observed. |
 | LG-7 | Abandoned identities: default is manual operator review, no automatic deletion; any deletion needs a separate decision (ADR-0023) | **Default recorded; deletion not approved** |
 | LG-8 | ZITADEL behaviour not yet proven locally: `EMAIL_VERIFICATION` enforcement; whether registration reveals an existing email (enumeration); whether the organisation scope selects the registration organisation; reported Login V2 registration defects (ZITADEL issues #12072, #11857) | **Open: Stage A4 tests** |
 | LG-9 | Security review of the signup surface (Stage E) without open Critical or High findings | **Open** |

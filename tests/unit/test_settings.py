@@ -8,7 +8,13 @@ from pathlib import Path
 import pytest
 from saas_os.infra.secrets import get_secrets_provider
 
-from crm_app.settings import ConfigurationError, Process, signup_enabled, validate_settings
+from crm_app.settings import (
+    ConfigurationError,
+    Process,
+    signup_enabled,
+    signup_limit,
+    validate_settings,
+)
 from tests.support import CONFIG_NAMES, PLACEHOLDER_SETTINGS
 
 MARKER = "do-not-leak-7f3a"
@@ -245,13 +251,8 @@ def test_the_end_session_endpoint_is_optional_and_checked_when_set() -> None:
 
 # --- Self-service signup (decision S-1, docs/project/SIGNUP-PLAN.md) -----------
 
-SIGNUP_ON = {
-    **PLACEHOLDER_SETTINGS,
-    "SIGNUP_ENABLED": "true",
-    "SIGNUP_MAX_WORKSPACES_PER_USER": "3",
-    "SIGNUP_MAX_PER_DAY": "50",
-    "TRUST_PROXY_HEADERS": "true",
-}
+SIGNUP_ON = {**PLACEHOLDER_SETTINGS, "SIGNUP_ENABLED": "true", "TRUST_PROXY_HEADERS": "true"}
+LIMITS = ("SIGNUP_MAX_WORKSPACES_PER_USER", "SIGNUP_MAX_ATTEMPTS_PER_24H")
 
 
 def test_signup_is_off_unless_switched_on() -> None:
@@ -266,22 +267,27 @@ def test_signup_is_off_unless_switched_on() -> None:
     ]
 
 
-def test_switching_signup_on_needs_both_limits_and_the_trusted_proxy() -> None:
+def test_switching_signup_on_needs_the_trusted_proxy() -> None:
     _validate(Process.APP, SIGNUP_ON)
-    bare = {**PLACEHOLDER_SETTINGS, "SIGNUP_ENABLED": "true"}
-    assert _problems(Process.APP, bare) == [
-        "SIGNUP_ENABLED=true needs SIGNUP_MAX_WORKSPACES_PER_USER.",
-        "SIGNUP_ENABLED=true needs SIGNUP_MAX_PER_DAY.",
-        "SIGNUP_ENABLED=true needs TRUST_PROXY_HEADERS=true behind the edge proxy.",
-    ]
-    assert _problems(Process.APP, {**SIGNUP_ON, "TRUST_PROXY_HEADERS": "false"}) == [
-        "SIGNUP_ENABLED=true needs TRUST_PROXY_HEADERS=true behind the edge proxy."
-    ]
+    for value in ("false", ""):
+        assert _problems(Process.APP, {**SIGNUP_ON, "TRUST_PROXY_HEADERS": value}) == [
+            "SIGNUP_ENABLED=true needs TRUST_PROXY_HEADERS=true behind the edge proxy."
+        ]
+
+
+def test_signup_limits_default_to_the_owners_initial_values_and_can_be_changed() -> None:
+    # Decision S-1.1: 5 workspaces per user, 100 attempts per rolling 24 hours.
+    assert signup_limit("SIGNUP_MAX_WORKSPACES_PER_USER", {}) == 5
+    assert signup_limit("SIGNUP_MAX_ATTEMPTS_PER_24H", {}) == 100
+    changed = {"SIGNUP_MAX_WORKSPACES_PER_USER": "2", "SIGNUP_MAX_ATTEMPTS_PER_24H": " 40 "}
+    _validate(Process.APP, {**SIGNUP_ON, **changed})
+    assert signup_limit("SIGNUP_MAX_WORKSPACES_PER_USER", changed) == 2
+    assert signup_limit("SIGNUP_MAX_ATTEMPTS_PER_24H", changed) == 40
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "two", "1.5", "²", "٣"])
 def test_signup_limits_must_be_positive_whole_numbers(value: str) -> None:
-    for name in ("SIGNUP_MAX_WORKSPACES_PER_USER", "SIGNUP_MAX_PER_DAY"):
+    for name in LIMITS:
         # Checked even while signup is off, so a bad value never waits to surface.
         assert _problems(Process.APP, {**PLACEHOLDER_SETTINGS, name: value}) == [
             f"{name} must be a whole number of at least 1."

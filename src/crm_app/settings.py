@@ -244,9 +244,22 @@ def _check_invitation_delivery(env: Mapping[str, str]) -> list[str]:
 _TRUE = frozenset({"1", "true", "yes", "on"})
 _FALSE = frozenset({"0", "false", "no", "off"})
 
-# Self-service signup (decision S-1, docs/project/SIGNUP-PLAN.md). Both limits
-# have no default: whoever turns signup on chooses them (launch gate LG-6).
-SIGNUP_LIMITS = ("SIGNUP_MAX_WORKSPACES_PER_USER", "SIGNUP_MAX_PER_DAY")
+# Self-service signup limits (decision S-1.1, docs/project/SIGNUP-PLAN.md §4),
+# with the owner's initial values. Ceilings against abuse, not targets: they
+# are adjusted once legitimate use and abuse have been observed.
+SIGNUP_LIMITS = {
+    # Workspaces one user may hold through signup (open signups included).
+    "SIGNUP_MAX_WORKSPACES_PER_USER": 5,
+    # Signup attempts across the platform in any rolling 24 hours.
+    "SIGNUP_MAX_ATTEMPTS_PER_24H": 100,
+}
+
+
+def signup_limit(name: str, env: Mapping[str, str] | None = None) -> int:
+    """The configured value of one of `SIGNUP_LIMITS`, or its default.
+    Start-up validation has already refused anything but a whole number >= 1."""
+    raw = (os.environ if env is None else env).get(name, "").strip()
+    return int(raw) if raw else SIGNUP_LIMITS[name]
 
 
 def _flag(env: Mapping[str, str], name: str) -> bool | None:
@@ -271,8 +284,6 @@ def _check_signup(env: Mapping[str, str], *, production: bool) -> list[str]:
         raw = env.get(name, "").strip()
         if raw and not (raw.isascii() and raw.isdigit() and int(raw) >= 1):
             problems.append(f"{name} must be a whole number of at least 1.")
-        elif not raw and enabled:
-            problems.append(f"SIGNUP_ENABLED=true needs {name}.")
     if not enabled:
         return problems
     if production:

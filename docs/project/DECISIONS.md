@@ -1021,6 +1021,37 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not approved:** a ZITADEL administrative API integration; automatic
   identity deletion; enabling signup in production; any SaaS-OS change.
 
+## S-1.1 — Signup limits and local registration testing (approved 2026-10-24)
+
+- **Status:** Approved by the owner, 2026-10-24. Amends S-1. Supersedes
+  the setting name `SIGNUP_MAX_PER_DAY` and S-1's "the limits have no
+  defaults"; every other part of S-1 stands.
+- **Decisions:**
+  1. **Initial limits**, configurable, enforced on the server, failing
+     closed:
+     - `SIGNUP_MAX_WORKSPACES_PER_USER` = **5**;
+     - `SIGNUP_MAX_ATTEMPTS_PER_24H` = **100** signup attempts across the
+       platform per **rolling** 24 hours.
+
+     These are abuse ceilings, not targets or guarantees. They are adjusted
+     after observing legitimate use and abuse. Attempts that fail after
+     reaching the endpoint count, so repeated failures cannot evade the
+     cap. Retries, concurrent requests and different workspace details
+     cannot bypass either limit. The counting and reset rules are in
+     `SIGNUP-PLAN.md` §4.
+  2. **Local Stage A4 approved:** ZITADEL registration, email verification
+     and ZITADEL email through the local Mailpit, in local development
+     only. No production identity or email change; `SIGNUP_ENABLED` is
+     not set.
+- **Implemented (2026-10-24):** the defaults and the rename in
+  `crm_app.settings`, with unit tests. The local Stage A4 setup is not
+  yet in the repository.
+- **Pending owner decisions:**
+  - whether requests refused by the rate limits or by the cap itself also
+    count as attempts (`SIGNUP-PLAN.md` §4 proposes not);
+  - the signup-table access model (`SIGNUP-PLAN.md` §4a, option A
+    recommended).
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project
