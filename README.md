@@ -130,6 +130,35 @@ not signup is on:
 uv run python -m crm_app.signup_maintenance
 ```
 
+**Trying LeadStack branding on the login pages** (local only; off unless you
+opt in). Sets LeadStack's colours and logo (`deploy/local/branding/`), hides
+ZITADEL's watermark and the login-name suffix, and replaces every English
+Login V2 text that names Zitadel:
+
+```bash
+ZITADEL_LOCAL_BRANDING=leadstack uv run python deploy/local/configure-zitadel.py
+```
+
+`ZITADEL_LOCAL_BRANDING=default` restores ZITADEL's own branding and texts.
+Only English is overridden; Login V2's other languages still name Zitadel.
+The layout stays Login V2's centred card: its `NEXT_PUBLIC_THEME_*` layout
+options are fixed when the published image is built and are ignored at run
+time (tried with v4.19.5).
+
+**LeadStack's own sign-in pages** (decision S-2). The `crm-app-login`
+repository builds Login V2 with LeadStack's layout and a one-page sign-in
+form. Build it there (`scripts/build.sh`, which makes the image
+`crm-app-login:dev`), then run it here in place of ZITADEL's image:
+
+```bash
+ZITADEL_LOGIN_IMAGE=crm-app-login:dev docker compose -f deploy/local/compose.yaml \
+  --env-file .env --profile identity up -d --wait zitadel-login
+```
+
+Without `ZITADEL_LOGIN_IMAGE` the published `zitadel-login` image runs, as
+before. Opening `/app` without a session goes straight to the sign-in page,
+except right after signing out in the same tab.
+
 `deploy/local/.bootstrap/` holds ZITADEL's bootstrap token and is never
 committed. `docker compose ... down -v` deletes every local volume, including
 ZITADEL's, after which the client ID changes.

@@ -1096,6 +1096,68 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Recorded gap:** SaaS-OS v0.5.0 does not export `system_cron`, so
   maintenance is a scheduled command rather than a worker cron job.
 
+## S-2 — LeadStack's own build of the sign-in pages (approved 2026-10-25)
+
+- **Status:** Approved by the owner, 2026-10-25, after a local trial showed
+  that ZITADEL's settings change colours, logo and texts but not the layout,
+  and cannot put login name and password on one page.
+- **Decisions:**
+  1. **Own build of Login V2:** the sign-in pages are ZITADEL's Login V2 at
+     the same release as ZITADEL, built with a small set of LeadStack files
+     laid over it. It is a separate private repository, `crm-app-login`
+     (neutral name, decision K4), producing the image that replaces
+     `zitadel-login`. The overlay keeps sign-in itself unchanged: the
+     one-form page calls Login V2's own server actions, so user lookup,
+     enumeration protection, lockout, email verification and second factors
+     stay ZITADEL's, and passwords never reach crm-app (ADR-0025 holds;
+     ADR-0026 stays rejected).
+  2. **One page:** login name and password on one form, in the design's
+     sign-in layout, on every Login V2 page. Upstream's two-step page stays
+     available for passkeys and other methods.
+  3. **The start page goes straight to sign-in:** `/app` without a session
+     sends the browser to `/auth/login` by itself, except after a sign-out
+     in that tab (the provider session might still be alive) and at most
+     once per 10 seconds (no loop).
+  4. **Updates:** a weekly workflow in `crm-app-login` opens a pull request
+     for each new ZITADEL release with the build result and release notes.
+     The build refuses a changed licence or a changed upstream file the
+     overlay replaces. Merging, the matching ZITADEL image change in
+     crm-app and deployment stay manual. Chosen instead of Renovate or
+     Dependabot: no third-party app, and the check needs the build anyway.
+- **Implemented (2026-10-25):**
+  - in crm-app (committed):
+    - `ZITADEL_LOGIN_IMAGE` in `deploy/local/compose.yaml`; the default
+      stays ZITADEL's published image;
+    - the start-page redirect (`frontend/src/api/signInRedirect.ts`) with
+      tests. A confirmed session clears the sign-out mark, so a later
+      expiry in the same tab redirects again;
+    - the opt-in local branding of Login V2 through ZITADEL's settings
+      (`deploy/local/configure-zitadel.py`, `ZITADEL_LOCAL_BRANDING`);
+  - `crm-app-login`: a local git repository with no remote, built and
+    verified locally only. Creating its GitHub repository, running its
+    workflows and publishing its image each need separate approval.
+- **Pending:**
+  - browser tests of the full sign-in journey in CI (Playwright, approved);
+  - where the image is published for deployment;
+  - the GitHub repository for `crm-app-login`.
+
+## S-2.L — Licence of the sign-in build (recorded 2026-10-25)
+
+- **Fact:** at v4.19.5 ZITADEL's `LICENSING.md` puts the repository under
+  AGPL-3.0-only, except `apps/login/`, `packages/zitadel-client/` and
+  `packages/zitadel-proto/`, which are MIT (and `proto/`, Apache-2.0).
+- **Consequence:**
+  - `crm-app-login` changes only MIT-licensed code, so its changes may stay
+    private. The duty is to keep ZITADEL's copyright and licence notice:
+    `LICENSES/zitadel-login-MIT.txt` in the repository and
+    `/app/LICENSE.zitadel-login` in the image.
+  - ZITADEL itself (AGPL-3.0) runs unmodified as a separate service, so it
+    creates no obligation for crm-app.
+- **Guard:** the build stops if a future `LICENSING.md` no longer lists
+  those three paths as MIT (`scripts/check-licence.sh`); the owner then
+  decides.
+- This is a reading of the published licence file, not legal advice.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

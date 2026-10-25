@@ -1,10 +1,74 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { beforeEach, describe, expect, it, type MockInstance, onTestFinished, vi } from "vitest";
 
+import { markSignedOut, signInNavigation } from "../api/signInRedirect";
 import { accessibilityViolations, type Handler, renderApp } from "../test/render";
 
 const signedOut: Handler = () => ({ status: 401, body: { detail: "Not authenticated" } });
+
+let leave: MockInstance<(url: string) => void>;
+beforeEach(() => {
+  sessionStorage.clear();
+  leave = vi.spyOn(signInNavigation, "leave").mockImplementation(() => undefined);
+  onTestFinished(() => {
+    leave.mockRestore();
+  });
+});
+
+describe("start page without a session (decision S-2)", () => {
+  it("sends the visitor straight on to the sign-in page, once", async () => {
+    renderApp("/", signedOut);
+    await waitFor(() => {
+      expect(leave).toHaveBeenCalledWith("/auth/login");
+    });
+    expect(leave).toHaveBeenCalledTimes(1);
+    // The link stays usable while the browser leaves.
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
+  });
+
+  it("stays after a sign-out in this tab, and following the link clears that", async () => {
+    const user = userEvent.setup();
+    markSignedOut();
+    renderApp("/", signedOut);
+    const link = await screen.findByRole("link", { name: "Sign in" });
+    expect(leave).not.toHaveBeenCalled();
+    const stop = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+    document.addEventListener("click", stop);
+    onTestFinished(() => {
+      document.removeEventListener("click", stop);
+    });
+    await user.click(link);
+    expect(sessionStorage.getItem("crm.signedOut")).toBeNull();
+  });
+
+  it("does not send the visitor on again within 10 seconds", async () => {
+    sessionStorage.setItem("crm.signInRedirectAt", String(Date.now() - 2000));
+    renderApp("/", signedOut);
+    await screen.findByRole("link", { name: "Sign in" });
+    expect(leave).not.toHaveBeenCalled();
+  });
+
+  it("does not leave when the session check fails", async () => {
+    renderApp("/", (_, path) => (path === "/auth/me" ? { status: 503, body: { detail: "Unavailable" } } : undefined));
+    await screen.findByRole("alert", {}, { timeout: 8000 });
+    expect(leave).not.toHaveBeenCalled();
+  }, 15000);
+
+  it("never leaves a signed-in person, and a confirmed session clears the sign-out mark", async () => {
+    markSignedOut();
+    renderApp("/", (_, path) => {
+      if (path === "/auth/me") return { status: 200, body: { user_id: "u" } };
+      if (path === "/v1/workspaces") return { status: 200, body: { items: [] } };
+      return undefined;
+    });
+    expect(await screen.findByRole("heading", { name: "Your workspaces" })).toBeVisible();
+    expect(leave).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem("crm.signedOut")).toBeNull();
+  });
+});
 
 describe("sign-in screen", () => {
   it("offers the branded sign-in to a visitor without a session", async () => {
@@ -32,6 +96,7 @@ describe("sign-in screen", () => {
 
   it("says it is leaving for the sign-in page and ignores a second click", async () => {
     const user = userEvent.setup();
+    markSignedOut(); // the screen stays, as after a sign-out
     renderApp("/", signedOut);
     const link = await screen.findByRole("link", { name: "Sign in" });
     // jsdom does not navigate; record whether each click was let through,
@@ -106,6 +171,8 @@ describe("sign-in screen", () => {
       expect(sent.map((s) => `${s.method} ${s.path}`)).toContain("GET /v1/sign-out-url");
     });
     expect(sent.map((s) => `${s.method} ${s.path}`)).toContain("POST /auth/logout");
+    // Signed out on purpose: the start page must not sign in again by itself.
+    expect(leave).not.toHaveBeenCalled();
   });
 });
 

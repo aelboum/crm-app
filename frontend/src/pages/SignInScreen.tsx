@@ -2,6 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
 
 import type { useMe } from "../api/queries";
+import { clearSignedOut, LOGIN_PATH, shouldRedirectToSignIn, signInNavigation } from "../api/signInRedirect";
 import { Button } from "../components/ui/Button";
 import { useT } from "../i18n/useT";
 
@@ -13,9 +14,12 @@ import { useT } from "../i18n/useT";
  * self-service signup, which decision P2-C excludes; credentials are never
  * entered here (SaaS-OS ADR-0026 was rejected), so the one action starts the
  * existing OIDC flow at /auth/login and ZITADEL's own pages take over.
+ * With `redirect` (the start page, decision S-2) the screen leaves for the
+ * sign-in page by itself when there is no session, unless
+ * shouldRedirectToSignIn() says otherwise.
  */
 
-const LOGIN = "/auth/login";
+const LOGIN = LOGIN_PATH;
 
 function isPlainClick(event: MouseEvent) {
   return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
@@ -47,6 +51,7 @@ function SignInLink() {
             event.preventDefault();
             return;
           }
+          clearSignedOut();
           if (isPlainClick(event)) setLeaving(true);
         }}
       >
@@ -66,6 +71,7 @@ export function SignInScreen({
   title,
   body,
   notice,
+  redirect = false,
 }: {
   /** The session check; while it runs or fails the screen says so. */
   me: ReturnType<typeof useMe>;
@@ -73,8 +79,14 @@ export function SignInScreen({
   body?: string | undefined;
   /** Shown above the sign-in action, e.g. why a link cannot be used. */
   notice?: ReactNode;
+  /** Leave for the sign-in page by itself when there is no session. */
+  redirect?: boolean;
 }) {
   const t = useT();
+  const signedOut = me.isSuccess && me.data === null;
+  useEffect(() => {
+    if (redirect && signedOut && shouldRedirectToSignIn()) signInNavigation.leave(LOGIN);
+  }, [redirect, signedOut]);
   let content;
   if (me.isPending) {
     content = (

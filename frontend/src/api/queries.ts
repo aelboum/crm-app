@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError, type Role, unwrap } from "./client";
 import { forgetInvitation } from "./pendingInvitation";
+import { clearSignedOut, markSignedOut } from "./signInRedirect";
 import type { components } from "./schema";
 
 export const PAGE_SIZE = 50;
@@ -22,7 +23,10 @@ export function useMe() {
     queryFn: async () => {
       const result = await api.GET("/auth/me");
       if (result.response.status === 401) return null;
-      return unwrap(result);
+      const me = unwrap(result);
+      // Signed in again, however it happened: a later expiry may redirect.
+      clearSignedOut();
+      return me;
     },
   });
 }
@@ -140,6 +144,7 @@ export function useSignOut() {
       client.clear();
       client.setQueryData(keys.me, null);
       forgetInvitation();
+      markSignedOut();
     },
   });
 }

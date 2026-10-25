@@ -171,7 +171,10 @@ services:
 
   zitadel-login:
     profiles: ["identity"]
-    image: ghcr.io/zitadel/zitadel-login:v4.19.5@sha256:2f8e57672fcd4f9a285d99355fae9f85fd7495768c090c07c3bbc2d84fc06617
+    # ZITADEL's published Login V2 by default; ZITADEL_LOGIN_IMAGE selects
+    # crm-app's LeadStack-styled build of the same release instead (decision
+    # S-2; the crm-app-login repository, README.md "Local identity").
+    image: ${ZITADEL_LOGIN_IMAGE:-ghcr.io/zitadel/zitadel-login:v4.19.5@sha256:2f8e57672fcd4f9a285d99355fae9f85fd7495768c090c07c3bbc2d84fc06617}
     environment:
       ZITADEL_API_URL: http://zitadel:8080
       NEXT_PUBLIC_BASE_PATH: /ui/v2/login

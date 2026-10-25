@@ -89,7 +89,7 @@ export function HomePage() {
   const t = useT();
   const me = useMe();
   if (!me.data) {
-    return <SignInScreen me={me} title={t("home.signedOut.title")} body={t("home.signedOut.body")} />;
+    return <SignInScreen me={me} title={t("home.signedOut.title")} body={t("home.signedOut.body")} redirect />;
   }
   const waiting = pendingInvitation();
   return (

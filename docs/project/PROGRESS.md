@@ -120,6 +120,61 @@ decisions P2-A to P2-E approved)
   - **Local:** the development database has migration 0006, and the API
     was restarted with `SIGNUP_ENABLED` unset.
 
+- **LeadStack sign-in pages (decision S-2, 2026-10-25; the crm-app part
+  committed, `crm-app-login` local only):**
+  - **What exists:** `crm-app-login` is a local repository with no remote.
+    It builds Login V2 v4.19.5 with a LeadStack overlay: 4 replaced and 6
+    new files, the one-page form and the design's layout on every page.
+  - **The image build** (`crm-app-login:dev`) checks the commit, the MIT
+    licence and the hashes of the 4 replaced upstream files. Upstream's
+    TypeScript check runs as part of it.
+  - **Verified in Chrome against the local stack**, using a throwaway test
+    user:
+    - the wrong password gets the generic "Failed to authenticate.";
+    - the right one leads to email verification, then back to `/app`
+      signed in;
+    - pressing Enter on the one form signs in;
+    - the layout at 1440 px and at a 390 px phone width, with no sideways
+      scrolling;
+    - no visible "Zitadel" in English, Dutch, German or French;
+    - `/app` without a session goes straight to sign-in;
+    - after a sign-out it stays on the sign-in screen;
+    - the image answers its health check;
+    - "Forgot password?" with no login name asks for one; with one, it
+      sends the code and opens "Set Password" in the layout. The new
+      password was not set.
+  - **Design match:** the first page now follows the account step of
+    `LeadStack Signup.dc.html`, checked against computed styles:
+    - `#F4F5F7` page, content in a 560 px column starting at the top;
+    - the Geist Mono label, then a 26 px heading;
+    - a provider button with the "or with email" rule;
+    - 40 px fields;
+    - the action bar with the primary button and arrow on the right, then
+      the line about creating an account.
+
+    Deliberate differences:
+    - no step rail, since sign-in has no steps;
+    - Google and Microsoft appear only once configured in ZITADEL, so a
+      passkey button takes their place;
+    - the language picker stays;
+    - a brand bar below 760 px.
+
+    Signing in, and the message for a missing field, were rechecked after
+    the change.
+  - **crm-app's frontend:** 84 tests pass, lint and type check are clean,
+    and the build succeeds. The extra test covers the fix from the S-2
+    review: a confirmed session clears the sign-out mark.
+  - **Not verified:**
+    - passkeys and other methods, through `flow=steps`;
+    - completing a password reset;
+    - lockout reached through the one form;
+    - registration through the new layout;
+    - Firefox, Safari, a real phone and a screen reader.
+  - **Not run:** the CI workflows (there's no remote), and browser tests
+    in CI (not written yet).
+  - **Unchanged:** sign-out still stops on ZITADEL's "choose the account"
+    page (P2-G residual, Low).
+
 ## Repository state
 
 - **Directory:** `C:\Users\imran\Documents\crm-app`, branch `main`.
