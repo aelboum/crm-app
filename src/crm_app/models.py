@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0005_invitation_intent` own the
+Migrations `0002_contacts_companies` to `0006_signup` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -182,3 +182,28 @@ class InvitationIntent(Base):
     invited_by_user_id: Mapped[uuid.UUID] = mapped_column()
     delivery: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Signup(Base):
+    """One person's request to create a workspace, while it is provisioned
+    (migration 0006, decision S-1). A pre-tenant global table: forced RLS
+    limits every row to the person in `crm_app.signup_user_id`
+    (`crm_app.signups`). No email, password or token."""
+
+    __tablename__ = "signup"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column()
+    idempotency_key: Mapped[str] = mapped_column(Text)
+    request_fingerprint: Mapped[str] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(Text)
+    step: Mapped[str] = mapped_column(Text)
+    workspace_name: Mapped[str | None] = mapped_column(Text)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column()
+    step_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer)
+    last_error_code: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

@@ -421,6 +421,8 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "activity",
         "workspace_settings",
         "invitation_intent",
+        "signup",
+        "signup_attempt",
     }
     for key, record in (("company_id", company), ("contact_id", contact)):
         rows = owner_connection.execute(

@@ -1052,6 +1052,50 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   - the signup-table access model (`SIGNUP-PLAN.md` §4a, option A
     recommended).
 
+## S-1.2 — Signup table, counting rule and Stage C (approved 2026-10-25)
+
+- **Status:** Approved by the owner, 2026-10-25.
+- **Decisions:**
+  1. **Signup-table access, option A** (`SIGNUP-PLAN.md` §4a, §4b):
+     - forced RLS;
+     - SaaS-OS's exclusion policy stays;
+     - restrictive policies limit every row to the signed-in person;
+     - no fallback to application queries without RLS.
+
+     Implementation detail within option A: the maintenance flag may read,
+     never write; jobs act as each row's own person.
+  2. **Counting rule for the rolling 24-hour cap:**
+     - a request counts once it passes the first per-user or per-address
+       rate limit and reaches the signup operation, even if validation,
+       verification or provisioning fails;
+     - requests refused by those limiters, or only by the cap already
+       being reached, do not count;
+     - check and increment are atomic and safe under concurrency, and an
+       unavailable counter refuses the request.
+  3. **Stage C approved,** after the security review and the negative
+     tests pass, including the shared provisioning service (Stage B).
+     Activation happens only after the membership, the Owner role and
+     the Owner's effective permissions are created and checked.
+- **Not approved:**
+  - automatic creation or deletion of ZITADEL users through an
+    administrative API;
+  - turning signup on in production;
+  - any SaaS-OS change or pin move.
+
+  `SIGNUP_ENABLED` stays off by default.
+- **Implemented (2026-10-25), uncommitted:**
+  - migration `0006_signup` with `crm_app.signup` and
+    `crm_app.signup_attempt`;
+  - code: `crm_app.provisioning`, `crm_app.signups`,
+    `crm_app.api.signups`, `crm_app.signup_maintenance` and
+    `crm_app.domains.signup`;
+  - the guard rules for global tables;
+  - the purge participant step.
+
+  Evidence is in `SIGNUP-PLAN.md` §4b and `PROGRESS.md`.
+- **Recorded gap:** SaaS-OS v0.5.0 does not export `system_cron`, so
+  maintenance is a scheduled command rather than a worker cron job.
+
 ## Ledger of other recorded facts
 
 - **2026-10-20:** Claude Design project

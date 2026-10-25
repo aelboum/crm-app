@@ -60,6 +60,22 @@ PURGE_TABLES: tuple[str, ...] = (
 _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 
 
+# Global tables that name a workspace without a tenant_id or a foreign key
+# (a key into core.tenants would block the purge): the participant removes
+# their rows for the purged workspace after the tenant tables, outside any
+# tenant context, because their RLS hides them from every tenant
+# transaction (migration 0006, `SIGNUP-PLAN.md` §4b).
+PURGE_GLOBAL_REFERENCES: tuple[str, ...] = ("signup",)
+
+
+def _forget_signups(tenant_id: uuid.UUID) -> None:
+    from crm_app import signups  # noqa: PLC0415
+
+    signups.forget_workspace(tenant_id)
+    if signups.remaining_for_workspace(tenant_id):
+        raise PurgeIncompleteError("Rows remain in: signup")
+
+
 class PurgeIncompleteError(RuntimeError):
     """Rows of the purged workspace are still present after deletion. SaaS-OS
     records only this type name (`participant_error`) and leaves the
@@ -77,8 +93,10 @@ class CrmDataPurgeParticipant:
     Every statement runs in one `tenant_session_scope(tenant_id)`
     transaction, so forced Row-Level Security confines it to the purged
     workspace; the explicit `tenant_id` predicate is defence in depth. After
-    deleting, it re-reads every table and raises if a row remains.
-    Idempotent: a re-run finds nothing and succeeds.
+    deleting, it re-reads every table and raises if a row remains. Then,
+    for each table in `global_references`, it removes the rows naming the
+    workspace in transactions without a tenant (`PURGE_GLOBAL_REFERENCES`)
+    and checks none remain. Idempotent: a re-run finds nothing and succeeds.
     """
 
     def __init__(
@@ -87,13 +105,18 @@ class CrmDataPurgeParticipant:
         *,
         schema: str = SCHEMA,
         name: str = PARTICIPANT_NAME,
+        global_references: Sequence[str] = (),
     ) -> None:
         for identifier in (schema, *tables):
             if not _IDENTIFIER.fullmatch(identifier):
                 raise ValueError(f"Not a plain SQL identifier: {identifier!r}")
+        unknown = set(global_references) - set(PURGE_GLOBAL_REFERENCES)
+        if unknown:
+            raise ValueError(f"No purge step for global table(s): {sorted(unknown)}")
         self._tables = tuple(tables)
         self._schema = schema
         self._name = name
+        self._global_references = tuple(global_references)
 
     @property
     def name(self) -> str:
@@ -114,6 +137,8 @@ class CrmDataPurgeParticipant:
             remaining = [t for t in self._tables if self._has_rows(session, t, tenant_id)]
             if remaining:
                 raise PurgeIncompleteError(f"Rows remain in: {', '.join(remaining)}")
+        if "signup" in self._global_references:
+            _forget_signups(tenant_id)
 
     def _table(self, table: str) -> Any:  # a SQLAlchemy Table; typed loosely to keep SQLAlchemy out
         from saas_os.infra.db import Base  # noqa: PLC0415
@@ -142,7 +167,7 @@ class CrmDataPurgeParticipant:
 
 # One instance per process: registering the same object again is a no-op,
 # a new instance under the same name is refused.
-CRM_DATA_PURGE_PARTICIPANT = CrmDataPurgeParticipant()
+CRM_DATA_PURGE_PARTICIPANT = CrmDataPurgeParticipant(global_references=PURGE_GLOBAL_REFERENCES)
 
 
 def register_purge_participants() -> None:

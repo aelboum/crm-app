@@ -28,7 +28,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from crm_app.roles import ROLE_TEMPLATES, Role
+from crm_app import provisioning
 from crm_app.settings import Process, validate_settings
 
 OWNER_CHECK = ("crm_app.owner", "manage")
@@ -73,27 +73,17 @@ def validate_request(request: Request) -> None:
         raise ProvisioningRefusedError("The name must be at most 255 characters.")
 
 
-def provision(request: Request) -> Result:  # noqa: PLR0912, PLR0915 - one ordered procedure
+def provision(request: Request) -> Result:
     """Run (or, with `dry_run`, only plan) the provisioning sequence."""
     # Imported here: SaaS-OS resolves configuration at import time.
+    # Registers the RBAC tables in the shared ORM metadata before
+    # `create_tenant` flushes its audit row (its foreign keys name them).
+    import saas_os.core.rbac  # noqa: F401, PLC0415
     from saas_os.core.authority import SystemAuthority, SystemCaller  # noqa: PLC0415
     from saas_os.core.identity import (  # noqa: PLC0415
-        add_tenant_membership,
         get_membership,
         get_or_create_user_for_external_identity,
         list_tenant_members,
-    )
-    from saas_os.core.rbac import (  # noqa: PLC0415
-        DuplicatePermissionGrantError,
-        DuplicateRoleAssignmentError,
-        DuplicateRoleNameError,
-        assign_first_role_for_new_tenant,
-        can,
-        create_role,
-        grant_permission,
-        list_membership_roles,
-        list_roles,
-        register_permission,
     )
     from saas_os.core.tenancy import (  # noqa: PLC0415
         TenantStatus,
@@ -149,53 +139,18 @@ def provision(request: Request) -> Result:  # noqa: PLR0912, PLR0915 - one order
         result.performed.append("workspace activated")
 
     membership = get_membership(tenant.id, user.id)
-    roles = {role.name: role for role in list_roles(tenant.id)}
-    owner_held = (
-        membership is not None
-        and Role.OWNER.value in roles
-        and any(
-            a.role_id == roles[Role.OWNER.value].id
-            for a in list_membership_roles(tenant.id, membership.id)
-        )
-    )
+    roles = provisioning.roles_by_name(tenant.id)
 
     # Roles and grants only while no principal holds authority.
-    if not owner_held:
-        for role, keys in ROLE_TEMPLATES.items():
-            if role.value not in roles:
-                try:
-                    roles[role.value] = create_role(tenant.id, role.value, caller=caller)
-                    result.performed.append(f"role {role.value} created")
-                except DuplicateRoleNameError:
-                    roles = {r.name: r for r in list_roles(tenant.id)}
-            role_id = roles[role.value].id
-            granted = 0
-            for resource, action in sorted(keys):
-                permission = register_permission(resource, action)
-                try:
-                    grant_permission(tenant.id, role_id, permission.id, caller=caller)
-                    granted += 1
-                except DuplicatePermissionGrantError:
-                    pass
-            if granted:
-                result.performed.append(f"{granted} permission(s) granted to {role.value}")
-
-        if membership is None:
-            membership = add_tenant_membership(tenant.id, user.id, caller=caller)
-            result.performed.append("owner membership created")
-        try:
-            assign_first_role_for_new_tenant(
-                tenant.id, membership.id, roles[Role.OWNER.value].id, caller=caller
-            )
-            result.performed.append("Owner role assigned")
-        except DuplicateRoleAssignmentError:
-            pass
+    if not provisioning.owner_held(tenant.id, membership, roles):
+        roles = provisioning.seed_roles(tenant.id, result.performed)
+        membership = provisioning.ensure_membership(tenant.id, user.id, result.performed)
+        provisioning.assign_owner(tenant.id, membership.id, roles, result.performed)
 
     if membership is None:
         raise ProvisioningRefusedError("Verification failed: no owner membership exists.")
     result.membership_id = membership.id
-    resource, action = OWNER_CHECK
-    if not can(actor_id=user.id, tenant_id=tenant.id, action=action, resource=resource):
+    if not provisioning.owner_verified(tenant.id, user.id, (OWNER_CHECK,)):
         raise ProvisioningRefusedError("Verification failed: the owner does not hold Owner rights.")
     return result
 

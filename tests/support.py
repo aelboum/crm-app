@@ -8,7 +8,7 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
-from crm_app.purge import PURGE_TABLES
+from crm_app.purge import PURGE_GLOBAL_REFERENCES, PURGE_TABLES
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -50,24 +50,45 @@ PLACEHOLDER_SETTINGS = {
 
 # Tables the product schema `crm_app` may contain, each approved by a
 # decision (P3-A: `company`, `contact`; P3-B: `note`, `activity`; P2-F:
-# `workspace_settings`, `invitation_intent`). The guards
+# `workspace_settings`, `invitation_intent`; S-1: `signup`,
+# `signup_attempt`). The guards
 # in `tests/unit/test_schema_guard.py` and
 # `tests/integration/test_tenant_table_guard.py` fail if a migration adds a
 # table that is not listed here.
 PRODUCT_TABLES: frozenset[str] = frozenset(
-    {"company", "contact", "note", "activity", "workspace_settings", "invitation_intent"}
+    {
+        "company",
+        "contact",
+        "note",
+        "activity",
+        "workspace_settings",
+        "invitation_intent",
+        # S-1, Stage C (owner decision of 2026-10-25, option A).
+        "signup",
+        "signup_attempt",
+    }
 )
 
-# Tenant tables the application may only append to and delete from (P3-B D6:
-# the record history). The guard requires the runtime role to lack UPDATE on
-# them, a stricter rule than for other tables, never a looser one.
-APPEND_ONLY_TABLES: frozenset[str] = frozenset({"activity"})
+# Tables the application may only append to and delete from (P3-B D6: the
+# record history; S-1: the signup attempt counter). The guard requires the
+# runtime role to lack UPDATE on them, a stricter rule than for other
+# tables, never a looser one.
+APPEND_ONLY_TABLES: frozenset[str] = frozenset({"activity", "signup_attempt"})
 
 # Product tables that deliberately hold no tenant data and so carry no
 # `tenant_id`. Every other product table must be tenant-owned; listing a
 # table here is a reviewed decision, never a way past the RLS and purge
-# guards.
-GLOBAL_TABLES: frozenset[str] = frozenset()
+# guards: each must carry SaaS-OS's tenant-context exclusion policy
+# (`tests/catalog_rules.py`, `global_policy_violations`).
+GLOBAL_TABLES: frozenset[str] = frozenset({"signup", "signup_attempt"})
+
+# Global tables whose rows are limited to one person (option A): they also
+# carry the restrictive owner policies.
+PERSON_SCOPED_TABLES: frozenset[str] = frozenset({"signup"})
+
+# Global tables that name a workspace (`workspace_id`, never a foreign key):
+# the purge participant must remove their rows (`crm_app.purge`).
+PURGE_GLOBAL_COVERED_TABLES: frozenset[str] = frozenset(PURGE_GLOBAL_REFERENCES)
 
 # Tenant-owned tables whose rows a tenant purge removes: the purge
 # participant's own manifest (`crm_app.purge.PURGE_TABLES`), so the guard

@@ -26,6 +26,8 @@ from tests.catalog_rules import (
     CHECKED_PRIVILEGES,
     Policy,
     classification_violations,
+    global_policy_violations,
+    global_reference_violations,
     policy_violations,
     privilege_violations,
     purge_violations,
@@ -34,8 +36,10 @@ from tests.catalog_rules import (
 from tests.support import (
     APPEND_ONLY_TABLES,
     GLOBAL_TABLES,
+    PERSON_SCOPED_TABLES,
     PRODUCT_TABLES,
     PURGE_COVERED_TABLES,
+    PURGE_GLOBAL_COVERED_TABLES,
 )
 
 SCHEMA = "crm_app"
@@ -171,6 +175,63 @@ def test_every_tenant_table_has_forced_rls_and_the_platform_policy(
         problems += rls_violations(table, enabled=enabled, forced=forced)
         problems += policy_violations(table, _policies(owner_connection, SCHEMA, table))
     assert problems == []
+
+
+def _has_column(connection: psycopg.Connection, schema: str, table: str, column: str) -> bool:
+    row = connection.execute(
+        "SELECT 1 FROM pg_catalog.pg_attribute a"
+        " JOIN pg_catalog.pg_class c ON c.oid = a.attrelid"
+        " JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace"
+        " WHERE n.nspname = %s AND c.relname = %s AND a.attname = %s"
+        " AND a.attnum > 0 AND NOT a.attisdropped",
+        (schema, table, column),
+    ).fetchone()
+    return row is not None
+
+
+def _references_tenants(connection: psycopg.Connection, schema: str, table: str) -> bool:
+    row = connection.execute(
+        "SELECT 1 FROM pg_catalog.pg_constraint k"
+        " JOIN pg_catalog.pg_class c ON c.oid = k.conrelid"
+        " JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace"
+        " WHERE n.nspname = %s AND c.relname = %s AND k.contype = 'f'"
+        " AND k.confrelid = 'core.tenants'::regclass",
+        (schema, table),
+    ).fetchone()
+    return row is not None
+
+
+def test_every_global_table_has_forced_rls_and_exactly_its_policies(
+    owner_connection: psycopg.Connection,
+) -> None:
+    """A table is global only with SaaS-OS's tenant-context exclusion policy
+    (no tenant transaction can reach it) and, if person-scoped, the
+    restrictive owner policies (decision S-1, option A)."""
+    problems: list[str] = []
+    for table in sorted(GLOBAL_TABLES):
+        enabled, forced = _rls_flags(owner_connection, SCHEMA, table)
+        problems += rls_violations(table, enabled=enabled, forced=forced)
+        problems += global_policy_violations(
+            table,
+            _policies(owner_connection, SCHEMA, table),
+            person_scoped=table in PERSON_SCOPED_TABLES,
+        )
+    assert problems == []
+
+
+def test_a_global_table_naming_a_workspace_is_purged_and_never_blocks_purge(
+    owner_connection: psycopg.Connection,
+) -> None:
+    problems: list[str] = []
+    for table in sorted(GLOBAL_TABLES):
+        problems += global_reference_violations(
+            table,
+            names_workspace=_has_column(owner_connection, SCHEMA, table, "workspace_id"),
+            references_tenants=_references_tenants(owner_connection, SCHEMA, table),
+            purge_covered=table in PURGE_GLOBAL_COVERED_TABLES,
+        )
+    assert problems == []
+    assert _has_column(owner_connection, SCHEMA, "signup", "workspace_id")
 
 
 def test_the_runtime_role_holds_exactly_its_privileges_on_every_product_table(

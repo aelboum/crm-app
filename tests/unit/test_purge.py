@@ -18,6 +18,7 @@ from crm_app.purge import (
     CRM_DATA_PURGE_PARTICIPANT,
     EXPECTED_PURGE_PARTICIPANTS,
     PARTICIPANT_NAME,
+    PURGE_GLOBAL_REFERENCES,
     PURGE_TABLES,
     CrmDataPurgeParticipant,
 )
@@ -152,3 +153,15 @@ def test_create_app_registers_the_participant(tmp_path: Path) -> None:
         tmp_path,
     )
     assert out.splitlines()[-1] == repr(EXPECTED_PURGE_PARTICIPANTS)
+
+
+def test_global_tables_naming_a_workspace_are_removed_by_the_participant() -> None:
+    """`signup` names the workspace it created without a key into
+    `core.tenants`; the participant removes those rows (decision S-1)."""
+    assert PURGE_GLOBAL_REFERENCES == ("signup",)
+    assert frozenset(PURGE_GLOBAL_REFERENCES) <= GLOBAL_TABLES
+
+
+def test_a_participant_refuses_a_global_table_it_has_no_step_for() -> None:
+    with pytest.raises(ValueError, match="No purge step"):
+        CrmDataPurgeParticipant(global_references=("signup_attempt",))

@@ -325,4 +325,6 @@ def test_the_migration_rolls_back_and_forward(
         "activity",
         "workspace_settings",
         "invitation_intent",
+        "signup",
+        "signup_attempt",
     }

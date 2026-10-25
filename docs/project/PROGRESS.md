@@ -78,6 +78,48 @@ decisions P2-A to P2-E approved)
     `/auth/login` answer "Authentication is not configured"; seen again
     during this check, not a product defect.
 
+- **Self-service signup, Stages B and C (decision S-1.2, 2026-10-25):**
+  - **Built:**
+    - migration `0006_signup`: `crm_app.signup` (option A, forced RLS)
+      and `crm_app.signup_attempt`;
+    - `POST /v1/signups` and `GET /v1/signups/current`, 404 while
+      `SIGNUP_ENABLED` is off, which it is by default;
+    - the shared provisioning service; the operator command keeps its
+      behaviour;
+    - resumable provisioning that activates last;
+    - limits and the counting rule;
+    - the maintenance command, the purge step and the guard rules for
+      global tables.
+  - **Verified:**
+    - pre-migration RLS probe: 28 of 28 passed (`SIGNUP-PLAN.md` §4b);
+    - unit tests: 265 passed;
+    - `tests/integration/test_signups.py`: 26 passed, covering
+      everything in the owner's list, plus the maintenance command in a
+      fresh process, and the platform cap under concurrent requests
+      released by a barrier (`SIGNUP-PLAN.md` §4b);
+    - the counting order fixed in review: a malformed `Idempotency-Key`
+      or a body that is not JSON is now refused after the attempt is
+      counted, not before;
+    - a regression found by the full suite and fixed: after the
+      provisioning refactor, the operator command no longer imported
+      `saas_os.core.rbac` before `create_tenant`, so a fresh process
+      failed with `NoReferencedTableError` (`core.delegation_grants`).
+      `provision.py` and `signups.py` now import it first;
+      `test_provision.py` passes again;
+    - the table guard;
+    - the OIDC identity test (sign-in, session, sign-out): 1 passed;
+    - frontend: 83 tests, lint, type check, build;
+    - ruff, pyright, import contracts, lock check and secret scan:
+      clean.
+    - **Full integration suite:** 254 passed, 0 failed (15 min 22 s,
+      after the fix).
+  - **Not done:**
+    - Stage D (screens);
+    - launch gates LG-1 to LG-10;
+    - scheduling the maintenance command in a deployment (none exists).
+  - **Local:** the development database has migration 0006, and the API
+    was restarted with `SIGNUP_ENABLED` unset.
+
 ## Repository state
 
 - **Directory:** `C:\Users\imran\Documents\crm-app`, branch `main`.

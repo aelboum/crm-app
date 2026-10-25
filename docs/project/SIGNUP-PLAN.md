@@ -4,15 +4,15 @@
 direction for implementation planning. It supersedes P2-C's exclusion of
 public workspace creation.
 
-**Status (2026-10-24):** planned. Stage A has started.
+**Status (2026-10-25):** Stages A2, B and C done.
 - The signup settings and kill switch (A2) exist and are tested, with the
   owner's limits (S-1.1).
 - The L4 investigation (A1) is done; L4 is reduced, not closed (§5).
-- The signup-table security is investigated (§4a); the owner's decision is
-  pending.
+- The signup backend (B, C) is built and verified: option A for the signup
+  table and the counting rule (S-1.2, §4b).
 
-Nothing else is implemented. Signup is off everywhere and refused in
-production by start-up validation.
+There is no signup screen yet (Stage D). Signup is off everywhere and
+refused in production by start-up validation.
 
 **Design reference:** `LeadStack Signup.dc.html` (outside the repository,
 `DESIGN-FIDELITY.md`). It is a reference only. It is never served or
@@ -239,14 +239,18 @@ are adjusted once legitimate use and abuse have been observed.
     the preferred store; a Redis sorted set is the alternative (Stage C).
   - **Unavailability:** if the counter store is unavailable, the request is
     refused (503) and nothing is provisioned.
-- **Confirm with the owner:** whether attempts refused by the rate limits or
-  the cap should also count (§7, LG-6).
+- **Confirmed by the owner (S-1.2, 2026-10-25):** requests refused by the
+  first per-user or per-address rate limit, or only by the cap already
+  being reached, are not counted; every request past them counts, even if
+  validation, verification or provisioning fails. Check and increment are
+  atomic under one advisory lock; an unavailable counter refuses (503).
 
 **Rate limiting.** SaaS-OS limiter keys `signup:user:<id>` and
 `signup:client:<address>`, the address from `resolve_client_address`. Both
 fail closed (503).
 
-**Signup state record (Stage C), a proposal that needs the security review
+**Signup state record (Stage C; built as migration 0006 after the review
+in §4b, which supersedes the proposal below), a proposal that needs the security review
 before its migration:**
 - One table, `crm_app.signup`, with:
   - `id`, `user_id`, `idempotency_key`, `request_fingerprint`, `state`;
@@ -302,16 +306,151 @@ Options:
 The platform attempt counter (above) holds timestamps only and no user or
 tenant reference. Under option A it uses the exclusion policy alone.
 
-**Recovery.** A worker cron job resumes signups that have not finished
-after a threshold, using the same service. After a bounded number of
-attempts a signup is marked `failed` with an error code, for operator
-review. A workspace left `pending` can then be deleted by an operator
-(`saas-os-operator delete-tenant`, then purge).
+**§4b. Signup-table security: design and verification (Stage C, 2026-10-25).**
+The owner chose option A and confirmed the counting rule (S-1.2). The
+design was checked against the real transaction model before migration
+0006 was written; the migration, guards and tests followed.
 
-**Expiry and retention (proposal).**
-- An unfinished signup row expires after **7 days**. The job marks it
-  expired, and expired rows are removed later; the retention period is
-  confirmed in Stage C.
+1. **Policies on `crm_app.signup`:**
+   - forced RLS;
+   - SaaS-OS's `tenant_context_exclusion_statements` policy (permissive,
+     every command: rows exist only in a transaction with no
+     `app.tenant_id`);
+   - four **restrictive** policies, one per command, comparing
+     `user_id::text` with `NULLIF(current_setting('crm_app.signup_user_id',
+     true), '')`:
+     - `SELECT`: also allowed with `crm_app.signup_maintenance = 'on'`;
+     - `INSERT`: `WITH CHECK` only;
+     - `UPDATE`: `USING` and `WITH CHECK`;
+     - `DELETE`: `USING` only.
+
+   Comparison is as text, so a missing, empty, malformed or injected value
+   matches nothing and never raises.
+2. **How PostgreSQL learns who the person is:** SaaS-OS sets no
+   per-user setting. `crm_app.signups._as_user()` opens every transaction
+   with `set_config('crm_app.signup_user_id', <session user>, true)`
+   (transaction-local), and the user comes only from the server-side
+   session (`get_current_session`). A unit test pins
+   `set_config(..., true)` to that one function.
+3. **Refusals:**
+   - not signed in: 401 before the handler;
+   - signed in without a verified email: 403;
+   - no person setting: no rows;
+   - another person's setting: their rows only;
+   - writes for another person: refused by `WITH CHECK`;
+   - any transaction with a tenant: no rows, writes refused, even with
+     the person or maintenance setting.
+4. **Jobs:**
+   - the maintenance command reads due rows with the maintenance flag,
+     which allows reading only;
+   - it then acts on each row in a transaction scoped to that row's own
+     person, so every write passes the same person policy.
+
+   A unit test checks that nothing writes inside a maintenance reader.
+5. **The table guard:** global tables are now checked too, not exempted.
+   `GLOBAL_TABLES = {signup, signup_attempt}`. Each must have:
+   - forced RLS and exactly the exclusion policy;
+   - for person-scoped tables (`signup`), exactly the four restrictive
+     policies, with the maintenance flag only on reading
+     (`global_policy_violations`).
+
+   A global table with `workspace_id` may not reference `core.tenants`
+   and must be in `PURGE_GLOBAL_REFERENCES` (`global_reference_violations`).
+   The tenant rules are unchanged.
+6. **Purge:** `workspace_id` has no foreign key, so SaaS-OS's purge is
+   never blocked.
+   - After the tenant tables, the purge participant removes the signup
+     rows naming the purged workspace outside any tenant context: read
+     with the maintenance flag, deleted as each row's own person.
+   - It then raises `PurgeIncompleteError` if any remain.
+7. **Expired and partly failed signups:**
+   - **Interrupted:** a run that stops leaves the row `provisioning`
+     with its last step and an error code. It resumes on the person's
+     replay or the maintenance command; after 5 runs it is `failed`.
+   - **Needs an operator:** a step finding an impossible state
+     (`owner_check_failed`, `workspace_has_other_members`) is `failed`
+     at once, for operator review.
+   - **Crash between `create_tenant` and recording it:** the next run
+     adopts the workspace it created. That is a `pending` workspace of
+     the recorded name, created within the step's window, with no
+     members and unclaimed (`signup_workspace_unique`), so no duplicate
+     and no orphan.
+   - **Expiry:** after 7 days an unfinished signup is `expired`. Its
+     workspace, if any, stays `pending` for an operator; it is never
+     activated.
+   - **Retention:**
+     - `failed` and `expired` rows are removed after 90 days;
+     - attempt rows after 48 hours;
+     - completed rows stay while their workspace exists (they count
+       toward the per-person limit) and go with its purge.
+   - **ZITADEL:** nothing creates or deletes a ZITADEL identity.
+
+**Pre-migration negative tests** (a temporary schema in `crm_app_test`,
+the runtime role, SaaS-OS `session_scope` and `tenant_session_scope`, a
+pooled connection reused): **28 passed, 0 failed.**
+- No setting: no rows; inserting is refused.
+- Person A:
+  - reads only A's rows;
+  - cannot update or delete B's rows;
+  - cannot insert a row for B;
+  - cannot hand A's own row to B.
+- A tenant context hides every row and refuses inserts, also with the
+  person or maintenance setting.
+- The same pooled connection's next transaction sees nothing (the
+  setting resets to `''`).
+- Malformed or foreign settings (`'not-a-uuid'`, `''`, `' '`, a random
+  UUID, `' OR 1=1 --`) see nothing, with no error.
+- The maintenance flag reads all rows but cannot update, delete or
+  insert.
+- The runtime role cannot alter the protection: `NO FORCE`, `DISABLE`,
+  `DROP POLICY` and `row_security = off` are all refused.
+- **Recorded risk:** a *session-level* `set_config` would outlive its
+  transaction on a pooled connection (reproduced). It is prevented by
+  code (`_set_local`, `is_local = true`) and a unit test, not by the
+  database.
+
+**Counting order (as built).** The per-user and per-address limiters run
+in the route's dependency. The handler then counts the attempt under the
+cap's advisory lock. Only after that does it read and validate the
+`Idempotency-Key` header and the JSON body, so a malformed key (400) or a
+body that is not JSON (422) is refused *and counted*, like an unverified
+email or an invalid name.
+
+**Concurrency evidence (2026-10-25,
+`test_concurrent_requests_never_exceed_the_cap_and_refusals_are_not_counted`).**
+Every round releases all requests together with a `threading.Barrier`,
+against the real advisory lock and table:
+- 40 calls to `record_attempt` at a cap of 7, ten rounds: exactly 7
+  counted, 33 refused and 7 stored, every round;
+- 24 HTTP requests at a cap of 6, five rounds, each request with its own
+  person, workspace name and key:
+  - six each of an unverified session, an invalid name, a malformed key
+    and a valid request;
+  - every round: exactly 6 admitted with the status their kind implies,
+    18 refused with 429, and 6 stored;
+  - workspaces created equal the valid requests admitted.
+
+The test was then run five more times (75 rounds), with no failure. With
+the counter unavailable (INSERT revoked), 8 concurrent requests all got
+503 and created nothing.
+
+**SaaS-OS gap found:** v0.5.0 schedules system jobs only through
+`saas_os.infra.jobs.queue.system_cron`, which is not part of its public
+surface. Maintenance is therefore a command
+(`python -m crm_app.signup_maintenance`) that the deployment runs every
+few minutes, plus resumption on the person's own replay. It is a candidate
+upstream request (export `system_cron`), not sent.
+
+**Recovery (implemented, §4b).** `python -m crm_app.signup_maintenance`
+(not a worker cron job: see the SaaS-OS gap in §4b) resumes signups idle
+for more than 2 minutes, using the same service. After 5 runs a signup is
+marked `failed` with an error code, for operator review. A workspace left
+`pending` can then be deleted by an operator (`saas-os-operator
+delete-tenant`, then purge).
+
+**Expiry and retention (implemented, §4b).**
+- An unfinished signup expires after **7 days**. `failed` and `expired`
+  rows are removed after 90 days, attempt records after 48 hours.
 - Expiring a signup row **does not delete** anything in ZITADEL, and does
   not delete the `core.users` row (no personal data).
 - Deleting a ZITADEL identity would need LeadStack to call ZITADEL's
@@ -382,8 +521,8 @@ proves both:
 | Stage | Depends on | Content | Acceptance criteria |
 | --- | --- | --- | --- |
 | **A. Security and configuration** | S-1 | A1 L4 investigation (done, §5). A2 `SIGNUP_ENABLED` (default off) and both limits with the owner's defaults (done, S-1.1). A3 the application and edge rate-limit requirements (written: §4, LG-5). A4 local ZITADEL registration, email verification and Mailpit as ZITADEL's SMTP, by script and documented in the README; registration stays off unless explicitly enabled for local testing. | A1/A2: unit tests pass (`tests/unit/test_settings.py`); production refuses the switch. A4: locally, with Mailpit, a new person registers, receives a code in Mailpit, verifies, returns to `/app` with `verified_email`; unverified sign-in is refused; password reset email arrives; existing sign-in, sign-out and invitation acceptance still pass (identity test plus browser). |
-| **B. Provisioning foundation** | A2 | Extract the steps of `provision.py` into a shared service. The operator CLI keeps its behaviour and output. The signup variant activates last, never accepts a parent, and seeds `workspace_settings` only if a decision asks for it. | `test_provision.py` unchanged and green. New tests: interruption after each step resumes correctly; two concurrent provisions of the same signup create one tenant; before activation the new tenant refuses every product action; after it, the Owner passes `can()` for `membership_role:create` and `crm_app.owner:manage` and counts as an administrator under ADR-0043. |
-| **C. Signup backend** | B; security review of the §4 table design | Migration for `crm_app.signup` (declared global, chosen access model); `POST /v1/signups`, `GET /v1/signups/current`; limits; rate limits; recovery and expiry job; structured events. | Integration tests: success; replay with the same key; a different key while one is open; parallel requests produce one workspace; per-user and daily caps hold under parallel requests; unverified session refused; kill switch off returns 404; limiter down returns 503; forged `parent_id`, `role`, `user_id` or `tenant_id` fields refused; cross-user read and write refused at API and repository level; cross-tenant isolation of the new workspace; crash at each step then resume; expiry after 7 days; logs and errors contain no email, token, code or workspace name; acceptance of an invitation creates no signup or tenant. |
+| **B. Provisioning foundation** | A2 | **Status 2026-10-25: built with C, verified locally, uncommitted** (`crm_app.provisioning`; `test_provision.py` unchanged and green; the interruption, concurrency and activation tests run through signup in `test_signups.py`). Extract the steps of `provision.py` into a shared service. The operator CLI keeps its behaviour and output. The signup variant activates last, never accepts a parent, and seeds `workspace_settings` only if a decision asks for it. | `test_provision.py` unchanged and green. New tests: interruption after each step resumes correctly; two concurrent provisions of the same signup create one tenant; before activation the new tenant refuses every product action; after it, the Owner passes `can()` for `membership_role:create` and `crm_app.owner:manage` and counts as an administrator under ADR-0043. |
+| **C. Signup backend** | B; security review of the §4 table design | **Status 2026-10-25: built and verified locally** (§4b; `tests/integration/test_signups.py`, 26 tests, including the cap under concurrent requests released by a barrier). Migration for `crm_app.signup` (declared global, chosen access model); `POST /v1/signups`, `GET /v1/signups/current`; limits; rate limits; recovery and expiry job; structured events. | Integration tests: success; replay with the same key; a different key while one is open; parallel requests produce one workspace; per-user and daily caps hold under parallel requests; unverified session refused; kill switch off returns 404; limiter down returns 503; forged `parent_id`, `role`, `user_id` or `tenant_id` fields refused; cross-user read and write refused at API and repository level; cross-tenant isolation of the new workspace; crash at each step then resume; expiry after 7 days; logs and errors contain no email, token, code or workspace name; acceptance of an invitation creates no signup or tenant. |
 | **D. Frontend** | C | **Create account** on the sign-in screen (to `/auth/login`); the workspace-name step; progress, error, limit and kill-switch states; entry into the workspace. | Vitest for every state, axe clean; no input that collects credentials anywhere; invitation precedence; browser check at desktop and 390 px; sign-out unchanged. |
 | **E. Verification and release readiness** | A-D | Full gate run; security review of the signup surface; staging verification; launch checklist (§7). | Repository gates green (ruff, pyright, import contracts, unit, integration, frontend, audits, secret scan); review without open Critical or High; every LG item has evidence recorded here; the production refusal in `settings.py` removed only by the change that records that evidence. |
 
@@ -399,7 +538,7 @@ evidence. Start-up validation enforces this in code (`settings.py`).
 | LG-3 | The shared customer ZITADEL organisation verified: registration lands only there; console and administrative roles are not granted to customers; login policy, lockout and `ignoreUnknownUsernames` apply to it | **Open: plan only** |
 | LG-4 | Owner MFA: the mechanism (for example ZITADEL `forceMfa` for the customer organisation, or a LeadStack check of the session's `multi_factor` before Owner actions) and its verification | **Open: mechanism not chosen** |
 | LG-5 | Production edge: the application reachable only through the edge; L4 verified closed there (§5); edge rate limiting on `/ui/v2/login/register*`, `/auth/*` and `/v1/signups`; a WAF or equivalent bot protection deployed; CAPTCHA evaluated, not assumed | **Open** |
-| LG-6 | Signup limits | **Set (S-1.1):** 5 workspaces per user, 100 attempts per rolling 24 hours, as defaults. Owner to confirm the counting rule in §4 (refused-by-limit requests not counted); revisit once real use and abuse have been observed. |
+| LG-6 | Signup limits | **Set (S-1.1):** 5 workspaces per user, 100 attempts per rolling 24 hours, as defaults. Counting rule confirmed (S-1.2, §4) and enforced in Stage C; revisit the numbers once real use and abuse have been observed. |
 | LG-7 | Abandoned identities: default is manual operator review, no automatic deletion; any deletion needs a separate decision (ADR-0023) | **Default recorded; deletion not approved** |
 | LG-8 | ZITADEL behaviour not yet proven locally: `EMAIL_VERIFICATION` enforcement; whether registration reveals an existing email (enumeration); whether the organisation scope selects the registration organisation; reported Login V2 registration defects (ZITADEL issues #12072, #11857) | **Open: Stage A4 tests** |
 | LG-9 | Security review of the signup surface (Stage E) without open Critical or High findings | **Open** |

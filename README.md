@@ -117,6 +117,19 @@ After sign-in the browser returns to `AUTH_POST_LOGIN_PATH` (`/app` in
 `.env.example`). There is no list of workspaces yet: open one by its link
 (`/app/w/<workspace id>`) or paste its ID on the start page.
 
+**Self-service signup** (decisions S-1, S-1.2; `docs/project/SIGNUP-PLAN.md`).
+`POST /v1/signups` and `GET /v1/signups/current` create a workspace for a
+signed-in person with a verified email and make them its Owner. They
+answer 404 unless `SIGNUP_ENABLED=true`, which also needs
+`TRUST_PROXY_HEADERS=true` and is refused in production. There is no
+signup screen yet (Stage D). Unfinished signups are resumed, expired and
+cleaned up by a command the deployment runs every few minutes, whether or
+not signup is on:
+
+```bash
+uv run python -m crm_app.signup_maintenance
+```
+
 `deploy/local/.bootstrap/` holds ZITADEL's bootstrap token and is never
 committed. `docker compose ... down -v` deletes every local volume, including
 ZITADEL's, after which the client ID changes.

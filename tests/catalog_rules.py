@@ -95,3 +95,93 @@ def classification_violations(
 
 def purge_violations(tenant_tables: Collection[str], covered: Collection[str]) -> list[str]:
     return [f"{t}: not covered by tenant purge" for t in sorted(set(tenant_tables) - set(covered))]
+
+
+# --- Global tables (decision S-1, option A; migration 0006) ----------------
+
+_USER_SETTING = "current_setting('crm_app.signup_user_id'"
+_MAINTENANCE_SETTING = "crm_app.signup_maintenance"
+# pg_policy.polcmd for each restrictive owner policy, and which expressions
+# it must have: (USING, WITH CHECK).
+_OWNER_POLICIES = {
+    "owner_read": ("r", True, False),
+    "owner_insert": ("a", False, True),
+    "owner_update": ("w", True, True),
+    "owner_delete": ("d", True, False),
+}
+
+
+def _exclusion_violations(table: str, policy: Policy) -> list[str]:
+    """SaaS-OS's `tenant_context_exclusion_statements` policy: permissive,
+    every command and role, visible only with no `app.tenant_id`."""
+    problems = []
+    if policy.command != "*" or not policy.permissive or policy.roles != ("public",):
+        problems.append(f"{table}: exclusion policy is not permissive for every command and role")
+    using = policy.using or ""
+    if "current_setting('app.tenant_id'" not in using or "IS NULL" not in using:
+        problems.append(f"{table}: exclusion policy does not require an empty app.tenant_id")
+    if policy.with_check is not None:
+        problems.append(f"{table}: exclusion policy has an unexpected WITH CHECK")
+    return problems
+
+
+def _owner_violations(table: str, suffix: str, policy: Policy) -> list[str]:
+    command, wants_using, wants_check = _OWNER_POLICIES[suffix]
+    problems = []
+    if policy.permissive:
+        problems.append(f"{table}: {policy.name} is permissive, not restrictive")
+    if policy.command != command:
+        problems.append(f"{table}: {policy.name} applies to {policy.command!r}, not {command!r}")
+    if policy.roles != ("public",):
+        problems.append(f"{table}: {policy.name} applies to {policy.roles}, not PUBLIC")
+    for label, expression, wanted in (
+        ("USING", policy.using, wants_using),
+        ("WITH CHECK", policy.with_check, wants_check),
+    ):
+        if wanted and (expression is None or _USER_SETTING not in expression):
+            problems.append(f"{table}: {policy.name} {label} is not scoped by the person")
+        if not wanted and expression is not None:
+            problems.append(f"{table}: {policy.name} has an unexpected {label}")
+    writes = (policy.using or "") + (policy.with_check or "")
+    if suffix != "owner_read" and _MAINTENANCE_SETTING in writes:
+        problems.append(f"{table}: {policy.name} lets the maintenance flag write")
+    return problems
+
+
+def global_policy_violations(
+    table: str, policies: Sequence[Policy], *, person_scoped: bool
+) -> list[str]:
+    """Exactly SaaS-OS's tenant-context exclusion policy, plus, for a
+    person-scoped table, the four restrictive owner policies of migration
+    0006: every row limited to `crm_app.signup_user_id`; the maintenance
+    flag may widen reading only, never writing."""
+    expected = {f"{table}_no_tenant_context"}
+    if person_scoped:
+        expected |= {f"{table}_{suffix}" for suffix in _OWNER_POLICIES}
+    by_name = {policy.name: policy for policy in policies}
+    problems = [f"{table}: missing policy {name}" for name in sorted(expected - set(by_name))]
+    problems += [f"{table}: unexpected policy {name}" for name in sorted(set(by_name) - expected)]
+    if f"{table}_no_tenant_context" in by_name:
+        problems += _exclusion_violations(table, by_name[f"{table}_no_tenant_context"])
+    if person_scoped:
+        for suffix in _OWNER_POLICIES:
+            policy = by_name.get(f"{table}_{suffix}")
+            if policy is not None:
+                problems += _owner_violations(table, suffix, policy)
+    return problems
+
+
+def global_reference_violations(
+    table: str, *, names_workspace: bool, references_tenants: bool, purge_covered: bool
+) -> list[str]:
+    """A global table that names a workspace must not hold a foreign key into
+    `core.tenants` (it would block SaaS-OS's purge), and the purge
+    participant must remove its rows."""
+    if not names_workspace:
+        return []
+    problems = []
+    if references_tenants:
+        problems.append(f"{table}: references core.tenants, which would block tenant purge")
+    if not purge_covered:
+        problems.append(f"{table}: names a workspace but is not covered by tenant purge")
+    return problems
