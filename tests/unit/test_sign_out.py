@@ -57,5 +57,6 @@ def test_with_one_the_url_carries_only_the_client_id_and_the_return_address(
     assert f"{url.scheme}://{url.netloc}{url.path}" == endpoint
     assert parse_qs(url.query) == {
         "client_id": ["placeholder-client"],
-        "post_logout_redirect_uri": ["https://app.invalid/app"],
+        # Straight back to a new sign-in (decision P2-G.1), not to /app.
+        "post_logout_redirect_uri": ["https://app.invalid/auth/login"],
     }

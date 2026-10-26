@@ -93,7 +93,7 @@ Put the printed `OIDC_CLIENT_ID` in `.env` and restart the application.
 Then apply the project's sign-in settings (no self-registration, no
 username probing, lockout after 5 failures; decision D-IDL.1):
 `uv run python deploy/local/configure-zitadel.py` (it also registers
-`<PUBLIC_APP_ORIGIN>/app` as the post-sign-out address, so signing out ends
+`<PUBLIC_APP_ORIGIN>/auth/login` as the post-sign-out address, so signing out ends
 the ZITADEL session too; decision P2-G). A locked-out user is
 unlocked in the ZITADEL console (`http://localhost:8000/ui/console`).
 In Git Bash on Windows, export `MSYS2_ENV_CONV_EXCL=AUTH_POST_LOGIN_PATH`
@@ -180,7 +180,9 @@ ZITADEL_LOGIN_IMAGE=crm-app-login:dev docker compose -f deploy/local/compose.yam
 
 Without `ZITADEL_LOGIN_IMAGE` the published `zitadel-login` image runs, as
 before. Opening `/app` without a session goes straight to the sign-in page,
-except right after signing out in the same tab.
+except right after signing out in the same tab. With this image, signing out
+ends ZITADEL's session too and then goes straight to the sign-in page
+(decision P2-G.1).
 
 `deploy/local/.bootstrap/` holds ZITADEL's bootstrap token and is never
 committed. `docker compose ... down -v` deletes every local volume, including

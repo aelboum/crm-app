@@ -38,9 +38,11 @@ branding on the login pages"); unset leaves branding untouched:
 - `ZITADEL_LOCAL_BRANDING=default` restores ZITADEL's own branding and texts.
 
 And on this project's OIDC application (the one with `OIDC_CLIENT_ID`):
-- `<PUBLIC_APP_ORIGIN>/app` is an allowed post-sign-out address, so signing
-  out of the application also ends the ZITADEL session (OIDC RP-initiated
-  logout, decision P2-F; `crm_app.api.sign_out`).
+- `<PUBLIC_APP_ORIGIN>/auth/login` is an allowed post-sign-out address, so
+  signing out of the application also ends the ZITADEL session and returns
+  straight to a new sign-in (OIDC RP-initiated logout, decisions P2-F and
+  P2-G.1; `crm_app.api.sign_out`). The earlier `<PUBLIC_APP_ORIGIN>/app` entry
+  is removed.
 
 Uses the bootstrap machine user's token from `deploy/local/.bootstrap/`
 (untracked). The token is read from the file and never printed.
@@ -318,11 +320,24 @@ def _all(base: str, token: str, path: str, filters: list[dict], key: str) -> lis
             return items
 
 
+def post_logout_uris(current: list[str], origin: str) -> list[str]:
+    """The post-logout redirect URIs to keep: `current` without exactly
+    `<origin>/app` (registered by earlier versions of this script), plus
+    exactly `<origin>/auth/login` once. Every other entry stays, in order."""
+    origin = origin.rstrip("/")
+    target, replaced = origin + "/auth/login", origin + "/app"
+    wanted = [uri for uri in current if uri != replaced]
+    if target not in wanted:
+        wanted.append(target)
+    return wanted
+
+
 def _allow_post_logout_redirect(base: str, token: str) -> bool:
-    """Adds `<PUBLIC_APP_ORIGIN>/app` to the application's post-logout
-    redirect URIs, keeping everything else; idempotent."""
+    """Makes `<PUBLIC_APP_ORIGIN>/auth/login` a post-logout redirect URI of
+    the application (decision P2-G.1) and removes `<PUBLIC_APP_ORIGIN>/app`,
+    which this script registered before; other entries stay. Idempotent."""
     client_id = os.environ["OIDC_CLIENT_ID"]
-    target = os.environ.get("PUBLIC_APP_ORIGIN", "http://localhost:8000").rstrip("/") + "/app"
+    origin = os.environ.get("PUBLIC_APP_ORIGIN", "http://localhost:8000")
     projects = _all(base, token, "/zitadel.project.v2.ProjectService/ListProjects", [], "projects")
     for project in projects:
         applications = _all(
@@ -337,7 +352,8 @@ def _allow_post_logout_redirect(base: str, token: str) -> bool:
             if oidc.get("clientId") != client_id:
                 continue
             current = oidc.get("postLogoutRedirectUris") or []
-            if target not in current:
+            wanted = post_logout_uris(current, origin)
+            if wanted != current:
                 kept = {key: oidc[key] for key in _PRESERVED_OIDC if key in oidc}
                 _call(
                     base,
@@ -347,7 +363,7 @@ def _allow_post_logout_redirect(base: str, token: str) -> bool:
                     {
                         "applicationId": app["applicationId"],
                         "projectId": project["projectId"],
-                        "oidcConfiguration": kept | {"postLogoutRedirectUris": [*current, target]},
+                        "oidcConfiguration": kept | {"postLogoutRedirectUris": wanted},
                     },
                 )
             return True

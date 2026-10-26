@@ -25,6 +25,8 @@ from the server's log.
 
 from __future__ import annotations
 
+import base64
+import json
 import os
 import socket
 import subprocess
@@ -208,3 +210,74 @@ def test_login_session_and_logout(app_server: tuple[str, Path]) -> None:
         if value:
             assert value not in log, f"{name} appeared in the server log"
     assert _LOGIN_CLIENT_PAT.read_text(encoding="utf-8").strip() not in log
+
+
+def _paths(response: httpx.Response) -> list[str]:
+    return [urlsplit(str(r.url)).path for r in [*response.history, response]]
+
+
+def test_sign_out_returns_to_a_new_sign_in(app_server: tuple[str, Path]) -> None:
+    """Decision P2-G.1: ZITADEL's end-session endpoint returns straight to
+    `/auth/login`, which starts a new sign-in once, without a loop. This
+    client holds no ZITADEL session cookie, so nothing is ended here; ending
+    the browser's sessions is checked in the browser (README.md)."""
+    origin, _ = app_server
+    origin = origin.rstrip("/")
+    with httpx.Client(follow_redirects=True, timeout=30) as client:
+        sign_out_url = client.get(f"{origin}/v1/sign-out-url").json()["url"]
+        if not sign_out_url:
+            pytest.skip("OIDC_END_SESSION_ENDPOINT is not set")
+        query = parse_qs(urlsplit(sign_out_url).query)
+        assert query["post_logout_redirect_uri"] == [f"{origin}/auth/login"]
+
+        # Signed out, `/auth/login` itself answers with the sign-in page.
+        direct = client.get(f"{origin}/auth/login")
+        assert direct.status_code == 200
+        assert _paths(direct).count("/auth/login") == 1
+        assert _paths(direct)[-1].endswith("/loginname")
+
+        ended = client.get(sign_out_url)
+        assert ended.status_code == 200
+        paths = _paths(ended)
+        assert len(paths) < 10, paths
+        assert paths.count("/auth/login") <= 1
+        if paths[-1].endswith("/logout"):
+            # ZITADEL's published login image: its sign-out page asks first.
+            return
+        # LeadStack's login build: straight on to a new sign-in.
+        assert paths.count("/auth/login") == 1
+        assert paths[-1].endswith("/loginname")
+
+
+def test_a_forged_logout_token_signs_nobody_out(app_server: tuple[str, Path]) -> None:
+    """A sign-out request with a token ZITADEL did not sign never reaches the
+    no-click sign-out: it gets the ordinary sign-out page and no cookie is
+    touched (decision P2-G.1)."""
+    origin, _ = app_server
+    login = f"{origin.rstrip('/')}/ui/v2/login"
+    # Well formed, but signed by nobody, and returning elsewhere.
+    claims = {"post_logout_redirect_uri": "https://evil.example"}
+    forged = (
+        ".".join(
+            base64.urlsafe_b64encode(json.dumps(part).encode()).decode().rstrip("=")
+            for part in ({"alg": "RS256"}, claims)
+        )
+        + ".AAAA"
+    )
+    with httpx.Client(follow_redirects=False, timeout=30) as client:
+        client.cookies.set("sessions", "kept", domain=urlsplit(origin).hostname or "", path="/")
+        first = client.get(f"{login}/logout", params={"logout_token": forged})
+        assert "sessions=" not in first.headers.get("set-cookie", "")
+        if first.status_code == 200:
+            return  # ZITADEL's published login image renders its page
+        assert first.status_code == 303
+        location = first.headers["location"]
+        assert urlsplit(location).path == "/ui/v2/login/logout"
+        assert parse_qs(urlsplit(location).query)["manual"] == ["1"]
+        assert "evil.example" not in location
+        page = client.get(
+            f"{origin.rstrip('/')}{location}" if location.startswith("/") else location
+        )
+        assert page.status_code == 200
+        assert 'data-i18n-key="logout.title"' in page.text
+        assert "sessions=" not in page.headers.get("set-cookie", "")

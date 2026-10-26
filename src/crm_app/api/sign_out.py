@@ -6,7 +6,10 @@ identity provider's own session survives, so on a shared computer the next
 "Sign in" would continue as the previous person without a password. The
 frontend therefore sends the browser on to the provider's end-session
 endpoint (OIDC RP-Initiated Logout 1.0) after the application sign-out,
-which ends the provider session and returns to `<PUBLIC_APP_ORIGIN>/app`.
+which ends the provider session and returns to `<PUBLIC_APP_ORIGIN>/auth/login`
+(decision P2-G.1): straight back to a new sign-in, without first loading the
+application to find out that nobody is signed in. `/auth/login` is public and
+only starts a new sign-in, so landing there cannot loop.
 
     GET /v1/sign-out-url   public: {"url": ...}
 
@@ -29,6 +32,10 @@ from saas_os.infra.secrets import get_secrets_provider
 
 router = APIRouter(prefix="/v1", tags=["session"])
 
+# Registered at the provider as the only post-logout redirect URI
+# (`deploy/local/configure-zitadel.py` locally; production: decision P2-G.1).
+POST_LOGOUT_PATH = "/auth/login"
+
 _public = Depends(
     public_route("public sign-out address: the provider's endpoint and public client ID")
 )
@@ -49,7 +56,8 @@ def sign_out_url() -> SignOutTarget:
             # Read like the rest of the OIDC settings (crm_app.settings);
             # a public identifier, already in every authorization request.
             "client_id": get_secrets_provider().get("OIDC_CLIENT_ID"),
-            "post_logout_redirect_uri": os.environ["PUBLIC_APP_ORIGIN"].rstrip("/") + "/app",
+            "post_logout_redirect_uri": os.environ["PUBLIC_APP_ORIGIN"].rstrip("/")
+            + POST_LOGOUT_PATH,
         }
     )
     return SignOutTarget(url=f"{endpoint}?{query}")

@@ -935,6 +935,47 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not approved:** a SaaS-OS change or pin move; the self-service
   sign-up of the design's `LeadStack Signup.dc.html` (excluded by P2-C).
 
+## P2-G.1 — Sign-out without the account choice (approved 2026-10-25)
+
+- **Status:** Approved by the owner, 2026-10-25. Amends P2-G decision 2
+  for LeadStack's own login build (decision S-2); ZITADEL's published
+  login image keeps the account-choice page.
+- **Decision:** when ZITADEL's end-session endpoint sends the browser to
+  the sign-out page with a valid logout token (it carries the registered
+  return address) and no account hint, the `crm-app-login` build ends
+  every ZITADEL session in that browser without a click and returns to
+  the registered address. If ending a session fails, the page shows the
+  error and the account list, as before.
+- **Return address:** `<PUBLIC_APP_ORIGIN>/auth/login`
+  (`crm_app.api.sign_out.POST_LOGOUT_PATH`), the only post-logout redirect
+  URI registered on the OIDC application; it replaces `/app`. The browser
+  goes straight on to a new sign-in instead of loading the application
+  first. `/auth/login` is public and only starts a sign-in, so it cannot
+  loop. After a sign-out without an end-session address the start page
+  still waits for a click (`frontend/src/api/signInRedirect.ts`).
+- **Speed:** the login build ends the sessions in a server route
+  (`logout/end`), served in place of the sign-out page, so no page or script
+  loads in between; the page itself appears only if that fails. The
+  frontend fetches the end-session address while it signs out. Measured
+  locally from "Sign out" to the sign-in form (3 runs each): 1.1 s with the
+  sign-out page; 0.55-0.59 s with the server route; 0.35-0.48 s (median
+  0.36 s) with the return to `/auth/login`.
+- **Production configuration (not applied; needed before launch):**
+  - on the production OIDC application, post-logout redirect URIs exactly
+    `https://<production origin>/auth/login`, and no `/app` entry;
+  - `OIDC_END_SESSION_ENDPOINT` set to the production issuer's
+    `end_session_endpoint` (https, checked at start-up);
+  - the login service is the `crm-app-login` image (LeadStack's build); with
+    ZITADEL's published image the account-choice page remains;
+  - `PUBLIC_APP_ORIGIN` is the origin above, since the return address is
+    built from it.
+- **Accepted risk (Low):** a link to the end-session endpoint from another
+  site can now sign a person out of ZITADEL without asking (logout CSRF).
+  It cannot sign anyone in, read data, or send the browser anywhere but the
+  registered return address, where it starts a new sign-in (rate-limited
+  like every `/auth/login`). The `id_token_hint` route (P2-G, SaaS-OS
+  request not sent) would still remove the page entirely.
+
 ## S-1 — Self-service signup (approved 2026-10-24)
 
 - **Status:** Approved by the owner, 2026-10-24, as the direction for

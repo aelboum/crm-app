@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, type MockInstance, onTestFinished, vi } from "vitest";
 
 import { markSignedOut, signInNavigation } from "../api/signInRedirect";
+import { signOutNavigation } from "../api/signOut";
 import { accessibilityViolations, type Handler, renderApp } from "../test/render";
 
 const signedOut: Handler = () => ({ status: 401, body: { detail: "Not authenticated" } });
@@ -173,6 +174,59 @@ describe("sign-in screen", () => {
     expect(sent.map((s) => `${s.method} ${s.path}`)).toContain("POST /auth/logout");
     // Signed out on purpose: the start page must not sign in again by itself.
     expect(leave).not.toHaveBeenCalled();
+  });
+
+  it("ends the session, then hands the browser to the provider's sign-out, which returns to /auth/login (P2-G.1)", async () => {
+    const user = userEvent.setup();
+    const endSession =
+      "http://localhost:8000/oidc/v1/end_session?client_id=c&post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Fauth%2Flogin";
+    const go = vi.spyOn(signOutNavigation, "go").mockImplementation(() => undefined);
+    onTestFinished(() => {
+      go.mockRestore();
+    });
+    let ended = false;
+    const { sent } = renderApp("/", (method, path) => {
+      if (method === "POST" && path === "/auth/logout") {
+        ended = true;
+        return { status: 204 };
+      }
+      if (path === "/auth/me") return ended ? { status: 401, body: {} } : { status: 200, body: { user_id: "u" } };
+      if (path === "/v1/workspaces") return { status: 200, body: { items: [] } };
+      if (path === "/v1/sign-out-url") return { status: 200, body: { url: endSession } };
+      return undefined;
+    });
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+
+    await waitFor(() => {
+      expect(go).toHaveBeenCalledWith(endSession);
+    });
+    expect(go).toHaveBeenCalledTimes(1);
+    // LeadStack's own session ended first, and nothing signed-in stays on screen.
+    expect(ended).toBe(true);
+    expect(sent.map((s) => `${s.method} ${s.path}`)).toContain("POST /auth/logout");
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Your workspaces" })).toBeNull();
+    // The start page does not race the provider's sign-out with a sign-in.
+    expect(leave).not.toHaveBeenCalled();
+  });
+
+  it("does not leave for the provider's sign-out when LeadStack's own sign-out fails", async () => {
+    const user = userEvent.setup();
+    const go = vi.spyOn(signOutNavigation, "go").mockImplementation(() => undefined);
+    onTestFinished(() => {
+      go.mockRestore();
+    });
+    renderApp("/", (method, path) => {
+      if (method === "POST" && path === "/auth/logout") return { status: 503, body: { detail: "Unavailable" } };
+      if (path === "/auth/me") return { status: 200, body: { user_id: "u" } };
+      if (path === "/v1/workspaces") return { status: 200, body: { items: [] } };
+      if (path === "/v1/sign-out-url") return { status: 200, body: { url: "http://localhost:8000/oidc/v1/end_session" } };
+      return undefined;
+    });
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+    expect(await screen.findByRole("heading", { name: "Your workspaces" })).toBeVisible();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(go).not.toHaveBeenCalled();
   });
 });
 

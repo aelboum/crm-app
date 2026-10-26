@@ -26,6 +26,15 @@ describe("leaveAfterSignOut", () => {
     expect(go).toHaveBeenCalledWith(url);
   });
 
+  it("uses an address fetched in advance, without asking again", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const go = vi.fn();
+    await leaveAfterSignOut(go, Promise.resolve("http://localhost:8000/oidc/v1/end_session?client_id=c"));
+    expect(go).toHaveBeenCalledWith("http://localhost:8000/oidc/v1/end_session?client_id=c");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("reloads the start page when none is configured", async () => {
     answer(() => json({ url: null }));
     const go = vi.fn();

@@ -44,7 +44,7 @@ import {
   useSignOut,
   useWorkspace,
 } from "../api/queries";
-import { leaveAfterSignOut } from "../api/signOut";
+import { leaveAfterSignOut, signOutTarget } from "../api/signOut";
 import { useT } from "../i18n/useT";
 import { highestRole } from "../members/actions";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
@@ -98,10 +98,11 @@ function useSignOutAndLeave() {
     signOut,
     // Leave the current page so nothing from the ended session stays on screen.
     run: () => {
+      const target = signOutTarget();
       signOut.mutate(undefined, {
         onSuccess: () => {
           void navigate({ to: "/" });
-          void leaveAfterSignOut();
+          void leaveAfterSignOut(undefined, target);
         },
       });
     },
