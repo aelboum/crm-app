@@ -246,6 +246,7 @@ check" is enforced by product code in addition to the permission.
 | `crm_app.activity:update` | ✓ | ✓ | – | – | U | — |
 | `crm_app.activity:delete` | ✓ | ✓ | – | – | D | Confirmation |
 | `crm_app.crm_data:export` | ✓ | ✓ | – | – | A | Bounded, audited, rate-limited |
+| `crm_app.crm_data:import` | ✓ | ✓ | – | – | A | Bounded, audited, rate-limited; added by P3-F |
 
 **Not in the matrix on purpose:** workspace deletion and purge. SaaS-OS
 ADR-0040 answers "May a tenant's administrator … delete their tenant? Is

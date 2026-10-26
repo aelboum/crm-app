@@ -53,6 +53,8 @@ SCHEMA = "crm_app"
 PURGE_TABLES: tuple[str, ...] = (
     "activity",
     "note",
+    "import_row",
+    "import_job",
     "contact_tag",
     "company_tag",
     "contact",
@@ -71,7 +73,9 @@ _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 # their rows for the purged workspace after the tenant tables, outside any
 # tenant context, because their RLS hides them from every tenant
 # transaction (migration 0006, `SIGNUP-PLAN.md` §4b).
-PURGE_GLOBAL_REFERENCES: tuple[str, ...] = ("signup",)
+# `import_expiry` (migration 0009) only schedules the deletion of import
+# rows; it holds no personal data, and its rows go with the workspace.
+PURGE_GLOBAL_REFERENCES: tuple[str, ...] = ("signup", "import_expiry")
 
 
 def _forget_signups(tenant_id: uuid.UUID) -> None:
@@ -80,6 +84,21 @@ def _forget_signups(tenant_id: uuid.UUID) -> None:
     signups.forget_workspace(tenant_id)
     if signups.remaining_for_workspace(tenant_id):
         raise PurgeIncompleteError("Rows remain in: signup")
+
+
+def _forget_import_expiry(tenant_id: uuid.UUID) -> None:
+    from saas_os.infra.db import delete, select, session_scope  # noqa: PLC0415
+
+    from crm_app.models import ImportExpiry  # noqa: PLC0415
+
+    with session_scope() as session:
+        session.execute(delete(ImportExpiry).where(ImportExpiry.workspace_id == tenant_id))
+    with session_scope() as session:
+        left = session.execute(
+            select(ImportExpiry.import_id).where(ImportExpiry.workspace_id == tenant_id).limit(1)
+        ).first()
+    if left is not None:
+        raise PurgeIncompleteError("Rows remain in: import_expiry")
 
 
 class PurgeIncompleteError(RuntimeError):
@@ -145,6 +164,8 @@ class CrmDataPurgeParticipant:
                 raise PurgeIncompleteError(f"Rows remain in: {', '.join(remaining)}")
         if "signup" in self._global_references:
             _forget_signups(tenant_id)
+        if "import_expiry" in self._global_references:
+            _forget_import_expiry(tenant_id)
 
     def _table(self, table: str) -> Any:  # a SQLAlchemy Table; typed loosely to keep SQLAlchemy out
         from saas_os.infra.db import Base  # noqa: PLC0415

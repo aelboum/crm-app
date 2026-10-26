@@ -1018,6 +1018,64 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      in the CSV exports (P3-E1 and P3-E2 fix their columns). Removing a
      select option leaves stored values as they are.
 
+## P3-F — CSV import (2026-10-26)
+
+- **Status:** The owner decided the two open questions on 2026-10-26
+  (`PHASE3-PLAN.md` §18 Q4, Q5): "Import permission: Owner and Admin only,
+  enforced server-side" and "Retention: Seven days for import staging data
+  and temporary artifacts … Do not delete successfully imported CRM
+  records after seven days." The rest is decided under M1 from
+  `PHASE3-PLAN.md` §9.
+- **Decisions:**
+  1. **Permission:** a new catalogue permission `crm_app.crm_data:import`
+     (administrative) in the Owner and Admin role templates (§9.5 option
+     (a)); `/access` reports it as `import_records`. Workspaces created
+     from now on receive it. Roles of workspaces created before this change
+     do not: SaaS-OS has no supported way to grant a new permission to
+     existing roles (gate G7, saas-os #88). No real workspace exists yet;
+     local test workspaces are affected, and a test workspace must be
+     created afresh to import.
+  2. **What:** contacts or companies, one kind per import. Contacts:
+     first name, last name, email, phone, job title, city, stage (source is
+     set to `import`). Companies: name, domain, website, phone, industry,
+     city, country code. Owners, tags, custom fields and company links are
+     not imported in this slice.
+  3. **Upload:** the request body is the CSV itself (`text/csv`), at most
+     5 MB, read with that limit and refused beyond it; at most 10,000 data
+     rows; UTF-8 (a byte-order mark is allowed), else Windows-1252; a header
+     row; the mapping is proposed from header names or given explicitly.
+     No new dependency (no multipart parser), no file stored: only the
+     normalised values of each row are kept.
+  4. **Validation and duplicates:** every row is checked with the API's own
+     validators. A row whose email (contact) or domain (company) belongs to
+     an existing active record, or to an earlier row of the file, is a
+     duplicate and is skipped. Nothing is ever updated or overwritten.
+     Errors name the row, the field and a code, never the value.
+  5. **Commit:** a worker job, `crm_app_import_commit`, creates records in
+     batches of 500 rows. Each batch is one transaction that creates the
+     records and marks their rows done with the new record's ID, so a
+     repeated delivery of a batch creates nothing twice, without changing
+     the record tables. Duplicates are checked again at commit. One import
+     runs per workspace at a time. Cancel stops after the current batch;
+     what was created stays. A failed job can be resumed.
+  6. **Limits:** 10 previews per user per fixed one-hour window on the
+     existing limiter (failing closed with 503), the same fixed-window
+     caveat as P3-E1.
+  7. **Retention:** an import's rows (normalised values, personal data)
+     are deleted 7 days after it finishes, or 7 days after its preview if
+     it is never committed; created records are never deleted by this. The
+     job's summary (status, counts, field-to-column mapping by position)
+     holds no cell value and is kept. Because no SaaS-OS authority lets
+     product code list every workspace, a global table `import_expiry`
+     (import ID, workspace ID, due time; no personal data; SaaS-OS's
+     tenant-context exclusion policy, as for `signup`) tells the
+     maintenance command `python -m crm_app.import_maintenance` which
+     workspaces to visit; it deletes their rows inside each workspace's
+     own scope. Purge removes both.
+  8. **Audit:** `crm_app.import.previewed`, `.committed`, `.completed`,
+     `.failed`, `.cancelled` with counts only; each created record has its
+     normal `created` audit and history entries, marked as imported.
+
 ## P3-E2 — Companies CSV export (approved 2026-10-26)
 
 - **Status:** Approved by the owner, 2026-10-26, after the 3E2 audit:

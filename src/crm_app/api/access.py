@@ -55,6 +55,7 @@ ACTIONS: dict[str, tuple[str, str]] = {
     # Contacts export (slice 3E): Owner and Admin. Display only; the export
     # route enforces the permission itself.
     "export_records": ("crm_app.crm_data", "export"),
+    "import_records": ("crm_app.crm_data", "import"),
 }
 
 

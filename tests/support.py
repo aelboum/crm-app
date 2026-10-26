@@ -69,6 +69,10 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "company_tag",
         # P3-D (custom fields).
         "custom_field_definition",
+        # P3-F (import).
+        "import_job",
+        "import_row",
+        "import_expiry",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -86,7 +90,7 @@ APPEND_ONLY_TABLES: frozenset[str] = frozenset({"activity", "signup_attempt"})
 # table here is a reviewed decision, never a way past the RLS and purge
 # guards: each must carry SaaS-OS's tenant-context exclusion policy
 # (`tests/catalog_rules.py`, `global_policy_violations`).
-GLOBAL_TABLES: frozenset[str] = frozenset({"signup", "signup_attempt"})
+GLOBAL_TABLES: frozenset[str] = frozenset({"signup", "signup_attempt", "import_expiry"})
 
 # Global tables whose rows are limited to one person (option A): they also
 # carry the restrictive owner policies.

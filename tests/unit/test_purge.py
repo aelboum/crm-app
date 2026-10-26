@@ -156,9 +156,10 @@ def test_create_app_registers_the_participant(tmp_path: Path) -> None:
 
 
 def test_global_tables_naming_a_workspace_are_removed_by_the_participant() -> None:
-    """`signup` names the workspace it created without a key into
-    `core.tenants`; the participant removes those rows (decision S-1)."""
-    assert PURGE_GLOBAL_REFERENCES == ("signup",)
+    """`signup` (decision S-1) and `import_expiry` (decision P3-F) name a
+    workspace without a key into `core.tenants`; the participant removes
+    those rows."""
+    assert PURGE_GLOBAL_REFERENCES == ("signup", "import_expiry")
     assert frozenset(PURGE_GLOBAL_REFERENCES) <= GLOBAL_TABLES
 
 

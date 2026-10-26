@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0008_custom_fields` own the
+Migrations `0002_contacts_companies` to `0009_imports` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -25,6 +25,7 @@ from typing import Any
 from saas_os.infra.db import (
     JSON,
     Base,
+    Boolean,
     DateTime,
     ForeignKeyConstraint,
     Integer,
@@ -240,6 +241,73 @@ class CustomFieldDefinition(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ImportJob(Base):
+    """One CSV import of contacts or companies (migration 0009, decision
+    P3-F): status, counts, the mapping by column position, the checkpoint.
+    No cell value."""
+
+    __tablename__ = "import_job"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    entity: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    mapping: Mapped[dict[str, int]] = mapped_column(JSON)
+    total_rows: Mapped[int] = mapped_column(Integer, default=0)
+    valid_rows: Mapped[int] = mapped_column(Integer, default=0)
+    invalid_rows: Mapped[int] = mapped_column(Integer, default=0)
+    duplicate_rows: Mapped[int] = mapped_column(Integer, default=0)
+    created_rows: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_rows: Mapped[int] = mapped_column(Integer, default=0)
+    failed_rows: Mapped[int] = mapped_column(Integer, default=0)
+    checkpoint: Mapped[int] = mapped_column(Integer, default=0)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ImportRow(Base):
+    """One data row of an import: normalised values or error codes, and the
+    record it created. Personal data; deleted after 7 days (P3-F 7)."""
+
+    __tablename__ = "import_row"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "import_id"],
+            [f"{SCHEMA}.import_job.tenant_id", f"{SCHEMA}.import_job.id"],
+            name="import_row_job_fkey",
+            ondelete="CASCADE",
+        ),
+        {"schema": SCHEMA},
+    )
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    import_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    row_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    status: Mapped[str] = mapped_column(Text)
+    # SQL NULL, not JSON null: the table's payload check tells them apart.
+    data: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    errors: Mapped[list[dict[str, str]] | None] = mapped_column(JSON(none_as_null=True))
+    record_id: Mapped[uuid.UUID | None] = mapped_column()
+
+
+class ImportExpiry(Base):
+    """When an import's rows are due for deletion, and in which workspace
+    (migration 0009). A global table without personal data; only a
+    transaction without a workspace sees it."""
+
+    __tablename__ = "import_expiry"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    import_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column()
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class WorkspaceSettings(Base):
