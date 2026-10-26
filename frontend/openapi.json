@@ -1745,6 +1745,19 @@
         "title": "SignupOut",
         "type": "object"
       },
+      "SignupStatus": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "SignupStatus",
+        "type": "object"
+      },
       "StatusChange": {
         "properties": {
           "confirm_owner_change": {
@@ -2169,6 +2182,28 @@
           }
         },
         "summary": "Current Signup",
+        "tags": [
+          "signups"
+        ]
+      }
+    },
+    "/v1/signups/status": {
+      "get": {
+        "description": "The kill switch's effective value, read-only. Production start-up\nrefuses `SIGNUP_ENABLED=true` (`crm_app.settings`), so it is false there.",
+        "operationId": "signup_status_v1_signups_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Signup Status",
         "tags": [
           "signups"
         ]

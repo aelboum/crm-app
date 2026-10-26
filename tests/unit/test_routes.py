@@ -179,12 +179,15 @@ def test_invitation_routes_are_for_owners_and_admins() -> None:
 # Self-service signup (decision S-1): the person is the signed-in session's
 # user, never a workspace member yet, so the routes need only a session and
 # name no workspace. They answer 404 while SIGNUP_ENABLED is off
-# (tests/integration/test_signups.py).
+# (tests/integration/test_signups.py). Only the status flag is public
+# (tests/unit/test_signup_status.py).
 SIGNUPS = {"POST /v1/signups", "GET /v1/signups/current"}
+SIGNUP_STATUS = "GET /v1/signups/status"
 
 
 def test_signup_routes_need_only_a_signed_in_person(tmp_path: Path) -> None:
     policies = {k: v for k, v in _policies(tmp_path).items() if "/v1/signups" in k}
+    assert policies.pop(SIGNUP_STATUS)[0] == "public"
     assert set(policies) == SIGNUPS
     assert {kind for kind, _, _ in policies.values()} == {"authenticated"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())

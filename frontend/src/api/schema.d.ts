@@ -143,6 +143,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/signups/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Signup Status
+         * @description The kill switch's effective value, read-only. Production start-up
+         *     refuses `SIGNUP_ENABLED=true` (`crm_app.settings`), so it is false there.
+         */
+        get: operations["signup_status_v1_signups_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenants/{tenant_id}/invitations/accept": {
         parameters: {
             query?: never;
@@ -1145,6 +1166,11 @@ export interface components {
             /** Workspace Id */
             workspace_id: string | null;
         };
+        /** SignupStatus */
+        SignupStatus: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** StatusChange */
         StatusChange: {
             /**
@@ -1403,6 +1429,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_status_v1_signups_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignupStatus"];
                 };
             };
         };

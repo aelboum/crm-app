@@ -1,9 +1,12 @@
 """Self-service signup routes (decisions S-1, S-1.1; `SIGNUP-PLAN.md` §4, Stage C).
 
+    GET  /v1/signups/status    public: {"enabled": bool}
     POST /v1/signups           Idempotency-Key header; body {"workspace_name"}
     GET  /v1/signups/current
 
-Both answer 404 while `SIGNUP_ENABLED` is off (`crm_app.settings`), and
+`status` tells the start page whether to offer signup; it reads the same
+kill switch and says nothing else (no limits, no configuration). The other
+two answer 404 while `SIGNUP_ENABLED` is off (`crm_app.settings`), and
 need a signed-in person (SaaS-OS's `authenticated` policy). The person is
 the server-side session's user; the body has exactly one field, so a
 request naming a user, a parent workspace, a role or any authority is
@@ -50,6 +53,7 @@ from saas_os.api.errors import (
     route_not_found,
     service_unavailable,
 )
+from saas_os.api.route_policy import public_route
 from saas_os.core.idempotency import IdempotencyKeyInvalidError, validate_idempotency_key
 from saas_os.core.identity import Session
 from saas_os.infra.ratelimit import (
@@ -76,6 +80,10 @@ class SignupRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     workspace_name: str
+
+
+class SignupStatus(BaseModel):
+    enabled: bool
 
 
 class SignupOut(BaseModel):
@@ -159,6 +167,16 @@ def _validated(payload: Any) -> str:
         return normalize_workspace_name(body.workspace_name)
     except InvalidWorkspaceNameError:
         raise invalid_request("invalid_workspace_name") from None
+
+
+_public = Depends(public_route("whether signup is offered: one flag, the same for every visitor"))
+
+
+@router.get("/status", response_model=SignupStatus, dependencies=[_public])
+def signup_status() -> SignupStatus:
+    """The kill switch's effective value, read-only. Production start-up
+    refuses `SIGNUP_ENABLED=true` (`crm_app.settings`), so it is false there."""
+    return SignupStatus(enabled=signup_enabled())
 
 
 @router.post(
