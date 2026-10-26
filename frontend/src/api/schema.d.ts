@@ -899,6 +899,10 @@ export interface components {
             city?: string | null;
             /** Country Code */
             country_code?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: string | boolean | number | null;
+            } | null;
             /** Domain */
             domain?: string | null;
             /** Industry */
@@ -927,6 +931,10 @@ export interface components {
             created_at: string;
             /** Created By User Id */
             created_by_user_id: string | null;
+            /** Custom Fields */
+            custom_fields: {
+                [key: string]: unknown;
+            };
             /** Domain */
             domain: string | null;
             /**
@@ -989,6 +997,10 @@ export interface components {
             city?: string | null;
             /** Country Code */
             country_code?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: string | boolean | number | null;
+            } | null;
             /** Domain */
             domain?: string | null;
             /** Industry */
@@ -1008,6 +1020,10 @@ export interface components {
             city?: string | null;
             /** Company Id */
             company_id?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: string | boolean | number | null;
+            } | null;
             /** Email */
             email?: string | null;
             /** First Name */
@@ -1047,6 +1063,10 @@ export interface components {
             created_at: string;
             /** Created By User Id */
             created_by_user_id: string | null;
+            /** Custom Fields */
+            custom_fields: {
+                [key: string]: unknown;
+            };
             /** Email */
             email: string | null;
             /** First Name */
@@ -1100,6 +1120,10 @@ export interface components {
             city?: string | null;
             /** Company Id */
             company_id?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: string | boolean | number | null;
+            } | null;
             /** Email */
             email?: string | null;
             /** First Name */

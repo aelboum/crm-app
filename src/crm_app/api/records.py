@@ -36,6 +36,11 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
+    StrictFloat,
+    StrictInt,
+    StrictStr,
+    StringConstraints,
     ValidationInfo,
     field_validator,
     model_validator,
@@ -80,6 +85,38 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+# --- Custom field values (decision P3-D 5) -------------------------------------------
+#
+# A JSON object of changed keys: each value a string, number, boolean, or
+# null to clear. Keys and values are checked against the workspace's active
+# fields by `crm_app.records`; here only the shape and size are bounded.
+
+_CustomKey = Annotated[str, StringConstraints(max_length=40)]
+_CustomValue = (
+    Annotated[StrictStr, StringConstraints(max_length=2048)]
+    | StrictBool
+    | StrictInt
+    | StrictFloat
+    | None
+)
+CustomValues = Annotated[dict[_CustomKey, _CustomValue], Field(max_length=100)]
+
+
+class _CustomFieldsCreate(BaseModel):
+    custom_fields: CustomValues | None = None
+
+
+class _CustomFieldsUpdate(BaseModel):
+    custom_fields: CustomValues | None = None
+
+    @field_validator("custom_fields")
+    @classmethod
+    def _not_null(cls, value: dict[str, Any] | None) -> dict[str, Any]:
+        if value is None:
+            raise values.InvalidValue("cannot be null; name the keys to clear")
+        return value
+
+
 # --- Contacts ---------------------------------------------------------------------
 
 _CONTACT_RULES: dict[str, Callable[[Any], Any]] = {
@@ -95,7 +132,7 @@ _CONTACT_RULES: dict[str, Callable[[Any], Any]] = {
 _CONTACT_REQUIRED = {"first_name", "lifecycle_stage", "source"}
 
 
-class ContactCreate(_Strict):
+class ContactCreate(_Strict, _CustomFieldsCreate):
     first_name: str
     last_name: str | None = None
     email: str | None = None
@@ -119,7 +156,7 @@ class ContactCreate(_Strict):
         return self
 
 
-class ContactUpdate(_Strict):
+class ContactUpdate(_Strict, _CustomFieldsUpdate):
     """Fields left out are unchanged; `null` clears an optional field."""
 
     first_name: str | None = None
@@ -169,6 +206,8 @@ class _RecordOut(BaseModel):
     version: int
     archived_at: datetime | None
     tags: list[TagRef]
+    # The values of the active custom fields, by key (decision P3-D 5).
+    custom_fields: dict[str, Any]
 
 
 class ContactOut(_RecordOut):
@@ -197,7 +236,7 @@ _COMPANY_RULES: dict[str, Callable[[Any], Any]] = {
 }
 
 
-class CompanyCreate(_Strict):
+class CompanyCreate(_Strict, _CustomFieldsCreate):
     """`domain` is derived from `website` when it is not given."""
 
     name: str
@@ -221,7 +260,7 @@ class CompanyCreate(_Strict):
         return self
 
 
-class CompanyUpdate(_Strict):
+class CompanyUpdate(_Strict, _CustomFieldsUpdate):
     """Fields left out are unchanged; `null` clears an optional field. The
     domain is not re-derived when only the website changes."""
 
@@ -258,6 +297,8 @@ class CompanyOut(_RecordOut):
 
 def _http(exc: RecordError) -> HTTPException:
     detail: dict[str, object] = {"code": exc.code}
+    if isinstance(exc, records.CustomFieldValueError) and exc.key is not None:
+        detail["key"] = exc.key
     if isinstance(exc, records.DuplicateRecordError) and exc.existing_id is not None:
         detail["existing_id"] = str(exc.existing_id)
     if isinstance(exc, records.StaleVersionError):

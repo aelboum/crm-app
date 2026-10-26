@@ -24,6 +24,7 @@ TEXT_MAX = 500
 NUMBER_DIGITS = 15
 NUMBER_LIMIT = 10**15
 MAX_ACTIVE = 50  # per entity per workspace (P3-D 3)
+VALUES_MAX_BYTES = 32_768  # a record's values as JSON (migration 0008)
 
 _KEY = re.compile(r"[a-z][a-z0-9_]{0,39}")
 _DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")

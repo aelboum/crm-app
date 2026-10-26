@@ -23,6 +23,7 @@ validation imports this module.
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -45,9 +46,19 @@ from saas_os.infra.db import (
 )
 from saas_os.infra.db import update as update_rows
 
+from crm_app.domains import custom_fields as field_rules
 from crm_app.domains import paging
 from crm_app.domains.membership import ACTIVE
-from crm_app.models import Activity, Company, CompanyTag, Contact, ContactTag, Tag
+from crm_app.domains.records import InvalidValue
+from crm_app.models import (
+    Activity,
+    Company,
+    CompanyTag,
+    Contact,
+    ContactTag,
+    CustomFieldDefinition,
+    Tag,
+)
 
 
 @dataclass(frozen=True)
@@ -158,6 +169,19 @@ class InvalidReferenceError(RecordError):
 
 class TooManyTagsError(RecordError):
     status, code = 422, "too_many_tags"
+
+
+class CustomFieldValueError(RecordError):
+    """A custom field value the record's active fields refuse (decision
+    P3-D 5). The key is workspace configuration, never personal data, so the
+    response names it."""
+
+    status = 422
+
+    def __init__(self, code: str, key: str | None = None) -> None:
+        super().__init__(code)
+        self.code = code
+        self.key = key
 
 
 class EmailOrPhoneRequiredError(RecordError):
@@ -291,6 +315,48 @@ def _audit(session: Session, kind: Kind, scope: Scope, event: _Event) -> None:
     )
 
 
+def _active_fields(session: Session, scope: Scope, kind: Kind) -> dict[str, CustomFieldDefinition]:
+    """The kind's active custom fields by key (decision P3-D)."""
+    rows = session.execute(
+        select(CustomFieldDefinition).where(
+            CustomFieldDefinition.tenant_id == scope.workspace,
+            CustomFieldDefinition.entity == kind.name,
+            CustomFieldDefinition.archived_at.is_(None),
+        )
+    ).scalars()
+    return {row.key: row for row in rows}
+
+
+def _merge_custom_fields(
+    session: Session,
+    scope: Scope,
+    kind: Kind,
+    stored: Mapping[str, Any],
+    changes: Mapping[str, Any],
+) -> dict[str, Any]:
+    """`stored` with `changes` applied (P3-D 5): each changed key must be an
+    active field of the kind and its value valid for the field's type; a
+    `None` clears it. Values of archived fields stay as they are."""
+    active = _active_fields(session, scope, kind) if changes else {}
+    merged = dict(stored)
+    for key, raw in changes.items():
+        field = active.get(key)
+        if field is None:
+            raise CustomFieldValueError("unknown_custom_field", key)
+        try:
+            value = field_rules.value(field.field_type, field.options, raw)
+        except InvalidValue:
+            raise CustomFieldValueError("invalid_custom_field", key) from None
+        if value is None:
+            merged.pop(key, None)
+        else:
+            merged[key] = value
+    size = len(json.dumps(merged, ensure_ascii=False).encode("utf-8"))
+    if size > field_rules.VALUES_MAX_BYTES:
+        raise CustomFieldValueError("custom_fields_too_large")
+    return merged
+
+
 def history_entry(
     kind: Kind, scope: Scope, record_id: uuid.UUID, event: str, **payload: Any
 ) -> Activity:
@@ -403,8 +469,12 @@ def _records(session: Session, scope: Scope, kind: Kind, rows: Sequence[Row]) ->
         {name: getattr(row, name) for name in (*_SYSTEM_FIELDS, *kind.fields)} for row in rows
     ]
     tagged = _tags_of(session, scope, kind, [row.id for row in rows])
-    for record in records:
+    active = set(_active_fields(session, scope, kind)) if rows else set()
+    for record, row in zip(records, rows, strict=True):
         record["tags"] = tagged.get(record["id"], [])
+        record["custom_fields"] = {
+            key: value for key, value in (row.custom_fields or {}).items() if key in active
+        }
     if kind is CONTACT:
         linked = {row.company_id for row in rows if isinstance(row, Contact) and row.company_id}
         companies = {}
@@ -749,10 +819,13 @@ def create(
     content; a replay returns the record's current state."""
     check_owner(scope, values.get("owner_user_id"))
     record_id = uuid.uuid4()
+    custom = values.get("custom_fields") or {}
+    values = {name: value for name, value in values.items() if name != "custom_fields"}
 
     def business(session: Session) -> dict[str, object]:
         lock_open_tenant(session, scope.workspace)
         now = _now()
+        merged = _merge_custom_fields(session, scope, kind, {}, custom)
         row = kind.model(
             id=record_id,
             tenant_id=scope.workspace,
@@ -762,6 +835,7 @@ def create(
             updated_by_user_id=scope.actor,
             version=1,
             archived_at=None,
+            custom_fields=merged,
             **values,
         )
         _check_row(session, scope, row, set(values))
@@ -770,7 +844,11 @@ def create(
         session.flush()
         session.add(history_entry(kind, scope, record_id, "created"))
         given = sorted(name for name, value in values.items() if value is not None)
-        _audit(session, kind, scope, _Event("created", record_id, {"fields": given}))
+        metadata: dict[str, object] = {"fields": given}
+        if merged:
+            metadata["fields"] = sorted([*given, "custom_fields"])
+            metadata["custom_field_keys"] = sorted(merged)
+        _audit(session, kind, scope, _Event("created", record_id, metadata))
         return {"id": str(record_id)}
 
     def unique_value() -> str | None:
@@ -781,6 +859,7 @@ def create(
         result = _write(kind, scope, unique_value, business)
     else:
         fingerprint = {k: None if v is None else str(v) for k, v in values.items()}
+        fingerprint["custom_fields"] = json.dumps(custom, sort_keys=True)
         try:
             # Keys are scoped to the acting member: another member's request
             # with the same key never replays this one.
@@ -818,10 +897,21 @@ def update(
         row = _load(session, kind, scope, record_id, lock=True)
         if row.version != expected_version:
             raise StaleVersionError(row.version)
-        changed = {name for name, value in changes.items() if getattr(row, name) != value}
+        wanted = dict(changes)
+        custom_keys: list[str] = []
+        if "custom_fields" in wanted:
+            stored = row.custom_fields or {}
+            merged = _merge_custom_fields(
+                session, scope, kind, stored, wanted["custom_fields"] or {}
+            )
+            wanted["custom_fields"] = merged
+            custom_keys = sorted(
+                key for key in set(stored) | set(merged) if stored.get(key) != merged.get(key)
+            )
+        changed = {name for name, value in wanted.items() if getattr(row, name) != value}
         before = {name: getattr(row, name) for name in changed}
         for name in changed:
-            setattr(row, name, changes[name])
+            setattr(row, name, wanted[name])
         unique["value"] = getattr(row, kind.unique_field)
         if not changed:
             return
@@ -831,7 +921,10 @@ def update(
         _touch(row, scope)
         session.flush()
         session.add_all(_change_history(kind, scope, row, before))
-        _audit(session, kind, scope, _Event("updated", record_id, {"fields": sorted(changed)}))
+        metadata: dict[str, object] = {"fields": sorted(changed)}
+        if custom_keys:
+            metadata["custom_field_keys"] = custom_keys
+        _audit(session, kind, scope, _Event("updated", record_id, metadata))
 
     _write(kind, scope, lambda: unique.get("value"), apply)
     return get(kind, scope, record_id)

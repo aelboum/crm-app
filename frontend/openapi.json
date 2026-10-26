@@ -291,6 +291,41 @@
             ],
             "title": "Country Code"
           },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "maxLength": 2048,
+                      "type": "string"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "propertyNames": {
+                  "maxLength": 40
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
           "domain": {
             "anyOf": [
               {
@@ -411,6 +446,11 @@
             ],
             "title": "Created By User Id"
           },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
           "domain": {
             "anyOf": [
               {
@@ -515,6 +555,7 @@
           "version",
           "archived_at",
           "tags",
+          "custom_fields",
           "name",
           "domain",
           "website",
@@ -614,6 +655,41 @@
             ],
             "title": "Country Code"
           },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "maxLength": 2048,
+                      "type": "string"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "propertyNames": {
+                  "maxLength": 40
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
           "domain": {
             "anyOf": [
               {
@@ -710,6 +786,41 @@
               }
             ],
             "title": "Company Id"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "maxLength": 2048,
+                      "type": "string"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "propertyNames": {
+                  "maxLength": 40
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
           },
           "email": {
             "anyOf": [
@@ -852,6 +963,11 @@
             ],
             "title": "Created By User Id"
           },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
           "email": {
             "anyOf": [
               {
@@ -964,6 +1080,7 @@
           "version",
           "archived_at",
           "tags",
+          "custom_fields",
           "first_name",
           "last_name",
           "email",
@@ -1042,6 +1159,41 @@
               }
             ],
             "title": "Company Id"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "maxLength": 2048,
+                      "type": "string"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "propertyNames": {
+                  "maxLength": 40
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
           },
           "email": {
             "anyOf": [
