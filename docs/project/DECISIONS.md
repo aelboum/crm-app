@@ -882,6 +882,39 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   other deferred scope; production deployment or releases; any SaaS-OS pin
   change. Phase 2 stays open.
 
+## P3-E1 — Contacts CSV export (approved 2026-10-26)
+
+- **Status:** Approved by the owner, 2026-10-26, after the 3E audit:
+  "I approve the first bounded Phase 3E slice: Contacts CSV export only."
+  It amends P3-A's and P3-B's "Not approved: exports" for contacts only.
+- **Decisions:**
+  1. Route: `GET /v1/workspaces/{id}/contacts/export.csv`, requiring the
+     existing `crm_app.crm_data:export` (Owner, Admin; Q6). No new
+     permission. `/access` reports it as `export_records`, for display only.
+  2. Columns, in order: `id, first_name, last_name, email, phone,
+     job_title, city, lifecycle_stage, source, company_id, company_name,
+     created_at, updated_at, archived_at`. Owner, tenant, version and
+     creator/updater IDs, notes and activity are excluded.
+  3. The list's filters and order, without paging. The default is active
+     contacts; `archived=true` and `archived=all` behave as on the list.
+  4. UTF-8 with a byte-order mark, minimal quoting, CRLF records, ISO 8601
+     UTC times, and an ASCII file name `contacts-YYYY-MM-DD.csv`.
+  5. Formula protection (a leading `'` for `=`, `+`, `-`, `@`, tab, CR)
+     applies to every cell, including phone numbers starting with `+`.
+  6. At most 50,000 rows; the 50,001st gives 413 `export_too_large` and no
+     file. There is no separate count.
+  7. Ten attempts per user per window. Every attempt that reaches the
+     export counts, including one refused for size. A limiter failure
+     refuses (503). **Recorded deviation:** SaaS-OS's limiter counts in
+     fixed one-hour windows, not a rolling hour, so up to 20 exports can
+     fall within one hour across a window boundary. A rolling window would
+     need new infrastructure, which this slice excludes.
+  8. Audit `crm_app.contacts.exported` with the row count and the names of
+     the filters used only, in the same transaction as the read. Refused
+     exports leave no entry.
+- **Not approved:** companies export, import, tags, custom fields, new
+  permissions, file storage, SaaS-OS changes, deployment.
+
 ## P2-F — Completing Phase 2 (approved 2026-10-24)
 
 - **Status:** Approved by the owner, 2026-10-24, after the Phase 2

@@ -567,6 +567,74 @@ def list_records(kind: Kind, scope: Scope, query: ListQuery) -> Page:
     )
 
 
+# --- Export (PHASE3-PLAN.md §10, slice 3E) ---------------------------------------------
+
+EXPORT_BATCH = 1_000
+
+
+class ExportTooLargeError(RecordError):
+    status = 413
+    code = "export_too_large"
+
+
+def export_contacts(
+    scope: Scope, query: ListQuery, *, max_rows: int, filter_keys: Sequence[str]
+) -> list[Record]:
+    """Every contact the list `query` selects, in the list's order, with the
+    linked company's name. One transaction reads them in batches and, only
+    when the whole result fits in `max_rows`, records the audit entry: no
+    separate count can disagree with what is exported, and a refused export
+    leaves no audit entry. Raises `ExportTooLargeError` on row `max_rows + 1`.
+
+    The company is joined on the contact's own workspace as well as its ID,
+    so a name can only come from the caller's workspace (Row-Level Security
+    already confines both tables)."""
+    keys = _order(CONTACT, query.order)
+    ascending = query.direction == "asc"
+    statement = (
+        select(
+            Contact.id,
+            Contact.first_name,
+            Contact.last_name,
+            Contact.email,
+            Contact.phone,
+            Contact.job_title,
+            Contact.city,
+            Contact.lifecycle_stage,
+            Contact.source,
+            Contact.company_id,
+            Company.name.label("company_name"),
+            Contact.created_at,
+            Contact.updated_at,
+            Contact.archived_at,
+        )
+        .outerjoin(
+            Company,
+            (Company.tenant_id == Contact.tenant_id) & (Company.id == Contact.company_id),
+        )
+        .where(*_conditions(CONTACT, scope, query))
+        .order_by(*(key.expression.asc() if ascending else key.expression.desc() for key in keys))
+        .limit(max_rows + 1)
+        .execution_options(yield_per=EXPORT_BATCH)
+    )
+    with tenant_session_scope(scope.workspace) as session:
+        rows: list[Record] = []
+        for row in session.execute(statement):
+            if len(rows) == max_rows:
+                raise ExportTooLargeError
+            rows.append(dict(row._mapping))
+        record_in_transaction(
+            session,
+            caller=UserCaller(scope.actor),
+            tenant_id=scope.workspace,
+            action="crm_app.contacts.exported",
+            resource_type=CONTACT.resource,
+            # The row count and the names of the filters used, never values.
+            metadata={"row_count": len(rows), "filter_keys": sorted(filter_keys)},
+        )
+    return rows
+
+
 # --- Writes ----------------------------------------------------------------------
 
 

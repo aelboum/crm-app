@@ -3357,6 +3357,39 @@
           },
           {
             "in": "query",
+            "name": "lifecycle_stage",
+            "required": false,
+            "schema": {
+              "items": {
+                "enum": [
+                  "lead",
+                  "prospect",
+                  "customer",
+                  "inactive"
+                ],
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Lifecycle Stage",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Company Id",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
             "name": "q",
             "required": false,
             "schema": {
@@ -3457,39 +3490,6 @@
                 }
               ],
               "title": "Cursor"
-            }
-          },
-          {
-            "in": "query",
-            "name": "lifecycle_stage",
-            "required": false,
-            "schema": {
-              "items": {
-                "enum": [
-                  "lead",
-                  "prospect",
-                  "customer",
-                  "inactive"
-                ],
-                "type": "string"
-              },
-              "maxItems": 20,
-              "title": "Lifecycle Stage",
-              "type": "array"
-            }
-          },
-          {
-            "in": "query",
-            "name": "company_id",
-            "required": false,
-            "schema": {
-              "items": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "maxItems": 20,
-              "title": "Company Id",
-              "type": "array"
             }
           },
           {
@@ -3615,6 +3615,181 @@
           }
         },
         "summary": "Create Contact",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/contacts/export.csv": {
+      "get": {
+        "description": "The contacts the list would show for these filters, in its order, as\nCSV (UTF-8 with a byte-order mark, CRLF records). Nothing is stored.",
+        "operationId": "export_contacts_v1_workspaces__tenant_id__contacts_export_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lifecycle_stage",
+            "required": false,
+            "schema": {
+              "items": {
+                "enum": [
+                  "lead",
+                  "prospect",
+                  "customer",
+                  "inactive"
+                ],
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Lifecycle Stage",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Company Id",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Owner",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "enum": [
+                "false",
+                "true",
+                "all"
+              ],
+              "title": "Archived",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "name",
+              "enum": [
+                "name",
+                "created_at",
+                "updated_at"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "description": "More than 50,000 contacts match: narrow the filters."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Export limit reached; see Retry-After."
+          }
+        },
+        "summary": "Export Contacts",
         "tags": [
           "contacts"
         ]

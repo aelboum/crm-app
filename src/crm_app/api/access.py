@@ -52,6 +52,9 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "create_note": ("crm_app.activity", "create"),
     "edit_any_note": ("crm_app.activity", "update"),
     "delete_any_note": ("crm_app.activity", "delete"),
+    # Contacts export (slice 3E): Owner and Admin. Display only; the export
+    # route enforces the permission itself.
+    "export_records": ("crm_app.crm_data", "export"),
 }
 
 

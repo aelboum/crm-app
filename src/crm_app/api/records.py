@@ -2,6 +2,7 @@
 
     /v1/workspaces/{tenant_id}/contacts[/{record_id}[/archive|/restore]]
     /v1/workspaces/{tenant_id}/companies[/{record_id}[/archive|/restore]]
+    /v1/workspaces/{tenant_id}/contacts/export.csv   (slice 3E; Owner and Admin)
 
 Each route declares exactly one `require_permission` from the existing
 catalogue (decision Q6): read for every role; create and update (which
@@ -24,10 +25,12 @@ enclosing function, which only works when annotations are evaluated.
 import re
 import uuid
 from collections.abc import Callable
-from datetime import datetime
+from dataclasses import replace
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Self
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
+from fastapi.concurrency import run_in_threadpool
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -38,9 +41,17 @@ from pydantic import (
 )
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import get_idempotency_key, require_permission
+from saas_os.api.errors import rate_limited, service_unavailable
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
+from saas_os.infra.ratelimit import (
+    RateLimitBackendError,
+    RateLimitExceededError,
+    enforce_rate_limit,
+    get_ratelimit_config,
+)
 
 from crm_app import records
+from crm_app.domains import export as csv_export
 from crm_app.domains import paging
 from crm_app.domains import records as values
 from crm_app.records import COMPANY, CONTACT, Kind, RecordError, Scope
@@ -369,10 +380,6 @@ def _add_routes(
         return Response(status_code=204)
 
 
-_add_routes(CONTACT, "contacts", ContactCreate, ContactUpdate, ContactOut)
-_add_routes(COMPANY, "companies", CompanyCreate, CompanyUpdate, CompanyOut)
-
-
 # --- Lists (PHASE3-PLAN.md §19.5) ----------------------------------------------------
 
 _MAX_VALUES = 20  # per repeatable filter
@@ -383,21 +390,33 @@ Archived = Literal["false", "true", "all"]
 Stage = Literal["lead", "prospect", "customer", "inactive"]
 
 
-class _ListParams(_Strict):
-    """Query parameters shared by both lists; unknown parameters are refused."""
+class _FilterParams(_Strict):
+    """The filters and order both lists (and the export) take; unknown
+    parameters are refused."""
 
     q: str | None = Field(default=None, max_length=100, pattern=r"^[^\x00]*$")
     owner: list[str] = Field(default_factory=list, max_length=_MAX_VALUES)
     archived: Archived = "false"
     sort: Order = "name"
     direction: Direction = "asc"
+
+
+class _ListParams(_FilterParams):
     limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
     cursor: str | None = Field(default=None, max_length=paging.CURSOR_MAX)
 
 
-class ContactListParams(_ListParams):
+class _ContactFilters(BaseModel):
     lifecycle_stage: list[Stage] = Field(default_factory=list, max_length=_MAX_VALUES)
     company_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)
+
+
+class ContactListParams(_ListParams, _ContactFilters):
+    pass
+
+
+class ContactExportParams(_FilterParams, _ContactFilters):
+    """The contact list's filters and order, without paging."""
 
 
 class CompanyListParams(_ListParams):
@@ -432,13 +451,14 @@ def _owners(raw: list[str], context: RequestContext) -> tuple[uuid.UUID, ...]:
     return tuple(owners)
 
 
-def _query(params: _ListParams, context: RequestContext, **extra: Any) -> records.ListQuery:
+def _query(params: _FilterParams, context: RequestContext, **extra: Any) -> records.ListQuery:
     q = params.q.strip() if params.q else ""
+    paged = isinstance(params, _ListParams)
     return records.ListQuery(
         order=params.sort,
         direction=params.direction,
-        limit=params.limit,
-        cursor=params.cursor,
+        limit=params.limit if paged else DEFAULT_LIMIT,
+        cursor=params.cursor if paged else None,
         q=q or None,
         archived=params.archived,
         owners=_owners(params.owner, context),
@@ -473,3 +493,82 @@ def list_companies(
     params: Annotated[CompanyListParams, Query()],
 ) -> Any:
     return _page(COMPANY, context, _query(params, context))
+
+
+# --- Contacts export (PHASE3-PLAN.md §10, slice 3E) ---------------------------------
+#
+# Owner and Admin only (`crm_app.crm_data:export`, decision Q6). Ten attempts
+# per user per window on SaaS-OS's limiter, which counts in fixed windows; a
+# limiter failure refuses. Registered before the record routes below, so
+# `export.csv` is never read as a `{record_id}`.
+
+EXPORT_PER_WINDOW = 10
+EXPORT_WINDOW_SECONDS = 3600
+_LIMITER_RETRY_SECONDS = 5
+
+
+async def _count_export(context: RequestContext) -> None:
+    """One export attempt for the caller, counted atomically by the limiter."""
+    config = replace(
+        get_ratelimit_config(),
+        requests_per_window=EXPORT_PER_WINDOW,
+        window_seconds=EXPORT_WINDOW_SECONDS,
+    )
+    try:
+        await enforce_rate_limit(f"crm-contact-export:{context.actor_id}", config=config)
+    except RateLimitExceededError as exc:
+        raise rate_limited(exc.retry_after_seconds) from None
+    except RateLimitBackendError:
+        raise service_unavailable(_LIMITER_RETRY_SECONDS) from None
+
+
+@router.get(
+    "/{tenant_id}/contacts/export.csv",
+    response_class=Response,
+    responses={
+        200: {"content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}}},
+        413: {"description": "More than 50,000 contacts match: narrow the filters."},
+        429: {"description": "Export limit reached; see Retry-After."},
+    },
+    tags=["contacts"],
+)
+async def export_contacts(
+    context: Annotated[RequestContext, Depends(require_permission("crm_app.crm_data", "export"))],
+    params: Annotated[ContactExportParams, Query()],
+) -> Response:
+    """The contacts the list would show for these filters, in its order, as
+    CSV (UTF-8 with a byte-order mark, CRLF records). Nothing is stored."""
+    query = _query(
+        params,
+        context,
+        stages=tuple(params.lifecycle_stage),
+        companies=tuple(params.company_id),
+    )
+    await _count_export(context)
+    try:
+        rows = await run_in_threadpool(
+            records.export_contacts,
+            _scope(context),
+            query,
+            max_rows=csv_export.MAX_ROWS,
+            filter_keys=sorted(params.model_fields_set),
+        )
+    except records.ExportTooLargeError:
+        raise HTTPException(
+            413, detail={"code": "export_too_large", "max_rows": csv_export.MAX_ROWS}
+        ) from None
+    name = csv_export.filename("contacts", datetime.now(UTC).date())
+    # Up to 50,000 rows: built off the event loop, like the read.
+    content = await run_in_threadpool(csv_export.to_csv, csv_export.CONTACT_COLUMNS, rows)
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{name}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+_add_routes(CONTACT, "contacts", ContactCreate, ContactUpdate, ContactOut)
+_add_routes(COMPANY, "companies", CompanyCreate, CompanyUpdate, CompanyOut)

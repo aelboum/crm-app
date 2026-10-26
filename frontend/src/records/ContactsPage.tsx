@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
 import { ApiError } from "../api/client";
+import { ExportError, exportContacts, fileDownload } from "../api/exportContacts";
 import { useAccess, useMe, useMembers } from "../api/queries";
 import {
   type Contact,
@@ -98,6 +99,7 @@ export function ContactsPage({
   const [dialog, setDialog] = useState<{ contact: Contact | null } | null>(null);
   const q = useDebounced(search);
   const can = (action: string) => access.data?.actions[action] === true;
+  const exporting = useContactExport(workspaceId);
   // "New → Contact" in the header opens the dialog through the URL; a
   // caller who may not create contacts just sees the list.
   const activeDialog =
@@ -152,10 +154,24 @@ export function ContactsPage({
             <Upload size={14} aria-hidden="true" />
             {t("records.import")}
           </Button>
-          <Button isDisabled aria-label={`${t("records.export")} (${t("nav.soon")})`}>
-            <Download size={14} aria-hidden="true" />
-            {t("records.export")}
-          </Button>
+          {can("export_records") ? (
+            <Button onPress={() => void exporting.run(filters)} isDisabled={exporting.running}>
+              {exporting.running ? (
+                <span className="spinner" aria-hidden="true" />
+              ) : (
+                <Download size={14} aria-hidden="true" />
+              )}
+              {exporting.running ? t("contacts.export.running") : t("records.export")}
+            </Button>
+          ) : (
+            <Button
+              isDisabled
+              aria-label={`${t("records.export")} (${t("contacts.export.notAllowed")})`}
+            >
+              <Download size={14} aria-hidden="true" />
+              {t("records.export")}
+            </Button>
+          )}
           {can("create_contact") ? (
             <Button variant="primary" onPress={() => { setDialog({ contact: null }); }}>
               <Plus size={15} aria-hidden="true" />
@@ -164,6 +180,15 @@ export function ContactsPage({
           ) : null}
         </div>
       </div>
+
+      {exporting.error ? (
+        <p className="notice error records-notice" role="alert">
+          {exporting.error}
+        </p>
+      ) : null}
+      <p className="sr-only" role="status">
+        {exporting.running ? t("contacts.export.running") : ""}
+      </p>
 
       <div className="view-tabs" role="group" aria-label={t("records.views")}>
         {VIEWS.map((v) => (
@@ -496,4 +521,61 @@ function ContactDrawer({
       )}
     </Drawer>
   );
+}
+
+/** Seconds as a short wait: "2 minutes", "45 seconds". */
+function waitText(t: ReturnType<typeof useT>, seconds: number): string {
+  return seconds < 60
+    ? t("contacts.export.waitSeconds", { count: Math.max(1, Math.ceil(seconds)) })
+    : t("contacts.export.waitMinutes", { count: Math.ceil(seconds / 60) });
+}
+
+/**
+ * Exports the current filters as CSV (slice 3E) and saves the file. The
+ * button's state comes from `/access`; the server enforces the permission.
+ * Failures are reported, never retried automatically.
+ */
+function useContactExport(workspaceId: string) {
+  const t = useT();
+  const toast = useToast();
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function explain(failure: unknown): string {
+    const status = failure instanceof ExportError ? failure.status : 0;
+    const wait = failure instanceof ExportError ? failure.retryAfter : null;
+    switch (status) {
+      case 0:
+        return t("contacts.export.network");
+      case 403:
+        return t("contacts.export.forbidden");
+      case 413:
+        return t("contacts.export.tooLarge");
+      case 429:
+        return wait === null
+          ? t("contacts.export.limited")
+          : `${t("contacts.export.limited")} ${waitText(t, wait)}`;
+      case 503:
+        return t("contacts.export.unavailable");
+      default:
+        return t("contacts.export.failed");
+    }
+  }
+
+  async function run(filters: ListFilters) {
+    if (running) return;
+    setRunning(true);
+    setError(null);
+    try {
+      const { blob, fileName } = await exportContacts(workspaceId, filters);
+      fileDownload.save(blob, fileName);
+      toast(t("contacts.export.done"));
+    } catch (failure) {
+      setError(explain(failure));
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return { run, running, error };
 }

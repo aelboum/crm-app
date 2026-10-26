@@ -34,7 +34,60 @@ decisions P2-A to P2-E approved)
   P2-G). CI passed on `5c06d48` (run 40094376772). Security findings are
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
-- **Phase 3:** slices 3A and 3B done; 3C and later not started.
+- **Phase 3:** slices 3A and 3B done; 3E1 (contacts export) done; 3C, 3D,
+  3F and companies export not started.
+- **Phase 3E1 contacts CSV export (decision P3-E1, 2026-10-26):**
+  - **Built:**
+    - `GET /v1/workspaces/{id}/contacts/export.csv`: Owner and Admin;
+      the list's filters and order, without paging; 50,000 rows at most;
+      10 attempts per user per window; audited;
+    - `export_records` in `/access`;
+    - the Export button on Contacts, with progress and an error state for
+      each refusal.
+
+    No migration, new permission, file storage or SaaS-OS change.
+  - **Tests:**
+    - unit: 24 for the CSV contract, plus route policy and the role
+      matrix;
+    - integration (`test_contact_export.py`, 14):
+      - roles; isolation through the path, the filters and company names;
+      - every filter and order matched against the list;
+      - the archive views; refused paging and unknown parameters;
+      - headers, encoding and values; stored values unchanged;
+      - 50,000 rows succeed and 50,001 give 413;
+      - the 11th export gives 429 with Retry-After; a limiter outage
+        gives 503 with no audit entry;
+      - audit holds counts and filter names only;
+    - Vitest (`export.test.tsx`, 10): button state, the filters sent, the
+      download name, progress, 413/429/403/503/500/network states, a safe
+      file name, and axe checks.
+    - **Totals:**
+      - unit: 297 passed;
+      - full integration suite: 271 passed;
+      - frontend: 146 tests, lint, type check, build and `npm audit`;
+      - ruff, pyright, import contracts, `pip-audit` and the secret scan:
+        clean.
+    - **Security review:** an independent review found no Critical or
+      High issues. Its one hardening point is applied: the CSV is built off
+      the event loop.
+  - **Browser** (local stack; Owner and Member throwaway identities;
+    1280 px and 390 px emulated):
+    - **Owner, desktop:** a filtered export downloaded a file with the
+      byte-order mark, CRLF records, the 14 columns, protected `'=cmd`,
+      `'@home`, `'+31…` and `'-Head…`, and quoted `Jansen, "Sam"`.
+      `Zoë`, `Émile` and `张伟` were intact, the company name resolved,
+      and the order matched the list.
+    - **Response headers:** `text/csv; charset=utf-8`, `attachment;
+      filename="contacts-2026-10-26.csv"`, `no-store`.
+    - **Owner, 390 px:** an empty archived view exported only the header.
+    - **Member:** the button was disabled with its reason, and a direct
+      request got 403 JSON with no data.
+    - **Both widths:** no horizontal overflow and no JavaScript errors.
+  - **Limitation:**
+    - the limiter's window is fixed, not rolling (P3-E1 7);
+    - in the automated browser, Chrome left the downloads as `.tmp` files
+      instead of renaming them to the server's name. The name itself was
+      verified in the response header and in Vitest.
 - **Phase 3A hardening (owner-approved 2026-10-26; frontend only):**
   - **Built:**
     - a searchable company picker in the contact form. It uses the

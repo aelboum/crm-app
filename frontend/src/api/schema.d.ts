@@ -360,6 +360,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/contacts/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Contacts
+         * @description The contacts the list would show for these filters, in its order, as
+         *     CSV (UTF-8 with a byte-order mark, CRLF records). Nothing is stored.
+         */
+        get: operations["export_contacts_v1_workspaces__tenant_id__contacts_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/contacts/{record_id}": {
         parameters: {
             query?: never;
@@ -1955,6 +1976,8 @@ export interface operations {
     list_contacts_v1_workspaces__tenant_id__contacts_get: {
         parameters: {
             query?: {
+                lifecycle_stage?: ("lead" | "prospect" | "customer" | "inactive")[];
+                company_id?: string[];
                 q?: string | null;
                 owner?: string[];
                 archived?: "false" | "true" | "all";
@@ -1962,8 +1985,6 @@ export interface operations {
                 direction?: "asc" | "desc";
                 limit?: number;
                 cursor?: string | null;
-                lifecycle_stage?: ("lead" | "prospect" | "customer" | "inactive")[];
-                company_id?: string[];
             };
             header?: {
                 authorization?: string | null;
@@ -2030,6 +2051,61 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    export_contacts_v1_workspaces__tenant_id__contacts_export_csv_get: {
+        parameters: {
+            query?: {
+                lifecycle_stage?: ("lead" | "prospect" | "customer" | "inactive")[];
+                company_id?: string[];
+                q?: string | null;
+                owner?: string[];
+                archived?: "false" | "true" | "all";
+                sort?: "name" | "created_at" | "updated_at";
+                direction?: "asc" | "desc";
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description More than 50,000 contacts match: narrow the filters. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Export limit reached; see Retry-After. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
