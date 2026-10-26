@@ -96,6 +96,16 @@ CONFIGURATION |= {
     f"POST {_FIELDS}/{{field_id}}/restore": "crm_app.workspace:update",
 }
 
+# CSV import (decision P3-F 1): Owner and Admin only, through the
+# catalogue's `crm_data:import`.
+_IMPORTS = "/v1/workspaces/{tenant_id}/imports"
+EXPORTS |= {
+    f"POST {_IMPORTS}": "crm_app.crm_data:import",
+    f"GET {_IMPORTS}": "crm_app.crm_data:import",
+    f"GET {_IMPORTS}/{{import_id}}": "crm_app.crm_data:import",
+    f"GET {_IMPORTS}/{{import_id}}/errors.csv": "crm_app.crm_data:import",
+}
+
 # Invitations (decisions Q4, Q5, P2-F): reading, creating and revoking are
 # for Owner and Admin only; inviting an Owner is checked again in the
 # handler (`crm_app.owner:manage`).
@@ -153,7 +163,7 @@ def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) 
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
     changing = {key for key in policies if not key.startswith("GET ")}
     assert changing == CHANGING | {
-        key for key in RECORDS | INVITATIONS | CONFIGURATION if not key.startswith("GET ")
+        key for key in RECORDS | INVITATIONS | CONFIGURATION | EXPORTS if not key.startswith("GET ")
     }
 
 

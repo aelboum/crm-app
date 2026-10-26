@@ -593,6 +593,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Imports */
+        get: operations["list_imports_v1_workspaces__tenant_id__imports_get"];
+        put?: never;
+        /**
+         * Preview Import
+         * @description Read, validate and stage a CSV file of contacts or companies. Nothing
+         *     is imported until the import is committed.
+         */
+        post: operations["preview_import_v1_workspaces__tenant_id__imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Import */
+        get: operations["get_import_v1_workspaces__tenant_id__imports__import_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/imports/{import_id}/errors.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Import Errors
+         * @description Every refused row as row number, field and code; never a value.
+         */
+        get: operations["import_errors_v1_workspaces__tenant_id__imports__import_id__errors_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/invitations": {
         parameters: {
             query?: never;
@@ -1255,6 +1314,75 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** ImportList */
+        ImportList: {
+            /** Items */
+            items: components["schemas"]["ImportSummary"][];
+        };
+        /** ImportPreview */
+        ImportPreview: {
+            /** Header */
+            header: string[];
+            /** Sample */
+            sample: {
+                [key: string]: unknown;
+            }[];
+            summary: components["schemas"]["ImportSummary"];
+        };
+        /** ImportSummary */
+        ImportSummary: {
+            /** Cancel Requested */
+            cancel_requested: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By User Id
+             * Format: uuid
+             */
+            created_by_user_id: string;
+            /** Created Rows */
+            created_rows: number;
+            /** Duplicate Rows */
+            duplicate_rows: number;
+            /**
+             * Entity
+             * @enum {string}
+             */
+            entity: "contact" | "company";
+            /** Errors */
+            errors: components["schemas"]["RowError"][];
+            /** Failed Rows */
+            failed_rows: number;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invalid Rows */
+            invalid_rows: number;
+            /** Mapping */
+            mapping: {
+                [key: string]: number;
+            };
+            /** Skipped Rows */
+            skipped_rows: number;
+            /** Status */
+            status: string;
+            /** Total Rows */
+            total_rows: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Valid Rows */
+            valid_rows: number;
+        };
         /** InvitationIn */
         InvitationIn: {
             /** Email */
@@ -1403,6 +1531,15 @@ export interface components {
              */
             confirm_owner_change: boolean;
             role: components["schemas"]["Role"];
+        };
+        /** RowError */
+        RowError: {
+            /** Code */
+            code: string;
+            /** Field */
+            field: string | null;
+            /** Row */
+            row: number;
         };
         /** SettingsOut */
         SettingsOut: {
@@ -3016,6 +3153,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DefinitionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_imports_v1_workspaces__tenant_id__imports_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_import_v1_workspaces__tenant_id__imports_post: {
+        parameters: {
+            query: {
+                entity: "contact" | "company";
+                column?: string[];
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "text/csv": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description The file is larger than 5 MB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The body is not CSV. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Preview limit reached; see Retry-After. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_import_v1_workspaces__tenant_id__imports__import_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_errors_v1_workspaces__tenant_id__imports__import_id__errors_csv_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             /** @description Validation Error */
