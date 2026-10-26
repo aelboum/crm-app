@@ -36,6 +36,13 @@ pytestmark = pytest.mark.usefixtures("migrated")
 MIGRATIONS_DIR = REPO_ROOT / "src" / "crm_app" / "migrations"
 
 
+# History entries naming fields that later migrations allowed (0007 `tags`,
+# 0008 `custom_fields`): an older rule refuses them, and a downgrade fails
+# rather than delete them, so a rollback test removes them first. Other
+# test modules may have written them in the same database.
+NEWER_HISTORY = "DELETE FROM crm_app.activity WHERE fields ?| array['tags', 'custom_fields']"
+
+
 @pytest.fixture
 def env(integration_env: dict[str, str]) -> dict[str, str]:
     return dict(integration_env)
@@ -311,6 +318,7 @@ def test_the_migration_rolls_back_and_forward(
     """Last in this module: drops every product table (and its rows), then
     applies the migrations again, leaving the schema as the other tests need
     it."""
+    owner_connection.execute(NEWER_HISTORY)
     down = run_python(_DOWNGRADE.format(path=str(MIGRATIONS_DIR)), env, tmp_path)
     try:
         assert down.returncode == 0, down.stderr

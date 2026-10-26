@@ -27,6 +27,7 @@ from psycopg.types.json import Jsonb
 from crm_app.purge import EXPECTED_PURGE_PARTICIPANTS
 from tests.integration.test_crm_tables import (
     MIGRATIONS_DIR,
+    NEWER_HISTORY,
     _as_workspace,
     _company,
     _contact,
@@ -399,6 +400,7 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
     writes records as they existed before 3B, then upgrades: each existing
     record gets exactly one `created` entry with its own time and creator
     (D7). Leaves the schema as the other tests need it."""
+    owner_connection.execute(NEWER_HISTORY)
     down = run_python(_DOWNGRADE.format(path=str(MIGRATIONS_DIR)), env, tmp_path)
     try:
         assert down.returncode == 0, down.stderr

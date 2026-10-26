@@ -25,6 +25,7 @@ from psycopg.types.json import Jsonb
 from crm_app.purge import EXPECTED_PURGE_PARTICIPANTS
 from tests.integration.test_crm_tables import (
     MIGRATIONS_DIR,
+    NEWER_HISTORY,
     _as_workspace,
     _company,
     _contact,
@@ -250,7 +251,7 @@ def test_the_migration_rolls_back_and_forward(
     """Downgrades to 0007 (dropping the definitions and every record's values),
     then upgrades, leaving the schema as the other tests need it. Entries that
     name `custom_fields` are removed first: the old rule refuses them."""
-    owner_connection.execute("DELETE FROM crm_app.activity WHERE fields ? 'custom_fields'")
+    owner_connection.execute(NEWER_HISTORY)
     down = run_python(_DOWNGRADE.format(path=str(MIGRATIONS_DIR)), env, tmp_path)
     try:
         assert down.returncode == 0, down.stderr
