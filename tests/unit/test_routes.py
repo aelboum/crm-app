@@ -73,6 +73,16 @@ EXPORTS = {
     "GET /v1/workspaces/{tenant_id}/companies/export.csv": "crm_app.crm_data:export",
 }
 
+# Tags (decision P3-C 4): every role reads the vocabulary; changing it is
+# workspace configuration, for Owner and Admin.
+_TAGS = "/v1/workspaces/{tenant_id}/tags"
+TAGS = {
+    f"GET {_TAGS}": "crm_app.contact:read",
+    f"POST {_TAGS}": "crm_app.workspace:update",
+    f"PATCH {_TAGS}/{{tag_id}}": "crm_app.workspace:update",
+    f"DELETE {_TAGS}/{{tag_id}}": "crm_app.workspace:update",
+}
+
 # Invitations (decisions Q4, Q5, P2-F): reading, creating and revoking are
 # for Owner and Admin only; inviting an Owner is checked again in the
 # handler (`crm_app.owner:manage`).
@@ -124,20 +134,30 @@ def test_the_directory_needs_only_a_signed_in_person(tmp_path: Path) -> None:
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
     policies = {k: v for k, v in _product_policies(tmp_path).items() if k != DIRECTORY}
     assert {key: detail for key, (_, detail, _) in policies.items()} == (
-        EXPECTED | RECORDS | INVITATIONS | EXPORTS
+        EXPECTED | RECORDS | INVITATIONS | EXPORTS | TAGS
     )
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
     changing = {key for key in policies if not key.startswith("GET ")}
     assert changing == CHANGING | {
-        key for key in RECORDS | INVITATIONS if not key.startswith("GET ")
+        key for key in RECORDS | INVITATIONS | TAGS if not key.startswith("GET ")
     }
 
 
 def test_route_permissions_are_registered() -> None:
-    for detail in (EXPECTED | RECORDS | INVITATIONS | EXPORTS).values():
+    for detail in (EXPECTED | RECORDS | INVITATIONS | EXPORTS | TAGS).values():
         resource, _, action = detail.rpartition(":")
         assert (resource, action) in PERMISSIONS
+
+
+def test_tags_are_read_by_every_role_and_configured_by_owners_and_admins() -> None:
+    for key, detail in TAGS.items():
+        resource, _, action = detail.rpartition(":")
+        holders = {
+            role for role, template in ROLE_TEMPLATES.items() if (resource, action) in template
+        }
+        expected = set(Role) if key.startswith("GET ") else {Role.OWNER, Role.ADMIN}
+        assert holders == expected, key
 
 
 def test_contact_export_is_for_owners_and_admins_only() -> None:

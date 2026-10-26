@@ -57,6 +57,24 @@ def text(value: str | None, maximum: int, *, required: bool = False) -> str | No
     return trimmed
 
 
+TAG_NAME_MAX = 50
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def tag_name(value: str) -> str:
+    """A tag name as stored (decision P3-C 3, migration 0007): trimmed,
+    1..50 characters, no control characters. Uniqueness, regardless of case,
+    is the database's."""
+    if _CONTROL.search(value):
+        raise InvalidValue("must not contain control characters")
+    trimmed = value.strip()
+    if not trimmed:
+        raise InvalidValue("is required")
+    if len(trimmed) > TAG_NAME_MAX:
+        raise InvalidValue(f"must be at most {TAG_NAME_MAX} characters")
+    return trimmed
+
+
 # Control characters a note may not hold: all but tab and line feed (the
 # migration 0003 `note_body_check` refuses the same set).
 _NOTE_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")

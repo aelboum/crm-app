@@ -209,3 +209,35 @@ def test_the_note_migration_matches_these_rules() -> None:
         "industry",
         "country_code",
     }
+
+
+# --- Tag names (decision P3-C 3) ---------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "stored"),
+    [
+        ("VIP", "VIP"),
+        ("  Hot lead  ", "Hot lead"),
+        ("张伟 客户", "张伟 客户"),
+        ("x" * 50, "x" * 50),
+    ],
+)
+def test_a_tag_name_is_trimmed(raw: str, stored: str) -> None:
+    assert values.tag_name(raw) == stored
+
+
+@pytest.mark.parametrize(
+    "raw", ["", "   ", "x" * 51, "line\nbreak", "tab\there", "nul\x00", "\x7f"]
+)
+def test_a_tag_name_outside_the_rules_is_refused_without_echoing_it(raw: str) -> None:
+    with pytest.raises(values.InvalidValue) as refused:
+        values.tag_name(raw)
+    assert raw.strip() not in str(refused.value) or not raw.strip()
+
+
+def test_the_migration_checks_the_same_tag_name_length() -> None:
+    migration = (
+        REPO_ROOT / "src" / "crm_app" / "migrations" / "versions" / "0007_tags.py"
+    ).read_text(encoding="utf-8")
+    assert f"TAG_NAME_MAX = {values.TAG_NAME_MAX}" in migration
