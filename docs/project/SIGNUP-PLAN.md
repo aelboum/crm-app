@@ -13,8 +13,8 @@ public workspace creation.
 - The signup backend (B, C) is built and verified: option A for the signup
   table and the counting rule (S-1.2, §4b).
 
-There is no signup screen yet (Stage D). Signup is off everywhere and
-refused in production by start-up validation.
+The signup screens (Stage D) are built and tested locally (§4c). Signup is
+off everywhere and refused in production by start-up validation.
 
 **Design reference:** `LeadStack Signup.dc.html` (outside the repository,
 `DESIGN-FIDELITY.md`). It is a reference only. It is never served or
@@ -167,7 +167,9 @@ within the per-user and platform limits.
 - `GET /v1/signups/current`.
 
 Both require a session with `verified_email`. Identity comes only from the
-session. The body has no field for user, parent tenant, role or authority:
+session. Added in Stage D: `GET /v1/signups/status`, public, answering only
+`{"enabled": bool}` from the same kill switch; it changes nothing and does
+not open the other two routes (§4c). The body has no field for user, parent tenant, role or authority:
 unknown fields are refused (422) and nothing is echoed back.
 
 **Provisioning (shared service, Stage B).** Each step is find-or-create and
@@ -473,6 +475,62 @@ delete-tenant`, then purge).
 - Progress, error and limit messages, then navigation to
   `/app/w/{id}/settings`.
 - The prototype file is never served.
+
+### 4c. Stage D as built (2026-10-26)
+
+**Status endpoint.** `GET /v1/signups/status` (public route policy, no
+session) returns `{"enabled": bool}` from `crm_app.settings.signup_enabled()`,
+the same switch that makes `POST /v1/signups` and `GET /v1/signups/current`
+answer 404. It carries no limit, configuration or count. Tests:
+`tests/unit/test_signup_status.py` (unset, false and true; the other routes
+stay 404 while off and need a session while on; the route is read-only) and
+`tests/unit/test_routes.py` (policy).
+
+**Contract as the frontend uses it** (from the code, not the plan):
+- refusals carry SaaS-OS's plain-text `detail`: `workspace_limit_reached`
+  and `idempotency_key_reused` (409), `invalid_workspace_name` (**400**, not
+  422; 422 is a malformed body), `"Not authorized."` (403);
+- a 403 from `POST` is ambiguous: the same answer comes from the
+  same-origin check. The screen names the verified-email requirement only
+  when `GET /v1/signups/current` also answers 403 (it has no origin check);
+- 429 and 503 carry `Retry-After`; the button stays disabled that long.
+
+**Screens (`frontend/src/pages/CreateWorkspace.tsx`, `HomePage.tsx`,
+`SignInScreen.tsx`, `api/signups.ts`).**
+- Sign-in screen: **Create account** appears only when the status says on.
+  It leads to `/auth/login`, where the login build offers "Create one"
+  (SaaS-OS's `/auth/login` passes no `prompt=create`). When the status is
+  unknown the screen claims neither that signup exists nor that it does not.
+- Start page: the workspace-name step appears at once for a person with no
+  workspace, or behind **Create workspace** for one who has workspaces; it
+  is offered when the status is on or unknown (the backend decides), and
+  never while an invitation waits in the tab.
+- One `Idempotency-Key` per attempt, kept in `sessionStorage` with its
+  normalized name (memory when storage is unavailable), reused for retries
+  after network failures, 429/503 and timeouts, replaced only after
+  `idempotency_key_reused`, a failed or expired signup, or a new name;
+  removed on completion and on sign-out.
+- Provisioning: the screen follows `GET /v1/signups/current` for about a
+  minute (1 s rising to 10 s), then offers **Check again**, which repeats
+  the same attempt so the backend resumes it. An unfinished signup found on
+  arrival is resumed. Success is shown only by opening the workspace once
+  the state is `complete`.
+
+**Invitation precedence: finding.** SaaS-OS v0.5.0 offers no invitee-side
+lookup: invitations can be listed only per workspace by its Owners and
+Admins (`saas_os.api.v1.invitations.list_invitations`), and the token
+lives only in the emailed link's fragment. A server-side "does this person
+have a pending invitation" check would need a new cross-tenant query by
+verified email, which is an architecture and security decision and was not
+built. Instead:
+- an invitation opened in the tab hides the step entirely;
+- the step tells invited people to open their invitation link, and that
+  creating a workspace does not join theirs;
+- the two flows cannot corrupt each other: accepting creates no workspace
+  (`test_accepting_an_invitation_creates_no_signup_or_workspace`), and
+  creating a workspace leaves every invitation usable.
+Remaining limitation: an invited person who lost the tab and ignores the
+hint can create a separate workspace first; their invitation still works.
 
 ## 5. Security finding L4: investigation (2026-10-24)
 

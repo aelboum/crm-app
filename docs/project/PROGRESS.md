@@ -190,9 +190,47 @@ decisions P2-A to P2-E approved)
     in CI (not written yet).
   - **Unchanged:** sign-out still stops on ZITADEL's "choose the account"
     page (P2-G residual, Low).
-- **Stage D (signup screens): not started.** LeadStack's own signup stays
-  off (`SIGNUP_ENABLED` unset, refused in production) and launch gates LG-1
-  to LG-10 remain open.
+- **Self-service signup, Stage D (2026-10-26; `SIGNUP-PLAN.md` §4c):**
+  - **Built:**
+    - `GET /v1/signups/status`, public, `{"enabled": bool}` from the same
+      kill switch; the other signup routes still answer 404 while it is off;
+    - the sign-in screen's **Create account** entry (only when the status is
+      on; it leads to the login build's "Create one");
+    - the start page's workspace-name step, with one idempotency key per
+      attempt, bounded progress checks, resumption, and every refusal of
+      the real contract (400/409/403/404/429/503, network failure);
+    - invitation precedence through the existing flow. A server-side
+      pending-invitation check would need a new cross-tenant query and was
+      not built (finding in §4c).
+  - **Verified:**
+    - unit 272 passed;
+    - full integration suite 257 passed;
+    - frontend 118 tests (31 for Stage D, two axe checks), lint, type
+      check and build;
+    - ruff, pyright, import contracts, pip-audit, npm audit and the
+      secret scan: clean.
+  - **Local A4 repaired:**
+    - the three `ZITADEL_LOCAL_*` opt-ins and
+      `ZITADEL_LOGIN_IMAGE=crm-app-login:dev` are now in the untracked
+      `.env`;
+    - `configure-zitadel.py` run twice with the same result (registration
+      on, Mailpit active, post-sign-out address kept);
+    - `zitadel-login` recreated with `EMAIL_VERIFICATION=true`.
+  - **Browser (local ZITADEL v4.19.5, LeadStack login build):**
+    - a disposable identity registered;
+    - it stopped at "Verify user" with `/auth/me` 401;
+    - the email arrived in Mailpit;
+    - restarting the sign-in before verifying returned to "Verify user";
+    - the emailed code signed the person in;
+    - with signup off, the step reported "not available";
+    - layout checked at 1280 px and at 390 px (no horizontal scroll);
+    - sign-out returned straight to the sign-in form.
+  - **Not done:** the browser run that provisions a workspace end to end,
+    because the application on 127.0.0.1:8001 was an older dev server not
+    started in this session. Provisioning itself is covered by the
+    integration suite and the Vitest contract tests.
+  - **Unchanged:** LeadStack's own signup stays off (`SIGNUP_ENABLED` unset,
+    refused in production); launch gates LG-1 to LG-10 remain open.
 
 ## Repository state
 

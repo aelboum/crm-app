@@ -3,6 +3,7 @@ import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
 
 import type { useMe } from "../api/queries";
 import { clearSignedOut, LOGIN_PATH, shouldRedirectToSignIn, signInNavigation } from "../api/signInRedirect";
+import { useSignupStatus } from "../api/signups";
 import { Button } from "../components/ui/Button";
 import { useT } from "../i18n/useT";
 
@@ -72,6 +73,7 @@ export function SignInScreen({
   body,
   notice,
   redirect = false,
+  offerSignup = false,
 }: {
   /** The session check; while it runs or fails the screen says so. */
   me: ReturnType<typeof useMe>;
@@ -81,8 +83,12 @@ export function SignInScreen({
   notice?: ReactNode;
   /** Leave for the sign-in page by itself when there is no session. */
   redirect?: boolean;
+  /** Offer "Create account" when the server says signup is on (Stage D). */
+  offerSignup?: boolean;
 }) {
   const t = useT();
+  const availability = useSignupStatus();
+  const signup = offerSignup && availability === "on";
   const signedOut = me.isSuccess && me.data === null;
   useEffect(() => {
     if (redirect && signedOut && shouldRedirectToSignIn()) signInNavigation.leave(LOGIN);
@@ -108,6 +114,13 @@ export function SignInScreen({
         ) : null}
         {notice}
         <SignInLink />
+        {signup ? (
+          // Registration happens on the provider's sign-in page ("Create
+          // one"); this page never collects credentials.
+          <a className="signin-create" href={LOGIN} onClick={() => { clearSignedOut(); }}>
+            {t("signin.createAccount")}
+          </a>
+        ) : null}
         <p className="signin-help">{t("signin.provider")}</p>
       </>
     );
@@ -121,7 +134,12 @@ export function SignInScreen({
         </div>
         <p className="signin-tagline">{t("signin.tagline")}</p>
         <span className="signin-aside-fill" />
-        <p className="signin-aside-note">{t("signin.asideNote")}</p>
+        {/* The note says whether there is public signup only once the server has said so. */}
+        {offerSignup && availability !== "off" ? (
+          signup ? <p className="signin-aside-note">{t("signin.asideNoteSignup")}</p> : null
+        ) : (
+          <p className="signin-aside-note">{t("signin.asideNote")}</p>
+        )}
       </aside>
       <div className="signin-panel">
         <div className="signin-body">
@@ -131,7 +149,7 @@ export function SignInScreen({
             {body ? <p className="signin-sub">{body}</p> : null}
           </div>
           {content}
-          <p className="signin-footer">{t("signin.noAccount")}</p>
+          <p className="signin-footer">{signup ? t("signin.createHelp") : t("signin.noAccount")}</p>
         </div>
       </div>
     </div>

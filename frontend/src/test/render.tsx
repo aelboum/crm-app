@@ -24,13 +24,15 @@ const APP_HEADERS = ["if-match", "idempotency-key"];
 interface Reply {
   status: number;
   body?: unknown;
+  /** Response headers beyond the content type (for example Retry-After). */
+  headers?: Record<string, string>;
 }
 export type Handler = (method: string, path: string, body: unknown) => Reply | undefined;
 
-const json = ({ status, body }: Reply) =>
+const json = ({ status, body, headers }: Reply) =>
   new Response(body === undefined ? null : JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
   });
 
 /** Renders the whole app at `path` (under /app) with `fetch` answered by `handler`. */

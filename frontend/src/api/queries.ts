@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError, type Role, unwrap } from "./client";
 import { forgetInvitation } from "./pendingInvitation";
+import { forgetAttempt } from "./signups";
 import { clearSignedOut, markSignedOut } from "./signInRedirect";
 import type { components } from "./schema";
 
@@ -144,6 +145,7 @@ export function useSignOut() {
       client.clear();
       client.setQueryData(keys.me, null);
       forgetInvitation();
+      forgetAttempt();
       markSignedOut();
     },
   });
