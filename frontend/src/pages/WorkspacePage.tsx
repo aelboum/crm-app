@@ -29,6 +29,7 @@ import { useToast } from "../components/ui/Toast";
 import { en, type MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { BusinessSettings } from "./BusinessSettings";
+import { FieldSettings } from "./FieldSettings";
 import { TagSettings } from "./TagSettings";
 import { type Invitation, useInvitations } from "../api/invitations";
 import { availableActions, highestRole, type MemberAction } from "../members/actions";
@@ -437,14 +438,15 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
 ];
 
 /** The settings sections that exist; every other one is marked "soon". */
-export type SettingsSection = "team" | "profile" | "business" | "tags";
-const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business", "tags"];
+export type SettingsSection = "team" | "profile" | "business" | "tags" | "fields";
+const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business", "tags", "fields"];
 
 const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId }> = {
   team: { title: "settings.team", desc: "settings.teamDesc" },
   profile: { title: "settings.profile", desc: "settings.profileDesc" },
   business: { title: "settings.business", desc: "settings.businessDesc" },
   tags: { title: "settings.tags", desc: "settings.tagsDesc" },
+  fields: { title: "settings.fields", desc: "settings.fieldsDesc" },
 };
 
 /**
@@ -588,6 +590,9 @@ export function SettingsPage({
               workspaceName={workspace.data?.name ?? ""}
               canEdit={access.data.actions.update_workspace === true}
             />
+          ) : null}
+          {access.data && section === "fields" ? (
+            <FieldSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />
           ) : null}
           {access.data && section === "tags" ? (
             <TagSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />

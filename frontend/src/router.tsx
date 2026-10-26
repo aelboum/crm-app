@@ -156,7 +156,10 @@ const sectionRoute = createRoute({
   // Only known settings sections and well-formed record IDs are accepted;
   // anything else is dropped.
   validateSearch: (search: Record<string, unknown>): SectionSearch => ({
-    ...(search.section === "profile" || search.section === "business" || search.section === "tags"
+    ...(search.section === "profile" ||
+    search.section === "business" ||
+    search.section === "tags" ||
+    search.section === "fields"
       ? { section: search.section }
       : {}),
     ...(typeof search.record === "string" && isWorkspaceId(search.record) ? { record: search.record } : {}),

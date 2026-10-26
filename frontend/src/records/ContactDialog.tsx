@@ -1,11 +1,13 @@
 import { type SyntheticEvent, useState } from "react";
 
 import { ApiError } from "../api/client";
+import { activeFields, useFieldDefinitions } from "../api/customFields";
 import { useMe, useMembers } from "../api/queries";
 import {
   type Contact,
   type ContactCreate,
   type ContactUpdate,
+  CustomFieldError,
   DuplicateError,
   FieldErrors,
   newIdempotencyKey,
@@ -21,6 +23,14 @@ import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
+import {
+  changedValues,
+  createValues,
+  type CustomDraft,
+  CustomFieldInputs,
+  draftOf,
+  draftProblems,
+} from "./CustomFields";
 import { ownerOptions, stageLabel } from "./parts";
 
 /*
@@ -101,6 +111,11 @@ function refusalMessage(error: ApiError): MessageId {
       return "contact.error.emailOrPhone";
     case "conflict":
       return "records.error.conflict";
+    case "invalid_custom_field":
+      return "fields.error.value";
+    case "unknown_custom_field":
+    case "custom_fields_too_large":
+      return "fields.error.record";
     default:
       return error.status === 403 ? "records.error.denied" : "records.error.generic";
   }
@@ -138,6 +153,12 @@ export function ContactDialog({
     contact?.company ? { id: contact.company.id, name: contact.company.name, archived: contact.company.archived } : null,
   );
   const pending = create.isPending || update.isPending;
+  // Custom fields (decision P3-D): the active ones, typed inputs.
+  const definitions = useFieldDefinitions(workspaceId);
+  const fields = activeFields(definitions.data?.items, "contact");
+  const [custom, setCustom] = useState<CustomDraft | null>(null);
+  const draft = custom ?? draftOf(fields, contact?.custom_fields);
+  const [invalidCustom, setInvalidCustom] = useState<Set<string>>(new Set());
 
   const set = (field: Field) => (event: { target: { value: string } }) => {
     setValue(field, event.target.value);
@@ -178,6 +199,9 @@ export function ContactDialog({
       lifecycle_stage: values.lifecycle_stage,
       source: values.source,
       owner_user_id: orNull(values.owner_user_id),
+      ...(Object.keys(createValues(fields, draft)).length
+        ? { custom_fields: createValues(fields, draft) }
+        : {}),
     };
   }
 
@@ -191,10 +215,13 @@ export function ContactDialog({
         Object.assign(changed, { [field]: next[field] });
       }
     }
+    const custom = changedValues(fields, draft, original.custom_fields);
+    if (Object.keys(custom).length) changed.custom_fields = custom;
     return changed;
   }
 
   function fail(error: ApiError) {
+    if (error instanceof CustomFieldError && error.key) setInvalidCustom(new Set([error.key]));
     if (error instanceof FieldErrors) {
       setInvalid(new Set(error.fields.filter((f): f is Field => FIELDS.includes(f as Field))));
     }
@@ -206,7 +233,9 @@ export function ContactDialog({
     setRefusal(null);
     const problems = localProblems();
     setInvalid(problems);
-    if (problems.size > 0) return;
+    const customProblems = new Set(draftProblems(fields, draft));
+    setInvalidCustom(customProblems);
+    if (problems.size > 0 || customProblems.size > 0) return;
     const done = (saved: Contact) => {
       toast(contact ? t("records.saved") : t("contact.created", { name: saved.first_name }));
       onSaved(saved);
@@ -347,6 +376,20 @@ export function ContactDialog({
             : [...USER_SOURCES]
           ).map((source) => ({ id: source, label: sourceLabel(t, source) })),
         )}
+        <CustomFieldInputs
+          fields={fields}
+          draft={draft}
+          invalid={invalidCustom}
+          idPrefix="contact"
+          onChange={(key, value) => {
+            setCustom({ ...draft, [key]: value });
+            setInvalidCustom((prev) => {
+              const next = new Set(prev);
+              next.delete(key);
+              return next;
+            });
+          }}
+        />
         <p className="form-hint wide">{t("contact.hint")}</p>
         {refusal && !(refusal instanceof FieldErrors && refusal.fields.length > 0) ? (
           <div className="notice error wide" role="alert">

@@ -357,9 +357,16 @@ messages; the design's validation texts.
 **Deliberate differences:**
 - *Data model (P2-E, P3-A):* the dental "Patient" stage is "Customer"
   (same colours); sources are the P3-A list (Manual, Referral, Other for
-  people; Import and Form shown only when the system set them); no score
-  or custom fields, so their columns and cards are left out. Notes and
-  activity arrived in slice 3B (§4d).
+  people; Import and Form shown only when the system set them); no
+  score, so its column and card are left out. Notes and activity arrived
+  in slice 3B (§4d).
+- *Custom fields (slice 3D, decision P3-D):* the design's "Custom fields"
+  card with "Manage" (label and value rows) in both drawers, shown when
+  the record type has active fields; "Manage" opens Settings › Custom
+  fields and is shown to Owners and Admins only. Settings › Custom fields
+  covers companies as well as contacts (the design names contacts only).
+  *Addition:* the record dialogs show one typed input per active field
+  after the core fields.
 - *Tags (slice 3C, decision P3-C):* the design's neutral pills
   (`#F1F2F4` on `#2A303C`, 11.5 px) in a Tags column (first three and
   "+N", hidden on narrow screens) and in the drawer's Tags section; the

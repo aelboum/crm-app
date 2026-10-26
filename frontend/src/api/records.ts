@@ -81,6 +81,17 @@ export class DuplicateError extends ApiError {
   }
 }
 
+/** A custom field value the server refused (422), naming the field's key (decision P3-D). */
+export class CustomFieldError extends ApiError {
+  readonly key: string | undefined;
+
+  constructor(code: string, key: string | undefined) {
+    super(422, code);
+    this.name = "CustomFieldError";
+    this.key = key;
+  }
+}
+
 function detailOf(error: unknown): unknown {
   return typeof error === "object" && error !== null && "detail" in error ? error.detail : undefined;
 }
@@ -101,6 +112,12 @@ export function unwrapWrite<T>(result: { data?: T; error?: unknown; response: Re
   const detail = detailOf(result.error);
   const status = result.response.status;
   if (status === 422 && Array.isArray(detail)) throw new FieldErrors(fieldNames(detail));
+  if (status === 422 && typeof detail === "object" && detail !== null && "code" in detail) {
+    const code = typeof detail.code === "string" ? detail.code : "invalid";
+    if (code.includes("custom_field")) {
+      throw new CustomFieldError(code, "key" in detail && typeof detail.key === "string" ? detail.key : undefined);
+    }
+  }
   if (status === 409 && typeof detail === "object" && detail !== null && "code" in detail) {
     const code = typeof detail.code === "string" ? detail.code : "conflict";
     const existing =

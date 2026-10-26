@@ -3,12 +3,14 @@ import { type SyntheticEvent, useMemo, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
 import { ApiError } from "../api/client";
+import { activeFields, useFieldDefinitions } from "../api/customFields";
 import { useAccess, useMe, useMembers } from "../api/queries";
 import { useTags } from "../api/tags";
 import {
   type Company,
   type CompanyCreate,
   type CompanyUpdate,
+  CustomFieldError,
   type Direction,
   DuplicateError,
   FieldErrors,
@@ -45,6 +47,15 @@ import {
   StagePill,
   When,
 } from "./parts";
+import {
+  changedValues,
+  createValues,
+  type CustomDraft,
+  CustomFieldInputs,
+  CustomFieldsSection,
+  draftOf,
+  draftProblems,
+} from "./CustomFields";
 import { ActivitySection, NotesSection } from "./NotesSection";
 import { ListTags, TagSection } from "./TagEditor";
 import { useDebounced } from "./useDebounced";
@@ -358,6 +369,7 @@ function CompanyDrawer({
   const t = useT();
   const toast = useToast();
   const company = useCompany(workspaceId, id);
+  const definitions = useFieldDefinitions(workspaceId);
   const people = useContactList(workspaceId, { ...NO_FILTERS, companyIds: [id] });
   const lifecycle = useLifecycle(workspaceId, "companies");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -433,6 +445,12 @@ function CompanyDrawer({
               <When value={record.created_at} />
             </FieldRow>
           </dl>
+          <CustomFieldsSection
+            workspaceId={workspaceId}
+            fields={activeFields(definitions.data?.items, "company")}
+            values={record.custom_fields}
+            canManage={canCreateTags}
+          />
           <TagSection
             workspaceId={workspaceId}
             kind="companies"
@@ -581,6 +599,11 @@ function refusalMessage(error: ApiError): MessageId {
       return "records.error.owner";
     case "conflict":
       return "records.error.conflict";
+    case "invalid_custom_field":
+      return "fields.error.value";
+    case "unknown_custom_field":
+    case "custom_fields_too_large":
+      return "fields.error.record";
     default:
       return error.status === 403 ? "records.error.denied" : "records.error.generic";
   }
@@ -622,6 +645,12 @@ function CompanyDialog({
   const [refusal, setRefusal] = useState<ApiError | null>(null);
   const [key] = useState(newIdempotencyKey);
   const owners = ownerOptions(t, members.data?.items ?? [], me.data?.user_id);
+  // Custom fields (decision P3-D): the active ones, typed inputs.
+  const definitions = useFieldDefinitions(workspaceId);
+  const fields = activeFields(definitions.data?.items, "company");
+  const [custom, setCustom] = useState<CustomDraft | null>(null);
+  const draft = custom ?? draftOf(fields, company?.custom_fields);
+  const [invalidCustom, setInvalidCustom] = useState<Set<string>>(new Set());
 
   function body(): CompanyCreate {
     return {
@@ -633,18 +662,25 @@ function CompanyDialog({
       city: orNull(values.city),
       country_code: orNull(values.country_code),
       owner_user_id: orNull(values.owner_user_id),
+      ...(Object.keys(createValues(fields, draft)).length
+        ? { custom_fields: createValues(fields, draft) }
+        : {}),
     };
   }
 
   function submit(event: SyntheticEvent) {
     event.preventDefault();
     setRefusal(null);
+    const customProblems = new Set(draftProblems(fields, draft));
+    setInvalidCustom(customProblems);
     if (!values.name.trim()) {
       setInvalid(new Set(["name"]));
       return;
     }
     setInvalid(new Set());
+    if (customProblems.size > 0) return;
     const fail = (error: ApiError) => {
+      if (error instanceof CustomFieldError && error.key) setInvalidCustom(new Set([error.key]));
       if (error instanceof FieldErrors) {
         setInvalid(new Set(error.fields.filter((f): f is Field => FIELDS.includes(f as Field))));
       }
@@ -661,6 +697,8 @@ function CompanyDialog({
       for (const field of FIELDS) {
         if (values[field].trim() !== before[field].trim()) Object.assign(changes, { [field]: next[field] });
       }
+      const customChanges = changedValues(fields, draft, company.custom_fields);
+      if (Object.keys(customChanges).length) changes.custom_fields = customChanges;
       if (Object.keys(changes).length === 0) {
         onClose();
         return;
@@ -756,6 +794,20 @@ function CompanyDialog({
         {field("city")}
         {field("country_code", { placeholder: "NL" })}
         {field("owner_user_id")}
+        <CustomFieldInputs
+          fields={fields}
+          draft={draft}
+          invalid={invalidCustom}
+          idPrefix="company"
+          onChange={(key, value) => {
+            setCustom({ ...draft, [key]: value });
+            setInvalidCustom((prev) => {
+              const next = new Set(prev);
+              next.delete(key);
+              return next;
+            });
+          }}
+        />
         <p className="form-hint wide">{t("company.hint")}</p>
         {refusal && !(refusal instanceof FieldErrors && refusal.fields.length > 0) ? (
           <div className="notice error wide" role="alert">

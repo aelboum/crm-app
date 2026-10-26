@@ -34,9 +34,47 @@ decisions P2-A to P2-E approved)
   P2-G). CI passed on `5c06d48` (run 40094376772). Security findings are
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
-- **Phase 3:** slices 3A, 3B, 3C (tags), 3E1 and 3E2 done; 3D (custom
-  fields) and 3F (import) not started. Work continues under the owner's
+- **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1 and 3E2
+  done; 3F (import) not started. Work continues under the owner's
   autonomous-development mandate (decision M1).
+- **Phase 3D custom fields (decision P3-D, 2026-10-26, under M1):**
+  - **Built, in four pushed increments:**
+    - 3D.1 (`744f499`): migration `0008_custom_fields`:
+      `custom_field_definition` (forced RLS, purge) and `custom_fields
+      jsonb` on contacts and companies (an object, at most 32 KB); the
+      history allow-list gains `custom_fields`;
+    - 3D.2 (`dad1e8a`): `GET/POST/PATCH /custom-fields`, `/archive`,
+      `/restore` (read for every role, changes for Owner and Admin); keys
+      and types fixed for good; 50 active fields per entity; audit with
+      entity, key and type;
+    - 3D.3 (`9af64b2`): values on record create and update, merged key by
+      key and validated against the active fields (`unknown_custom_field`,
+      `invalid_custom_field` naming the key); records show active fields
+      only; history and audit name keys, never values;
+    - 3D.4: Settings › Custom fields (per entity, key suggested from the
+      label, choice options one per line, edit, archive and restore), the
+      drawer's "Custom fields" card with "Manage" for Owners and Admins,
+      typed inputs in both record dialogs that send only changed keys,
+      and the history label.
+  - **CI fix:** 3D.3's first CI run failed in `test_tag_tables.py`'s
+    rollback: the new value tests left history entries naming
+    `custom_fields`, which the 0007 rule refuses. Every rollback test now
+    removes entries naming fields newer than its target first
+    (`NEWER_HISTORY`); the product code was not at fault.
+  - **Tests:** integration `test_custom_field_tables.py` (24),
+    `test_custom_field_routes.py` (10), `test_record_custom_fields.py`
+    (7); unit `test_custom_field_values.py` (46) and route policy; Vitest
+    `customFields.test.tsx` (5, with axe).
+  - **Browser** (local stack, Owner 1280 px, Member 390 px): the Owner
+    created five fields (text, number, date, yes/no, choice), set values
+    in the contact dialog (typed inputs: number, date, selects) and saw
+    them formatted in the drawer card with "Manage"; the Member saw the
+    card without "Manage", could edit values in the dialog (scrolling at
+    390 px, no overflow), and a direct field creation got 403. No console
+    errors other than that deliberate 403.
+  - **Limitations:** no filtering, sorting or CSV export by custom fields
+    yet (P3-D 7); removing a choice option keeps stored values; the type
+    selector keeps its last choice after adding a field.
 - **Phase 3C tags (decision P3-C, 2026-10-26, under M1):**
   - **Built, in four pushed increments:**
     - 3C.1 (`aaf5ff6`): migration `0007_tags` with `tag`, `contact_tag`,

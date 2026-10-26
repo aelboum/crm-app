@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
 import { ApiError } from "../api/client";
+import { activeFields, useFieldDefinitions } from "../api/customFields";
 import { useAccess, useMe, useMembers } from "../api/queries";
 import { useTags } from "../api/tags";
 import {
@@ -24,6 +25,7 @@ import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
+import { CustomFieldsSection } from "./CustomFields";
 import { ActivitySection, NotesSection } from "./NotesSection";
 import { ListTags, TagSection } from "./TagEditor";
 import {
@@ -382,6 +384,7 @@ function ContactDrawer({
   const t = useT();
   const toast = useToast();
   const contact = useContact(workspaceId, id);
+  const definitions = useFieldDefinitions(workspaceId);
   const lifecycle = useLifecycle(workspaceId, "contacts");
   const [confirmDelete, setConfirmDelete] = useState(false);
   // An unsaved note: closing asks first (PHASE3-PLAN.md §21).
@@ -490,6 +493,12 @@ function ContactDrawer({
               ) : null}
             </div>
           ) : null}
+          <CustomFieldsSection
+            workspaceId={workspaceId}
+            fields={activeFields(definitions.data?.items, "contact")}
+            values={record.custom_fields}
+            canManage={canCreateTags}
+          />
           <TagSection
             workspaceId={workspaceId}
             kind="contacts"

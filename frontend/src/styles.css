@@ -829,6 +829,25 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .tag-row:last-child { border-bottom: 0; }
 .tag-row.editing { display: block; }
 .tag-row-actions { display: flex; gap: 2px; flex-shrink: 0; }
+/* Settings › Custom fields (decision P3-D). */
+.field-settings { padding: 16px 0 8px; }
+.field-settings > .field-entities { margin: 0 20px 12px; }
+.field-settings > .muted { margin: 0 20px 12px; }
+.field-new { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 20px 16px; align-items: start; }
+.field-new .wide { grid-column: 1 / -1; }
+.field-new-actions { display: flex; gap: 8px; }
+.field-rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.field-row-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 8px 20px; border-bottom: 1px solid #f1f2f4; }
+.field-row-item:last-child { border-bottom: 0; }
+.field-row-item.editing { display: block; padding-top: 16px; }
+.field-row-item.editing .field-new { margin: 0; }
+.field-row-item.archived .field-row-label { color: #687082; }
+.field-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.field-row-label { font-weight: 500; }
+.field-row-meta { font-size: 12px; color: #687082; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .field-new { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 640px) {
   .tag-new { flex-wrap: wrap; }
   .tag-new .form-field { flex-basis: 100%; }
