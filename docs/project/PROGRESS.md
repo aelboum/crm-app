@@ -225,10 +225,55 @@ decisions P2-A to P2-E approved)
     - with signup off, the step reported "not available";
     - layout checked at 1280 px and at 390 px (no horizontal scroll);
     - sign-out returned straight to the sign-in form.
-  - **Not done:** the browser run that provisions a workspace end to end,
-    because the application on 127.0.0.1:8001 was an older dev server not
-    started in this session. Provisioning itself is covered by the
-    integration suite and the Vitest contract tests.
+  - **End-to-end browser run (2026-10-26, owner-authorized; code
+    `2680bf4`; local stack only):**
+    - **Setup:** the local dev server on 127.0.0.1:8001 was stopped (its
+      identity checked first). The test ran on a temporary server with
+      `SIGNUP_ENABLED=true` set in that process only; `.env` was
+      unchanged.
+    - **Identities:** each run used its own throwaway identity and a
+      unique workspace name.
+    - **Desktop (1280 px):**
+      - the sign-in screen offered "Create one", and registration ran
+        through the hosted login;
+      - before verification, `/auth/me` and `POST /v1/signups` both
+        answered 401;
+      - the code arrived in Mailpit, and verifying it signed the person in;
+      - the workspace-name step appeared, and `POST /v1/signups` answered
+        201 `complete`;
+      - the browser opened `/app/w/{id}/settings`;
+      - `/access` showed the Owner role with every action allowed; the
+        workspace had one member, the Owner;
+      - a business-settings save through the UI succeeded (version 0 to 1).
+    - **Mobile (390 px, emulated):** the same journey, with no
+      horizontal overflow on the sign-in page, the start page or the new
+      workspace.
+    - **Console:** no JavaScript errors. The only failed loads logged were
+      expected statuses: 401 before sign-in, 404 from the first
+      `GET /v1/signups/current`, and 422 from a malformed manual test
+      request.
+    - **Signup off:** with the server restarted without `SIGNUP_ENABLED`,
+      the status answered `false`, no Create workspace option appeared,
+      and `POST /v1/signups` and `GET /v1/signups/current` answered 404.
+    - **Regressions:**
+      - an existing member's **Create workspace** opened the step, and
+        Cancel closed it;
+      - the desktop Owner invited the mobile identity. With the link
+        opened, the start page showed "You have an invitation waiting"
+        and no Create workspace option;
+      - accepting the invitation added a membership without a role and
+        created no signup or workspace;
+      - sign-out returned straight to a fresh sign-in.
+    - **Not re-run:** `tests/identity`, because the restored server holds
+      port 8001.
+    - **Pre-existing, not Stage D:** at mobile width the header's workspace
+      switcher button has no accessible name.
+    - **Afterwards:**
+      - the temporary server was stopped, and the dev server restarted
+        with the same command and `.env`, signup off;
+      - the local database keeps the test identities, their two
+        workspaces, one accepted invitation and one settings change;
+        nothing that existed before was changed.
   - **Unchanged:** LeadStack's own signup stays off (`SIGNUP_ENABLED` unset,
     refused in production); launch gates LG-1 to LG-10 remain open.
 
