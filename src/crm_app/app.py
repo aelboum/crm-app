@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
     from saas_os.api.v1 import invitation_acceptance_router  # noqa: PLC0415
 
     from crm_app.api.access import router as access_router  # noqa: PLC0415
+    from crm_app.api.custom_fields import router as custom_fields_router  # noqa: PLC0415
     from crm_app.api.errors import validation_error  # noqa: PLC0415
     from crm_app.api.headers import NoStoreMiddleware  # noqa: PLC0415
     from crm_app.api.history import router as history_router  # noqa: PLC0415
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(history_router)
     app.include_router(notes_router)
     app.include_router(tags_router)
+    app.include_router(custom_fields_router)
     app.include_router(invitations_router)
     # SaaS-OS's acceptance route (ADR-0046): the invitee, signed in with the
     # invited verified email, redeems the token; no role is given (Q5).

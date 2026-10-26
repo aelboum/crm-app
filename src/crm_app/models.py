@@ -231,7 +231,8 @@ class CustomFieldDefinition(Base):
     key: Mapped[str] = mapped_column(Text)
     label: Mapped[str] = mapped_column(Text)
     field_type: Mapped[str] = mapped_column(Text)
-    options: Mapped[list[str] | None] = mapped_column(JSON)
+    # SQL NULL, not JSON null, for a field that is not a select.
+    options: Mapped[list[str] | None] = mapped_column(JSON(none_as_null=True))
     position: Mapped[int] = mapped_column(Integer)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
