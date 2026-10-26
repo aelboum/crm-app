@@ -360,6 +360,7 @@ const FIELD_LABELS: Partial<Record<string, MessageId>> = {
   website: "history.field.website",
   industry: "history.field.industry",
   country_code: "history.field.country_code",
+  tags: "history.field.tags",
 };
 
 const STAGE_LABELS: Partial<Record<string, MessageId>> = {

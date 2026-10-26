@@ -1,9 +1,10 @@
-import { ArrowUpRight, Pencil, Plus, Search, User } from "lucide-react";
+import { ArrowUpRight, Pencil, Plus, Search, Tag, User } from "lucide-react";
 import { type SyntheticEvent, useMemo, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
 import { ApiError } from "../api/client";
 import { useAccess, useMe, useMembers } from "../api/queries";
+import { useTags } from "../api/tags";
 import {
   type Company,
   type CompanyCreate,
@@ -45,6 +46,7 @@ import {
   When,
 } from "./parts";
 import { ActivitySection, NotesSection } from "./NotesSection";
+import { ListTags, TagSection } from "./TagEditor";
 import { useDebounced } from "./useDebounced";
 import { useRecordExport } from "./useRecordExport";
 
@@ -89,6 +91,8 @@ export function CompaniesPage({
   const [view, setView] = useState<View>("active");
   const [search, setSearch] = useState("");
   const [owners, setOwners] = useState<string[]>([]);
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const tags = useTags(workspaceId);
   const [sort, setSort] = useState<Sort>("name");
   const [direction, setDirection] = useState<Direction>("asc");
   const [dialog, setDialog] = useState<{ company: Company | null } | null>(null);
@@ -97,13 +101,13 @@ export function CompaniesPage({
   const exporting = useRecordExport("companies", workspaceId);
 
   const filters: ListFilters = useMemo(
-    () => ({ ...NO_FILTERS, q, sort, direction, owners, archived: view === "archived" ? "true" : "false" }),
-    [q, sort, direction, owners, view],
+    () => ({ ...NO_FILTERS, q, sort, direction, owners, tagIds, archived: view === "archived" ? "true" : "false" }),
+    [q, sort, direction, owners, tagIds, view],
   );
   const list = useCompanyList(workspaceId, filters);
   const items = (list.data?.pages ?? []).flatMap((page) => page.items);
   const first = list.data?.pages[0];
-  const filtered = search !== "" || owners.length > 0;
+  const filtered = search !== "" || owners.length > 0 || tagIds.length > 0;
   const total = first ? (first.total_capped ? t("records.capped") : String(first.total)) : "";
 
   function toggleSort(next: Sort) {
@@ -165,6 +169,15 @@ export function CompaniesPage({
           selected={owners}
           onChange={setOwners}
         />
+        {tags.data?.items.length ? (
+          <FilterMenu
+            label={t("tags.label")}
+            icon={<Tag size={14} aria-hidden="true" />}
+            options={tags.data.items.map((tag) => ({ id: tag.id, label: tag.name }))}
+            selected={tagIds}
+            onChange={setTagIds}
+          />
+        ) : null}
         <div className="chip-group" role="group" aria-label={t("records.views")}>
           {(["active", "archived"] as const).map((v) => (
             <AriaButton
@@ -183,6 +196,7 @@ export function CompaniesPage({
             onPress={() => {
               setSearch("");
               setOwners([]);
+              setTagIds([]);
             }}
           >
             {t("records.clear")}
@@ -224,6 +238,9 @@ export function CompaniesPage({
                   <th scope="col">{t("company.field.industry")}</th>
                   <th scope="col">{t("records.field.owner")}</th>
                   <th scope="col" className="hide-narrow">
+                    {t("tags.label")}
+                  </th>
+                  <th scope="col" className="hide-narrow">
                     {t("company.field.city")}
                   </th>
                   <th scope="col" aria-sort={ariaSort("updated_at")}>
@@ -260,6 +277,9 @@ export function CompaniesPage({
                     <td>
                       <OwnerCell ownerId={company.owner_user_id} meId={meId} />
                     </td>
+                    <td className="hide-narrow">
+                      <ListTags tags={company.tags} />
+                    </td>
                     <td className="hide-narrow muted">{company.city ?? "—"}</td>
                     <td className="secondary">
                       <When value={company.updated_at} />
@@ -287,6 +307,7 @@ export function CompaniesPage({
           canUpdate={can("update_company")}
           canDelete={can("delete_company")}
           canAddNote={can("create_note")}
+          canCreateTags={can("update_workspace")}
           onClose={() => { onOpen(null); }}
           onEdit={(company) => { setDialog({ company }); }}
           onOpenContact={onOpenContact}
@@ -318,6 +339,7 @@ function CompanyDrawer({
   canUpdate,
   canDelete,
   canAddNote,
+  canCreateTags,
   onClose,
   onEdit,
   onOpenContact,
@@ -328,6 +350,7 @@ function CompanyDrawer({
   canUpdate: boolean;
   canDelete: boolean;
   canAddNote: boolean;
+  canCreateTags: boolean;
   onClose: () => void;
   onEdit: (company: Company) => void;
   onOpenContact: (id: string) => void;
@@ -410,6 +433,13 @@ function CompanyDrawer({
               <When value={record.created_at} />
             </FieldRow>
           </dl>
+          <TagSection
+            workspaceId={workspaceId}
+            kind="companies"
+            record={record}
+            canEdit={canUpdate}
+            canCreate={canCreateTags}
+          />
           <section className="drawer-section" aria-labelledby="company-people">
             <h2 id="company-people" className="drawer-section-title">
               {t("company.people")}

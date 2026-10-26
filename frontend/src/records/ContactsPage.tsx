@@ -1,9 +1,10 @@
-import { CircleDot, Pencil, Plus, Search, Upload, User } from "lucide-react";
+import { CircleDot, Pencil, Plus, Search, Tag, Upload, User } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
 import { ApiError } from "../api/client";
 import { useAccess, useMe, useMembers } from "../api/queries";
+import { useTags } from "../api/tags";
 import {
   type Contact,
   type Direction,
@@ -24,6 +25,7 @@ import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
 import { ActivitySection, NotesSection } from "./NotesSection";
+import { ListTags, TagSection } from "./TagEditor";
 import {
   Avatar,
   Drawer,
@@ -95,6 +97,8 @@ export function ContactsPage({
   const [view, setView] = useState<View>("all");
   const [search, setSearch] = useState("");
   const [stages, setStages] = useState<Stage[]>([]);
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const tags = useTags(workspaceId);
   const [owners, setOwners] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>("name");
   const [direction, setDirection] = useState<Direction>("asc");
@@ -116,13 +120,14 @@ export function ContactsPage({
       archived: view === "archived" ? "true" : "false",
       owners: view === "mine" && meId ? [meId] : owners,
       stages: view === "leads" ? ["lead"] : stages,
+      tagIds,
     }),
-    [q, sort, direction, view, meId, owners, stages],
+    [q, sort, direction, view, meId, owners, stages, tagIds],
   );
   const list = useContactList(workspaceId, filters, view !== "mine" || meId !== undefined);
   const items = (list.data?.pages ?? []).flatMap((page) => page.items);
   const first = list.data?.pages[0];
-  const filtered = search !== "" || stages.length > 0 || owners.length > 0;
+  const filtered = search !== "" || stages.length > 0 || owners.length > 0 || tagIds.length > 0;
 
   function toggleSort(next: Sort) {
     if (next === sort) {
@@ -137,6 +142,7 @@ export function ContactsPage({
     setSearch("");
     setStages([]);
     setOwners([]);
+    setTagIds([]);
   }
 
   const total = first ? (first.total_capped ? t("records.capped") : String(first.total)) : "";
@@ -216,6 +222,15 @@ export function ContactsPage({
             onChange={setOwners}
           />
         )}
+        {tags.data?.items.length ? (
+          <FilterMenu
+            label={t("tags.label")}
+            icon={<Tag size={14} aria-hidden="true" />}
+            options={tags.data.items.map((tag) => ({ id: tag.id, label: tag.name }))}
+            selected={tagIds}
+            onChange={setTagIds}
+          />
+        ) : null}
         {filtered ? (
           <AriaButton className="text-button" onPress={clear}>
             {t("records.clear")}
@@ -251,6 +266,7 @@ export function ContactsPage({
                   </th>
                   <th scope="col">{t("contact.field.stage")}</th>
                   <th scope="col">{t("records.field.owner")}</th>
+                  <th scope="col" className="hide-narrow">{t("tags.label")}</th>
                   <th scope="col" className="hide-narrow">{t("contact.field.company")}</th>
                   <th scope="col" className="hide-narrow">{t("contact.field.source")}</th>
                   <th scope="col" aria-sort={sort === "updated_at" ? (direction === "asc" ? "ascending" : "descending") : undefined}>
@@ -284,6 +300,9 @@ export function ContactsPage({
                     <td>
                       <OwnerCell ownerId={contact.owner_user_id} meId={meId} />
                     </td>
+                    <td className="hide-narrow">
+                      <ListTags tags={contact.tags} />
+                    </td>
                     <td className="hide-narrow">{contact.company?.name ?? <span className="muted">—</span>}</td>
                     <td className="hide-narrow secondary">{sourceLabel(t, contact.source)}</td>
                     <td className="secondary">
@@ -312,6 +331,7 @@ export function ContactsPage({
           canUpdate={can("update_contact")}
           canDelete={can("delete_contact")}
           canAddNote={can("create_note")}
+          canCreateTags={can("update_workspace")}
           onClose={() => { onOpen(null); }}
           onEdit={(contact) => { setDialog({ contact }); }}
         />
@@ -345,6 +365,7 @@ function ContactDrawer({
   canUpdate,
   canDelete,
   canAddNote,
+  canCreateTags,
   onClose,
   onEdit,
 }: {
@@ -354,6 +375,7 @@ function ContactDrawer({
   canUpdate: boolean;
   canDelete: boolean;
   canAddNote: boolean;
+  canCreateTags: boolean;
   onClose: () => void;
   onEdit: (contact: Contact) => void;
 }) {
@@ -468,6 +490,13 @@ function ContactDrawer({
               ) : null}
             </div>
           ) : null}
+          <TagSection
+            workspaceId={workspaceId}
+            kind="contacts"
+            record={record}
+            canEdit={canUpdate}
+            canCreate={canCreateTags}
+          />
           <NotesSection
             workspaceId={workspaceId}
             kind="contacts"

@@ -702,6 +702,20 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .field-row dd { margin: 0; overflow-wrap: anywhere; }
 .drawer-section-title { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: #687082; text-transform: uppercase; letter-spacing: 0.04em; }
 .people-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+/* Tags (decision P3-C): the design's neutral pills (ScreenContacts.dc.html). */
+.tag-pills { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.tag-pill { font-size: 11.5px; line-height: 18px; padding: 1px 7px; border-radius: 5px; background: #f1f2f4; color: #2a303c; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.tag-pill.more { color: #687082; }
+.drawer-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.drawer-section-head .drawer-section-title { margin-bottom: 8px; }
+.tag-editor { display: flex; flex-direction: column; gap: 12px; }
+.tag-count { margin: 0; font-size: 12px; color: #687082; }
+.tag-options { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto; }
+.tag-option { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 4px; border-radius: 6px; cursor: pointer; }
+.tag-option:hover { background: #f7f8fa; }
+.tag-option input { width: 16px; height: 16px; accent-color: var(--accent); }
+.tag-new { display: flex; align-items: flex-end; gap: 8px; }
+.tag-new .form-field { flex: 1; }
 .people-more { display: flex; justify-content: center; padding-top: 8px; }
 .person-card {
   width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #eef0f3;
@@ -806,6 +820,19 @@ a.btn-primary:hover { filter: brightness(0.94); }
 /* Settings › Business profile (ScreenSettings.dc.html L28-40; decision P2-F 1). */
 .business-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; }
 .business-card > .profile-note, .business-card > .notice { margin: 0 20px 12px; }
+.tag-settings { padding: 16px 0 8px; }
+.tag-settings > .profile-note:first-child { margin-top: 0; }
+.tag-settings > .tag-new { margin: 0 20px 16px; }
+.tag-settings > .muted { margin: 0 20px 12px; }
+.tag-rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.tag-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 6px 20px; border-bottom: 1px solid #f1f2f4; }
+.tag-row:last-child { border-bottom: 0; }
+.tag-row.editing { display: block; }
+.tag-row-actions { display: flex; gap: 2px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .tag-new { flex-wrap: wrap; }
+  .tag-new .form-field { flex-basis: 100%; }
+}
 .business-fields {
   padding: 18px 20px 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
 }

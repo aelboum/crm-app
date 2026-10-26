@@ -36,6 +36,8 @@ export interface ListFilters {
   owners: string[];
   stages: Stage[];
   companyIds: string[];
+  /** Any of these tags (decision P3-C 7). */
+  tagIds: string[];
 }
 
 export const NO_FILTERS: ListFilters = {
@@ -46,6 +48,7 @@ export const NO_FILTERS: ListFilters = {
   owners: [],
   stages: [],
   companyIds: [],
+  tagIds: [],
 };
 
 export const recordKeys = {
@@ -93,7 +96,7 @@ function fieldNames(detail: unknown[]): string[] {
 }
 
 /** Like `unwrap`, keeping the details record writes return on refusal. */
-function unwrapWrite<T>(result: { data?: T; error?: unknown; response: Response }): T {
+export function unwrapWrite<T>(result: { data?: T; error?: unknown; response: Response }): T {
   if (result.response.ok && result.data !== undefined) return result.data;
   const detail = detailOf(result.error);
   const status = result.response.status;
@@ -109,14 +112,14 @@ function unwrapWrite<T>(result: { data?: T; error?: unknown; response: Response 
 }
 
 /** A write that answers 204 without a body. */
-function expectNoContent(response: Response): null {
+export function expectNoContent(response: Response): null {
   if (!response.ok) throw new ApiError(response.status);
   return null;
 }
 
-const where = (workspaceId: string) => ({ tenant_id: workspaceId });
+export const where = (workspaceId: string) => ({ tenant_id: workspaceId });
 const item = (workspaceId: string, id: string) => ({ tenant_id: workspaceId, record_id: id });
-const ifMatch = (version: number) => ({ "If-Match": `"${String(version)}"` });
+export const ifMatch = (version: number) => ({ "If-Match": `"${String(version)}"` });
 
 /** Query parameters, leaving out the ones not in use. */
 function common(filters: ListFilters, cursor: string | undefined) {
@@ -128,6 +131,7 @@ function common(filters: ListFilters, cursor: string | undefined) {
     limit: LIST_PAGE,
     ...(q ? { q } : {}),
     ...(filters.owners.length ? { owner: filters.owners } : {}),
+    ...(filters.tagIds.length ? { tag_id: filters.tagIds } : {}),
     ...(cursor ? { cursor } : {}),
   };
 }
@@ -196,7 +200,7 @@ export function useCompany(workspaceId: string, id: string | null) {
 }
 
 /** Re-reads both kinds after any change: a company change shows on its contacts. */
-function useRefresh(workspaceId: string) {
+export function useRefresh(workspaceId: string) {
   const client = useQueryClient();
   return () =>
     Promise.all([
@@ -304,6 +308,20 @@ export function useLifecycle(workspaceId: string, kind: RecordKind) {
       kind === "contacts"
         ? contactLifecycle(workspaceId, id, action)
         : companyLifecycle(workspaceId, id, action),
+    onSettled: () => refresh(),
+  });
+}
+
+/** Replace a record's tags (decision P3-C 5): a record update with its version. */
+export function useSetTags(workspaceId: string, kind: RecordKind) {
+  const refresh = useRefresh(workspaceId);
+  return useMutation<Contact | Company, ApiError, { id: string; version: number; tagIds: string[] }>({
+    mutationFn: async ({ id, version, tagIds }) => {
+      const params = { params: { path: item(workspaceId, id), header: ifMatch(version) }, body: { tag_ids: tagIds } };
+      return kind === "contacts"
+        ? unwrapWrite(await api.PUT("/v1/workspaces/{tenant_id}/contacts/{record_id}/tags", params))
+        : unwrapWrite(await api.PUT("/v1/workspaces/{tenant_id}/companies/{record_id}/tags", params));
+    },
     onSettled: () => refresh(),
   });
 }

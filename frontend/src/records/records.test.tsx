@@ -31,6 +31,7 @@ const base = {
   updated_by_user_id: "u-me",
   version: 1,
   archived_at: null,
+  tags: [] as { id: string; name: string }[],
 };
 
 const acme = {
@@ -137,7 +138,7 @@ describe("contacts", () => {
     const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
     expect(await within(drawer).findByText("sam@example.test")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New contact" })).toBeNull();
-    expect(within(drawer).queryByRole("button", { name: /Edit/ })).toBeNull();
+    expect(within(drawer).queryByRole("button", { name: "Edit" })).toBeNull();
     expect(within(drawer).queryByRole("button", { name: "Archive" })).toBeNull();
     expect(within(drawer).queryByRole("button", { name: "Delete permanently" })).toBeNull();
   });
@@ -248,7 +249,7 @@ describe("contacts", () => {
       ),
     );
     const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
-    await user.click(await within(drawer).findByRole("button", { name: /Edit/ }));
+    await user.click(await within(drawer).findByRole("button", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit contact" });
     await user.type(within(dialog).getByLabelText("City"), "Delft");
     await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
@@ -271,7 +272,7 @@ describe("contacts", () => {
       ),
     );
     const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
-    await user.click(await within(drawer).findByRole("button", { name: /Edit/ }));
+    await user.click(await within(drawer).findByRole("button", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit contact" });
     await user.type(within(dialog).getByLabelText("City"), "Delft");
     await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
@@ -529,7 +530,7 @@ describe("company picker", () => {
       ),
     );
     const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
-    await user.click(await within(drawer).findByRole("button", { name: /Edit/ }));
+    await user.click(await within(drawer).findByRole("button", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit contact" });
     expect(within(dialog).getByText("Acme BV")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Remove company" }));
@@ -735,7 +736,7 @@ describe("records regressions", () => {
       ),
     );
     const drawer = await screen.findByRole("dialog", { name: "Company" });
-    await user.click(await within(drawer).findByRole("button", { name: /Edit/ }));
+    await user.click(await within(drawer).findByRole("button", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit company" });
     const city = within(dialog).getByLabelText("City");
     await user.clear(city);

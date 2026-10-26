@@ -34,8 +34,36 @@ decisions P2-A to P2-E approved)
   P2-G). CI passed on `5c06d48` (run 40094376772). Security findings are
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
-- **Phase 3:** slices 3A and 3B done; 3E1 (contacts export) and 3E2
-  (companies export) done; 3C, 3D and 3F not started.
+- **Phase 3:** slices 3A, 3B, 3C (tags), 3E1 and 3E2 done; 3D (custom
+  fields) and 3F (import) not started. Work continues under the owner's
+  autonomous-development mandate (decision M1).
+- **Phase 3C tags (decision P3-C, 2026-10-26, under M1):**
+  - **Built, in four pushed increments:**
+    - 3C.1 (`aaf5ff6`): migration `0007_tags` with `tag`, `contact_tag`,
+      `company_tag` (forced RLS, composite keys, cascades, purge); the
+      history allow-list gains `tags`;
+    - 3C.2 (`3850aec`): `GET/POST/PATCH/DELETE /tags` (read for every
+      role, changes for Owner and Admin via `workspace:update`), names
+      unique regardless of case, 500 per workspace, audit by ID only;
+    - 3C.3 (`b70318b`): `PUT .../{record}/tags` (record update, If-Match,
+      20 per record, history and audit naming `tags`), `tags` on every
+      record, a `tag_id` filter on both lists and both exports;
+    - 3C.4: tag pills and a Tags column, the Tag filter, the drawer's
+      Tags section and "Edit tags" dialog, Settings › Tags, and the
+      history label.
+  - **Tests:** integration `test_tag_tables.py` (21), `test_tag_routes.py`
+    (10), `test_record_tags.py` (7); unit route policy and name rules;
+    Vitest `tags.test.tsx` (9, with axe). CI passed on 3C.1-3C.3 (run
+    40390565926 for 3C.3); 3C.4 is recorded with its own CI run below.
+  - **Browser** (local stack, Owner desktop 1280 px, Member 390 px): Owner
+    created four tags in Settings, tagged a contact in the dialog (and
+    created "Event 2026" there), saw pills in the drawer and list, the
+    "Updated tags" history entry, and the Tag filter narrowing the list to
+    that contact. The Member saw the tags, could choose existing tags but
+    had no "New tag" field, and a direct create got 403; Settings › Tags
+    was read-only. No horizontal overflow, no console errors.
+  - **Limitations:** tags are not exported in CSV yet (P3-C 7); the Tags
+    column is hidden below 760 px; tag counts per tag are not shown.
 - **Phase 3E2 companies CSV export (decision P3-E2, 2026-10-26):**
   - **Built:**
     - `GET /v1/workspaces/{id}/companies/export.csv`: Owner and Admin; the

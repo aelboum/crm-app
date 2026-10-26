@@ -45,6 +45,7 @@ const sam = {
   updated_by_user_id: "u-me",
   version: 1,
   archived_at: null as string | null,
+  tags: [] as { id: string; name: string }[],
 };
 
 function note(id: string, body: string, author: string, extra: Record<string, unknown> = {}) {

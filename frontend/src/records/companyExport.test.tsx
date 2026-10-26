@@ -33,6 +33,7 @@ const acme = {
   updated_by_user_id: "u-me",
   version: 1,
   archived_at: null,
+  tags: [] as { id: string; name: string }[],
 };
 
 interface Reply {

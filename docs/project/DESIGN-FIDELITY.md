@@ -357,9 +357,19 @@ messages; the design's validation texts.
 **Deliberate differences:**
 - *Data model (P2-E, P3-A):* the dental "Patient" stage is "Customer"
   (same colours); sources are the P3-A list (Manual, Referral, Other for
-  people; Import and Form shown only when the system set them); no score,
-  tags or custom fields, so their columns, cards and tag pills are left
-  out. Notes and activity arrived in slice 3B (§4d).
+  people; Import and Form shown only when the system set them); no score
+  or custom fields, so their columns and cards are left out. Notes and
+  activity arrived in slice 3B (§4d).
+- *Tags (slice 3C, decision P3-C):* the design's neutral pills
+  (`#F1F2F4` on `#2A303C`, 11.5 px) in a Tags column (first three and
+  "+N", hidden on narrow screens) and in the drawer's Tags section; the
+  design's Tag filter on both lists. Tags have no colour, as in the
+  design. *Improvement:* instead of the design's inline "+ Add tag" field,
+  "Edit tags" opens a dialog that saves the whole set with the record's
+  version (no race between quick changes); Owners and Admins can create a
+  tag there. *Addition:* Settings › Tags lists, renames and deletes tags
+  (the design notes' "Central Settings" option); the design has no such
+  section.
 - *Views:* "Assigned to me" instead of a named person; "Hot (80+)",
   "Recall due" and "+ Save view" are left out (no score, no recall, no
   saved views); an "Archived" view is added so archived contacts can be

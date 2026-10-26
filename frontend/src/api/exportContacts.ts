@@ -63,6 +63,7 @@ function common(filters: ListFilters) {
     archived: filters.archived,
     ...(q ? { q } : {}),
     ...(filters.owners.length ? { owner: filters.owners } : {}),
+    ...(filters.tagIds.length ? { tag_id: filters.tagIds } : {}),
   };
 }
 
