@@ -1,7 +1,7 @@
 """Contact and company routes (`PHASE3-PLAN.md` §19, slice 3A).
 
-    /v1/workspaces/{tenant_id}/contacts[/{record_id}[/archive|/restore]]
-    /v1/workspaces/{tenant_id}/companies[/{record_id}[/archive|/restore]]
+    /v1/workspaces/{tenant_id}/contacts[/{record_id}[/archive|/restore|/tags]]
+    /v1/workspaces/{tenant_id}/companies[/{record_id}[/archive|/restore|/tags]]
     /v1/workspaces/{tenant_id}/contacts/export.csv   (slice 3E1; Owner and Admin)
     /v1/workspaces/{tenant_id}/companies/export.csv  (slice 3E2; Owner and Admin)
 
@@ -148,6 +148,17 @@ class CompanySummary(BaseModel):
     archived: bool
 
 
+class TagRef(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
+class TagSet(_Strict):
+    """A record's whole tag set (decision P3-C 5)."""
+
+    tag_ids: list[uuid.UUID] = Field(max_length=records.MAX_RECORD_TAGS)
+
+
 class _RecordOut(BaseModel):
     id: uuid.UUID
     owner_user_id: uuid.UUID | None
@@ -157,6 +168,7 @@ class _RecordOut(BaseModel):
     updated_by_user_id: uuid.UUID | None
     version: int
     archived_at: datetime | None
+    tags: list[TagRef]
 
 
 class ContactOut(_RecordOut):
@@ -400,6 +412,8 @@ class _FilterParams(_Strict):
     archived: Archived = "false"
     sort: Order = "name"
     direction: Direction = "asc"
+    # Any of these tags (decision P3-C 7).
+    tag_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)
 
 
 class _ListParams(_FilterParams):
@@ -467,6 +481,7 @@ def _query(params: _FilterParams, context: RequestContext, **extra: Any) -> reco
         q=q or None,
         archived=params.archived,
         owners=_owners(params.owner, context),
+        tags=tuple(params.tag_id),
         **extra,
     )
 
@@ -623,5 +638,33 @@ async def export_companies(
     )
 
 
+def _add_tag_route(kind: Kind, path: str, out: type[BaseModel]) -> None:
+    """`PUT .../{record_id}/tags`: replace the record's tags (decision P3-C 5),
+    a record update."""
+    change = Annotated[RequestContext, Depends(require_permission(kind.resource, "update"))]
+    item = f"/{{tenant_id}}/{path}/{{record_id}}"
+    tags: list[str | Any] = [path]
+
+    @router.put(f"{item}/tags", response_model=out, name=f"set_{kind.name}_tags", tags=tags)
+    def set_tags(
+        record_id: uuid.UUID,
+        body: TagSet,
+        context: change,  # pyright: ignore[reportInvalidTypeForm]
+        response: Response,
+        if_match: IfMatch = None,
+    ) -> Any:
+        expected = _version(if_match)
+        try:
+            record = records.set_tags(
+                kind, _scope(context), record_id, body.tag_ids, expected_version=expected
+            )
+        except RecordError as exc:
+            raise _http(exc) from None
+        _etag(response, record)
+        return record
+
+
 _add_routes(CONTACT, "contacts", ContactCreate, ContactUpdate, ContactOut)
 _add_routes(COMPANY, "companies", CompanyCreate, CompanyUpdate, CompanyOut)
+_add_tag_route(CONTACT, "contacts", ContactOut)
+_add_tag_route(COMPANY, "companies", CompanyOut)

@@ -465,6 +465,13 @@
             ],
             "title": "Phone"
           },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -507,6 +514,7 @@
           "updated_by_user_id",
           "version",
           "archived_at",
+          "tags",
           "name",
           "domain",
           "website",
@@ -917,6 +925,13 @@
             "title": "Source",
             "type": "string"
           },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -948,6 +963,7 @@
           "updated_by_user_id",
           "version",
           "archived_at",
+          "tags",
           "first_name",
           "last_name",
           "email",
@@ -1841,6 +1857,45 @@
         "title": "TagOut",
         "type": "object"
       },
+      "TagRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TagRef",
+        "type": "object"
+      },
+      "TagSet": {
+        "additionalProperties": false,
+        "description": "A record's whole tag set (decision P3-C 5).",
+        "properties": {
+          "tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Tag Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tag_ids"
+        ],
+        "title": "TagSet",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2609,6 +2664,20 @@
           },
           {
             "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Tag Id",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -2852,6 +2921,20 @@
               ],
               "title": "Direction",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Tag Id",
+              "type": "array"
             }
           },
           {
@@ -3555,6 +3638,101 @@
         ]
       }
     },
+    "/v1/workspaces/{tenant_id}/companies/{record_id}/tags": {
+      "put": {
+        "operationId": "set_company_tags_v1_workspaces__tenant_id__companies__record_id__tags_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Company Tags",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
     "/v1/workspaces/{tenant_id}/contacts": {
       "get": {
         "operationId": "list_contacts_v1_workspaces__tenant_id__contacts_get",
@@ -3675,6 +3853,20 @@
               ],
               "title": "Direction",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Tag Id",
+              "type": "array"
             }
           },
           {
@@ -3955,6 +4147,20 @@
               ],
               "title": "Direction",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Tag Id",
+              "type": "array"
             }
           },
           {
@@ -4653,6 +4859,101 @@
           }
         },
         "summary": "Restore Contact",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/tags": {
+      "put": {
+        "operationId": "set_contact_tags_v1_workspaces__tenant_id__contacts__record_id__tags_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Contact Tags",
         "tags": [
           "contacts"
         ]

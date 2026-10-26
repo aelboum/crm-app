@@ -363,6 +363,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/companies/{record_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Company Tags */
+        put: operations["set_company_tags_v1_workspaces__tenant_id__companies__record_id__tags_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/contacts": {
         parameters: {
             query?: never;
@@ -484,6 +501,23 @@ export interface paths {
         put?: never;
         /** Restore Contact */
         post: operations["restore_contact_v1_workspaces__tenant_id__contacts__record_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Contact Tags */
+        put: operations["set_contact_tags_v1_workspaces__tenant_id__contacts__record_id__tags_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -839,6 +873,8 @@ export interface components {
             owner_user_id: string | null;
             /** Phone */
             phone: string | null;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
             /**
              * Updated At
              * Format: date-time
@@ -963,6 +999,8 @@ export interface components {
             phone: string | null;
             /** Source */
             source: string;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
             /**
              * Updated At
              * Format: date-time
@@ -1290,6 +1328,24 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+        };
+        /** TagRef */
+        TagRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * TagSet
+         * @description A record's whole tag set (decision P3-C 5).
+         */
+        TagSet: {
+            /** Tag Ids */
+            tag_ids: string[];
         };
         /** ValidationError */
         ValidationError: {
@@ -1707,6 +1763,7 @@ export interface operations {
                 archived?: "false" | "true" | "all";
                 sort?: "name" | "created_at" | "updated_at";
                 direction?: "asc" | "desc";
+                tag_id?: string[];
                 limit?: number;
                 cursor?: string | null;
             };
@@ -1786,6 +1843,7 @@ export interface operations {
                 archived?: "false" | "true" | "all";
                 sort?: "name" | "created_at" | "updated_at";
                 direction?: "asc" | "desc";
+                tag_id?: string[];
             };
             header?: {
                 authorization?: string | null;
@@ -2117,6 +2175,45 @@ export interface operations {
             };
         };
     };
+    set_company_tags_v1_workspaces__tenant_id__companies__record_id__tags_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagSet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_contacts_v1_workspaces__tenant_id__contacts_get: {
         parameters: {
             query?: {
@@ -2127,6 +2224,7 @@ export interface operations {
                 archived?: "false" | "true" | "all";
                 sort?: "name" | "created_at" | "updated_at";
                 direction?: "asc" | "desc";
+                tag_id?: string[];
                 limit?: number;
                 cursor?: string | null;
             };
@@ -2208,6 +2306,7 @@ export interface operations {
                 archived?: "false" | "true" | "all";
                 sort?: "name" | "created_at" | "updated_at";
                 direction?: "asc" | "desc";
+                tag_id?: string[];
             };
             header?: {
                 authorization?: string | null;
@@ -2518,6 +2617,45 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_contact_tags_v1_workspaces__tenant_id__contacts__record_id__tags_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagSet"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

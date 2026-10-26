@@ -50,6 +50,8 @@ for _path, _resource in (("contacts", "crm_app.contact"), ("companies", "crm_app
         f"PATCH {_item}": f"{_resource}:update",
         f"POST {_item}/archive": f"{_resource}:update",
         f"POST {_item}/restore": f"{_resource}:update",
+        # Replacing the record's tags (decision P3-C 5): a record update.
+        f"PUT {_item}/tags": f"{_resource}:update",
         f"DELETE {_item}": f"{_resource}:delete",
         # The record's history and notes (slice 3B, decision P3-B): reads for
         # every role; adding notes for Owner, Admin and Member.

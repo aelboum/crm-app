@@ -47,7 +47,7 @@ from saas_os.infra.db import update as update_rows
 
 from crm_app.domains import paging
 from crm_app.domains.membership import ACTIVE
-from crm_app.models import Activity, Company, Contact
+from crm_app.models import Activity, Company, CompanyTag, Contact, ContactTag, Tag
 
 
 @dataclass(frozen=True)
@@ -102,6 +102,13 @@ _SYSTEM_FIELDS = (
 )
 
 
+# The table holding each kind's tags, and its record column (decision P3-C).
+_TAGGING: dict[str, tuple[type[ContactTag] | type[CompanyTag], Any]] = {
+    "contact": (ContactTag, ContactTag.contact_id),
+    "company": (CompanyTag, CompanyTag.company_id),
+}
+MAX_RECORD_TAGS = 20
+
 # Changes with their own history kind; `updated` names only the other fields.
 _STAGE, _OWNER, _COMPANY = "lifecycle_stage", "owner_user_id", "company_id"
 _OWN_KIND = frozenset({_STAGE, _OWNER, _COMPANY})
@@ -147,6 +154,10 @@ class InvalidReferenceError(RecordError):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+class TooManyTagsError(RecordError):
+    status, code = 422, "too_many_tags"
 
 
 class EmailOrPhoneRequiredError(RecordError):
@@ -230,6 +241,8 @@ def _duplicate_or(exc: IntegrityError, kind: Kind, scope: Scope, value: str | No
     constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
     if kind is CONTACT and constraint == _COMPANY_LINK:
         return InvalidReferenceError("company_not_found")
+    if constraint == f"{kind.name}_tag_tag_fkey":
+        return InvalidReferenceError("tag_not_found")
     if constraint != kind.unique_index or value is None:
         return ConstraintViolationError()
     with tenant_session_scope(scope.workspace) as session:
@@ -389,6 +402,9 @@ def _records(session: Session, scope: Scope, kind: Kind, rows: Sequence[Row]) ->
     records = [
         {name: getattr(row, name) for name in (*_SYSTEM_FIELDS, *kind.fields)} for row in rows
     ]
+    tagged = _tags_of(session, scope, kind, [row.id for row in rows])
+    for record in records:
+        record["tags"] = tagged.get(record["id"], [])
     if kind is CONTACT:
         linked = {row.company_id for row in rows if isinstance(row, Contact) and row.company_id}
         companies = {}
@@ -408,6 +424,25 @@ def _records(session: Session, scope: Scope, kind: Kind, rows: Sequence[Row]) ->
         for record in records:
             record["company"] = companies.get(record["company_id"])
     return records
+
+
+def _tags_of(
+    session: Session, scope: Scope, kind: Kind, record_ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, list[dict[str, Any]]]:
+    """Each record's tags, by name, in one query (decision P3-C 8)."""
+    if not record_ids:
+        return {}
+    model, record = _TAGGING[kind.name]
+    rows = session.execute(
+        select(record, Tag.id, Tag.name)
+        .join(Tag, (Tag.tenant_id == model.tenant_id) & (Tag.id == model.tag_id))
+        .where(model.tenant_id == scope.workspace, record.in_(record_ids))
+        .order_by(Tag.name.collate(ORDER_COLLATION), Tag.id)
+    )
+    tagged: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for record_id, tag_id, name in rows:
+        tagged.setdefault(record_id, []).append({"id": tag_id, "name": name})
+    return tagged
 
 
 def get(kind: Kind, scope: Scope, record_id: uuid.UUID) -> Record:
@@ -435,6 +470,7 @@ class ListQuery:
     stages: tuple[str, ...] = ()
     owners: tuple[uuid.UUID, ...] = ()
     companies: tuple[uuid.UUID, ...] = ()
+    tags: tuple[uuid.UUID, ...] = ()
 
     def filters(self) -> dict[str, object]:
         return {
@@ -443,6 +479,7 @@ class ListQuery:
             "stages": sorted(self.stages),
             "owners": sorted(str(owner) for owner in self.owners),
             "companies": sorted(str(company) for company in self.companies),
+            "tags": sorted(str(tag) for tag in self.tags),
         }
 
 
@@ -525,6 +562,15 @@ def _conditions(kind: Kind, scope: Scope, query: ListQuery) -> list[Any]:
         conditions.append(Contact.lifecycle_stage.in_(query.stages))
     if kind is CONTACT and query.companies:
         conditions.append(Contact.company_id.in_(query.companies))
+    if query.tags:
+        tagging, record = _TAGGING[kind.name]
+        conditions.append(
+            model.id.in_(
+                select(record).where(
+                    tagging.tenant_id == scope.workspace, tagging.tag_id.in_(query.tags)
+                )
+            )
+        )
     return conditions
 
 
@@ -788,6 +834,75 @@ def update(
         _audit(session, kind, scope, _Event("updated", record_id, {"fields": sorted(changed)}))
 
     _write(kind, scope, lambda: unique.get("value"), apply)
+    return get(kind, scope, record_id)
+
+
+def set_tags(
+    kind: Kind,
+    scope: Scope,
+    record_id: uuid.UUID,
+    tag_ids: Sequence[uuid.UUID],
+    *,
+    expected_version: int,
+) -> Record:
+    """Replace the record's tags with `tag_ids` if it is still at
+    `expected_version` (decision P3-C 5). Every tag must be one of the
+    workspace's; at most `MAX_RECORD_TAGS`. The same set is a no-op: no new
+    version, no history, no audit entry. A change is a record update: a new
+    version, an `updated` history entry naming `tags`, and the audit entry
+    `<kind>.updated` with `fields: ["tags"]`, never the tags' names."""
+    wanted = set(tag_ids)
+    if len(wanted) > MAX_RECORD_TAGS:
+        raise TooManyTagsError
+    tagging, record = _TAGGING[kind.name]
+
+    def apply(session: Session) -> None:
+        row = _load(session, kind, scope, record_id, lock=True)
+        if row.version != expected_version:
+            raise StaleVersionError(row.version)
+        if wanted:
+            known = set(
+                session.execute(
+                    select(Tag.id).where(Tag.tenant_id == scope.workspace, Tag.id.in_(wanted))
+                ).scalars()
+            )
+            if known != wanted:
+                raise InvalidReferenceError("tag_not_found")
+        current = set(
+            session.execute(
+                select(tagging.tag_id).where(
+                    tagging.tenant_id == scope.workspace, record == record_id
+                )
+            ).scalars()
+        )
+        if current == wanted:
+            return
+        removed = current - wanted
+        if removed:
+            session.execute(
+                delete(tagging).where(
+                    tagging.tenant_id == scope.workspace,
+                    record == record_id,
+                    tagging.tag_id.in_(removed),
+                )
+            )
+        now = _now()
+        session.add_all(
+            tagging(
+                tenant_id=scope.workspace,
+                tag_id=tag_id,
+                created_by_user_id=scope.actor,
+                created_at=now,
+                **{record.key: record_id},
+            )
+            for tag_id in wanted - current
+        )
+        _touch(row, scope)
+        session.flush()
+        session.add(history_entry(kind, scope, record_id, "updated", fields=["tags"]))
+        _audit(session, kind, scope, _Event("updated", record_id, {"fields": ["tags"]}))
+
+    _write(kind, scope, lambda: None, apply)
     return get(kind, scope, record_id)
 
 
