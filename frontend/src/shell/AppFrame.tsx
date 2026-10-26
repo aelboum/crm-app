@@ -166,7 +166,9 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
   );
   return (
     <MenuTrigger>
-      <AriaButton className="ws-switcher">
+      {/* A fixed name: the visible text is empty while the workspace loads,
+          and the kind line is hidden on narrow screens. */}
+      <AriaButton className="ws-switcher" aria-label={name ? `${name} ${t("ws.kind")}` : t("ws.kind")}>
         <span
           className="ws-tile"
           data-mark={name ? initials(name) : ""}

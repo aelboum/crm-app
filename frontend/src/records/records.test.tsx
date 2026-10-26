@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { accessibilityViolations, type Handler, renderApp } from "../test/render";
 
@@ -378,5 +378,407 @@ describe("companies", () => {
       website: "https://www.acme.example",
       domain: null,
     });
+  });
+});
+
+// --- Slice 3A hardening -----------------------------------------------------
+
+const BETA = "c0000000-0000-4000-8000-000000000002";
+const ZETA = "c0000000-0000-4000-8000-000000000003";
+const ZERO = "c0000000-0000-4000-8000-000000000004";
+const company = (id: string, name: string) => ({ ...acme, id, name, domain: null, website: null, city: null });
+const beta = company(BETA, "Beta Freight");
+const zeta = company(ZETA, "Zeta Ltd");
+const zero = company(ZERO, "Zero Co");
+
+/** Companies by search text and cursor, as the API pages them. */
+const companyPages: Handler = (method, path) => {
+  if (method !== "GET" || !path.startsWith(`/v1/workspaces/${WS}/companies?`)) return undefined;
+  const query = new URLSearchParams(path.split("?")[1]);
+  const q = query.get("q");
+  if (q === "Zet") return page([zeta]);
+  if (q === "Ze") return page([zero]);
+  if (q) return page([]);
+  return query.get("cursor") === "co2" ? page([beta]) : page([acme], "co2");
+};
+
+const delay = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+async function openNewContact(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "New contact" }));
+  return screen.findByRole("dialog", { name: "New contact" });
+}
+
+describe("company picker", () => {
+  it("finds companies beyond the first page and by search, and links the chosen one", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/contacts`,
+      crm(OWNER_ACTIONS, (method, path, body) =>
+        method === "POST"
+          ? { status: 201, body: { ...ria, ...(body as object), id: NEW } }
+          : companyPages(method, path, body),
+      ),
+    );
+    const dialog = await openNewContact(user);
+    await user.type(within(dialog).getByLabelText(/First name/), "Noor");
+    await user.type(within(dialog).getByLabelText("Email"), "noor@example.test");
+    await user.click(within(dialog).getByRole("button", { name: "Choose company" }));
+    const results = await within(dialog).findByRole("listbox", { name: "Companies" });
+    expect(within(results).getByRole("option", { name: /Acme BV/ })).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+
+    // The second page, by cursor.
+    await user.click(within(dialog).getByRole("button", { name: "Load more companies" }));
+    expect(await within(dialog).findByRole("option", { name: /Beta Freight/ })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Load more companies" })).toBeNull();
+
+    // A search, sent to the workspace's own list of active companies.
+    await user.type(within(dialog).getByRole("searchbox", { name: "Search companies" }), "Zet");
+    await user.click(await within(dialog).findByRole("option", { name: /Zeta Ltd/ }));
+    expect(within(dialog).getByText("Zeta Ltd")).toBeInTheDocument();
+    // Focus returns to the company control, not to the top of the form.
+    expect(within(dialog).getByRole("button", { name: "Change company" })).toHaveFocus();
+    expect(
+      listRequests(sent, "companies").some((r) => r.path.includes("q=Zet") && r.path.includes("archived=false")),
+    ).toBe(true);
+
+    await user.click(within(dialog).getByRole("button", { name: "Create contact" }));
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toMatchObject({ company_id: ZETA });
+    });
+  });
+
+  it("never lets an older, slower search replace a newer one", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/contacts`, crm(OWNER_ACTIONS, companyPages));
+    const answer = globalThis.fetch;
+    vi.stubGlobal("fetch", async (request: Request) => {
+      if (new URL(request.url).searchParams.get("q") === "Ze") await delay(700);
+      return answer(request);
+    });
+    const dialog = await openNewContact(user);
+    await user.click(within(dialog).getByRole("button", { name: "Choose company" }));
+    const box = within(dialog).getByRole("searchbox", { name: "Search companies" });
+    await user.type(box, "Ze");
+    await delay(350); // past the debounce: the slow "Ze" request is out
+    await user.type(box, "t");
+    expect(await within(dialog).findByRole("option", { name: /Zeta Ltd/ })).toBeInTheDocument();
+    await delay(800); // the slow answer has now arrived
+    expect(within(dialog).queryByRole("option", { name: /Zero Co/ })).toBeNull();
+    expect(within(dialog).getByRole("option", { name: /Zeta Ltd/ })).toBeInTheDocument();
+  });
+
+  it("says when nothing matches, and offers a retry when the list fails", async () => {
+    const user = userEvent.setup();
+    let failing = false;
+    renderApp(
+      `/w/${WS}/contacts`,
+      crm(OWNER_ACTIONS, (method, path, body) =>
+        failing && path.startsWith(`/v1/workspaces/${WS}/companies?`)
+          ? { status: 500, body: { detail: "Internal Server Error" } }
+          : companyPages(method, path, body),
+      ),
+    );
+    const dialog = await openNewContact(user);
+    await user.click(within(dialog).getByRole("button", { name: "Choose company" }));
+    const box = within(dialog).getByRole("searchbox", { name: "Search companies" });
+    await user.type(box, "Nope");
+    expect(await within(dialog).findByText("No active company starts with that text.")).toBeInTheDocument();
+    failing = true;
+    await user.type(box, "s");
+    expect(
+      await within(dialog).findByText("Something went wrong. Try again.", {}, { timeout: 8000 }),
+    ).toBeInTheDocument();
+    failing = false;
+    await user.click(within(dialog).getByRole("button", { name: "Try again" }));
+    expect(await within(dialog).findByText("No active company starts with that text.")).toBeInTheDocument();
+  }, 15000);
+
+  it("moves into the results with the down arrow, and Escape closes only the search", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/contacts`, crm(OWNER_ACTIONS, companyPages));
+    const dialog = await openNewContact(user);
+    await user.type(within(dialog).getByLabelText(/First name/), "Noor");
+    await user.click(within(dialog).getByRole("button", { name: "Choose company" }));
+    await within(dialog).findByRole("option", { name: /Acme BV/ });
+    await user.keyboard("{ArrowDown}");
+    expect(within(dialog).getByRole("option", { name: /Acme BV/ })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    // The contact dialog and what was typed stay; focus is back on the control.
+    expect(screen.getByRole("dialog", { name: "New contact" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/First name/)).toHaveValue("Noor");
+    expect(within(dialog).queryByRole("searchbox", { name: "Search companies" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "Choose company" })).toHaveFocus();
+    // Opening again starts from an empty search.
+    await user.click(within(dialog).getByRole("button", { name: "Choose company" }));
+    expect(within(dialog).getByRole("searchbox", { name: "Search companies" })).toHaveValue("");
+  });
+
+  it("shows a contact's current company and can remove it", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/contacts?record=${SAM}`,
+      crm(OWNER_ACTIONS, (method) =>
+        method === "PATCH"
+          ? { status: 200, body: { ...sam, company_id: null, company: null, version: 2 } }
+          : undefined,
+      ),
+    );
+    const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
+    await user.click(await within(drawer).findByRole("button", { name: /Edit/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit contact" });
+    expect(within(dialog).getByText("Acme BV")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Remove company" }));
+    expect(within(dialog).getByText("No company")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Choose company" })).toHaveFocus();
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "PATCH")?.body).toEqual({ company_id: null });
+    });
+  });
+});
+
+describe("form accessibility", () => {
+  it("ties the server's field errors to the select and the company controls", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/contacts`,
+      crm(OWNER_ACTIONS, (method) =>
+        method === "POST"
+          ? {
+              status: 422,
+              body: {
+                detail: [
+                  { loc: ["body", "lifecycle_stage"], msg: "x", type: "x" },
+                  { loc: ["body", "company_id"], msg: "x", type: "x" },
+                ],
+              },
+            }
+          : undefined,
+      ),
+    );
+    const dialog = await openNewContact(user);
+    await user.type(within(dialog).getByLabelText(/First name/), "Noor");
+    await user.type(within(dialog).getByLabelText("Email"), "noor@example.test");
+    await user.click(within(dialog).getByRole("button", { name: "Create contact" }));
+    const stage = within(dialog).getByRole("combobox", { name: "Stage" });
+    await waitFor(() => {
+      expect(stage).toHaveAttribute("aria-invalid", "true");
+    });
+    expect(stage).toHaveAccessibleDescription("Check this value.");
+    expect(within(dialog).getByRole("button", { name: "Choose company" })).toHaveAccessibleDescription(
+      "Check this value.",
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+});
+
+describe("company drawer people", () => {
+  const people =
+    (fail: boolean): Handler =>
+    (method, path) => {
+      if (method !== "GET" || !path.startsWith(`/v1/workspaces/${WS}/contacts?`)) return undefined;
+      if (!path.includes("cursor=p2")) return page([sam], "p2");
+      return fail ? { status: 500, body: { detail: "Internal Server Error" } } : page([ria]);
+    };
+
+  it("loads more people by cursor until the end", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(`/w/${WS}/companies?record=${ACME}`, crm(OWNER_ACTIONS, people(false)));
+    const drawer = await screen.findByRole("dialog", { name: "Company" });
+    expect(await within(drawer).findByRole("button", { name: /Sam Jansen/ })).toBeInTheDocument();
+    await user.click(within(drawer).getByRole("button", { name: "Load more people" }));
+    expect(await within(drawer).findByRole("button", { name: /Ria Jansen/ })).toBeInTheDocument();
+    expect(within(drawer).getByText("All 2 people shown.")).toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "Load more people" })).toBeNull();
+    const next = listRequests(sent, "contacts").find((r) => r.path.includes("cursor=p2"));
+    expect(next?.path).toContain(`company_id=${ACME}`);
+  });
+
+  it("keeps the people shown when the next page fails", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/companies?record=${ACME}`, crm(OWNER_ACTIONS, people(true)));
+    const drawer = await screen.findByRole("dialog", { name: "Company" });
+    await user.click(await within(drawer).findByRole("button", { name: "Load more people" }));
+    expect(await within(drawer).findByText("More people could not be loaded.", {}, { timeout: 8000 })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: /Sam Jansen/ })).toBeInTheDocument();
+  }, 15000);
+});
+
+describe("records regressions", () => {
+  it("archives a contact from the drawer and confirms it", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/contacts?record=${SAM}`,
+      crm(OWNER_ACTIONS, (method, path) =>
+        method === "POST" && path.endsWith("/archive")
+          ? { status: 200, body: { ...sam, archived_at: stamp } }
+          : undefined,
+      ),
+    );
+    const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
+    await user.click(await within(drawer).findByRole("button", { name: "Archive" }));
+    await waitFor(() => {
+      expect(
+        sent.some((r) => r.method === "POST" && r.path === `/v1/workspaces/${WS}/contacts/${SAM}/archive`),
+      ).toBe(true);
+    });
+    const toasts = document.querySelector(".toast-region");
+    expect(toasts).not.toBeNull();
+    await waitFor(() => {
+      expect(toasts).toHaveTextContent("Archived");
+    });
+  });
+
+  it("restores an archived contact, and explains when another active one holds its email", async () => {
+    const user = userEvent.setup();
+    const archived = { ...ria, archived_at: stamp };
+    const { sent } = renderApp(
+      `/w/${WS}/contacts?record=${RIA}`,
+      crm(OWNER_ACTIONS, (method, path) => {
+        if (method === "POST" && path.endsWith("/restore")) {
+          return { status: 409, body: { detail: { code: "duplicate_email", existing_id: SAM } } };
+        }
+        if (method === "GET" && path === `/v1/workspaces/${WS}/contacts/${RIA}`) {
+          return { status: 200, body: archived };
+        }
+        return undefined;
+      }),
+    );
+    const drawer = await screen.findByRole("dialog", { name: "Contact preview" });
+    expect(await within(drawer).findByText(/Archived: hidden from the default list/)).toBeInTheDocument();
+    await user.click(within(drawer).getByRole("button", { name: "Restore" }));
+    expect(
+      await within(drawer).findByText(
+        "Another active contact already has this email, so this one cannot be restored.",
+      ),
+    ).toBeInTheDocument();
+    expect(sent.some((r) => r.method === "POST" && r.path.endsWith(`/contacts/${RIA}/restore`))).toBe(true);
+  });
+
+  it("filters by owner and sorts by name and by last update", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(`/w/${WS}/contacts`, crm(OWNER_ACTIONS));
+    await screen.findByRole("table", { name: "Contacts" });
+    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await user.click(await screen.findByRole("menuitemcheckbox", { name: "You" }));
+    await waitFor(() => {
+      expect(listRequests(sent, "contacts").some((r) => r.path.includes("owner=u-me"))).toBe(true);
+    });
+    await user.keyboard("{Escape}");
+
+    expect(screen.getByRole("columnheader", { name: /Name/ })).toHaveAttribute("aria-sort", "ascending");
+    await user.click(within(screen.getByRole("columnheader", { name: /Name/ })).getByRole("button"));
+    await waitFor(() => {
+      expect(screen.getByRole("columnheader", { name: /Name/ })).toHaveAttribute("aria-sort", "descending");
+    });
+    expect(listRequests(sent, "contacts").some((r) => r.path.includes("direction=desc") && r.path.includes("sort=name"))).toBe(true);
+    await user.click(within(screen.getByRole("columnheader", { name: /Updated/ })).getByRole("button"));
+    await waitFor(() => {
+      expect(
+        listRequests(sent, "contacts").some((r) => r.path.includes("sort=updated_at") && r.path.includes("direction=desc")),
+      ).toBe(true);
+    });
+  });
+
+  it("says a list is forbidden, without a retry", async () => {
+    renderApp(
+      `/w/${WS}/contacts`,
+      crm(OWNER_ACTIONS, (method, path) =>
+        method === "GET" && path.startsWith(`/v1/workspaces/${WS}/contacts?`)
+          ? { status: 403, body: { detail: "Not authorized." } }
+          : undefined,
+      ),
+    );
+    expect(await screen.findByText("You do not have permission to see this.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("offers a retry after a server error, and recovers", async () => {
+    const user = userEvent.setup();
+    let failing = true;
+    renderApp(
+      `/w/${WS}/companies`,
+      crm(OWNER_ACTIONS, (method, path) =>
+        failing && method === "GET" && path.startsWith(`/v1/workspaces/${WS}/companies?`)
+          ? { status: 500, body: { detail: "Internal Server Error" } }
+          : undefined,
+      ),
+    );
+    const retry = await screen.findByRole("button", { name: "Try again" }, { timeout: 8000 });
+    failing = false;
+    await user.click(retry);
+    expect(await screen.findByRole("table", { name: "Companies" })).toBeInTheDocument();
+  }, 15000);
+
+  it("opens the new-contact dialog from the header's link", async () => {
+    renderApp(`/w/${WS}/contacts?create=contact`, crm(OWNER_ACTIONS));
+    expect(await screen.findByRole("dialog", { name: "New contact" })).toBeInTheDocument();
+  });
+
+  it("ignores the new-contact link for a read-only member", async () => {
+    renderApp(`/w/${WS}/contacts?create=contact`, crm(READ_ONLY));
+    await screen.findByRole("table", { name: "Contacts" });
+    expect(screen.queryByRole("dialog", { name: "New contact" })).toBeNull();
+  });
+
+  it("edits a company's changed fields with the version it read", async () => {
+    const user = userEvent.setup();
+    const { sent, headersSent } = renderApp(
+      `/w/${WS}/companies?record=${ACME}`,
+      crm(OWNER_ACTIONS, (method) =>
+        method === "PATCH" ? { status: 200, body: { ...acme, city: "Delft", version: 2 } } : undefined,
+      ),
+    );
+    const drawer = await screen.findByRole("dialog", { name: "Company" });
+    await user.click(await within(drawer).findByRole("button", { name: /Edit/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit company" });
+    const city = within(dialog).getByLabelText("City");
+    await user.clear(city);
+    await user.type(city, "Delft");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(sent.filter((r) => r.method === "PATCH")).toEqual([
+        { method: "PATCH", path: `/v1/workspaces/${WS}/companies/${ACME}`, body: { city: "Delft" } },
+      ]);
+    });
+    expect(headersSent.find((r) => r.method === "PATCH")?.headers["if-match"]).toBe('"1"');
+  });
+});
+
+describe("narrow screens", () => {
+  /** Answers the width media queries as a 390 px phone would. */
+  function narrowScreen() {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+  }
+
+  it("keeps the contacts page usable and the switcher named, with navigation behind a button", async () => {
+    narrowScreen();
+    renderApp(`/w/${WS}/contacts`, crm(OWNER_ACTIONS));
+    expect(await screen.findByRole("button", { name: "Open navigation" })).toBeInTheDocument();
+    expect(await screen.findByRole("table", { name: "Contacts" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Acme Client workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Company" })).toHaveClass("hide-narrow");
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("names the workspace switcher while the workspace name is unavailable", async () => {
+    narrowScreen();
+    renderApp(
+      `/w/${WS}/contacts`,
+      crm(OWNER_ACTIONS, (method, path) =>
+        method === "GET" && path === `/v1/workspaces/${WS}` ? { status: 503, body: { detail: "x" } } : undefined,
+      ),
+    );
+    expect(await screen.findByRole("button", { name: "Client workspace" })).toBeInTheDocument();
   });
 });

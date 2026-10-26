@@ -35,6 +35,54 @@ decisions P2-A to P2-E approved)
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
 - **Phase 3:** slices 3A and 3B done; 3C and later not started.
+- **Phase 3A hardening (owner-approved 2026-10-26; frontend only):**
+  - **Built:**
+    - a searchable company picker in the contact form. It uses the
+      existing company list API (prefix search, cursor pages, active
+      companies only) in place of the first-50 select;
+    - "Load more people" in the company drawer, with an end-of-list line
+      and a next-page failure state that keeps the loaded people;
+    - select errors and the picker linked to their messages
+      (`aria-describedby`, `aria-invalid`);
+    - a fixed accessible name on the workspace switcher;
+    - dialogs scroll inside a phone-height screen (pre-existing: the
+      contact form's actions were out of reach at 390 × 844);
+    - the chosen company name wraps on narrow screens;
+    - focus returns to the company control after a choice, a cancel or a
+      removal. The down arrow moves from the search box into the results,
+      and Escape closes only the search, not the contact dialog. Every
+      search starts empty.
+  - **No change to:** backend, migrations, permissions, the API schema,
+    the SaaS-OS pin, invitations or `crm-app-login`.
+  - **Tests:** 18 new Vitest cases in `records.test.tsx`, covering:
+    - picker paging, search, a stale-response race, empty, error and
+      retry states, keyboard and Escape handling, and removing the
+      company;
+    - field-error descriptions and axe checks;
+    - People paging and its failure state;
+    - archive, and a blocked restore;
+    - the owner filter and sorting;
+    - 403 and 500 states;
+    - the `?create=contact` link, for creators and read-only members;
+    - company edit with `If-Match`;
+    - narrow-screen layout and the switcher name.
+
+    Frontend total: 136 tests. Unit tests: 272 passed. Full integration
+    suite: 257 passed. An independent review found no blocking bugs; its
+    four keyboard and focus findings are fixed.
+  - **Browser** (local stack, 1280 px and 390 px emulated):
+    - a company beyond the first 50 found by "Load more" and by search,
+      chosen by mouse and by keyboard, and saved on the new contact;
+    - Zylo Logistics' People list went from 50 to 56 with "All 56
+      people shown.";
+    - a real 429 from the rate limiter (after seeding) showed the error
+      state, and Try again recovered;
+    - field errors are linked to their controls, including a real server
+      422 on Stage;
+    - the switcher is named at both widths;
+    - no horizontal overflow, and no console messages on the test page.
+  - **Local test data:** 61 companies and 57 contacts in the throwaway
+    workspace "E2E Stage D 8cab83".
 - **Self-service signup (decision S-1, 2026-10-24):** planned in
   `SIGNUP-PLAN.md`; supersedes P2-C's exclusion. Verified on 2026-10-24:
   baseline `f3e08f5` = `origin/main`, SaaS-OS pin `b03d87a` unchanged.

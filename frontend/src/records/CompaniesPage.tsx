@@ -404,7 +404,7 @@ function CompanyDrawer({
             </h2>
             {people.isPending ? (
               <Loading />
-            ) : people.isError ? (
+            ) : people.isError && !people.data ? (
               <LoadError error={people.error} onRetry={() => void people.refetch()} />
             ) : contacts.length === 0 ? (
               <p className="muted">{t("company.noPeople")}</p>
@@ -427,7 +427,24 @@ function CompanyDrawer({
                 ))}
               </ul>
             )}
-            {people.hasNextPage ? <p className="muted">{t("company.morePeople")}</p> : null}
+            {people.isFetchNextPageError ? (
+              <div className="notice error row" role="alert">
+                <p>{t("company.morePeopleFailed")}</p>
+                <Button size="sm" onPress={() => void people.fetchNextPage()}>
+                  {t("state.retry")}
+                </Button>
+              </div>
+            ) : people.hasNextPage ? (
+              <div className="people-more">
+                <Button size="sm" onPress={() => void people.fetchNextPage()} isDisabled={people.isFetchingNextPage}>
+                  {people.isFetchingNextPage ? t("state.loading") : t("company.loadMorePeople")}
+                </Button>
+              </div>
+            ) : (people.data?.pages.length ?? 0) > 1 ? (
+              <p className="muted" role="status">
+                {t("company.allPeople", { count: contacts.length })}
+              </p>
+            ) : null}
           </section>
           {refusal ? (
             <p className="notice error" role="alert">

@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useMemo, useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { useMe, useMembers } from "../api/queries";
@@ -8,11 +8,9 @@ import {
   type ContactUpdate,
   DuplicateError,
   FieldErrors,
-  NO_FILTERS,
   newIdempotencyKey,
   STAGES,
   type Stage,
-  useCompanyList,
   useCreateContact,
   USER_SOURCES,
   useUpdateContact,
@@ -22,6 +20,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
 import { ownerOptions, stageLabel } from "./parts";
 
 /*
@@ -125,7 +124,6 @@ export function ContactDialog({
   const toast = useToast();
   const me = useMe();
   const members = useMembers(workspaceId, 0, true);
-  const companies = useCompanyList(workspaceId, NO_FILTERS);
   const create = useCreateContact(workspaceId);
   const update = useUpdateContact(workspaceId);
   const [values, setValues] = useState<Values>(() => valuesOf(contact));
@@ -135,17 +133,18 @@ export function ContactDialog({
   const [key] = useState(newIdempotencyKey);
   const meId = me.data?.user_id;
   const owners = ownerOptions(t, members.data?.items ?? [], meId);
-  const companyOptions = useMemo(() => {
-    const list = (companies.data?.pages ?? []).flatMap((page) => page.items);
-    const current = contact?.company;
-    return current && !list.some((c) => c.id === current.id)
-      ? [{ id: current.id, name: current.name }, ...list]
-      : list;
-  }, [companies.data, contact]);
+  // The company shown in the picker: the contact's own, or the one chosen here.
+  const [company, setCompany] = useState<PickedCompany | null>(() =>
+    contact?.company ? { id: contact.company.id, name: contact.company.name, archived: contact.company.archived } : null,
+  );
   const pending = create.isPending || update.isPending;
 
   const set = (field: Field) => (event: { target: { value: string } }) => {
-    setValues((prev) => ({ ...prev, [field]: event.target.value }));
+    setValue(field, event.target.value);
+  };
+
+  function setValue(field: Field, value: string) {
+    setValues((prev) => ({ ...prev, [field]: value }));
     setInvalid((prev) => {
       const next = new Set(prev);
       next.delete(field);
@@ -155,7 +154,7 @@ export function ContactDialog({
       }
       return next;
     });
-  };
+  }
 
   function localProblems(): Set<Field> {
     const problems = new Set<Field>();
@@ -275,6 +274,7 @@ export function ContactDialog({
           value={values[field]}
           onChange={set(field)}
           aria-invalid={message ? true : undefined}
+          aria-describedby={message ? `${id}-error` : undefined}
         >
           {choices.map((choice) => (
             <option key={choice.id} value={choice.id}>
@@ -282,7 +282,11 @@ export function ContactDialog({
             </option>
           ))}
         </select>
-        {message ? <span className="form-error">{message}</span> : null}
+        {message ? (
+          <span id={`${id}-error`} className="form-error">
+            {message}
+          </span>
+        ) : null}
       </div>
     );
   };
@@ -310,10 +314,22 @@ export function ContactDialog({
         {input("phone", t("contact.field.phone"), { type: "tel" })}
         {input("job_title", t("contact.field.jobTitle"))}
         {input("city", t("contact.field.city"))}
-        {select("company_id", t("contact.field.company"), [
-          { id: "", label: t("contact.noCompany") },
-          ...companyOptions.map((c) => ({ id: c.id, label: c.name })),
-        ])}
+        <CompanyPicker
+          workspaceId={workspaceId}
+          id="contact-company_id"
+          label={t("contact.field.company")}
+          selected={company}
+          onChange={(picked) => {
+            setCompany(picked);
+            setValue("company_id", picked?.id ?? "");
+          }}
+          errorId={error("company_id") ? "contact-company_id-error" : undefined}
+        />
+        {error("company_id") ? (
+          <span id="contact-company_id-error" className="form-error wide">
+            {error("company_id")}
+          </span>
+        ) : null}
         {select(
           "lifecycle_stage",
           t("contact.field.stage"),

@@ -535,6 +535,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .modal {
   background: var(--surface); border-radius: var(--radius-dialog); box-shadow: var(--shadow-dialog);
   padding: var(--space-6); max-width: 480px; width: 100%;
+  /* A dialog taller than the screen (a long form on a phone) scrolls inside
+     itself, so its actions stay reachable. */
+  max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto;
 }
 .dialog { display: grid; gap: var(--space-4); outline: none; }
 .dialog-title { font-size: 16px; font-weight: 650; margin: 0; }
@@ -698,6 +701,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .field-row dd { margin: 0; overflow-wrap: anywhere; }
 .drawer-section-title { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: #687082; text-transform: uppercase; letter-spacing: 0.04em; }
 .people-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.people-more { display: flex; justify-content: center; padding-top: 8px; }
 .person-card {
   width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #eef0f3;
   border-radius: 8px; background: #fff; font: inherit; text-align: left; cursor: pointer; color: var(--ink);
@@ -763,6 +767,22 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .form-input.invalid { border-color: #d6453d; }
 .form-error { font-size: 12px; color: #a3302a; }
 .form-hint { margin: 0; font-size: 12px; color: #687082; }
+.company-picker .picker-current { flex-wrap: nowrap; min-width: 0; }
+.picker-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-panel { display: flex; flex-direction: column; gap: 8px; }
+.picker-panel .row { flex-wrap: nowrap; }
+.picker-search { flex: 1; min-width: 0; }
+.picker-results { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-inner); padding: 4px; }
+.picker-option { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 6px; cursor: pointer; outline: none; }
+.picker-option[data-focused], .picker-option[data-hovered] { background: #f1f3f6; }
+.picker-option[data-focus-visible] { box-shadow: 0 0 0 2px var(--accent); }
+.picker-option[data-selected] .picker-option-name { font-weight: 600; }
+.picker-option-sub { font-size: 12px; color: #687082; }
+@media (max-width: 759px) {
+  /* The chosen name gets its own line instead of being cut short by the buttons. */
+  .company-picker .picker-current { flex-wrap: wrap; }
+  .picker-value { flex-basis: 100%; white-space: normal; overflow-wrap: anywhere; }
+}
 .modal .notice.error { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .modal .notice.error p { margin: 0; flex: 1; }
 
