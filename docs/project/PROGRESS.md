@@ -34,8 +34,74 @@ decisions P2-A to P2-E approved)
   P2-G). CI passed on `5c06d48` (run 40094376772). Security findings are
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
-- **Phase 3:** slices 3A and 3B done; 3E1 (contacts export) done; 3C, 3D,
-  3F and companies export not started.
+- **Phase 3:** slices 3A and 3B done; 3E1 (contacts export) and 3E2
+  (companies export) done; 3C, 3D and 3F not started.
+- **Phase 3E2 companies CSV export (decision P3-E2, 2026-10-26):**
+  - **Built:**
+    - `GET /v1/workspaces/{id}/companies/export.csv`: Owner and Admin; the
+      company list's filters and order, without paging; 11 columns;
+      50,000 rows at most; 10 attempts per user per window, on a budget
+      separate from contacts; audited as `crm_app.companies.exported`;
+    - the read-and-audit step and the route's limiter, size and file
+      handling shared with the contacts export, whose behaviour and
+      limiter key are unchanged;
+    - the Export button on Companies, with progress and an error state for
+      each refusal; the button, notices and export hook are shared with
+      Contacts (`records/useRecordExport.ts`, `ExportButton`,
+      `ExportNotices`).
+
+    No migration, new permission, file storage or SaaS-OS change.
+  - **Tests:**
+    - unit: 4 more for the CSV contract (company columns, a protected and
+      quoted company row, the empty file, the file name), and the route
+      policy for the new route;
+    - integration (`test_company_export.py`, 17):
+      - roles (Owner, Admin 200; Member, Read-only 403; non-member 404;
+        no session 401);
+      - isolation: another workspace's owner ID selects nothing, and its
+        companies never appear;
+      - 14 filter and order cases matched against the list, including
+        name and domain search, `owner=me`, the three archive views and
+        every sort in both directions; the empty result is the header;
+      - paging, contact-only, malformed and unknown parameters refused;
+      - headers, encoding and values; stored values unchanged;
+      - 50,000 rows succeed and 50,001 give 413 with no audit entry;
+      - the 11th export gives 429 with Retry-After; contacts and companies
+        budgets are independent both ways; a limiter outage gives 503
+        with no audit entry;
+      - audit holds counts and filter names only;
+    - Vitest (`companyExport.test.tsx`, 11): button state, the filters
+      sent (none of the contact filters), the download name, progress,
+      413/429/403/503/500/network states, a safe file name, and axe
+      checks. The contacts export tests pass unchanged.
+    - **Totals:**
+      - unit: 301 passed;
+      - full integration suite: 288 passed;
+      - frontend: 157 tests, lint, type check, build and `npm audit`;
+      - ruff, pyright, import contracts, `pip-audit` and the secret scan:
+        clean; `gen:api` regenerates the committed schema unchanged.
+    - **Security review:** an independent review found no Critical, High or
+      Medium issues.
+  - **Browser** (local stack; Owner and Member throwaway identities;
+    1280 px and 390 px emulated):
+    - **Owner, desktop:** searching `xp-` and exporting downloaded a file
+      with the byte-order mark, CRLF records, the 11 columns, protected
+      `'=cmd Holdings`, `'+31 20 555 0101`, `'@Logistics` and `'-Food`,
+      quoted `Émile, "Bakkerij"` and `https://xp-zhang.example/?a=1,b=2`,
+      intact `Zoë` and `张伟`, and the list's order.
+    - **Response headers:** `text/csv; charset=utf-8`, `attachment;
+      filename="companies-2026-10-26.csv"`, `no-store`.
+    - **Owner, 390 px:** the empty archived view exported only the header,
+      with the "Companies exported" toast.
+    - **Member, 390 px:** the button was disabled with its reason, and a
+      direct request got 403 JSON with no data.
+    - **Both widths:** no horizontal overflow and no JavaScript errors.
+  - **Limitations:**
+    - the limiter's window is fixed, not rolling (P3-E2 5);
+    - a worst-case export of 50,000 companies with very long websites can
+      use well over 100 MB of memory (P3-E2);
+    - Chrome automation saved the downloads as `.tmp` files; the name was
+      verified in the response header and in Vitest.
 - **Phase 3E1 contacts CSV export (decision P3-E1, 2026-10-26):**
   - **Built:**
     - `GET /v1/workspaces/{id}/contacts/export.csv`: Owner and Admin;

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, X } from "lucide-react";
+import { Check, ChevronDown, Download, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useIntl } from "react-intl";
 import {
@@ -14,9 +14,12 @@ import {
 } from "react-aria-components";
 
 import type { Member } from "../api/client";
+import type { ExportKind } from "../api/exportContacts";
 import type { Stage } from "../api/records";
+import { Button } from "../components/ui/Button";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { exportMessage } from "./useRecordExport";
 
 /*
  * Pieces shared by the Contacts and Companies screens (ScreenContacts.dc.html,
@@ -259,5 +262,62 @@ export function SortHeader({
       {label}
       {active ? <span aria-hidden="true">{direction === "asc" ? " ↑" : " ↓"}</span> : null}
     </AriaButton>
+  );
+}
+
+/**
+ * The header's Export button (slices 3E1, 3E2): enabled for those `/access`
+ * allows, otherwise disabled with the reason in its name. The server decides.
+ */
+export function ExportButton({
+  kind,
+  allowed,
+  running,
+  onExport,
+}: {
+  kind: ExportKind;
+  allowed: boolean;
+  running: boolean;
+  onExport: () => void;
+}) {
+  const t = useT();
+  if (!allowed) {
+    return (
+      <Button isDisabled aria-label={`${t("records.export")} (${t(exportMessage(kind, "notAllowed"))})`}>
+        <Download size={14} aria-hidden="true" />
+        {t("records.export")}
+      </Button>
+    );
+  }
+  return (
+    <Button onPress={onExport} isDisabled={running}>
+      {running ? <span className="spinner" aria-hidden="true" /> : <Download size={14} aria-hidden="true" />}
+      {running ? t(exportMessage(kind, "running")) : t("records.export")}
+    </Button>
+  );
+}
+
+/** The export's failure (an alert) and its progress (a status message). */
+export function ExportNotices({
+  kind,
+  running,
+  error,
+}: {
+  kind: ExportKind;
+  running: boolean;
+  error: string | null;
+}) {
+  const t = useT();
+  return (
+    <>
+      {error ? (
+        <p className="notice error records-notice" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <p className="sr-only" role="status">
+        {running ? t(exportMessage(kind, "running")) : ""}
+      </p>
+    </>
   );
 }

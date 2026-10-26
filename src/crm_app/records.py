@@ -581,38 +581,90 @@ def export_contacts(
     scope: Scope, query: ListQuery, *, max_rows: int, filter_keys: Sequence[str]
 ) -> list[Record]:
     """Every contact the list `query` selects, in the list's order, with the
-    linked company's name. One transaction reads them in batches and, only
-    when the whole result fits in `max_rows`, records the audit entry: no
-    separate count can disagree with what is exported, and a refused export
-    leaves no audit entry. Raises `ExportTooLargeError` on row `max_rows + 1`.
+    linked company's name. Raises `ExportTooLargeError` on row
+    `max_rows + 1` (see `_export`).
 
     The company is joined on the contact's own workspace as well as its ID,
     so a name can only come from the caller's workspace (Row-Level Security
     already confines both tables)."""
-    keys = _order(CONTACT, query.order)
+    statement = select(
+        Contact.id,
+        Contact.first_name,
+        Contact.last_name,
+        Contact.email,
+        Contact.phone,
+        Contact.job_title,
+        Contact.city,
+        Contact.lifecycle_stage,
+        Contact.source,
+        Contact.company_id,
+        Company.name.label("company_name"),
+        Contact.created_at,
+        Contact.updated_at,
+        Contact.archived_at,
+    ).outerjoin(
+        Company,
+        (Company.tenant_id == Contact.tenant_id) & (Company.id == Contact.company_id),
+    )
+    return _export(
+        CONTACT,
+        scope,
+        query,
+        statement,
+        action="crm_app.contacts.exported",
+        max_rows=max_rows,
+        filter_keys=filter_keys,
+    )
+
+
+def export_companies(
+    scope: Scope, query: ListQuery, *, max_rows: int, filter_keys: Sequence[str]
+) -> list[Record]:
+    """Every company the list `query` selects, in the list's order (slice
+    3E2). Raises `ExportTooLargeError` on row `max_rows + 1` (see `_export`)."""
+    statement = select(
+        Company.id,
+        Company.name,
+        Company.domain,
+        Company.website,
+        Company.phone,
+        Company.industry,
+        Company.city,
+        Company.country_code,
+        Company.created_at,
+        Company.updated_at,
+        Company.archived_at,
+    )
+    return _export(
+        COMPANY,
+        scope,
+        query,
+        statement,
+        action="crm_app.companies.exported",
+        max_rows=max_rows,
+        filter_keys=filter_keys,
+    )
+
+
+def _export(  # noqa: PLR0913 - what to read, then the export's own limits
+    kind: Kind,
+    scope: Scope,
+    query: ListQuery,
+    statement: Any,
+    *,
+    action: str,
+    max_rows: int,
+    filter_keys: Sequence[str],
+) -> list[Record]:
+    """The rows of `statement` that the list `query` selects, in the list's
+    order. One transaction reads them in batches and, only when the whole
+    result fits in `max_rows`, records the audit entry: no separate count can
+    disagree with what is exported, and a refused export leaves no audit
+    entry. Raises `ExportTooLargeError` on row `max_rows + 1`."""
+    keys = _order(kind, query.order)
     ascending = query.direction == "asc"
     statement = (
-        select(
-            Contact.id,
-            Contact.first_name,
-            Contact.last_name,
-            Contact.email,
-            Contact.phone,
-            Contact.job_title,
-            Contact.city,
-            Contact.lifecycle_stage,
-            Contact.source,
-            Contact.company_id,
-            Company.name.label("company_name"),
-            Contact.created_at,
-            Contact.updated_at,
-            Contact.archived_at,
-        )
-        .outerjoin(
-            Company,
-            (Company.tenant_id == Contact.tenant_id) & (Company.id == Contact.company_id),
-        )
-        .where(*_conditions(CONTACT, scope, query))
+        statement.where(*_conditions(kind, scope, query))
         .order_by(*(key.expression.asc() if ascending else key.expression.desc() for key in keys))
         .limit(max_rows + 1)
         .execution_options(yield_per=EXPORT_BATCH)
@@ -627,8 +679,8 @@ def export_contacts(
             session,
             caller=UserCaller(scope.actor),
             tenant_id=scope.workspace,
-            action="crm_app.contacts.exported",
-            resource_type=CONTACT.resource,
+            action=action,
+            resource_type=kind.resource,
             # The row count and the names of the filters used, never values.
             metadata={"row_count": len(rows), "filter_keys": sorted(filter_keys)},
         )

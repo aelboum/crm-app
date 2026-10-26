@@ -2,7 +2,8 @@
 
     /v1/workspaces/{tenant_id}/contacts[/{record_id}[/archive|/restore]]
     /v1/workspaces/{tenant_id}/companies[/{record_id}[/archive|/restore]]
-    /v1/workspaces/{tenant_id}/contacts/export.csv   (slice 3E; Owner and Admin)
+    /v1/workspaces/{tenant_id}/contacts/export.csv   (slice 3E1; Owner and Admin)
+    /v1/workspaces/{tenant_id}/companies/export.csv  (slice 3E2; Owner and Admin)
 
 Each route declares exactly one `require_permission` from the existing
 catalogue (decision Q6): read for every role; create and update (which
@@ -25,7 +26,7 @@ enclosing function, which only works when annotations are evaluated.
 import re
 import uuid
 from collections.abc import Callable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Self
 
@@ -423,6 +424,10 @@ class CompanyListParams(_ListParams):
     pass
 
 
+class CompanyExportParams(_FilterParams):
+    """The company list's filters and order, without paging."""
+
+
 class ContactPage(BaseModel):
     items: list[ContactOut]
     next_cursor: str | None
@@ -495,10 +500,11 @@ def list_companies(
     return _page(COMPANY, context, _query(params, context))
 
 
-# --- Contacts export (PHASE3-PLAN.md §10, slice 3E) ---------------------------------
+# --- Exports (PHASE3-PLAN.md §10, slices 3E1 and 3E2) -----------------------------
 #
 # Owner and Admin only (`crm_app.crm_data:export`, decision Q6). Ten attempts
-# per user per window on SaaS-OS's limiter, which counts in fixed windows; a
+# per user per window and per kind on SaaS-OS's limiter, which counts in
+# fixed windows; contacts and companies have separate budgets (P3-E2). A
 # limiter failure refuses. Registered before the record routes below, so
 # `export.csv` is never read as a `{record_id}`.
 
@@ -507,19 +513,68 @@ EXPORT_WINDOW_SECONDS = 3600
 _LIMITER_RETRY_SECONDS = 5
 
 
-async def _count_export(context: RequestContext) -> None:
-    """One export attempt for the caller, counted atomically by the limiter."""
+async def _count_export(context: RequestContext, budget: str) -> None:
+    """One export attempt for the caller against the `budget` key, counted
+    atomically by the limiter."""
     config = replace(
         get_ratelimit_config(),
         requests_per_window=EXPORT_PER_WINDOW,
         window_seconds=EXPORT_WINDOW_SECONDS,
     )
     try:
-        await enforce_rate_limit(f"crm-contact-export:{context.actor_id}", config=config)
+        await enforce_rate_limit(f"{budget}:{context.actor_id}", config=config)
     except RateLimitExceededError as exc:
         raise rate_limited(exc.retry_after_seconds) from None
     except RateLimitBackendError:
         raise service_unavailable(_LIMITER_RETRY_SECONDS) from None
+
+
+@dataclass(frozen=True)
+class _ExportKind:
+    name: str  # the file name's prefix
+    budget: str  # the limiter key's prefix; one budget per kind
+    exporter: Callable[..., list[records.Record]]
+    columns: tuple[str, ...]
+
+
+_CONTACT_EXPORT = _ExportKind(
+    "contacts", "crm-contact-export", records.export_contacts, csv_export.CONTACT_COLUMNS
+)
+_COMPANY_EXPORT = _ExportKind(
+    "companies", "crm-company-export", records.export_companies, csv_export.COMPANY_COLUMNS
+)
+
+
+async def _export(
+    kind: _ExportKind,
+    context: RequestContext,
+    query: records.ListQuery,
+    filter_keys: list[str],
+) -> Response:
+    await _count_export(context, kind.budget)
+    try:
+        rows = await run_in_threadpool(
+            kind.exporter,
+            _scope(context),
+            query,
+            max_rows=csv_export.MAX_ROWS,
+            filter_keys=filter_keys,
+        )
+    except records.ExportTooLargeError:
+        raise HTTPException(
+            413, detail={"code": "export_too_large", "max_rows": csv_export.MAX_ROWS}
+        ) from None
+    file_name = csv_export.filename(kind.name, datetime.now(UTC).date())
+    # Up to 50,000 rows: built off the event loop, like the read.
+    content = await run_in_threadpool(csv_export.to_csv, kind.columns, rows)
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{file_name}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get(
@@ -544,29 +599,27 @@ async def export_contacts(
         stages=tuple(params.lifecycle_stage),
         companies=tuple(params.company_id),
     )
-    await _count_export(context)
-    try:
-        rows = await run_in_threadpool(
-            records.export_contacts,
-            _scope(context),
-            query,
-            max_rows=csv_export.MAX_ROWS,
-            filter_keys=sorted(params.model_fields_set),
-        )
-    except records.ExportTooLargeError:
-        raise HTTPException(
-            413, detail={"code": "export_too_large", "max_rows": csv_export.MAX_ROWS}
-        ) from None
-    name = csv_export.filename("contacts", datetime.now(UTC).date())
-    # Up to 50,000 rows: built off the event loop, like the read.
-    content = await run_in_threadpool(csv_export.to_csv, csv_export.CONTACT_COLUMNS, rows)
-    return Response(
-        content=content,
-        media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": f'attachment; filename="{name}"',
-            "Cache-Control": "no-store",
-        },
+    return await _export(_CONTACT_EXPORT, context, query, sorted(params.model_fields_set))
+
+
+@router.get(
+    "/{tenant_id}/companies/export.csv",
+    response_class=Response,
+    responses={
+        200: {"content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}}},
+        413: {"description": "More than 50,000 companies match: narrow the filters."},
+        429: {"description": "Export limit reached; see Retry-After."},
+    },
+    tags=["companies"],
+)
+async def export_companies(
+    context: Annotated[RequestContext, Depends(require_permission("crm_app.crm_data", "export"))],
+    params: Annotated[CompanyExportParams, Query()],
+) -> Response:
+    """The companies the list would show for these filters, in its order, as
+    CSV (UTF-8 with a byte-order mark, CRLF records). Nothing is stored."""
+    return await _export(
+        _COMPANY_EXPORT, context, _query(params, context), sorted(params.model_fields_set)
     )
 
 

@@ -915,6 +915,45 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not approved:** companies export, import, tags, custom fields, new
   permissions, file storage, SaaS-OS changes, deployment.
 
+## P3-E2 — Companies CSV export (approved 2026-10-26)
+
+- **Status:** Approved by the owner, 2026-10-26, after the 3E2 audit:
+  "Implement Phase 3E2 — Companies CSV export only". It amends P3-E1's
+  "Not approved: companies export".
+- **Decisions:**
+  1. Route: `GET /v1/workspaces/{id}/companies/export.csv`, requiring the
+     existing `crm_app.crm_data:export` (Owner, Admin; Q6). No new
+     permission; `/access` keeps reporting it as `export_records`.
+  2. Columns, in order: `id, name, domain, website, phone, industry, city,
+     country_code, created_at, updated_at, archived_at`. Owner, tenant,
+     version and creator/updater IDs, notes, activity and people counts are
+     excluded, as for contacts.
+  3. The company list's filters and order (`q` on name or domain prefix,
+     `owner`, `archived`, `sort`, `direction`), without paging. Paging,
+     the contact list's filters and unknown parameters are refused (422).
+  4. The file, formula protection, the 50,000-row bound (413
+     `export_too_large`, no file, no separate count) and the audit
+     (`crm_app.companies.exported`, row count and filter names only, same
+     transaction, none for a refused export) follow P3-E1 2 and 4-8.
+  5. **Separate rate-limit budget:** ten attempts per user per window for
+     companies, on the limiter key `crm-company-export:{user}`. It neither
+     uses nor changes the contacts budget (`crm-contact-export:{user}`). A
+     limiter failure refuses (503). **Recorded deviation (as P3-E1 7):** the
+     limiter counts in fixed one-hour windows, not a rolling hour, so up to
+     20 company exports can fall within one hour across a window boundary.
+  6. The server code is shared with the contacts export (one read-and-audit
+     helper, one route helper); the contacts export's behaviour, contract
+     and limiter key are unchanged.
+- **Known limitation:** the export is built in memory, so that a refusal at
+  row 50,001 never leaves a partial file. A website can be up to 2,048
+  characters, so a worst-case export of 50,000 companies with very long
+  websites can hold well over 100 MB in rows and CSV text at once, about
+  twice the contacts worst case. Typical data is far smaller. Streaming
+  would avoid this but cannot refuse with 413 once the file has started;
+  it is left for later.
+- **Not approved:** company import, tags, custom fields, saved views, new
+  permissions, migrations, file storage, SaaS-OS changes, deployment.
+
 ## P2-F — Completing Phase 2 (approved 2026-10-24)
 
 - **Status:** Approved by the owner, 2026-10-24, after the Phase 2

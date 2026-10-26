@@ -32,6 +32,8 @@ import { useT } from "../i18n/useT";
 import {
   Avatar,
   Drawer,
+  ExportButton,
+  ExportNotices,
   FieldRow,
   FilterMenu,
   initials,
@@ -44,6 +46,7 @@ import {
 } from "./parts";
 import { ActivitySection, NotesSection } from "./NotesSection";
 import { useDebounced } from "./useDebounced";
+import { useRecordExport } from "./useRecordExport";
 
 /*
  * Companies (ScreenCompanies.dc.html): header, search, table, drawer with
@@ -91,6 +94,7 @@ export function CompaniesPage({
   const [dialog, setDialog] = useState<{ company: Company | null } | null>(null);
   const q = useDebounced(search);
   const can = (action: string) => access.data?.actions[action] === true;
+  const exporting = useRecordExport("companies", workspaceId);
 
   const filters: ListFilters = useMemo(
     () => ({ ...NO_FILTERS, q, sort, direction, owners, archived: view === "archived" ? "true" : "false" }),
@@ -125,6 +129,12 @@ export function CompaniesPage({
           </h1>
         </div>
         <div className="records-actions">
+          <ExportButton
+            kind="companies"
+            allowed={can("export_records")}
+            running={exporting.running}
+            onExport={() => void exporting.run(filters)}
+          />
           {can("create_company") ? (
             <Button variant="primary" onPress={() => { setDialog({ company: null }); }}>
               <Plus size={15} aria-hidden="true" />
@@ -133,6 +143,8 @@ export function CompaniesPage({
           ) : null}
         </div>
       </div>
+
+      <ExportNotices kind="companies" running={exporting.running} error={exporting.error} />
 
       <div className="records-toolbar">
         <label className="search-box">

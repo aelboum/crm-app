@@ -1,5 +1,6 @@
-"""The contacts CSV contract (slice 3E; `crm_app.domains.export`): formula
-protection and CSV serialization, each on its own, then together."""
+"""The contacts and companies CSV contract (slices 3E1 and 3E2;
+`crm_app.domains.export`): formula protection and CSV serialization, each on
+its own, then together."""
 
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ import pytest
 
 from crm_app.domains.export import (
     BOM,
+    COMPANY_COLUMNS,
     CONTACT_COLUMNS,
     MAX_ROWS,
     cell,
@@ -126,3 +128,71 @@ def test_the_filename_is_fixed_ascii_with_the_date() -> None:
     assert name == "contacts-2026-10-26.csv"
     assert name.isascii()
     assert filename("contacts", datetime.now(UTC).date()).startswith("contacts-")
+
+
+def test_the_company_columns_are_exactly_the_approved_ones_in_order() -> None:
+    assert COMPANY_COLUMNS == (
+        "id",
+        "name",
+        "domain",
+        "website",
+        "phone",
+        "industry",
+        "city",
+        "country_code",
+        "created_at",
+        "updated_at",
+        "archived_at",
+    )
+    for excluded in (
+        "owner_user_id",
+        "tenant_id",
+        "version",
+        "created_by_user_id",
+        "updated_by_user_id",
+        "notes",
+    ):
+        assert excluded not in COMPANY_COLUMNS
+
+
+def test_a_company_row_is_protected_and_quoted_cell_by_cell() -> None:
+    company = uuid.UUID("c0000000-0000-4000-8000-000000000001")
+    row = {
+        "id": company,
+        "name": '=Acme, "Holdings"',
+        "domain": "acme.example",
+        "website": "https://acme.example/?a=1,b=2",
+        "phone": "+31 20 123 4567",
+        "industry": "@Logistics",
+        "city": "-Zürich",
+        "country_code": "CH",
+        "created_at": datetime(2026, 10, 26, 9, 30, tzinfo=UTC),
+        "updated_at": datetime(2026, 10, 26, 11, 30, tzinfo=timezone(timedelta(hours=2))),
+        "archived_at": None,
+    }
+    data = to_csv(COMPANY_COLUMNS, [row])
+    record = data.decode("utf-8").removeprefix(BOM).split("\r\n")[1]
+    assert record.startswith(
+        f'{company},"\'=Acme, ""Holdings""",acme.example,"https://acme.example/?a=1,b=2",'
+    )
+    assert _parse(data)[1] == [
+        str(company),
+        '\'=Acme, "Holdings"',
+        "acme.example",
+        "https://acme.example/?a=1,b=2",
+        "'+31 20 123 4567",
+        "'@Logistics",
+        "'-Zürich",
+        "CH",
+        "2026-10-26T09:30:00Z",
+        "2026-10-26T09:30:00Z",
+        "",
+    ]
+
+
+def test_an_empty_company_export_is_the_header_alone() -> None:
+    assert _parse(to_csv(COMPANY_COLUMNS, [])) == [list(COMPANY_COLUMNS)]
+
+
+def test_the_company_filename_is_fixed_ascii_with_the_date() -> None:
+    assert filename("companies", date(2026, 10, 26)) == "companies-2026-10-26.csv"

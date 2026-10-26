@@ -2,11 +2,14 @@ import { api } from "./client";
 import type { ListFilters } from "./records";
 
 /*
- * Contacts CSV export (slice 3E). The server decides who may export and
- * which rows: this sends the list's current filters and order (no paging)
- * and saves what comes back. Nothing is retried automatically: an export is
- * costly and counts towards a limit of 10 per user per window.
+ * Contacts and companies CSV export (slices 3E1 and 3E2). The server decides
+ * who may export and which rows: this sends the list's current filters and
+ * order (no paging) and saves what comes back. Nothing is retried
+ * automatically: an export is costly and counts towards a limit of 10 per
+ * user per window, kept separately for contacts and for companies.
  */
+
+export type ExportKind = "contacts" | "companies";
 
 /** A refused or failed export. Status 0: the request never reached the server. */
 export class ExportError extends Error {
@@ -22,14 +25,13 @@ export class ExportError extends Error {
   }
 }
 
-const FALLBACK_NAME = "contacts.csv";
 const SAFE_NAME = /filename="([A-Za-z0-9._-]{1,100})"/;
 
 /** The server's file name when it is a plain, safe one; otherwise a fixed name. */
-export function fileNameFrom(disposition: string | null): string {
+export function fileNameFrom(disposition: string | null, kind: ExportKind = "contacts"): string {
   const match = disposition ? SAFE_NAME.exec(disposition) : null;
   const name = match?.[1];
-  return name && name.endsWith(".csv") && !name.startsWith(".") ? name : FALLBACK_NAME;
+  return name && name.endsWith(".csv") && !name.startsWith(".") ? name : `${kind}.csv`;
 }
 
 function retryAfterOf(response: Response): number | null {
@@ -39,22 +41,39 @@ function retryAfterOf(response: Response): number | null {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
-export async function exportContacts(
-  workspaceId: string,
-  filters: ListFilters,
-): Promise<{ blob: Blob; fileName: string }> {
+type Exported = { blob: Blob; fileName: string };
+
+function exported(
+  kind: ExportKind,
+  result: { data?: unknown; response: Response },
+): Exported {
+  const { response } = result;
+  if (!response.ok || !(result.data instanceof Blob)) {
+    throw new ExportError(response.status, retryAfterOf(response));
+  }
+  return { blob: result.data, fileName: fileNameFrom(response.headers.get("Content-Disposition"), kind) };
+}
+
+/** The filters both lists share, as the export's query parameters. */
+function common(filters: ListFilters) {
   const q = filters.q.trim();
+  return {
+    sort: filters.sort,
+    direction: filters.direction,
+    archived: filters.archived,
+    ...(q ? { q } : {}),
+    ...(filters.owners.length ? { owner: filters.owners } : {}),
+  };
+}
+
+export async function exportContacts(workspaceId: string, filters: ListFilters): Promise<Exported> {
   let result;
   try {
     result = await api.GET("/v1/workspaces/{tenant_id}/contacts/export.csv", {
       params: {
         path: { tenant_id: workspaceId },
         query: {
-          sort: filters.sort,
-          direction: filters.direction,
-          archived: filters.archived,
-          ...(q ? { q } : {}),
-          ...(filters.owners.length ? { owner: filters.owners } : {}),
+          ...common(filters),
           ...(filters.stages.length ? { lifecycle_stage: [...filters.stages] } : {}),
           ...(filters.companyIds.length ? { company_id: filters.companyIds } : {}),
         },
@@ -64,11 +83,21 @@ export async function exportContacts(
   } catch {
     throw new ExportError(0, null);
   }
-  const { response } = result;
-  if (!response.ok || !(result.data instanceof Blob)) {
-    throw new ExportError(response.status, retryAfterOf(response));
+  return exported("contacts", result);
+}
+
+/** The company list's filters only: it has no stage or company filter. */
+export async function exportCompanies(workspaceId: string, filters: ListFilters): Promise<Exported> {
+  let result;
+  try {
+    result = await api.GET("/v1/workspaces/{tenant_id}/companies/export.csv", {
+      params: { path: { tenant_id: workspaceId }, query: common(filters) },
+      parseAs: "blob",
+    });
+  } catch {
+    throw new ExportError(0, null);
   }
-  return { blob: result.data, fileName: fileNameFrom(response.headers.get("Content-Disposition")) };
+  return exported("companies", result);
 }
 
 /** Saves a file through a temporary link. Replaced in tests: jsdom does not download. */

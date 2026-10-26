@@ -2692,6 +2692,148 @@
         ]
       }
     },
+    "/v1/workspaces/{tenant_id}/companies/export.csv": {
+      "get": {
+        "description": "The companies the list would show for these filters, in its order, as\nCSV (UTF-8 with a byte-order mark, CRLF records). Nothing is stored.",
+        "operationId": "export_companies_v1_workspaces__tenant_id__companies_export_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Owner",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "enum": [
+                "false",
+                "true",
+                "all"
+              ],
+              "title": "Archived",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "name",
+              "enum": [
+                "name",
+                "created_at",
+                "updated_at"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "description": "More than 50,000 companies match: narrow the filters."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Export limit reached; see Retry-After."
+          }
+        },
+        "summary": "Export Companies",
+        "tags": [
+          "companies"
+        ]
+      }
+    },
     "/v1/workspaces/{tenant_id}/companies/{record_id}": {
       "delete": {
         "operationId": "delete_company_v1_workspaces__tenant_id__companies__record_id__delete",

@@ -1,5 +1,5 @@
-"""CSV export of contacts (`PHASE3-PLAN.md` §10, slice 3E; owner approval of
-2026-10-26).
+"""CSV export of contacts and companies (`PHASE3-PLAN.md` §10, slices 3E1
+and 3E2; owner approvals of 2026-10-26, decisions P3-E1 and P3-E2).
 
 Two separate steps, so each is tested on its own:
 
@@ -32,6 +32,20 @@ CONTACT_COLUMNS: tuple[str, ...] = (
     "source",
     "company_id",
     "company_name",
+    "created_at",
+    "updated_at",
+    "archived_at",
+)
+
+COMPANY_COLUMNS: tuple[str, ...] = (
+    "id",
+    "name",
+    "domain",
+    "website",
+    "phone",
+    "industry",
+    "city",
+    "country_code",
     "created_at",
     "updated_at",
     "archived_at",

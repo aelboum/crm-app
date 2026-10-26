@@ -66,9 +66,12 @@ RECORDS |= {
 }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 
-# Contacts export (slice 3E): the catalogue's existing `crm_data:export`,
-# Owner and Admin only (Q6); no new permission.
-EXPORTS = {"GET /v1/workspaces/{tenant_id}/contacts/export.csv": "crm_app.crm_data:export"}
+# Contacts and companies exports (slices 3E1, 3E2): the catalogue's existing
+# `crm_data:export`, Owner and Admin only (Q6); no new permission.
+EXPORTS = {
+    "GET /v1/workspaces/{tenant_id}/contacts/export.csv": "crm_app.crm_data:export",
+    "GET /v1/workspaces/{tenant_id}/companies/export.csv": "crm_app.crm_data:export",
+}
 
 # Invitations (decisions Q4, Q5, P2-F): reading, creating and revoking are
 # for Owner and Admin only; inviting an Owner is checked again in the
