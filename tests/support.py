@@ -63,6 +63,10 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "activity",
         "workspace_settings",
         "invitation_intent",
+        # P3-C (tags).
+        "tag",
+        "contact_tag",
+        "company_tag",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",

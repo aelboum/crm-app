@@ -327,4 +327,7 @@ def test_the_migration_rolls_back_and_forward(
         "invitation_intent",
         "signup",
         "signup_attempt",
+        "tag",
+        "contact_tag",
+        "company_tag",
     }

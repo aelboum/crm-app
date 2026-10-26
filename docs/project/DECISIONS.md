@@ -915,6 +915,64 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not approved:** companies export, import, tags, custom fields, new
   permissions, file storage, SaaS-OS changes, deployment.
 
+## M1 — Continuous autonomous development (approved 2026-10-26)
+
+- **Status:** Approved by the owner, 2026-10-26 ("LeadStack CRM — Continuous
+  Autonomous Development Mandate"). Active across sessions until the owner
+  changes or revokes it.
+- **Decision:** Within the existing roadmap, approved decisions and
+  architecture, Claude Code chooses, implements, tests, documents, commits
+  and pushes successive slices to `main` without per-feature approval,
+  recording each consequential choice in this log. This amends CLAUDE.md
+  §9's "commit and push need approval" and Phase 3's per-slice approval
+  (G1, `PHASE3-PLAN.md` §20) for roadmap work.
+- **Still needs explicit approval:** production deployment, releases or
+  production configuration, data or credentials; enabling production
+  signup or flags required to stay off; changes to ZITADEL, the identity
+  architecture, the `crm-app`/`crm-app-login` split, `crm-app-login` PR #1
+  or its image; the SaaS-OS pin; cross-tenant invitation lookups or
+  invitation and role semantics; paid services; destructive or
+  hard-to-reverse data-model changes; changing an approved decision in
+  this log.
+- **Safeguards:** migrations run only on local and disposable test
+  databases; authorization, tenant isolation, RLS, rate limits, audit and
+  validation are never weakened to pass a check; normal pushes only.
+
+## P3-C — Tags (2026-10-26, under M1)
+
+- **Status:** Approved under M1, 2026-10-26. Roadmap Phase 3.1 ("Tags");
+  `PHASE3-PLAN.md` §3.2, §6.2, §20 slice 3C.
+- **Decisions:**
+  1. Tables `tag`, `contact_tag`, `company_tag` (migration `0007_tags`):
+     tenant-owned, forced RLS, composite keys into the record and the tag,
+     `ON DELETE CASCADE` from both, in `PURGE_TABLES`.
+  2. **No colour.** The design shows every tag as the same neutral pill
+     (`ScreenContacts.dc.html`, `#F1F2F4` on `#2A303C`); the plan's colour
+     palette is dropped until a design asks for it.
+  3. **Names:** trimmed, 1-50 characters, no control characters, unique per
+     workspace regardless of case. At most 500 tags per workspace and 20
+     per record, so a list row and a filter menu stay bounded.
+  4. **Who:** every role reads tags (`contact:read`/`company:read`).
+     Creating, renaming and deleting tags is workspace configuration and
+     needs `crm_app.workspace:update` (Owner, Admin), as §6.2 proposed.
+     Putting existing tags on a record is a record update (Owner, Admin,
+     Member). No new permission.
+  5. **Assignment** replaces a record's tag set (`PUT .../tags`, with
+     `If-Match`). A change is a record update: a new version, a history
+     entry `updated` naming `tags` (the migration widens that allow-list),
+     and the audit entry `crm_app.contact.updated` / `crm_app.company.updated`
+     with `fields: ["tags"]`. Tag names are never written to history or
+     audit; configuration changes are audited as `crm_app.tag.created`,
+     `.renamed`, `.deleted` with the tag ID only.
+  6. **Deleting a tag** removes it from every record by cascade. Those
+     records keep their version and get no history entry; the audit entry
+     counts the assignments removed.
+  7. **Lists** filter by `tag_id` (repeatable, any of them), and the CSV
+     exports accept the same filter so an export still matches its list.
+     The exports' columns stay as approved in P3-E1 and P3-E2: tags are not
+     exported yet.
+  8. Records in lists and details carry `tags: [{id, name}]`, by name.
+
 ## P3-E2 — Companies CSV export (approved 2026-10-26)
 
 - **Status:** Approved by the owner, 2026-10-26, after the 3E2 audit:

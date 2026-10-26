@@ -20,7 +20,7 @@ import pytest
 from tests.support import run_module, run_python
 
 SAAS_OS_MIGRATION_HEAD = "f6a2c8e4b1d9"
-PRODUCT_MIGRATION_HEAD = "0006_signup"
+PRODUCT_MIGRATION_HEAD = "0007_tags"
 
 _STARTUP_PROBE = (
     "import json\n"

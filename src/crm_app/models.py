@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0006_signup` own the
+Migrations `0002_contacts_companies` to `0007_tags` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -151,6 +151,67 @@ class Activity(Base):
     owner_to: Mapped[uuid.UUID | None] = mapped_column()
     company_ref_id: Mapped[uuid.UUID | None] = mapped_column()
     note_id: Mapped[uuid.UUID | None] = mapped_column()
+
+
+class Tag(Base):
+    """A tag of the workspace's vocabulary (migration 0007, decision P3-C).
+    Names are unique per workspace regardless of case."""
+
+    __tablename__ = "tag"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+def _tag_keys(table: str, parent: str) -> tuple[ForeignKeyConstraint, ForeignKeyConstraint]:
+    """A tag assignment joins a record and a tag of the same workspace."""
+    return (
+        ForeignKeyConstraint(
+            ["tenant_id", f"{parent}_id"],
+            [f"{SCHEMA}.{parent}.tenant_id", f"{SCHEMA}.{parent}.id"],
+            name=f"{table}_{parent}_fkey",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "tag_id"],
+            [f"{SCHEMA}.tag.tenant_id", f"{SCHEMA}.tag.id"],
+            name=f"{table}_tag_fkey",
+            ondelete="CASCADE",
+        ),
+    )
+
+
+class ContactTag(Base):
+    """A tag on a contact."""
+
+    __tablename__ = "contact_tag"
+    __table_args__ = (*_tag_keys("contact_tag", "contact"), {"schema": SCHEMA})
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    contact_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tag_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CompanyTag(Base):
+    """A tag on a company."""
+
+    __tablename__ = "company_tag"
+    __table_args__ = (*_tag_keys("company_tag", "company"), {"schema": SCHEMA})
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tag_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class WorkspaceSettings(Base):
