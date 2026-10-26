@@ -67,6 +67,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "tag",
         "contact_tag",
         "company_tag",
+        # P3-D (custom fields).
+        "custom_field_definition",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",

@@ -972,6 +972,51 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      The exports' columns stay as approved in P3-E1 and P3-E2: tags are not
      exported yet.
   8. Records in lists and details carry `tags: [{id, name}]`, by name.
+- **Migration locking note (after the 3C security review):** Alembic runs
+  each migration in one transaction, so `ALTER TABLE` locks last until
+  commit. Acceptable while no production data exists; a later change to a
+  large table must split its steps across transactions.
+
+## P3-D — Custom fields (2026-10-26, under M1)
+
+- **Status:** Approved under M1, 2026-10-26. Roadmap Phase 3.1 ("Custom
+  fields"); `PHASE3-PLAN.md` §3.2, §6.1, §20 slice 3D; the design's
+  "Custom fields" card with "Manage" (`ScreenContacts.dc.html`) and
+  Settings › Custom fields (`ScreenSettings.dc.html`, "Extra fields on
+  contact records").
+- **Decisions:**
+  1. Table `custom_field_definition` and a column `custom_fields jsonb NOT
+     NULL DEFAULT '{}'` on `contact` and `company` (migration
+     `0008_custom_fields`, additive). JSON in the record, not an
+     entity-attribute-value table, as the plan recommends.
+  2. **A definition** is for contacts or companies. Its `key`
+     (`^[a-z][a-z0-9_]{0,39}$`) and type never change and are unique per
+     workspace and entity for good, so a key never takes another meaning;
+     the label (1-60 characters), the options of a select and the position
+     can change. Definitions are archived and restored, not deleted; a
+     record's values stay stored while their field is archived and show
+     again on restore.
+  3. **Types:** `text` (one line, at most 500 characters), `number` (a
+     finite number, at most 15 significant digits), `date`
+     (`YYYY-MM-DD`), `boolean`, `select` (one of 1-50 options of 1-60
+     characters, distinct regardless of case). At most 50 active fields
+     per entity per workspace; a record's values are at most 32 KB.
+  4. **Who:** every role reads the definitions (`contact:read`); creating,
+     changing, archiving and restoring them is workspace configuration
+     (`workspace:update`, Owner and Admin). Values are part of the record:
+     whoever may create or update the record may set them.
+  5. **Writes merge:** a record write names only the keys it changes; a
+     key set to `null` is cleared. Only active fields of the record's
+     entity are accepted, each value checked against its type. Records
+     show only active fields' values.
+  6. **History and audit:** a value change is an `updated` entry naming
+     `custom_fields`; the record's audit entry lists `custom_fields` and
+     the changed keys, never values. Definition changes are audited as
+     `crm_app.custom_field.created`, `.updated`, `.archived`, `.restored`
+     with the entity, key and type.
+  7. **Not yet:** filtering or sorting by custom fields, and custom fields
+     in the CSV exports (P3-E1 and P3-E2 fix their columns). Removing a
+     select option leaves stored values as they are.
 
 ## P3-E2 — Companies CSV export (approved 2026-10-26)
 

@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0007_tags` own the
+Migrations `0002_contacts_companies` to `0008_custom_fields` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from saas_os.infra.db import (
     JSON,
@@ -47,6 +48,9 @@ class _Record:
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Values of the workspace's custom fields, `{key: value}` (migration 0008,
+    # decision P3-D); validated by `crm_app.custom_fields`.
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
 class Company(_Record, Base):
@@ -212,6 +216,29 @@ class CompanyTag(Base):
     tag_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CustomFieldDefinition(Base):
+    """A custom field of contacts or companies (migration 0008, decision
+    P3-D). The key and type never change; archiving hides the field."""
+
+    __tablename__ = "custom_field_definition"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    entity: Mapped[str] = mapped_column(Text)
+    key: Mapped[str] = mapped_column(Text)
+    label: Mapped[str] = mapped_column(Text)
+    field_type: Mapped[str] = mapped_column(Text)
+    options: Mapped[list[str] | None] = mapped_column(JSON)
+    position: Mapped[int] = mapped_column(Integer)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class WorkspaceSettings(Base):

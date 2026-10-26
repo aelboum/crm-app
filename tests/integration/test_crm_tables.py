@@ -330,4 +330,5 @@ def test_the_migration_rolls_back_and_forward(
         "tag",
         "contact_tag",
         "company_tag",
+        "custom_field_definition",
     }
