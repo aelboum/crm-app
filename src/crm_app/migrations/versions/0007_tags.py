@@ -19,10 +19,13 @@ migration, and each in `crm_app.purge.PURGE_TABLES`:
   bypassed. Deleting a record or a tag removes its assignments
   (`ON DELETE CASCADE`).
 
-The history's `updated` entries may now also name `tags` (P3-C 5). The
-constraint is replaced without a full-table lock: added `NOT VALID`, then
-validated, which takes only a SHARE UPDATE EXCLUSIVE lock on `activity`.
-The new rule accepts every row the old one did.
+The history's `updated` entries may now also name `tags` (P3-C 5); the
+new rule accepts every row the old one did. Alembic runs this migration in
+one transaction, so dropping the old rule holds an ACCESS EXCLUSIVE lock on
+`activity` until commit, through the validating scan (`NOT VALID` then
+`VALIDATE` does not shorten it within one transaction). That is acceptable
+while no production data exists; a later change to a large table must split
+its steps across transactions.
 
 Downgrade restores the old rule and drops the three tables with their rows:
 for test and development databases only. It fails if a history entry names

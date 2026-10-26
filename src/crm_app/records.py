@@ -861,9 +861,13 @@ def set_tags(
         if row.version != expected_version:
             raise StaleVersionError(row.version)
         if wanted:
+            # KEY SHARE: a concurrent tag deletion waits for this change, or
+            # this one sees the tag gone; never a half-applied set.
             known = set(
                 session.execute(
-                    select(Tag.id).where(Tag.tenant_id == scope.workspace, Tag.id.in_(wanted))
+                    select(Tag.id)
+                    .where(Tag.tenant_id == scope.workspace, Tag.id.in_(wanted))
+                    .with_for_update(key_share=True)
                 ).scalars()
             )
             if known != wanted:

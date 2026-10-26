@@ -62,6 +62,16 @@ decisions P2-A to P2-E approved)
     that contact. The Member saw the tags, could choose existing tags but
     had no "New tag" field, and a direct create got 403; Settings › Tags
     was read-only. No horizontal overflow, no console errors.
+  - **Security review:** an independent review of the whole slice found no
+    Critical or High issues. Applied: tag names also refuse Unicode format
+    and separator characters (zero-width, direction marks, U+2028/2029),
+    and assignment takes a KEY SHARE lock on the tags it adds. Corrected:
+    migration 0007's docstring overstated how short its `activity` lock
+    is; in one Alembic transaction the ACCESS EXCLUSIVE lock lasts until
+    commit (no production data exists yet; later changes to large tables
+    must split their steps). Accepted: the duplicate pre-check compares
+    with Python's `lower()`, the database index with PostgreSQL's; the
+    index decides, and a mismatch only changes which 409 a client sees.
   - **Limitations:** tags are not exported in CSV yet (P3-C 7); the Tags
     column is hidden below 760 px; tag counts per tag are not shown.
 - **Phase 3E2 companies CSV export (decision P3-E2, 2026-10-26):**

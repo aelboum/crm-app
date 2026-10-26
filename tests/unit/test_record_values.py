@@ -241,3 +241,12 @@ def test_the_migration_checks_the_same_tag_name_length() -> None:
         REPO_ROOT / "src" / "crm_app" / "migrations" / "versions" / "0007_tags.py"
     ).read_text(encoding="utf-8")
     assert f"TAG_NAME_MAX = {values.TAG_NAME_MAX}" in migration
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["\u200b", "VIP\u200b", "\u202eevil", "a\u2028b", "a\u2029b", "\x85", "soft\u00adhyphen"],
+)
+def test_a_tag_name_with_invisible_characters_is_refused(raw: str) -> None:
+    with pytest.raises(values.InvalidValue):
+        values.tag_name(raw)

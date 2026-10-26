@@ -12,6 +12,7 @@ Messages name the rule, never the value: they reach responses.
 from __future__ import annotations
 
 import re
+import unicodedata
 from urllib.parse import urlsplit
 
 STAGES = ("lead", "prospect", "customer", "inactive")
@@ -58,14 +59,22 @@ def text(value: str | None, maximum: int, *, required: bool = False) -> str | No
 
 
 TAG_NAME_MAX = 50
-_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+# Unicode categories a short name may not contain: control (Cc), format
+# (Cf: zero-width and direction marks) and line or paragraph separators.
+_INVISIBLE = frozenset({"Cc", "Cf", "Zl", "Zp"})
+
+
+def visible_text(value: str) -> bool:
+    """Whether `value` holds no control, format or separator characters,
+    which would make a name invisible or misleading on screen."""
+    return not any(unicodedata.category(char) in _INVISIBLE for char in value)
 
 
 def tag_name(value: str) -> str:
     """A tag name as stored (decision P3-C 3, migration 0007): trimmed,
-    1..50 characters, no control characters. Uniqueness, regardless of case,
-    is the database's."""
-    if _CONTROL.search(value):
+    1..50 characters, no control, format or separator characters.
+    Uniqueness, regardless of case, is the database's."""
+    if not visible_text(value):
         raise InvalidValue("must not contain control characters")
     trimmed = value.strip()
     if not trimmed:
