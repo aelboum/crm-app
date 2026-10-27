@@ -37,6 +37,33 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 4 slice 4C, tasks (decision P4-C, 2026-10-27):**
+  - **Built:** migration `0012_tasks` (`task`: title, priority, optional
+    due time with time zone and assignee, completion with who and when,
+    optional links to a contact, company and deal cleared rather than
+    cascaded when the record is deleted); `crm_app.tasks` and its routes
+    (list with status, assignee, overdue, due window, link filters, four
+    orders and cursors; the four tab counts; create with
+    `Idempotency-Key`; update, complete and reopen with `If-Match`;
+    delete, which Members may do per Q6); the Tasks page (assignee filter,
+    tabs with counts, quick add with Today / Tomorrow / Next week at 17:00
+    local time, groups Overdue / Today / Upcoming / No due date, complete,
+    edit with an exact date and time, delete); an "Open tasks" section with
+    quick add in contact, company and deal drawers; "+ New → Task".
+  - **Tests:** unit `test_task_rules.py` and the route-policy table (with
+    Q6's task-delete exception); integration `test_task_tables.py` (13)
+    and `test_task_routes.py` (10: roles, isolation, links, validation and
+    naive times, idempotent create, versions, completing and reopening,
+    filters, counts, order, paging, audit without titles); Vitest
+    `tasks.test.tsx` (5, with axe).
+  - **Browser** (local stack, dev DB migrated to 0012 without reset): added
+    three tasks, grouped Today / Upcoming / No due date with matching tab
+    counts; completed one (Completed tab, struck through); added a task
+    from a deal's drawer, linked to the deal; fits 390 px; no console
+    errors.
+  - **Limitations:** no reminders or notifications, recurring tasks,
+    descriptions or bulk actions; "Today" is the viewer's day, not the
+    workspace's time zone; members show by ID.
 - **Phase 4 slice 4B, deals (decision P4-B, 2026-10-27):**
   - **Built:** migration `0011_opportunities` (`opportunity` with composite
     keys to a stage of its own pipeline, RESTRICT, and to contacts and

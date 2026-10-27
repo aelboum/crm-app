@@ -15,6 +15,7 @@ import { useT } from "../i18n/useT";
 import { refusalOf } from "./DealDialog";
 import { daysInStage, eventText, Money, stageShade } from "./dealParts";
 import { Drawer, FieldRow, ownerLabel, When } from "./parts";
+import { TasksSection } from "./TasksSection";
 
 /*
  * The design's deal drawer (ScreenPipeline.dc.html): title, value with its
@@ -275,6 +276,7 @@ export function DealDrawer({
             </div>
           ) : null}
 
+          <TasksSection workspaceId={workspaceId} link={{ kind: "opportunity", id: deal.id }} />
           <History workspaceId={workspaceId} id={deal.id} meId={meId} />
 
           {losing ? (

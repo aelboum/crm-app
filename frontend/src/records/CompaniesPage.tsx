@@ -58,6 +58,7 @@ import {
 } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
 import { ActivitySection, NotesSection } from "./NotesSection";
+import { TasksSection } from "./TasksSection";
 import { ListTags, TagSection } from "./TagEditor";
 import { useDebounced } from "./useDebounced";
 import { useRecordExport } from "./useRecordExport";
@@ -451,6 +452,7 @@ function CompanyDrawer({
               <When value={record.created_at} />
             </FieldRow>
           </dl>
+          <TasksSection workspaceId={workspaceId} link={{ kind: "company", id: record.id }} />
           <CustomFieldsSection
             workspaceId={workspaceId}
             fields={activeFields(definitions.data?.items, "company")}

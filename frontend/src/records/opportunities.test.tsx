@@ -155,6 +155,9 @@ function workspace({ actions, current = deal(), onWrite }: Options): Handler {
     if (method === "GET" && path.startsWith(`${base}/opportunities/${DEAL}/history`)) {
       return { status: 200, body: { items: HISTORY, next_cursor: null } };
     }
+    if (method === "GET" && path.startsWith(`${base}/tasks?`)) {
+      return { status: 200, body: { items: [], next_cursor: null, total: 0, total_capped: false } };
+    }
     if (method !== "GET" && path.startsWith(`${base}/opportunities`)) return onWrite?.(method, path, body);
     return undefined;
   };

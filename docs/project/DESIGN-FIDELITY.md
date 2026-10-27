@@ -63,6 +63,7 @@ L243-247):
 | Settings › other sections (business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
 | Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values; flows checked in Chrome at desktop width |
 | Companies (`ScreenCompanies`) | `/companies` | 3 | List, drawer with the company's people, and create/edit dialog (§4c); compared from source values; flows checked in Chrome at desktop width |
+| Tasks (`ScreenTasks`) | `/tasks` | 4 | **Implemented (4C)** — tabs with counts, quick add, groups, complete, delete as designed. Differences: real due times (the design's are display strings) with a No due date group; an Edit dialog; priority stored as data; members by ID; task sections in record drawers |
 | Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | **Implemented (4B)** — board, table, drawer, create/edit. Differences: no pipeline switcher (one pipeline); no Won column (won and lost are outcomes, Mark lost asks a reason, closed deals offer Reopen); summary shows open value, weighted forecast and open deals only; values in the deal's currency; drag-and-drop plus keyboard stage buttons in the drawer; members by ID |
 | Settings › Sales pipeline (not in the design; P4 4A) | `/settings?section=pipeline` | 4 | **Implemented** — stage names, probabilities and order; won and lost are outcomes, not stages |
 | Tasks (`ScreenTasks`) | `/tasks` | 4 | Placeholder |

@@ -18,6 +18,7 @@ import { InvitePage } from "./pages/InvitePage";
 import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
 import { OpportunitiesPage } from "./records/OpportunitiesPage";
+import { TasksPage } from "./records/TasksPage";
 import { type SettingsSection, SettingsPage } from "./pages/WorkspacePage";
 import { AppFrame, PlaceholderPage, PlainLayout } from "./shell/AppFrame";
 import { findSection, SETTINGS_SLUG } from "./shell/navigation";
@@ -149,6 +150,17 @@ function SectionPage() {
         }}
         onOpenCompany={(id) => {
           void navigate({ params: { workspaceId, section: "companies" }, search: { record: id } });
+        }}
+      />
+    );
+  }
+  if (slug === "tasks") {
+    return (
+      <TasksPage
+        workspaceId={workspaceId}
+        onOpenLink={(kind, id) => {
+          const target = kind === "contact" ? "contacts" : kind === "company" ? "companies" : "opportunities";
+          void navigate({ params: { workspaceId, section: target }, search: { record: id } });
         }}
       />
     );

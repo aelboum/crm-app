@@ -256,9 +256,9 @@ interface CreateItem {
 }
 
 // The design's "+ New" menu for a client workspace, in its order and with its
-// shortcut letters. Contacts (slice 3A) and opportunities (slice 4B) can be
-// created by callers who may; every other record type is not built yet and
-// says so.
+// shortcut letters. Contacts (slice 3A), opportunities (slice 4B) and tasks
+// (slice 4C, on the Tasks page) can be created by callers who may; every
+// other record type is not built yet and says so.
 const CREATE_ITEMS: CreateItem[] = [
   { id: "contact", icon: UserPlus, label: "create.contact", key: "C" },
   { id: "opportunity", icon: Kanban, label: "create.opportunity", key: "O" },
@@ -290,6 +290,7 @@ function CreateMenu({
   const available = new Set([
     ...(access.data?.actions.create_contact === true ? ["contact"] : []),
     ...(access.data?.actions.create_opportunity === true ? ["opportunity"] : []),
+    ...(access.data?.actions.create_task === true ? ["task"] : []),
   ]);
   return (
     <MenuTrigger>
@@ -309,6 +310,13 @@ function CreateMenu({
             (id) => !available.has(id),
           )}
           onAction={(key) => {
+            if (key === "task") {
+              // The Tasks page's quick-add row creates tasks.
+              void navigate({
+                to: "/w/$workspaceId/$section",
+                params: { workspaceId, section: "tasks" },
+              });
+            }
             if (key === "contact" || key === "opportunity") {
               void navigate({
                 to: "/w/$workspaceId/$section",

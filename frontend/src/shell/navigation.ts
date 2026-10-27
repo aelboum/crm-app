@@ -70,7 +70,7 @@ export const GROUPS: Group[] = [
       built("contacts", "nav.contacts", Users),
       built("companies", "nav.companies", Building2),
       built("opportunities", "nav.opportunities", Kanban),
-      soon("tasks", "nav.tasks", SquareCheckBig, "soon.sales"),
+      built("tasks", "nav.tasks", SquareCheckBig),
     ],
   },
   {
