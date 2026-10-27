@@ -122,6 +122,18 @@ RECORDS |= {
     f"GET {_DEALS}/{{deal_id}}/history": "crm_app.opportunity:read",
 }
 
+# Tasks (decision P4-C 3, Q6): every role reads; Owner, Admin and Member
+# create, update and delete.
+_TASKS = "/v1/workspaces/{tenant_id}/tasks"
+RECORDS |= {
+    f"GET {_TASKS}": "crm_app.task:read",
+    f"GET {_TASKS}/counts": "crm_app.task:read",
+    f"POST {_TASKS}": "crm_app.task:create",
+    f"GET {_TASKS}/{{task_id}}": "crm_app.task:read",
+    f"PATCH {_TASKS}/{{task_id}}": "crm_app.task:update",
+    f"DELETE {_TASKS}/{{task_id}}": "crm_app.task:delete",
+}
+
 # CSV import (decision P3-F 1): Owner and Admin only, through the
 # catalogue's `crm_data:import`.
 _IMPORTS = "/v1/workspaces/{tenant_id}/imports"
@@ -250,7 +262,8 @@ def test_record_routes_follow_the_role_matrix() -> None:
             "read": set(Role),
             "create": EDITORS,
             "update": EDITORS,
-            "delete": {Role.OWNER, Role.ADMIN},
+            # Q6: Members may delete tasks, not other records.
+            "delete": EDITORS if resource == "crm_app.task" else {Role.OWNER, Role.ADMIN},
         }[action]
         assert holders == expected, key
 

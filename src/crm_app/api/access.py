@@ -63,6 +63,10 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "create_opportunity": ("crm_app.opportunity", "create"),
     "update_opportunity": ("crm_app.opportunity", "update"),
     "delete_opportunity": ("crm_app.opportunity", "delete"),
+    # Tasks (decision P4-C 3): Members may delete them too (Q6).
+    "create_task": ("crm_app.task", "create"),
+    "update_task": ("crm_app.task", "update"),
+    "delete_task": ("crm_app.task", "delete"),
 }
 
 

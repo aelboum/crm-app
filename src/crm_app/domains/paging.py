@@ -54,6 +54,13 @@ ORDER_KEYS: Mapping[str, Mapping[str, Sequence[str]]] = {
         "expected_close_date": ("date?", "uuid"),
     },
     "opportunity_event": {"seq": ("int",)},
+    # Tasks (decision P4-C 5): the due time sorts last ascending when unset.
+    "task": {
+        "due_at": ("datetime?", "uuid"),
+        "completed_at": ("datetime?", "uuid"),
+        "created_at": ("datetime", "uuid"),
+        "updated_at": ("datetime", "uuid"),
+    },
 }
 
 Value = str | datetime | date | Decimal | int | uuid.UUID | None
@@ -102,6 +109,7 @@ def _count(value: str) -> int:
 _PARSERS: Mapping[str, Callable[[str], Value]] = {
     "uuid": uuid.UUID,
     "datetime": _aware,
+    "datetime?": _aware,
     "date?": date.fromisoformat,
     "decimal?": _finite,
     "int": _count,

@@ -1139,6 +1139,48 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      several pipelines, per-deal probability, card order within a column
      (cards are ordered by last update).
 
+## P4-C — Tasks (2026-10-27, under M1)
+
+- **Status:** Approved under M1 (owner instruction of 2026-10-27, "proceed
+  autonomously"). Roadmap 4.1; the design's `ScreenTasks.dc.html`; Q6
+  (Members may delete tasks); slice 4C.
+- **Design audit:** tabs Open, Assigned to me, Overdue and Completed with
+  counts; an assignee filter ("Everyone" or a person); a quick-add row
+  (title, assignee, due, priority); groups Overdue, Today and Upcoming;
+  a complete toggle, the linked contact and Delete on each row. The
+  prototype's due dates are display strings ("Today, 5:00 PM") and
+  "overdue" is a stored flag; here both are computed from a real time.
+- **Decisions:**
+  1. Table `task` (migration `0012_tasks`): tenant-owned, forced RLS, in
+     `PURGE_TABLES`. Title trimmed, 1-200 characters, no control
+     characters; priority `high`, `medium` (default) or `low`; `due_at`
+     an optional timestamp with time zone; `assignee_user_id` an optional
+     active member; `completed_at` and `completed_by_user_id` set together
+     while done; a version for optimistic concurrency.
+  2. **Links:** optional contact, company and deal, each by a composite key
+     `ON DELETE SET NULL` of the link column, so a task outlives its
+     record. Linked records must be of the same workspace, and a contact or
+     company active when linked.
+  3. **Who** (Q6): every role reads; Owner, Admin and Member create,
+     update, complete, reopen and delete. `/access` gains `create_task`,
+     `update_task`, `delete_task`.
+  4. **Time:** stored in UTC; "overdue" is an open task due before now on
+     the server. "Today" and "Upcoming" are the viewer's local day, so the
+     list takes `due_from`/`due_to` bounds the browser computes.
+  5. **Lists:** filters open or done, assignee (`me`), overdue, due
+     bounds, contact, company and deal; orders by due date (nulls last),
+     completion time, creation or last update, with cursor paging;
+     `GET /tasks/counts` gives the four tabs' counts for the assignee
+     filter. Create accepts `Idempotency-Key`; every change needs
+     `If-Match`, including completing and reopening.
+  6. **Audit:** `crm_app.task.created`, `.updated` (field names),
+     `.completed`, `.reopened`, `.deleted`, never titles. No user-visible
+     history: the design shows none.
+  7. **Record drawers:** contacts, companies and deals show their open
+     tasks and can add one linked to them.
+  8. **Not in 4C:** reminders and notifications, recurring tasks, task
+     descriptions, bulk actions.
+
 ## P3-F — CSV import (2026-10-26)
 
 - **Status:** The owner decided the two open questions on 2026-10-26

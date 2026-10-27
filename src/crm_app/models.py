@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0011_opportunities` own the
+Migrations `0002_contacts_companies` to `0012_tasks` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -487,3 +487,29 @@ class OpportunityEvent(Base):
     owner_to: Mapped[uuid.UUID | None] = mapped_column()
     outcome_from: Mapped[str | None] = mapped_column(Text)
     outcome_to: Mapped[str | None] = mapped_column(Text)
+
+
+class Task(Base):
+    """A task (migration 0012, decision P4-C). Done exactly while
+    `completed_at` is set; its links to a contact, company or deal are
+    cleared, not cascaded, when that record is deleted."""
+
+    __tablename__ = "task"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    title: Mapped[str] = mapped_column(Text)
+    priority: Mapped[str] = mapped_column(Text)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    assignee_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    company_id: Mapped[uuid.UUID | None] = mapped_column()
+    opportunity_id: Mapped[uuid.UUID | None] = mapped_column()
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)

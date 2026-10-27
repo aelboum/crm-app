@@ -1096,6 +1096,60 @@ export interface paths {
         patch: operations["rename_tag_v1_workspaces__tenant_id__tags__tag_id__patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tasks */
+        get: operations["list_tasks_v1_workspaces__tenant_id__tasks_get"];
+        put?: never;
+        /** Create Task */
+        post: operations["create_task_v1_workspaces__tenant_id__tasks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/tasks/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count Tasks */
+        get: operations["count_tasks_v1_workspaces__tenant_id__tasks_counts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Task */
+        get: operations["get_task_v1_workspaces__tenant_id__tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Task */
+        delete: operations["delete_task_v1_workspaces__tenant_id__tasks__task_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Task */
+        patch: operations["update_task_v1_workspaces__tenant_id__tasks__task_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2178,6 +2232,121 @@ export interface components {
         TagSet: {
             /** Tag Ids */
             tag_ids: string[];
+        };
+        /** TaskCounts */
+        TaskCounts: {
+            /** Done */
+            done: number;
+            /** Mine */
+            mine: number;
+            /** Open */
+            open: number;
+            /** Overdue */
+            overdue: number;
+        };
+        /** TaskIn */
+        TaskIn: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Due At */
+            due_at?: string | null;
+            /** Opportunity Id */
+            opportunity_id?: string | null;
+            /**
+             * Priority
+             * @default medium
+             * @enum {string}
+             */
+            priority: "high" | "medium" | "low";
+            /** Title */
+            title: string;
+        };
+        /** TaskOut */
+        TaskOut: {
+            /** Assignee User Id */
+            assignee_user_id: string | null;
+            company: components["schemas"]["LinkRef"] | null;
+            /** Company Id */
+            company_id: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Completed By User Id */
+            completed_by_user_id: string | null;
+            contact: components["schemas"]["LinkRef"] | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /** Done */
+            done: boolean;
+            /** Due At */
+            due_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            opportunity: components["schemas"]["LinkRef"] | null;
+            /** Opportunity Id */
+            opportunity_id: string | null;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "high" | "medium" | "low";
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By User Id */
+            updated_by_user_id: string | null;
+            /** Version */
+            version: number;
+        };
+        /** TaskPage */
+        TaskPage: {
+            /** Items */
+            items: components["schemas"]["TaskOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+            /** Total Capped */
+            total_capped: boolean;
+        };
+        /**
+         * TaskPatch
+         * @description Only the fields sent change; `null` clears an optional one.
+         */
+        TaskPatch: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Done */
+            done?: boolean | null;
+            /** Due At */
+            due_at?: string | null;
+            /** Opportunity Id */
+            opportunity_id?: string | null;
+            /** Priority */
+            priority?: ("high" | "medium" | "low") | null;
+            /** Title */
+            title?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -5084,6 +5253,230 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TagOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tasks_v1_workspaces__tenant_id__tasks_get: {
+        parameters: {
+            query?: {
+                assignee?: string[];
+                status?: "open" | "done" | "all";
+                overdue?: boolean;
+                due_from?: string | null;
+                due_to?: string | null;
+                contact_id?: string[];
+                company_id?: string[];
+                opportunity_id?: string[];
+                sort?: "due_at" | "completed_at" | "created_at" | "updated_at";
+                direction?: "asc" | "desc";
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_task_v1_workspaces__tenant_id__tasks_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    count_tasks_v1_workspaces__tenant_id__tasks_counts_get: {
+        parameters: {
+            query?: {
+                assignee?: string[];
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCounts"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_v1_workspaces__tenant_id__tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                task_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_task_v1_workspaces__tenant_id__tasks__task_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                task_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_task_v1_workspaces__tenant_id__tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                task_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
                 };
             };
             /** @description Validation Error */

@@ -79,6 +79,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         # P4-B (deals).
         "opportunity",
         "opportunity_event",
+        # P4-C (tasks).
+        "task",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
