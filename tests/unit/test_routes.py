@@ -104,6 +104,9 @@ EXPORTS |= {
     f"GET {_IMPORTS}": "crm_app.crm_data:import",
     f"GET {_IMPORTS}/{{import_id}}": "crm_app.crm_data:import",
     f"GET {_IMPORTS}/{{import_id}}/errors.csv": "crm_app.crm_data:import",
+    f"POST {_IMPORTS}/{{import_id}}/commit": "crm_app.crm_data:import",
+    f"POST {_IMPORTS}/{{import_id}}/cancel": "crm_app.crm_data:import",
+    f"POST {_IMPORTS}/{{import_id}}/resume": "crm_app.crm_data:import",
 }
 
 # Invitations (decisions Q4, Q5, P2-F): reading, creating and revoking are

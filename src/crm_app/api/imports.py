@@ -4,6 +4,9 @@
     GET  /v1/workspaces/{tenant_id}/imports                      crm_app.crm_data:import
     GET  /v1/workspaces/{tenant_id}/imports/{import_id}          crm_app.crm_data:import
     GET  /v1/workspaces/{tenant_id}/imports/{import_id}/errors.csv
+    POST /v1/workspaces/{tenant_id}/imports/{import_id}/commit
+    POST /v1/workspaces/{tenant_id}/imports/{import_id}/cancel
+    POST /v1/workspaces/{tenant_id}/imports/{import_id}/resume
 
 Owner and Admin only (decision P3-F 1), each route with exactly one
 `require_permission`. The path's `tenant_id` is only the request; handlers
@@ -15,6 +18,11 @@ chunks and refused past 5 MB, never stored. `column` maps a field to a
 column position (`email:2`), repeatable; without it the mapping is
 proposed from the header. Ten previews per user per window on SaaS-OS's
 limiter, which counts in fixed windows and refuses when it fails (P3-F 6).
+
+Committing queues the worker job `crm_app_import_commit`; if the queue
+cannot be reached, the import goes back to where it was and the answer is
+503. Cancelling stops it before its next batch; a failed import resumes
+from its checkpoint.
 """
 
 import csv
@@ -30,6 +38,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
 from saas_os.api.errors import rate_limited, service_unavailable
+from saas_os.infra.jobs import TenantJobPayload, enqueue_job
 from saas_os.infra.ratelimit import (
     RateLimitBackendError,
     RateLimitExceededError,
@@ -37,7 +46,7 @@ from saas_os.infra.ratelimit import (
     get_ratelimit_config,
 )
 
-from crm_app import imports
+from crm_app import import_commit, imports
 from crm_app.api.records import _http
 from crm_app.domains import imports as rules
 from crm_app.records import RecordError, Scope
@@ -222,3 +231,35 @@ def import_errors(import_id: uuid.UUID, context: Import) -> Response:
             "Cache-Control": "no-store",
         },
     )
+
+
+async def _enqueue(context: RequestContext, import_id: uuid.UUID) -> None:
+    payload = TenantJobPayload(
+        tenant_id=str(context.tenant_id),
+        data={"import_id": str(import_id), "actor_id": str(context.actor_id)},
+    )
+    try:
+        await enqueue_job(import_commit.JOB_NAME, payload)
+    except Exception:  # noqa: BLE001 - any queue failure: undo and say so
+        await run_in_threadpool(import_commit.unqueue, _scope(context), import_id)
+        raise service_unavailable(_LIMITER_RETRY_SECONDS) from None
+
+
+def _state_route(verb: str) -> None:
+    @router.post(f"{_IMPORT}/{verb}", response_model=ImportSummary, name=f"{verb}_import")
+    async def change(import_id: uuid.UUID, context: Import) -> Any:
+        scope = _scope(context)
+        try:
+            if verb == "cancel":
+                return await run_in_threadpool(import_commit.cancel, scope, import_id)
+            summary = await run_in_threadpool(
+                import_commit.queue, scope, import_id, resume=verb == "resume"
+            )
+        except RecordError as exc:
+            raise _http(exc) from None
+        await _enqueue(context, import_id)
+        return summary
+
+
+for _verb in ("commit", "cancel", "resume"):
+    _state_route(_verb)

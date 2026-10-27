@@ -806,6 +806,50 @@ def _export(  # noqa: PLR0913 - what to read, then the export's own limits
 # --- Writes ----------------------------------------------------------------------
 
 
+def insert_record(  # noqa: PLR0913 - the record, then how it came to be
+    session: Session,
+    kind: Kind,
+    scope: Scope,
+    values: Mapping[str, Any],
+    *,
+    record_id: uuid.UUID,
+    custom: Mapping[str, Any] | None = None,
+    import_id: uuid.UUID | None = None,
+) -> None:
+    """Insert one record with its `created` history and audit entries, in
+    the caller's transaction, which already holds `lock_open_tenant`.
+    Raises `DuplicateRecordError` when an active record holds its email or
+    domain, before anything is written. An imported record's audit entry
+    names the import (decision P3-F 8)."""
+    now = _now()
+    merged = _merge_custom_fields(session, scope, kind, {}, custom or {})
+    row = kind.model(
+        id=record_id,
+        tenant_id=scope.workspace,
+        created_at=now,
+        updated_at=now,
+        created_by_user_id=scope.actor,
+        updated_by_user_id=scope.actor,
+        version=1,
+        archived_at=None,
+        custom_fields=merged,
+        **values,
+    )
+    _check_row(session, scope, row, set(values))
+    _refuse_duplicate(session, kind, scope, row)
+    session.add(row)
+    session.flush()
+    session.add(history_entry(kind, scope, record_id, "created"))
+    given = sorted(name for name, value in values.items() if value is not None)
+    metadata: dict[str, object] = {"fields": given}
+    if merged:
+        metadata["fields"] = sorted([*given, "custom_fields"])
+        metadata["custom_field_keys"] = sorted(merged)
+    if import_id is not None:
+        metadata["import_id"] = str(import_id)
+    _audit(session, kind, scope, _Event("created", record_id, metadata))
+
+
 def create(
     kind: Kind,
     scope: Scope,
@@ -824,31 +868,7 @@ def create(
 
     def business(session: Session) -> dict[str, object]:
         lock_open_tenant(session, scope.workspace)
-        now = _now()
-        merged = _merge_custom_fields(session, scope, kind, {}, custom)
-        row = kind.model(
-            id=record_id,
-            tenant_id=scope.workspace,
-            created_at=now,
-            updated_at=now,
-            created_by_user_id=scope.actor,
-            updated_by_user_id=scope.actor,
-            version=1,
-            archived_at=None,
-            custom_fields=merged,
-            **values,
-        )
-        _check_row(session, scope, row, set(values))
-        _refuse_duplicate(session, kind, scope, row)
-        session.add(row)
-        session.flush()
-        session.add(history_entry(kind, scope, record_id, "created"))
-        given = sorted(name for name, value in values.items() if value is not None)
-        metadata: dict[str, object] = {"fields": given}
-        if merged:
-            metadata["fields"] = sorted([*given, "custom_fields"])
-            metadata["custom_field_keys"] = sorted(merged)
-        _audit(session, kind, scope, _Event("created", record_id, metadata))
+        insert_record(session, kind, scope, values, record_id=record_id, custom=custom)
         return {"id": str(record_id)}
 
     def unique_value() -> str | None:
