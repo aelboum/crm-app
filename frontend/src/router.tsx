@@ -17,6 +17,7 @@ import { HomePage, isWorkspaceId } from "./pages/HomePage";
 import { InvitePage } from "./pages/InvitePage";
 import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
+import { OpportunitiesPage } from "./records/OpportunitiesPage";
 import { type SettingsSection, SettingsPage } from "./pages/WorkspacePage";
 import { AppFrame, PlaceholderPage, PlainLayout } from "./shell/AppFrame";
 import { findSection, SETTINGS_SLUG } from "./shell/navigation";
@@ -97,8 +98,8 @@ interface SectionSearch {
   section?: SettingsSection;
   /** The contact or company whose preview is open. */
   record?: string;
-  /** Opens the new-contact dialog (the header's "New → Contact"). */
-  create?: "contact";
+  /** Opens a new-record dialog (the header's "New" menu). */
+  create?: "contact" | "opportunity";
 }
 
 function SectionPage() {
@@ -129,6 +130,25 @@ function SectionPage() {
         onOpen={openRecord}
         onOpenContact={(id) => {
           void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+        }}
+      />
+    );
+  }
+  if (slug === "opportunities") {
+    return (
+      <OpportunitiesPage
+        workspaceId={workspaceId}
+        openId={record ?? null}
+        onOpen={openRecord}
+        startCreate={create === "opportunity"}
+        onCreateDone={() => {
+          void navigate({ search: record ? { record } : {}, replace: true });
+        }}
+        onOpenContact={(id) => {
+          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+        }}
+        onOpenCompany={(id) => {
+          void navigate({ params: { workspaceId, section: "companies" }, search: { record: id } });
         }}
       />
     );
@@ -164,7 +184,7 @@ const sectionRoute = createRoute({
       ? { section: search.section }
       : {}),
     ...(typeof search.record === "string" && isWorkspaceId(search.record) ? { record: search.record } : {}),
-    ...(search.create === "contact" ? { create: "contact" as const } : {}),
+    ...(search.create === "contact" || search.create === "opportunity" ? { create: search.create } : {}),
   }),
   component: SectionPage,
 });

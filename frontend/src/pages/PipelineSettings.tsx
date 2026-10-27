@@ -4,7 +4,7 @@ import { type SyntheticEvent, useEffect, useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { type Pipeline, type PipelineChange, type Stage, useChangePipeline, usePipelines } from "../api/pipelines";
 import { DuplicateError, FieldErrors } from "../api/records";
-import { ConfirmDialog } from "../components/ConfirmDialog";
+import { Dialog } from "../components/ui/Dialog";
 import { Loading, LoadError } from "../components/StateNotice";
 import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
@@ -29,6 +29,7 @@ function failure(error: unknown): MessageId {
     if (error.code === "stale_version") return "pipeline.error.stale";
     if (error.code === "stage_limit_reached") return "pipeline.error.full";
     if (error.code === "last_stage") return "pipeline.error.lastStage";
+    if (error.code === "stage_in_use" || error.code === "invalid_move_target") return "pipeline.error.stale";
     if (error.code === "stage_not_found" || error.code === "pipeline_not_found") return "pipeline.error.stale";
     if (error.status === 403) return "pipeline.error.forbidden";
   }
@@ -126,11 +127,11 @@ function PipelineEditor({
     apply({ kind: "reorder", stageIds: ids }, "pipeline.reordered");
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = (moveTo: string) => {
     if (!deleting) return;
     const stage = deleting;
     setDeleting(null);
-    apply({ kind: "delete", stageId: stage.id }, "pipeline.stageRemoved");
+    apply({ kind: "delete", stageId: stage.id, moveTo }, "pipeline.stageRemoved");
   };
 
   const busy = change.isPending;
@@ -285,17 +286,78 @@ function PipelineEditor({
         </form>
       ) : null}
       <p className="profile-note">{t("pipeline.outcomesNote")}</p>
-      <ConfirmDialog
-        isOpen={deleting !== null}
-        title={t("pipeline.removeTitle")}
-        confirmLabel={t("pipeline.removeConfirm")}
-        message={t("pipeline.removeMessage", { name: deleting?.name ?? "" })}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setDeleting(null);
-        }}
-      />
+      {deleting ? (
+        <RemoveStageDialog
+          stage={deleting}
+          others={stages.filter((s) => s.id !== deleting.id)}
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setDeleting(null);
+          }}
+        />
+      ) : null}
     </section>
+  );
+}
+
+/** Removing a stage names where its deals go (decision P4-B 8); the next
+ *  stage is proposed. A stage without deals is simply removed. */
+function RemoveStageDialog({
+  stage,
+  others,
+  onConfirm,
+  onCancel,
+}: {
+  stage: Stage;
+  others: Stage[];
+  onConfirm: (moveTo: string) => void;
+  onCancel: () => void;
+}) {
+  const t = useT();
+  const next = others.find((s) => s.position > stage.position) ?? others[others.length - 1];
+  const [target, setTarget] = useState(next?.id ?? "");
+  return (
+    <Dialog
+      isOpen
+      role="alertdialog"
+      title={t("pipeline.removeTitle")}
+      onClose={onCancel}
+      actions={
+        <>
+          <Button onPress={onCancel}>{t("confirm.cancel")}</Button>
+          <Button
+            variant="destructive"
+            isDisabled={!target}
+            onPress={() => {
+              onConfirm(target);
+            }}
+          >
+            {t("pipeline.removeConfirm")}
+          </Button>
+        </>
+      }
+    >
+      <p>{t("pipeline.removeMessage", { name: stage.name })}</p>
+      <div className="form-field">
+        <label htmlFor="stage-move-to" className="form-label">
+          {t("pipeline.moveDealsTo")}
+        </label>
+        <select
+          id="stage-move-to"
+          className="form-input form-select"
+          value={target}
+          onChange={(event) => {
+            setTarget(event.target.value);
+          }}
+        >
+          {others.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </Dialog>
   );
 }
 

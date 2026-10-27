@@ -256,8 +256,9 @@ interface CreateItem {
 }
 
 // The design's "+ New" menu for a client workspace, in its order and with its
-// shortcut letters. Contacts can be created (slice 3A) by callers who may;
-// every other record type is not built yet and says so.
+// shortcut letters. Contacts (slice 3A) and opportunities (slice 4B) can be
+// created by callers who may; every other record type is not built yet and
+// says so.
 const CREATE_ITEMS: CreateItem[] = [
   { id: "contact", icon: UserPlus, label: "create.contact", key: "C" },
   { id: "opportunity", icon: Kanban, label: "create.opportunity", key: "O" },
@@ -286,9 +287,10 @@ function CreateMenu({
   const t = useT();
   const navigate = useNavigate();
   const access = useAccess(workspaceId);
-  const available = new Set(
-    access.data?.actions.create_contact === true ? ["contact"] : [],
-  );
+  const available = new Set([
+    ...(access.data?.actions.create_contact === true ? ["contact"] : []),
+    ...(access.data?.actions.create_opportunity === true ? ["opportunity"] : []),
+  ]);
   return (
     <MenuTrigger>
       <AriaButton className="new-button">
@@ -307,11 +309,14 @@ function CreateMenu({
             (id) => !available.has(id),
           )}
           onAction={(key) => {
-            if (key === "contact") {
+            if (key === "contact" || key === "opportunity") {
               void navigate({
                 to: "/w/$workspaceId/$section",
-                params: { workspaceId, section: "contacts" },
-                search: { create: "contact" },
+                params: {
+                  workspaceId,
+                  section: key === "contact" ? "contacts" : "opportunities",
+                },
+                search: { create: key },
               });
             }
           }}

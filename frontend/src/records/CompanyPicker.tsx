@@ -1,9 +1,10 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { ListBox, ListBoxItem } from "react-aria-components";
 
-import { NO_FILTERS, useCompanyList } from "../api/records";
+import { NO_FILTERS, useCompanyList, useContactList } from "../api/records";
 import { LoadError } from "../components/StateNotice";
 import { Button } from "../components/ui/Button";
+import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { useDebounced } from "./useDebounced";
 
@@ -15,7 +16,41 @@ import { useDebounced } from "./useDebounced";
  * (each text is its own cached query), so an older, slower answer never
  * replaces a newer one. Only active companies are offered, as the API links
  * only those; a contact's current company stays shown even when archived.
+ *
+ * The deal form (decision P4-B 4) uses the same control for a contact
+ * (`kind="contacts"`): prefix search on name or email, active contacts only.
  */
+
+export type PickerKind = "companies" | "contacts";
+
+const TEXT: Record<PickerKind, Record<string, MessageId>> = {
+  companies: {
+    none: "contact.noCompany",
+    choose: "picker.company.choose",
+    change: "picker.company.change",
+    remove: "picker.company.remove",
+    search: "picker.company.search",
+    results: "picker.company.results",
+    more: "picker.company.more",
+    noMatch: "picker.company.noMatch",
+    empty: "picker.company.none",
+  },
+  contacts: {
+    none: "picker.contact.noContact",
+    choose: "picker.contact.choose",
+    change: "picker.contact.change",
+    remove: "picker.contact.remove",
+    search: "picker.contact.search",
+    results: "picker.contact.results",
+    more: "picker.contact.more",
+    noMatch: "picker.contact.noMatch",
+    empty: "picker.contact.none",
+  },
+};
+
+function text(kind: PickerKind, key: string): MessageId {
+  return TEXT[kind][key] ?? "picker.loadMoreFailed";
+}
 
 export interface PickedCompany {
   id: string;
@@ -30,6 +65,7 @@ export function CompanyPicker({
   selected,
   onChange,
   errorId,
+  kind = "companies",
 }: {
   workspaceId: string;
   /** The id of the control that opens the search; the label points at it. */
@@ -39,6 +75,8 @@ export function CompanyPicker({
   onChange: (company: PickedCompany | null) => void;
   /** The id of this field's error message, when there is one. */
   errorId?: string | undefined;
+  /** What is picked: a company (the default) or a contact. */
+  kind?: PickerKind;
 }) {
   const t = useT();
   const [searching, setSearching] = useState(false);
@@ -67,6 +105,7 @@ export function CompanyPicker({
       {searching ? (
         <SearchPanel
           workspaceId={workspaceId}
+          kind={kind}
           id={id}
           selectedId={selected?.id ?? null}
           errorId={errorId}
@@ -79,7 +118,7 @@ export function CompanyPicker({
       ) : (
         <div className="row picker-current">
           <span className={selected ? "picker-value" : "picker-value muted"}>
-            {selected ? selected.name : t("contact.noCompany")}
+            {selected ? selected.name : t(text(kind, "none"))}
             {selected?.archived ? ` · ${t("picker.company.archived")}` : ""}
           </span>
           <Button
@@ -89,7 +128,7 @@ export function CompanyPicker({
             {...(errorId ? { "aria-describedby": errorId } : {})}
             onPress={() => { setSearching(true); }}
           >
-            {selected ? t("picker.company.change") : t("picker.company.choose")}
+            {selected ? t(text(kind, "change")) : t(text(kind, "choose"))}
           </Button>
           {selected ? (
             <Button
@@ -100,7 +139,7 @@ export function CompanyPicker({
                 onChange(null);
               }}
             >
-              {t("picker.company.remove")}
+              {t(text(kind, "remove"))}
             </Button>
           ) : null}
         </div>
@@ -113,6 +152,7 @@ export function CompanyPicker({
  *  opening starts from an empty search. */
 function SearchPanel({
   workspaceId,
+  kind,
   id,
   selectedId,
   errorId,
@@ -120,17 +160,32 @@ function SearchPanel({
   onClose,
 }: {
   workspaceId: string;
+  kind: PickerKind;
   id: string;
   selectedId: string | null;
   errorId: string | undefined;
-  onPick: (company: PickedCompany) => void;
+  onPick: (picked: PickedCompany) => void;
   onClose: () => void;
 }) {
   const t = useT();
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
-  const list = useCompanyList(workspaceId, { ...NO_FILTERS, q });
-  const companies = (list.data?.pages ?? []).flatMap((page) => page.items);
+  const companyList = useCompanyList(workspaceId, { ...NO_FILTERS, q }, kind === "companies");
+  const contactList = useContactList(workspaceId, { ...NO_FILTERS, q }, kind === "contacts");
+  const list = kind === "companies" ? companyList : contactList;
+  // One shape for both kinds: what the option shows and what is picked.
+  const options =
+    kind === "companies"
+      ? (companyList.data?.pages ?? []).flatMap((page) =>
+          page.items.map((c) => ({ id: c.id, name: c.name, sub: c.domain ?? c.city })),
+        )
+      : (contactList.data?.pages ?? []).flatMap((page) =>
+          page.items.map((c) => ({
+            id: c.id,
+            name: [c.first_name, c.last_name].filter(Boolean).join(" "),
+            sub: c.email ?? c.phone,
+          })),
+        );
   const resultsId = `${id}-results`;
 
   // Escape anywhere in the panel closes the search, not the whole dialog.
@@ -153,10 +208,10 @@ function SearchPanel({
   } else if (list.isError && !list.data) {
     // A failed later page keeps the results already shown (below).
     results = <LoadError error={list.error} onRetry={() => void list.refetch()} />;
-  } else if (companies.length === 0) {
+  } else if (options.length === 0) {
     results = (
       <p className="muted" role="status">
-        {q ? t("picker.company.noMatch") : t("picker.company.none")}
+        {q ? t(text(kind, "noMatch")) : t(text(kind, "empty"))}
       </p>
     );
   } else {
@@ -165,21 +220,19 @@ function SearchPanel({
         <ListBox
           id={resultsId}
           className="picker-results"
-          aria-label={t("picker.company.results")}
-          items={companies}
+          aria-label={t(text(kind, "results"))}
+          items={options}
           selectionMode="single"
           selectedKeys={selectedId ? [selectedId] : []}
           onAction={(key) => {
-            const company = companies.find((c) => c.id === key);
-            if (company) onPick({ id: company.id, name: company.name });
+            const option = options.find((c) => c.id === key);
+            if (option) onPick({ id: option.id, name: option.name });
           }}
         >
-          {(company) => (
-            <ListBoxItem id={company.id} className="picker-option" textValue={company.name}>
-              <span className="picker-option-name">{company.name}</span>
-              {company.domain ?? company.city ? (
-                <span className="picker-option-sub">{company.domain ?? company.city}</span>
-              ) : null}
+          {(option) => (
+            <ListBoxItem id={option.id} className="picker-option" textValue={option.name}>
+              <span className="picker-option-name">{option.name}</span>
+              {option.sub ? <span className="picker-option-sub">{option.sub}</span> : null}
             </ListBoxItem>
           )}
         </ListBox>
@@ -190,7 +243,7 @@ function SearchPanel({
         ) : null}
         {list.hasNextPage ? (
           <Button size="sm" onPress={() => void list.fetchNextPage()} isDisabled={list.isFetchingNextPage}>
-            {list.isFetchingNextPage ? t("state.loading") : t("picker.company.more")}
+            {list.isFetchingNextPage ? t("state.loading") : t(text(kind, "more"))}
           </Button>
         ) : null}
       </>
@@ -217,9 +270,9 @@ function SearchPanel({
               }
             }
           }}
-          placeholder={t("picker.company.search")}
-          aria-label={t("picker.company.search")}
-          aria-controls={companies.length ? resultsId : undefined}
+          placeholder={t(text(kind, "search"))}
+          aria-label={t(text(kind, "search"))}
+          aria-controls={options.length ? resultsId : undefined}
           aria-describedby={errorId}
           aria-invalid={errorId ? true : undefined}
           maxLength={100}

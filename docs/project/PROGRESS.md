@@ -37,6 +37,50 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 4 slice 4B, deals (decision P4-B, 2026-10-27):**
+  - **Built:** migration `0011_opportunities` (`opportunity` with composite
+    keys to a stage of its own pipeline, RESTRICT, and to contacts and
+    companies, SET NULL of the link; `numeric(15,3)` amounts; open, won,
+    lost with a required lost reason) and the append-only
+    `opportunity_event` history (no UPDATE for the runtime role; `seq`
+    orders entries); `crm_app.opportunities` and its routes (list with
+    filters, five orders and cursors; summary per stage and currency;
+    create with `Idempotency-Key`; update and outcome with `If-Match`;
+    delete for Owner and Admin; history); stage removal with `move_to`;
+    the Opportunities page (board with drag-and-drop and summary totals,
+    table with outcome filter and sorting, drawer with stage stepper, Mark
+    won, Mark lost with a reason, Reopen, Delete, history; create and edit
+    dialog with contact and company pickers); Settings › Sales pipeline
+    asks where a removed stage's deals go; "+ New → Opportunity".
+  - **Money:** decimal strings end to end; the server refuses more minor
+    digits than the currency has (never rounds); the currency is the
+    workspace's when the deal is created; totals are summed per currency
+    in exact decimals (the UI adds them with integer arithmetic) and
+    formatted from the string.
+  - **Tests:** unit `test_opportunity_rules.py` (money per currency,
+    transitions, cursor types) and the route-policy table; integration
+    `test_opportunity_tables.py` (34: RLS, cross-workspace writes,
+    composite keys, value, outcome and history rules, append-only history,
+    order, deletions, purge, rollback to 0010) and
+    `test_opportunity_routes.py` (16: roles, isolation on every route and
+    reference, money, validation, idempotent create, versions, lifecycle,
+    history order and content, filters, orders, paging, summary parity,
+    currency at creation, stage removal with and without `move_to`,
+    concurrent updates and concurrent stage removal against creates,
+    audit without titles, amounts or reasons); Vitest
+    `opportunities.test.tsx` (8, with axe) and updated pipeline settings
+    and app-frame tests.
+  - **Browser** (local stack, dev DB migrated to 0011 without reset): a
+    deal created from the dialog with a contact picked; stage moved from
+    the drawer and by dragging a card; marked lost with a reason (stage
+    locked), reopened; history in order; summary and column totals;
+    removing the stage holding the deal moved it to the proposed stage with
+    a "stage removed" history entry; board, table and drawer fit 390 px
+    (the board scrolls inside itself); no console errors.
+  - **Limitations:** one pipeline; no tags, custom fields, import or export
+    for deals; no "Avg. days in stage" or "Won this month" metrics; card
+    order within a column is by last update; members show by ID; the
+    production bundle is over Vite's 500 kB warning (as before this slice).
 - **Phase 4 slice 4A, pipeline and stages (decision P4, 2026-10-27):**
   - **Built:** migration `0010_pipelines` (`pipeline`, `pipeline_stage`:
     forced RLS, composite keys, case-insensitive unique names, positions

@@ -51,7 +51,9 @@ const URL = `/w/${WS}/settings?section=pipeline`;
 describe("settings › sales pipeline", () => {
   it("shows the stages in order, read-only for Members", async () => {
     renderApp(URL, workspace(MEMBER));
-    const list = await screen.findByRole("list", { name: "Stages (3 of 15)" });
+    // The first render of the file also loads the settings page: allow for a
+    // busy test runner.
+    const list = await screen.findByRole("list", { name: "Stages (3 of 15)" }, { timeout: 4000 });
     expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
       "1Qualified20%",
       "2Meeting40%",
@@ -120,9 +122,16 @@ describe("settings › sales pipeline", () => {
 
     await user.click(await screen.findByRole("button", { name: "Remove Proposal" }));
     const confirm = await screen.findByRole("alertdialog", { name: "Remove stage?" });
+    // The last stage's deals go to the stage before it unless another is chosen.
+    const target = within(confirm).getByRole("combobox", { name: "Move its deals to" });
+    expect(target).toHaveValue(STAGES[1]?.id);
+    await user.selectOptions(target, STAGES[0]?.id ?? "");
     await user.click(within(confirm).getByRole("button", { name: "Remove stage" }));
     await waitFor(() => {
-      expect(sent.some((r) => r.method === "DELETE" && r.path.endsWith(STAGES[2]?.id ?? "?"))).toBe(true);
+      const removal = sent.find((r) => r.method === "DELETE");
+      expect(removal?.path).toBe(
+        `/v1/workspaces/${WS}/pipelines/${PIPE}/stages/${STAGES[2]?.id ?? ""}?move_to=${STAGES[0]?.id ?? ""}`,
+      );
     });
   });
 

@@ -69,7 +69,7 @@ export const GROUPS: Group[] = [
     sections: [
       built("contacts", "nav.contacts", Users),
       built("companies", "nav.companies", Building2),
-      soon("opportunities", "nav.opportunities", Kanban, "soon.sales"),
+      built("opportunities", "nav.opportunities", Kanban),
       soon("tasks", "nav.tasks", SquareCheckBig, "soon.sales"),
     ],
   },

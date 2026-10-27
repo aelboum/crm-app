@@ -31,7 +31,7 @@ export type PipelineChange =
   | { kind: "rename"; name: string }
   | { kind: "add"; name: string; probability: number }
   | { kind: "update"; stageId: string; name?: string; probability?: number }
-  | { kind: "delete"; stageId: string }
+  | { kind: "delete"; stageId: string; moveTo: string }
   | { kind: "reorder"; stageIds: string[] };
 
 async function send(workspaceId: string, pipeline: Pipeline, change: PipelineChange): Promise<Pipeline> {
@@ -65,7 +65,8 @@ async function send(workspaceId: string, pipeline: Pipeline, change: PipelineCha
     case "delete":
       return unwrapWrite(
         await api.DELETE("/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages/{stage_id}", {
-          params: { path: { ...path, stage_id: change.stageId }, header },
+          // The stage's deals, if any, move to `moveTo` first (decision P4-B 8).
+          params: { path: { ...path, stage_id: change.stageId }, header, query: { move_to: change.moveTo } },
         }),
       );
     case "reorder":
@@ -84,6 +85,8 @@ export function useChangePipeline(workspaceId: string) {
   return useMutation<Pipeline, ApiError, { pipeline: Pipeline; change: PipelineChange }>({
     mutationFn: ({ pipeline, change }) => send(workspaceId, pipeline, change),
     onSuccess: (updated) => {
+      // Stage names, probabilities and removals show on deals too.
+      void client.invalidateQueries({ queryKey: ["workspace", workspaceId, "opportunities"] });
       client.setQueryData<PipelineList>(pipelineKeys.all(workspaceId), (current) =>
         current
           ? { ...current, items: current.items.map((item) => (item.id === updated.id ? updated : item)) }

@@ -26,23 +26,25 @@ const signedIn: Handler = (method, path) => {
 
 describe("app frame", () => {
   it("shows the design's navigation, marking every module that is not built", async () => {
-    renderApp(`/w/${WS}/opportunities`, signedIn);
+    renderApp(`/w/${WS}/tasks`, signedIn);
     const nav = await screen.findByRole("navigation", { name: "Workspace" });
     for (const group of ["CRM", "Scheduling", "Marketing", "AI", "Insights"]) {
       expect(within(nav).getByRole("button", { name: group })).toHaveAttribute("aria-expanded", "true");
     }
-    const opportunities = within(nav).getByRole("link", { name: /Opportunities/ });
-    expect(opportunities).toHaveAttribute("aria-current", "page");
-    expect(opportunities).toHaveTextContent("soon");
-    // Contacts and Companies are built (slice 3A), so they carry no marker.
+    const tasks = within(nav).getByRole("link", { name: /Tasks/ });
+    expect(tasks).toHaveAttribute("aria-current", "page");
+    expect(tasks).toHaveTextContent("soon");
+    // Contacts, Companies (slice 3A) and Opportunities (slice 4B) are built,
+    // so they carry no marker.
+    expect(within(nav).getByRole("link", { name: "Opportunities" })).not.toHaveTextContent("soon");
     expect(within(nav).getByRole("link", { name: "Contacts" })).not.toHaveTextContent("soon");
     expect(within(nav).getByRole("link", { name: "Companies" })).not.toHaveTextContent("soon");
     expect(within(nav).getByRole("link", { name: "Settings" })).not.toHaveTextContent("soon");
   });
 
   it("opens the design's placeholder page for a module that is not built", async () => {
-    renderApp(`/w/${WS}/opportunities`, signedIn);
-    expect(await screen.findByRole("heading", { level: 1, name: "Opportunities" })).toBeInTheDocument();
+    renderApp(`/w/${WS}/tasks`, signedIn);
+    expect(await screen.findByRole("heading", { level: 1, name: "Tasks" })).toBeInTheDocument();
     expect(screen.getByText("Not available yet")).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });
