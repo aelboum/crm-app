@@ -73,6 +73,9 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "import_job",
         "import_row",
         "import_expiry",
+        # P4 (pipeline).
+        "pipeline",
+        "pipeline_stage",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",

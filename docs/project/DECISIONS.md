@@ -1018,6 +1018,62 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      in the CSV exports (P3-E1 and P3-E2 fix their columns). Removing a
      select option leaves stored values as they are.
 
+## P4 — Sales pipeline, deals and tasks (2026-10-27, under M1)
+
+- **Status:** Approved under M1; the owner confirmed one pipeline per
+  workspace ("go", 2026-10-27). Roadmap Phase 4 (4.1 tasks, 4.2
+  opportunities, 4.3 pipelines); P2-E (won and lost are outcomes, stage
+  history); the design's `ScreenPipeline.dc.html` (board, table, drawer,
+  "New opportunity") and `ScreenTasks.dc.html`. Built in slices 4A
+  (pipeline and stages), 4B (deals), 4C (tasks).
+- **Design audit:** the design has a pipeline switcher, a probability per
+  stage (20/40/60/75/100), a "Won" column that is the last stage, a
+  "Lost" stage hidden from the board, a per-deal probability overwritten
+  on every move, colours by column position, dollar values and close dates
+  as display strings. Kept: board and table, stage totals and
+  probabilities, idle days, owner filter, drawer with stage stepper, Mark
+  won and Mark lost. Changed: won and lost become the deal's outcome, not
+  stages (P2-E); one probability per stage, no per-deal override; values
+  in the workspace's currency; real dates.
+- **4A decisions (pipeline and stages):**
+  1. Tables `pipeline` and `pipeline_stage` (migration `0010_pipelines`):
+     tenant-owned, forced RLS, composite keys, in `PURGE_TABLES`. The
+     schema allows several pipelines; the product offers **one per
+     workspace** for now, so the design's pipeline switcher is not shown.
+  2. **The default pipeline** "Sales" with stages Qualified (20 %),
+     Meeting (40 %), Proposal (60 %), Negotiation (75 %) is created the
+     first time a workspace's pipeline is read, under SaaS-OS's tenant
+     advisory lock, so concurrent first reads create it once. No backfill
+     or provisioning step is needed, and workspaces created before Phase 4
+     get it too. Creating it is not a user action and is not audited.
+  3. **Stages** are open stages only: name trimmed, 1-40 characters, no
+     control characters, unique per pipeline regardless of case;
+     probability a whole number 0-100; 1-15 stages; order is a position.
+     No stored colour: the board shades columns by position, as the design
+     does. Won and lost are not stages.
+  4. **Who:** every role reads the pipeline (`pipeline:read`); renaming
+     it and adding, changing, reordering or removing stages needs
+     `pipeline:manage` (Owner, Admin). `/access` gains `manage_pipeline`.
+  5. **Concurrency:** the pipeline carries one version for its whole
+     configuration; every change sends `If-Match` with it and bumps it.
+  6. **Removing a stage** is refused for the last stage. From 4B, a stage
+     that holds deals can only be removed by naming another stage of the
+     same pipeline to move them to; each moved deal gets a stage-change
+     history entry.
+  7. **Audit:** `crm_app.pipeline.updated` (rename),
+     `.stage_created`, `.stage_updated`, `.stage_deleted`,
+     `.stages_reordered`, naming IDs and the changed field names, never
+     names.
+- **4B and 4C direction (detailed in their slices):** a deal (table
+  `opportunity`) has a title, a value as a decimal amount in the
+  workspace's currency, a stage, an owner, an expected close date, links
+  to one contact and one company, and an outcome `open`, `won` or `lost`
+  (with a reason for lost); its weighted value is value times its stage's
+  probability while open. Stage changes and outcomes are history entries.
+  Tasks have a title, an assignee, a due date and time, completion, and
+  an optional link to a contact, company or deal; Members may delete
+  tasks (Q6).
+
 ## P3-F — CSV import (2026-10-26)
 
 - **Status:** The owner decided the two open questions on 2026-10-26

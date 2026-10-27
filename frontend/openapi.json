@@ -2093,6 +2093,86 @@
         "title": "NotePage",
         "type": "object"
       },
+      "PipelineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 240,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PipelineIn",
+        "type": "object"
+      },
+      "PipelineList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PipelineOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "max_stages": {
+            "title": "Max Stages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "max_stages"
+        ],
+        "title": "PipelineList",
+        "type": "object"
+      },
+      "PipelineOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageOut"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "created_at",
+          "updated_at",
+          "stages"
+        ],
+        "title": "PipelineOut",
+        "type": "object"
+      },
       "Role": {
         "enum": [
           "Owner",
@@ -2335,6 +2415,109 @@
           "enabled"
         ],
         "title": "SignupStatus",
+        "type": "object"
+      },
+      "StageIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 240,
+            "title": "Name",
+            "type": "string"
+          },
+          "probability": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Probability",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "probability"
+        ],
+        "title": "StageIn",
+        "type": "object"
+      },
+      "StageOrderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "stage_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 15,
+            "minItems": 1,
+            "title": "Stage Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stage_ids"
+        ],
+        "title": "StageOrderIn",
+        "type": "object"
+      },
+      "StageOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "probability": {
+            "title": "Probability",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "probability",
+          "position"
+        ],
+        "title": "StageOut",
+        "type": "object"
+      },
+      "StagePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "probability": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability"
+          }
+        },
+        "title": "StagePatch",
         "type": "object"
       },
       "StatusChange": {
@@ -7244,6 +7427,548 @@
         "summary": "Update Note",
         "tags": [
           "notes"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/pipelines": {
+      "get": {
+        "operationId": "list_pipelines_v1_workspaces__tenant_id__pipelines_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pipelines",
+        "tags": [
+          "pipelines"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}": {
+      "patch": {
+        "operationId": "rename_pipeline_v1_workspaces__tenant_id__pipelines__pipeline_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pipeline_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pipeline Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rename Pipeline",
+        "tags": [
+          "pipelines"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stage-order": {
+      "put": {
+        "operationId": "reorder_stages_v1_workspaces__tenant_id__pipelines__pipeline_id__stage_order_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pipeline_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pipeline Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageOrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reorder Stages",
+        "tags": [
+          "pipelines"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages": {
+      "post": {
+        "operationId": "add_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pipeline_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pipeline Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Stage",
+        "tags": [
+          "pipelines"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages/{stage_id}": {
+      "delete": {
+        "operationId": "delete_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pipeline_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pipeline Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "stage_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Stage Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Stage",
+        "tags": [
+          "pipelines"
+        ]
+      },
+      "patch": {
+        "operationId": "update_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pipeline_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pipeline Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "stage_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Stage Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StagePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Stage",
+        "tags": [
+          "pipelines"
         ]
       }
     },

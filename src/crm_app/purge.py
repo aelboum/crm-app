@@ -61,6 +61,8 @@ PURGE_TABLES: tuple[str, ...] = (
     "company",
     "tag",
     "custom_field_definition",
+    "pipeline_stage",
+    "pipeline",
     "workspace_settings",
     "invitation_intent",
 )

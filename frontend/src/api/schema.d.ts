@@ -863,6 +863,92 @@ export interface paths {
         patch: operations["update_note_v1_workspaces__tenant_id__notes__note_id__patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/pipelines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pipelines */
+        get: operations["list_pipelines_v1_workspaces__tenant_id__pipelines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Rename Pipeline */
+        patch: operations["rename_pipeline_v1_workspaces__tenant_id__pipelines__pipeline_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stage-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reorder Stages */
+        put: operations["reorder_stages_v1_workspaces__tenant_id__pipelines__pipeline_id__stage_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Stage */
+        post: operations["add_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages/{stage_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Stage */
+        delete: operations["delete_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Stage */
+        patch: operations["update_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__patch"];
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/settings": {
         parameters: {
             query?: never;
@@ -1569,6 +1655,42 @@ export interface components {
             /** Record Archived */
             record_archived: boolean;
         };
+        /** PipelineIn */
+        PipelineIn: {
+            /** Name */
+            name: string;
+        };
+        /** PipelineList */
+        PipelineList: {
+            /** Items */
+            items: components["schemas"]["PipelineOut"][];
+            /** Max Stages */
+            max_stages: number;
+        };
+        /** PipelineOut */
+        PipelineOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Stages */
+            stages: components["schemas"]["StageOut"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
         /**
          * Role
          * @enum {string}
@@ -1647,6 +1769,39 @@ export interface components {
         SignupStatus: {
             /** Enabled */
             enabled: boolean;
+        };
+        /** StageIn */
+        StageIn: {
+            /** Name */
+            name: string;
+            /** Probability */
+            probability: number;
+        };
+        /** StageOrderIn */
+        StageOrderIn: {
+            /** Stage Ids */
+            stage_ids: string[];
+        };
+        /** StageOut */
+        StageOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Position */
+            position: number;
+            /** Probability */
+            probability: number;
+        };
+        /** StagePatch */
+        StagePatch: {
+            /** Name */
+            name?: string | null;
+            /** Probability */
+            probability?: number | null;
         };
         /** StatusChange */
         StatusChange: {
@@ -3868,6 +4023,232 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pipelines_v1_workspaces__tenant_id__pipelines_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_pipeline_v1_workspaces__tenant_id__pipelines__pipeline_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                pipeline_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PipelineIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_stages_v1_workspaces__tenant_id__pipelines__pipeline_id__stage_order_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                pipeline_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageOrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                pipeline_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                pipeline_id: string;
+                stage_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                pipeline_id: string;
+                stage_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StagePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineOut"];
                 };
             };
             /** @description Validation Error */

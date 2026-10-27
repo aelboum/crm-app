@@ -432,6 +432,8 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "import_job",
         "import_row",
         "import_expiry",
+        "pipeline",
+        "pipeline_stage",
     }
     for key, record in (("company_id", company), ("contact_id", contact)):
         rows = owner_connection.execute(

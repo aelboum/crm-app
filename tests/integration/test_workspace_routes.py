@@ -132,6 +132,7 @@ def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> 
         "delete_any_note": False,
         "export_records": False,
         "import_records": False,
+        "manage_pipeline": False,
     }
     assert owner["membership_id"] != reader["membership_id"]
 

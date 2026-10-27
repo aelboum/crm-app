@@ -56,6 +56,8 @@ ACTIONS: dict[str, tuple[str, str]] = {
     # route enforces the permission itself.
     "export_records": ("crm_app.crm_data", "export"),
     "import_records": ("crm_app.crm_data", "import"),
+    # The sales pipeline and its stages (decision P4 4A.4).
+    "manage_pipeline": ("crm_app.pipeline", "manage"),
 }
 
 

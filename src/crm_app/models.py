@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0009_imports` own the
+Migrations `0002_contacts_companies` to `0010_pipelines` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -364,3 +364,45 @@ class Signup(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Pipeline(Base):
+    """A sales pipeline (migration 0010, decision P4). Its version covers
+    the whole configuration, stages included."""
+
+    __tablename__ = "pipeline"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class PipelineStage(Base):
+    """An open stage of a pipeline (migration 0010, decision P4). Won and
+    lost are a deal's outcome, not stages."""
+
+    __tablename__ = "pipeline_stage"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "pipeline_id"],
+            [f"{SCHEMA}.pipeline.tenant_id", f"{SCHEMA}.pipeline.id"],
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    pipeline_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    probability: Mapped[int] = mapped_column(Integer)
+    position: Mapped[int] = mapped_column(Integer)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

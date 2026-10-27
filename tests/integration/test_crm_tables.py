@@ -342,4 +342,6 @@ def test_the_migration_rolls_back_and_forward(
         "import_job",
         "import_row",
         "import_expiry",
+        "pipeline",
+        "pipeline_stage",
     }

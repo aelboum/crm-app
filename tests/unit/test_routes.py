@@ -96,6 +96,18 @@ CONFIGURATION |= {
     f"POST {_FIELDS}/{{field_id}}/restore": "crm_app.workspace:update",
 }
 
+# The sales pipeline (decision P4 4A.4): every role reads it; changing it
+# is for Owner and Admin, through the catalogue's `pipeline:manage`.
+_PIPELINE = "/v1/workspaces/{tenant_id}/pipelines/{pipeline_id}"
+CONFIGURATION |= {
+    "GET /v1/workspaces/{tenant_id}/pipelines": "crm_app.pipeline:read",
+    f"PATCH {_PIPELINE}": "crm_app.pipeline:manage",
+    f"POST {_PIPELINE}/stages": "crm_app.pipeline:manage",
+    f"PATCH {_PIPELINE}/stages/{{stage_id}}": "crm_app.pipeline:manage",
+    f"DELETE {_PIPELINE}/stages/{{stage_id}}": "crm_app.pipeline:manage",
+    f"PUT {_PIPELINE}/stage-order": "crm_app.pipeline:manage",
+}
+
 # CSV import (decision P3-F 1): Owner and Admin only, through the
 # catalogue's `crm_data:import`.
 _IMPORTS = "/v1/workspaces/{tenant_id}/imports"
