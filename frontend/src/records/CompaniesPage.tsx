@@ -56,6 +56,7 @@ import {
   draftOf,
   draftProblems,
 } from "./CustomFields";
+import { ImportButton, ImportDialog } from "./ImportDialog";
 import { ActivitySection, NotesSection } from "./NotesSection";
 import { ListTags, TagSection } from "./TagEditor";
 import { useDebounced } from "./useDebounced";
@@ -103,6 +104,7 @@ export function CompaniesPage({
   const [search, setSearch] = useState("");
   const [owners, setOwners] = useState<string[]>([]);
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
   const tags = useTags(workspaceId);
   const [sort, setSort] = useState<Sort>("name");
   const [direction, setDirection] = useState<Direction>("asc");
@@ -144,6 +146,7 @@ export function CompaniesPage({
           </h1>
         </div>
         <div className="records-actions">
+          <ImportButton allowed={can("import_records")} onPress={() => { setImporting(true); }} />
           <ExportButton
             kind="companies"
             allowed={can("export_records")}
@@ -310,6 +313,9 @@ export function CompaniesPage({
         ) : null}
       </div>
 
+      {importing ? (
+        <ImportDialog workspaceId={workspaceId} entity="company" onClose={() => { setImporting(false); }} />
+      ) : null}
       {openId ? (
         <CompanyDrawer
           workspaceId={workspaceId}

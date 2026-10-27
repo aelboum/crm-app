@@ -382,8 +382,12 @@ messages; the design's validation texts.
   saved views); an "Archived" view is added so archived contacts can be
   restored. Companies get an Active/Archived switch instead of industry
   chips (industry is free text and the API has no industry filter).
-- *Not built, shown honestly:* Import is a disabled button named "not
-  available yet"; quick actions (Message, Call, Book, Deal), the
+- *Import (slice 3F, decision P3-F):* the design's Import button opens a
+  dialog (the design has no import screen): choose a CSV file, review the
+  column mapping, the counts and the refused rows, then import and follow
+  the progress. Members and Read-only users see Import disabled, named
+  "Import (Only Owners and Admins can import)". Companies gain the same
+  Import button. *Not built, shown honestly:* quick actions (Message, Call, Book, Deal), the
   bulk bar, the columns picker, opportunities, pipeline and "Won" are left
   out, and the drawer says what is not available.
 - *Export (slices 3E1 and 3E2, decisions P3-E1 and P3-E2):* Export works on

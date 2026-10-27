@@ -1,4 +1,4 @@
-import { CircleDot, Pencil, Plus, Search, Tag, Upload, User } from "lucide-react";
+import { CircleDot, Pencil, Plus, Search, Tag, User } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
@@ -26,6 +26,7 @@ import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
 import { CustomFieldsSection } from "./CustomFields";
+import { ImportButton, ImportDialog } from "./ImportDialog";
 import { ActivitySection, NotesSection } from "./NotesSection";
 import { ListTags, TagSection } from "./TagEditor";
 import {
@@ -100,6 +101,7 @@ export function ContactsPage({
   const [search, setSearch] = useState("");
   const [stages, setStages] = useState<Stage[]>([]);
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
   const tags = useTags(workspaceId);
   const [owners, setOwners] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>("name");
@@ -160,10 +162,7 @@ export function ContactsPage({
           </h1>
         </div>
         <div className="records-actions">
-          <Button isDisabled aria-label={`${t("records.import")} (${t("nav.soon")})`}>
-            <Upload size={14} aria-hidden="true" />
-            {t("records.import")}
-          </Button>
+          <ImportButton allowed={can("import_records")} onPress={() => { setImporting(true); }} />
           <ExportButton
             kind="contacts"
             allowed={can("export_records")}
@@ -325,6 +324,9 @@ export function ContactsPage({
         ) : null}
       </div>
 
+      {importing ? (
+        <ImportDialog workspaceId={workspaceId} entity="contact" onClose={() => { setImporting(false); }} />
+      ) : null}
       {openId ? (
         <ContactDrawer
           workspaceId={workspaceId}

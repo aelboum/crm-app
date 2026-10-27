@@ -44,7 +44,9 @@ export function renderApp(path: string, handler: Handler) {
     vi.fn(async (request: Request) => {
       const url = new URL(request.url, "http://localhost");
       const text = await request.text();
-      const body: unknown = text ? JSON.parse(text) : undefined;
+      // JSON bodies are parsed; anything else (an uploaded CSV file) stays text.
+      const isJson = (request.headers.get("content-type") ?? "").includes("json");
+      const body: unknown = text ? (isJson ? JSON.parse(text) : text) : undefined;
       const where = url.pathname + url.search;
       sent.push({ method: request.method, path: where, body });
       const headers = Object.fromEntries(

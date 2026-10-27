@@ -829,6 +829,20 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .tag-row:last-child { border-bottom: 0; }
 .tag-row.editing { display: block; }
 .tag-row-actions { display: flex; gap: 2px; flex-shrink: 0; }
+/* CSV import dialog (decision P3-F). */
+.import-dialog { display: flex; flex-direction: column; gap: 14px; }
+.import-mapping { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; align-items: end; }
+.import-mapping legend { margin-bottom: 6px; }
+.import-counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.import-counts div { background: #f7f8fa; border-radius: 8px; padding: 8px 10px; }
+.import-counts dt { font-size: 12px; color: #687082; }
+.import-counts dd { margin: 2px 0 0; font-size: 18px; font-weight: 600; }
+.import-errors { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+.import-progress p { margin: 0 0 8px; }
+@media (max-width: 640px) {
+  .import-mapping { grid-template-columns: minmax(0, 1fr); }
+  .import-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 /* Settings › Custom fields (decision P3-D). */
 .field-settings { padding: 16px 0 8px; }
 .field-settings > .field-entities { margin: 0 20px 12px; }

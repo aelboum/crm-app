@@ -34,9 +34,48 @@ decisions P2-A to P2-E approved)
   P2-G). CI passed on `5c06d48` (run 40094376772). Security findings are
   fixed or dispositioned (`PHASE2-SECURITY-REVIEW.md`); accepted residuals
   are deferred to Phase 13.
-- **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1 and 3E2
-  done; 3F (import) not started. Work continues under the owner's
-  autonomous-development mandate (decision M1).
+- **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
+  and 3F (CSV import) done. Work continues under the owner's
+  autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 3F CSV import (decision P3-F, 2026-10-26/27):**
+  - **Owner decisions:** import is Owner and Admin only, enforced
+    server-side; staging data is kept 7 days; imported records are never
+    deleted by that cleanup.
+  - **Built, in pushed increments:**
+    - 3F.1 (`3bce9b6`): permission `crm_app.crm_data:import` (Owner,
+      Admin; `/access` `import_records`), migration `0009_imports`
+      (`import_job`, `import_row`, global `import_expiry`);
+    - 3F.2 (`623e65c`): `POST /imports` takes the CSV as the body (5 MB,
+      10,000 rows, UTF-8 or Windows-1252, comma/semicolon/tab), proposes
+      or takes a mapping, validates rows with the API's rules, marks
+      duplicates (active records and earlier rows) to skip; list, detail
+      and an error report of row, field and code; 10 previews per hour;
+    - 3F.3 (`e7157ca`): `commit`, `cancel`, `resume`; the worker job
+      `crm_app_import_commit` creates records in batches of 500 with the
+      same rules, history and audit as typed records, idempotent on
+      redelivery, one import at a time per workspace;
+    - 3F.4: `python -m crm_app.import_maintenance` deletes staged rows
+      when due (7 days after finishing, or after a never-committed
+      preview, which becomes `expired`); the Import dialog on Contacts
+      and Companies (file, column mapping, counts, refused rows, error
+      report, import with progress, stop, resume).
+  - **Tests:** unit `test_import_rules.py`; integration
+    `test_import_tables.py`, `test_imports.py`, `test_import_commit.py`
+    (job function run directly: batches, redelivery, cancel, failure and
+    resume), `test_import_maintenance.py`; Vitest `imports.test.tsx` (7,
+    with axe). The full integration suite runs in five chunks locally
+    because of memory pressure on this machine.
+  - **Browser** (local stack; a fresh local test workspace provisioned for
+    a throwaway Owner, because workspaces created before 3F.1 lack the new
+    permission, gate G7): a 6-row file previewed as 3 ready, 1 duplicate,
+    2 refused with their reasons; importing through the running worker
+    created the 3 contacts with source "import" (the formula-like name kept
+    as text); the dialog and page fit 390 px; no console errors.
+  - **Limitations:** owners, tags, custom fields and company links are not
+    imported; nothing is ever updated or merged; the preview limit is a
+    fixed window (as P3-E1); workspaces provisioned before 3F.1 cannot
+    import until SaaS-OS offers a way to grant new permissions (G7); the
+    maintenance command must be scheduled by the deployment.
 - **Phase 3D custom fields (decision P3-D, 2026-10-26, under M1):**
   - **Built, in four pushed increments:**
     - 3D.1 (`744f499`): migration `0008_custom_fields`:
