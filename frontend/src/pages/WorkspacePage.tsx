@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ExternalLink,
   Eye,
+  Kanban,
   ListPlus,
   Minus,
   Palette,
@@ -30,6 +31,7 @@ import { en, type MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { BusinessSettings } from "./BusinessSettings";
 import { FieldSettings } from "./FieldSettings";
+import { PipelineSettings } from "./PipelineSettings";
 import { TagSettings } from "./TagSettings";
 import { type Invitation, useInvitations } from "../api/invitations";
 import { availableActions, highestRole, type MemberAction } from "../members/actions";
@@ -430,6 +432,7 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
       { id: "tags", label: "settings.tags", icon: Tag },
       { id: "notifications", label: "settings.notifications", icon: Bell },
       { id: "fields", label: "settings.fields", icon: ListPlus },
+      { id: "pipeline", label: "settings.pipeline", icon: Kanban },
       { id: "ai", label: "settings.ai", icon: Sparkles },
       { id: "integrations", label: "settings.integrations", icon: Plug },
       { id: "appearance", label: "settings.appearance", icon: Palette },
@@ -438,8 +441,8 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
 ];
 
 /** The settings sections that exist; every other one is marked "soon". */
-export type SettingsSection = "team" | "profile" | "business" | "tags" | "fields";
-const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business", "tags", "fields"];
+export type SettingsSection = "team" | "profile" | "business" | "tags" | "fields" | "pipeline";
+const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business", "tags", "fields", "pipeline"];
 
 const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId }> = {
   team: { title: "settings.team", desc: "settings.teamDesc" },
@@ -447,6 +450,7 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
   business: { title: "settings.business", desc: "settings.businessDesc" },
   tags: { title: "settings.tags", desc: "settings.tagsDesc" },
   fields: { title: "settings.fields", desc: "settings.fieldsDesc" },
+  pipeline: { title: "settings.pipeline", desc: "settings.pipelineDesc" },
 };
 
 /**
@@ -593,6 +597,9 @@ export function SettingsPage({
           ) : null}
           {access.data && section === "fields" ? (
             <FieldSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />
+          ) : null}
+          {access.data && section === "pipeline" ? (
+            <PipelineSettings workspaceId={workspaceId} canEdit={access.data.actions.manage_pipeline === true} />
           ) : null}
           {access.data && section === "tags" ? (
             <TagSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />

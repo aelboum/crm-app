@@ -159,7 +159,8 @@ const sectionRoute = createRoute({
     ...(search.section === "profile" ||
     search.section === "business" ||
     search.section === "tags" ||
-    search.section === "fields"
+    search.section === "fields" ||
+    search.section === "pipeline"
       ? { section: search.section }
       : {}),
     ...(typeof search.record === "string" && isWorkspaceId(search.record) ? { record: search.record } : {}),

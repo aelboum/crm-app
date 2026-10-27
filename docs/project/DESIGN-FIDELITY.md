@@ -63,7 +63,8 @@ L243-247):
 | Settings › other sections (business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
 | Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values; flows checked in Chrome at desktop width |
 | Companies (`ScreenCompanies`) | `/companies` | 3 | List, drawer with the company's people, and create/edit dialog (§4c); compared from source values; flows checked in Chrome at desktop width |
-| Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | Placeholder |
+| Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | Placeholder (4B) |
+| Settings › Sales pipeline (not in the design; P4 4A) | `/settings?section=pipeline` | 4 | **Implemented** — stage names, probabilities and order; won and lost are outcomes, not stages |
 | Tasks (`ScreenTasks`) | `/tasks` | 4 | Placeholder |
 | Inbox (`ScreenConversations`) | `/inbox` | 6 | Placeholder |
 | Calendar (`ScreenCalendar`) | `/calendar` | 5 (outside MVP, K5) | Placeholder |

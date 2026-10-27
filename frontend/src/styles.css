@@ -878,3 +878,20 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .invite-link { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
 .invite-link .form-input { flex: 1; font-size: 12px; }
 .member-row > .btn { flex: none; }
+/* Settings › Sales pipeline (decision P4, slice 4A). */
+.pipeline-settings { padding: 16px 0 8px; }
+.pipeline-settings > .profile-note { margin: 0 20px 12px; }
+.pipeline-settings > .notice { margin: 0 20px 12px; }
+.pipeline-settings > .tag-new { margin: 0 20px 16px; }
+.pipeline-title { margin: 0 20px 12px; font-weight: 600; }
+.pipeline-stages-title { margin: 8px 20px; font-size: 13px; font-weight: 600; color: #687082; }
+.stage-row { justify-content: flex-start; }
+.stage-order { width: 20px; flex-shrink: 0; color: #687082; font-variant-numeric: tabular-nums; }
+.stage-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.stage-probability { color: #687082; font-variant-numeric: tabular-nums; }
+.stage-new .stage-probability-field { flex: 0 0 120px; }
+.stage-rows + .stage-new { margin-top: 16px; }
+@media (max-width: 640px) {
+  .stage-new .stage-probability-field { flex-basis: 100%; }
+  .stage-row { flex-wrap: wrap; }
+}

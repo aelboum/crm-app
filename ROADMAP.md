@@ -505,7 +505,7 @@ Support:
 
 # 9. Phase 4 — Sales, Tasks, and Pipelines
 
-**Status:** Not started.
+**Status:** In progress (decision P4). Slice 4A, pipeline and stages, is done; 4B deals and 4C tasks follow.
 
 ## Objectives
 

@@ -37,6 +37,31 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 4 slice 4A, pipeline and stages (decision P4, 2026-10-27):**
+  - **Built:** migration `0010_pipelines` (`pipeline`, `pipeline_stage`:
+    forced RLS, composite keys, case-insensitive unique names, positions
+    unique per pipeline and checked at commit, in `PURGE_TABLES`);
+    `crm_app.pipelines` and `GET /pipelines` (every role; the default
+    pipeline "Sales" with four stages is created on the first read, once,
+    under the tenant advisory lock), rename, add, change, reorder and
+    remove stages (`pipeline:manage`, Owner and Admin; one version for the
+    whole pipeline, `If-Match` on every change; 1-15 stages; audited by ID
+    without names); `/access` `manage_pipeline`; Settings › Sales pipeline
+    (move up and down buttons instead of drag, so it works from the
+    keyboard).
+  - **Tests:** unit `test_pipeline_rules.py` and the route-policy table;
+    integration `test_pipeline_tables.py` (RLS, cross-workspace writes,
+    composite key, rules, deferred positions, cascade, purge, rollback to
+    0009) and `test_pipeline_routes.py` (roles, concurrent first reads,
+    versions, validation, limits, cross-workspace 404s, audit); Vitest
+    `pipelineSettings.test.tsx` (8, with axe).
+  - **Browser** (local stack, dev DB migrated to 0010 without reset): the
+    default pipeline appeared on first visit; adding "Closing" at 90 % and
+    moving a stage down were saved (API shows version 3, positions 0-4);
+    fits 390 px; no console errors.
+  - **Limitations:** one pipeline per workspace (the design's switcher is
+    not shown); no deals yet, so removing a stage moves nothing until 4B
+    adds the move-to rule (P4 4A.6).
 - **Phase 3F CSV import (decision P3-F, 2026-10-26/27):**
   - **Owner decisions:** import is Owner and Admin only, enforced
     server-side; staging data is kept 7 days; imported records are never
