@@ -58,6 +58,11 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "import_records": ("crm_app.crm_data", "import"),
     # The sales pipeline and its stages (decision P4 4A.4).
     "manage_pipeline": ("crm_app.pipeline", "manage"),
+    # Deals (decision P4-B 6): create, update (stages and outcomes too) and
+    # delete.
+    "create_opportunity": ("crm_app.opportunity", "create"),
+    "update_opportunity": ("crm_app.opportunity", "update"),
+    "delete_opportunity": ("crm_app.opportunity", "delete"),
 }
 
 

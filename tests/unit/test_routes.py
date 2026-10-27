@@ -108,6 +108,20 @@ CONFIGURATION |= {
     f"PUT {_PIPELINE}/stage-order": "crm_app.pipeline:manage",
 }
 
+# Deals (decision P4-B 6, Q6): every role reads; Owner, Admin and Member
+# create and update; Owner and Admin delete.
+_DEALS = "/v1/workspaces/{tenant_id}/opportunities"
+RECORDS |= {
+    f"GET {_DEALS}": "crm_app.opportunity:read",
+    f"GET {_DEALS}/summary": "crm_app.opportunity:read",
+    f"POST {_DEALS}": "crm_app.opportunity:create",
+    f"GET {_DEALS}/{{deal_id}}": "crm_app.opportunity:read",
+    f"PATCH {_DEALS}/{{deal_id}}": "crm_app.opportunity:update",
+    f"POST {_DEALS}/{{deal_id}}/outcome": "crm_app.opportunity:update",
+    f"DELETE {_DEALS}/{{deal_id}}": "crm_app.opportunity:delete",
+    f"GET {_DEALS}/{{deal_id}}/history": "crm_app.opportunity:read",
+}
+
 # CSV import (decision P3-F 1): Owner and Admin only, through the
 # catalogue's `crm_data:import`.
 _IMPORTS = "/v1/workspaces/{tenant_id}/imports"

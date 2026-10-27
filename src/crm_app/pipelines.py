@@ -14,7 +14,8 @@ locked, workspace-scoped transaction. Audit entries name IDs and changed
 field names, never names (P4 4A.7).
 
 Stage positions are always 0..n-1. Removing a stage renumbers the rest;
-the last stage cannot be removed (P4 4A.6).
+the last stage cannot be removed (P4 4A.6), and a stage holding deals only
+with a stage to move them to (P4-B 8).
 
 SaaS-OS resolves configuration at import time; only code that runs after
 validation imports this module.
@@ -41,7 +42,7 @@ from saas_os.infra.db import (
 )
 
 from crm_app.domains import pipelines as rules
-from crm_app.models import Pipeline, PipelineStage
+from crm_app.models import Opportunity, Pipeline, PipelineStage
 from crm_app.records import (
     ConstraintViolationError,
     RecordError,
@@ -54,6 +55,7 @@ from crm_app.records import (
 RESOURCE = "crm_app.pipeline"
 _STAGE_NAME_KEY = "pipeline_stage_name_key"
 _PIPELINE_NAME_KEY = "pipeline_name_key"
+_DEAL_STAGE_KEY = "opportunity_stage_fkey"
 
 
 class PipelineNotFoundError(RecordError):
@@ -82,6 +84,22 @@ class LastStageError(RecordError):
 
 class InvalidStageOrderError(RecordError):
     status, code = 422, "invalid_stage_order"
+
+
+class StageInUseError(RecordError):
+    """The stage holds deals and no stage to move them to was named."""
+
+    status, code = 409, "stage_in_use"
+
+    def __init__(self, deals: int) -> None:
+        super().__init__(self.code)
+        self.deals = deals
+
+
+class InvalidMoveTargetError(RecordError):
+    """`move_to` is not another stage of the same pipeline."""
+
+    status, code = 422, "invalid_move_target"
 
 
 Described = dict[str, Any]
@@ -153,6 +171,8 @@ def _transaction[T](scope: Scope, fn: Callable[[Session], T]) -> T:
             raise DuplicateStageError from None
         if constraint == _PIPELINE_NAME_KEY:
             raise DuplicatePipelineError from None
+        if constraint == _DEAL_STAGE_KEY:
+            raise StageInUseError(0) from None
         raise ConstraintViolationError from None
     except OperationalError as exc:
         if is_transaction_conflict(exc):
@@ -219,6 +239,16 @@ def list_pipelines(scope: Scope) -> list[Described]:
 
 
 # --- Changes ----------------------------------------------------------------------
+
+
+def _deal_count(session: Session, scope: Scope, stage_id: uuid.UUID) -> int:
+    return len(
+        session.execute(
+            select(Opportunity.id).where(
+                Opportunity.tenant_id == scope.workspace, Opportunity.stage_id == stage_id
+            )
+        ).all()
+    )
 
 
 def _locked(session: Session, scope: Scope, pipeline_id: uuid.UUID, expected: int) -> Pipeline:
@@ -379,10 +409,37 @@ def reorder_stages(
     return _transaction(scope, apply)
 
 
+def _move_deals(session: Session, scope: Scope, stage: PipelineStage, to: PipelineStage) -> int:
+    """Move every deal in `stage` to `to`, each with its history entry
+    (P4-B 8). The pipeline's row lock keeps deal writes out meanwhile."""
+    from crm_app.opportunities import move_to_stage  # noqa: PLC0415 - it imports this module
+
+    deals = list(
+        session.execute(
+            select(Opportunity)
+            .where(Opportunity.tenant_id == scope.workspace, Opportunity.stage_id == stage.id)
+            .order_by(Opportunity.id)
+            .with_for_update()
+        ).scalars()
+    )
+    entries = [move_to_stage(scope, deal, stage, to, "stage_removed") for deal in deals]
+    session.flush()
+    session.add_all(entries)
+    session.flush()
+    return len(deals)
+
+
 def delete_stage(
-    scope: Scope, pipeline_id: uuid.UUID, stage_id: uuid.UUID, *, expected_version: int
+    scope: Scope,
+    pipeline_id: uuid.UUID,
+    stage_id: uuid.UUID,
+    *,
+    expected_version: int,
+    move_to: uuid.UUID | None = None,
 ) -> Described:
-    """Remove a stage and renumber the rest. The last stage stays."""
+    """Remove a stage and renumber the rest. The last stage stays. A stage
+    holding deals is removed only with `move_to`, another stage of the same
+    pipeline, where its deals go first (P4-B 8)."""
 
     def apply(session: Session) -> Described:
         pipeline = _locked(session, scope, pipeline_id, expected_version)
@@ -390,6 +447,21 @@ def delete_stage(
         stage = _stage(stages, stage_id)
         if len(stages) == 1:
             raise LastStageError
+        target = None
+        if move_to is not None:
+            target = next((s for s in stages if s.id == move_to and s.id != stage.id), None)
+            if target is None:
+                raise InvalidMoveTargetError
+        held = session.execute(
+            select(Opportunity.id)
+            .where(Opportunity.tenant_id == scope.workspace, Opportunity.stage_id == stage.id)
+            .limit(1)
+        ).first()
+        moved = 0
+        if held is not None:
+            if target is None:
+                raise StageInUseError(_deal_count(session, scope, stage.id))
+            moved = _move_deals(session, scope, stage, target)
         session.delete(stage)
         session.flush()
         now = _now()
@@ -401,7 +473,10 @@ def delete_stage(
                 other.updated_by_user_id = scope.actor
         _bump(pipeline, scope, now)
         session.flush()
-        _audit(session, scope, "stage_deleted", pipeline.id, stage_id=str(stage_id))
+        metadata: dict[str, Any] = {"stage_id": str(stage_id)}
+        if target is not None:
+            metadata |= {"moved_to": str(target.id), "moved_deals": moved}
+        _audit(session, scope, "stage_deleted", pipeline.id, **metadata)
         return _out(pipeline, remaining)
 
     return _transaction(scope, apply)

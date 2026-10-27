@@ -5,6 +5,7 @@
     POST   /v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages              pipeline:manage
     PATCH  /v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages/{stage_id}   pipeline:manage
     DELETE /v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stages/{stage_id}   pipeline:manage
+           ?move_to={stage_id} moves the stage's deals first (P4-B 8)
     PUT    /v1/workspaces/{tenant_id}/pipelines/{pipeline_id}/stage-order         pipeline:manage
 
 Each declares exactly one `require_permission` from the existing catalogue
@@ -23,7 +24,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
@@ -214,12 +215,22 @@ def delete_stage(
     context: Manage,
     response: Response,
     if_match: IfMatch = None,
+    move_to: Annotated[uuid.UUID | None, Query()] = None,
 ) -> Any:
+    """`move_to` names the stage that receives the removed stage's deals
+    (P4-B 8); without it, a stage holding deals is refused with
+    `stage_in_use` and the number of deals."""
     expected = _version(if_match)
     try:
         pipeline = pipelines.delete_stage(
-            _scope(context), stage.pipeline_id, stage.stage_id, expected_version=expected
+            _scope(context),
+            stage.pipeline_id,
+            stage.stage_id,
+            expected_version=expected,
+            move_to=move_to,
         )
+    except pipelines.StageInUseError as exc:
+        raise HTTPException(409, detail={"code": exc.code, "deals": exc.deals}) from None
     except RecordError as exc:
         raise _http(exc) from None
     return _answer(response, pipeline)

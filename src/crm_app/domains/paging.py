@@ -20,8 +20,9 @@ import binascii
 import hashlib
 import json
 import uuid
-from collections.abc import Mapping, Sequence
-from datetime import datetime
+from collections.abc import Callable, Mapping, Sequence
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 CURSOR_MAX = 1024
 _FORMAT = 1
@@ -43,9 +44,20 @@ ORDER_KEYS: Mapping[str, Mapping[str, Sequence[str]]] = {
     # A record's history and notes, newest first (`PHASE3-PLAN.md` §21).
     "activity": {"occurred_at": ("datetime", "uuid")},
     "note": {"created_at": ("datetime", "uuid")},
+    # Deals (decision P4-B 10). "decimal?" and "date?" are nullable and sort
+    # last ascending; a deal's history is ordered by its sequence number.
+    "opportunity": {
+        "updated_at": ("datetime", "uuid"),
+        "created_at": ("datetime", "uuid"),
+        "title": ("text", "uuid"),
+        "amount": ("decimal?", "uuid"),
+        "expected_close_date": ("date?", "uuid"),
+    },
+    "opportunity_event": {"seq": ("int",)},
 }
 
-Key = tuple[str | datetime | uuid.UUID | None, ...]
+Value = str | datetime | date | Decimal | int | uuid.UUID | None
+Key = tuple[Value, ...]
 
 
 class InvalidCursor(ValueError):
@@ -58,31 +70,57 @@ def filter_hash(filters: Mapping[str, object]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
-def _dump(value: str | datetime | uuid.UUID | None) -> str | None:
+def _dump(value: Value) -> str | None:
     if value is None:
         return None
-    if isinstance(value, datetime):
+    if isinstance(value, datetime | date):
         return value.isoformat()
     return str(value)
 
 
-def _load(kind: str, value: object) -> str | datetime | uuid.UUID | None:
+def _aware(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        raise InvalidCursor
+    return parsed
+
+
+def _finite(value: str) -> Decimal:
+    number = Decimal(value)
+    if not number.is_finite():
+        raise InvalidCursor
+    return number
+
+
+def _count(value: str) -> int:
+    if not value.isascii() or not value.isdigit() or len(value) > 19:
+        raise InvalidCursor
+    return int(value)
+
+
+# How each non-text key type is read back; text is checked in `_load`.
+_PARSERS: Mapping[str, Callable[[str], Value]] = {
+    "uuid": uuid.UUID,
+    "datetime": _aware,
+    "date?": date.fromisoformat,
+    "decimal?": _finite,
+    "int": _count,
+}
+
+
+def _load(kind: str, value: object) -> Value:
     if value is None:
-        if kind == "text?":
+        if kind.endswith("?"):
             return None
         raise InvalidCursor
     if not isinstance(value, str):
         raise InvalidCursor
-    try:
-        if kind == "uuid":
-            return uuid.UUID(value)
-        if kind == "datetime":
-            parsed = datetime.fromisoformat(value)
-            if parsed.tzinfo is None:
-                raise InvalidCursor
-            return parsed
-    except ValueError:
-        raise InvalidCursor from None
+    parser = _PARSERS.get(kind)
+    if parser is not None:
+        try:
+            return parser(value)
+        except (ValueError, InvalidOperation):
+            raise InvalidCursor from None
     if "\x00" in value:
         raise InvalidCursor
     return value

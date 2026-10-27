@@ -1074,6 +1074,71 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   an optional link to a contact, company or deal; Members may delete
   tasks (Q6).
 
+## P4-B — Deals (2026-10-27, under M1)
+
+- **Status:** Approved under M1 (owner instruction of 2026-10-27, "Implement
+  Phase 4B — Deals end to end"). Refines P4's 4B direction; slice 4B.
+- **Decisions:**
+  1. Tables `opportunity` and `opportunity_event` (migration
+     `0011_opportunities`): tenant-owned, forced RLS, composite keys, in
+     `PURGE_TABLES`.
+  2. **Money.** `amount` is optional, `numeric(15,3)`, never negative, sent
+     and returned as a decimal string (`"12500.50"`), never a JSON number,
+     so no client or server step uses floating point. It may have at most
+     the currency's ISO 4217 minor digits (0 for JPY and the like, 3 for
+     BHD and the like, otherwise 2) and at most 12 whole digits; anything
+     else is refused, never rounded. `currency` is the workspace's currency
+     when the deal is created, set by the server and never by the client;
+     there is no per-deal override. Changing the workspace's currency later
+     does not rewrite existing deals: each keeps the currency its amount
+     was entered in, and totals are summed per currency in exact decimals.
+  3. **Stage.** A deal references a stage of the workspace's pipeline
+     through `(tenant_id, pipeline_id, stage_id)`, `ON DELETE RESTRICT`. A
+     new deal starts in the first stage unless another is given.
+     `stage_entered_at` dates the current stage, for "idle" (7 days or
+     more in the stage while open, as the design's filter).
+  4. **Links.** Contact, company and owner are optional. A contact or
+     company must be an active (not archived) record of the same workspace
+     when linked; composite keys with `ON DELETE SET NULL` of the link
+     column keep the deal if the record is later deleted. The owner must
+     be an active member (as for contacts).
+  5. **Outcomes.** `open`, `won`, `lost`. Allowed: open to won or lost,
+     won or lost back to open ("reopen"); won to lost and lost to won go
+     through open. Lost needs a reason (trimmed, 1-500 characters); reopening
+     clears it. `closed_at` is set while won or lost. A closed deal's stage
+     cannot change (`deal_closed`); its other fields can.
+  6. **Who** (Q6): every role reads; Owner, Admin and Member create and
+     update, which includes stage changes and outcomes; only Owner and
+     Admin delete.
+  7. **History** (`opportunity_event`): append-only for the application:
+     the runtime role has SELECT, INSERT and DELETE (purge and the cascade
+     from a deleted deal) but not UPDATE, and no application code deletes
+     an entry. A sequence number orders entries within one transaction.
+     Kinds: `created`, `updated` (changed field names from an allow-list),
+     `stage_changed` (stage IDs with their names at the time, and whether
+     it was a move or a stage removal), `owner_changed`, `outcome_changed`.
+     Never amounts, titles or the lost reason.
+  8. **Removing a stage that holds deals** needs `move_to`, another stage of
+     the same pipeline; the deals move, each with a `stage_changed` entry,
+     in the transaction that removes the stage. Without `move_to` the
+     refusal is `stage_in_use` with the number of deals.
+  9. **Concurrency.** Every deal write takes a share lock on its pipeline's
+     row; pipeline changes take the row lock, so a stage removal and a deal
+     write never interleave. Deal updates and outcomes need `If-Match`;
+     create accepts `Idempotency-Key` (scoped to the member).
+  10. **Lists.** `GET /opportunities` filters by text in the title, outcome,
+     stage, owner, contact, company and idle, orders by updated, created,
+     title, amount or expected close date with cursor paging;
+     `GET /opportunities/summary` returns, for the same filters, each
+     stage's open-deal count and per-currency total and weighted total. The
+     board and the table use the same filters, so they agree.
+  11. **Audit:** `crm_app.opportunity.created`, `.updated`,
+     `.outcome_changed`, `.deleted` with IDs and field names only; a stage
+     removal's audit entry counts the deals moved.
+  12. **Not in 4B:** custom fields and tags on deals, deal import and export,
+     several pipelines, per-deal probability, card order within a column
+     (cards are ordered by last update).
+
 ## P3-F — CSV import (2026-10-26)
 
 - **Status:** The owner decided the two open questions on 2026-10-26

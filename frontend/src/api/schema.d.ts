@@ -863,6 +863,94 @@ export interface paths {
         patch: operations["update_note_v1_workspaces__tenant_id__notes__note_id__patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/opportunities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Opportunities */
+        get: operations["list_opportunities_v1_workspaces__tenant_id__opportunities_get"];
+        put?: never;
+        /** Create Opportunity */
+        post: operations["create_opportunity_v1_workspaces__tenant_id__opportunities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/opportunities/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summarize Opportunities */
+        get: operations["summarize_opportunities_v1_workspaces__tenant_id__opportunities_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/opportunities/{deal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Opportunity */
+        get: operations["get_opportunity_v1_workspaces__tenant_id__opportunities__deal_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Opportunity */
+        delete: operations["delete_opportunity_v1_workspaces__tenant_id__opportunities__deal_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Opportunity */
+        patch: operations["update_opportunity_v1_workspaces__tenant_id__opportunities__deal_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/opportunities/{deal_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Opportunity History */
+        get: operations["opportunity_history_v1_workspaces__tenant_id__opportunities__deal_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/opportunities/{deal_id}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Opportunity Outcome */
+        post: operations["set_opportunity_outcome_v1_workspaces__tenant_id__opportunities__deal_id__outcome_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/pipelines": {
         parameters: {
             query?: never;
@@ -941,7 +1029,12 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete Stage */
+        /**
+         * Delete Stage
+         * @description `move_to` names the stage that receives the removed stage's deals
+         *     (P4-B 8); without it, a stage holding deals is refused with
+         *     `stage_in_use` and the number of deals.
+         */
         delete: operations["delete_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__delete"];
         options?: never;
         head?: never;
@@ -1351,6 +1444,172 @@ export interface components {
              */
             user_id: string;
         };
+        /** DealEvent */
+        DealEvent: {
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** Fields */
+            fields: string[] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Outcome From */
+            outcome_from: string | null;
+            /** Outcome To */
+            outcome_to: string | null;
+            /** Owner From */
+            owner_from: string | null;
+            /** Owner To */
+            owner_to: string | null;
+            /** Stage Cause */
+            stage_cause: string | null;
+            /** Stage From */
+            stage_from: string | null;
+            /** Stage From Name */
+            stage_from_name: string | null;
+            /** Stage To */
+            stage_to: string | null;
+            /** Stage To Name */
+            stage_to_name: string | null;
+        };
+        /** DealHistory */
+        DealHistory: {
+            /** Items */
+            items: components["schemas"]["DealEvent"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** DealIn */
+        DealIn: {
+            /** Amount */
+            amount?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Expected Close Date */
+            expected_close_date?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Stage Id */
+            stage_id?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** DealOut */
+        DealOut: {
+            /** Amount */
+            amount: string | null;
+            /** Closed At */
+            closed_at: string | null;
+            company: components["schemas"]["LinkRef"] | null;
+            /** Company Id */
+            company_id: string | null;
+            contact: components["schemas"]["LinkRef"] | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /** Currency */
+            currency: string;
+            /** Expected Close Date */
+            expected_close_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lost Reason */
+            lost_reason: string | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "open" | "won" | "lost";
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /**
+             * Pipeline Id
+             * Format: uuid
+             */
+            pipeline_id: string;
+            stage: components["schemas"]["StageRef"];
+            /**
+             * Stage Entered At
+             * Format: date-time
+             */
+            stage_entered_at: string;
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By User Id */
+            updated_by_user_id: string | null;
+            /** Version */
+            version: number;
+            /** Weighted Amount */
+            weighted_amount: string | null;
+        };
+        /** DealPage */
+        DealPage: {
+            /** Items */
+            items: components["schemas"]["DealOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+            /** Total Capped */
+            total_capped: boolean;
+        };
+        /**
+         * DealPatch
+         * @description Only the fields sent change; `null` clears an optional one.
+         */
+        DealPatch: {
+            /** Amount */
+            amount?: string | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Expected Close Date */
+            expected_close_date?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Stage Id */
+            stage_id?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** DealSummary */
+        DealSummary: {
+            /** Stages */
+            stages: components["schemas"]["StageSummary"][];
+            /** Total Capped */
+            total_capped: boolean;
+        };
         /** DefinitionCreate */
         DefinitionCreate: {
             /**
@@ -1571,6 +1830,18 @@ export interface components {
              */
             status: "pending" | "accepted" | "expired" | "revoked";
         };
+        /** LinkRef */
+        LinkRef: {
+            /** Archived */
+            archived: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** Member */
         Member: {
             /**
@@ -1654,6 +1925,16 @@ export interface components {
             next_cursor: string | null;
             /** Record Archived */
             record_archived: boolean;
+        };
+        /** OutcomeIn */
+        OutcomeIn: {
+            /** Lost Reason */
+            lost_reason?: string | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "open" | "won" | "lost";
         };
         /** PipelineIn */
         PipelineIn: {
@@ -1802,6 +2083,41 @@ export interface components {
             name?: string | null;
             /** Probability */
             probability?: number | null;
+        };
+        /** StageRef */
+        StageRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Position */
+            position: number;
+            /** Probability */
+            probability: number;
+        };
+        /** StageSummary */
+        StageSummary: {
+            /** Count */
+            count: number;
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Totals */
+            totals: components["schemas"]["StageTotal"][];
+        };
+        /** StageTotal */
+        StageTotal: {
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /** Weighted Amount */
+            weighted_amount: string;
         };
         /** StatusChange */
         StatusChange: {
@@ -4036,6 +4352,311 @@ export interface operations {
             };
         };
     };
+    list_opportunities_v1_workspaces__tenant_id__opportunities_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                outcome?: ("open" | "won" | "lost")[];
+                stage_id?: string[];
+                owner?: string[];
+                contact_id?: string[];
+                company_id?: string[];
+                idle?: boolean;
+                sort?: "updated_at" | "created_at" | "title" | "amount" | "expected_close_date";
+                direction?: "asc" | "desc";
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_opportunity_v1_workspaces__tenant_id__opportunities_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summarize_opportunities_v1_workspaces__tenant_id__opportunities_summary_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                outcome?: ("open" | "won" | "lost")[];
+                stage_id?: string[];
+                owner?: string[];
+                contact_id?: string[];
+                company_id?: string[];
+                idle?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_opportunity_v1_workspaces__tenant_id__opportunities__deal_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                deal_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_opportunity_v1_workspaces__tenant_id__opportunities__deal_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                deal_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_opportunity_v1_workspaces__tenant_id__opportunities__deal_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                deal_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    opportunity_history_v1_workspaces__tenant_id__opportunities__deal_id__history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                deal_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_opportunity_outcome_v1_workspaces__tenant_id__opportunities__deal_id__outcome_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                deal_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutcomeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_pipelines_v1_workspaces__tenant_id__pipelines_get: {
         parameters: {
             query?: never;
@@ -4188,7 +4809,9 @@ export interface operations {
     };
     delete_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                move_to?: string | null;
+            };
             header?: {
                 "If-Match"?: string | null;
                 authorization?: string | null;
