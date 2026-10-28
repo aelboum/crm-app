@@ -15,8 +15,10 @@ import { keys } from "./api/queries";
 import { LoadError } from "./components/StateNotice";
 import { HomePage, isWorkspaceId } from "./pages/HomePage";
 import { InvitePage } from "./pages/InvitePage";
+import { PublicFormPage } from "./pages/PublicFormPage";
 import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
+import { FormsPage } from "./records/FormsPage";
 import { OpportunitiesPage } from "./records/OpportunitiesPage";
 import { TasksPage } from "./records/TasksPage";
 import { type SettingsSection, SettingsPage } from "./pages/WorkspacePage";
@@ -47,6 +49,25 @@ const inviteRoute = createRoute({
   getParentRoute: () => plainRoute,
   path: "/invite/$workspaceId",
   component: InviteRoutePage,
+});
+
+function PublicFormRoutePage() {
+  const { workspaceId, formKey } = publicFormRoute.useParams();
+  if (!isWorkspaceId(workspaceId)) {
+    return (
+      <main id="main" className="public-form-page">
+        <div className="public-form-card">{notFound}</div>
+      </main>
+    );
+  }
+  return <PublicFormPage workspaceId={workspaceId} formKey={formKey} />;
+}
+
+// A published form's own page (decision P7-A 10): no app frame, no sign-in.
+const publicFormRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/f/$workspaceId/$formKey",
+  component: PublicFormRoutePage,
 });
 
 const notFound = <LoadError error={new ApiError(404)} onRetry={() => undefined} />;
@@ -165,6 +186,20 @@ function SectionPage() {
       />
     );
   }
+  if (slug === "forms") {
+    return (
+      <FormsPage
+        workspaceId={workspaceId}
+        formId={record}
+        onOpen={(id) => {
+          void navigate({ search: id ? { record: id } : {} });
+        }}
+        onOpenContact={(id) => {
+          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+        }}
+      />
+    );
+  }
   // Settings holds Team & roles and My profile today; every other module is
   // the design's placeholder.
   if (slug === SETTINGS_SLUG) {
@@ -204,6 +239,7 @@ const sectionRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   plainRoute.addChildren([homeRoute, inviteRoute]),
   workspaceRoute.addChildren([workspaceIndexRoute, sectionRoute]),
+  publicFormRoute,
 ]);
 
 export function createAppRouter(history: RouterHistory = createBrowserHistory()) {

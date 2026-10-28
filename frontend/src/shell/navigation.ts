@@ -84,7 +84,7 @@ export const GROUPS: Group[] = [
     sections: [
       soon("campaigns", "nav.campaigns", Megaphone, "soon.later"),
       soon("automations", "nav.automations", Workflow, "soon.later"),
-      soon("forms", "nav.forms", FileText, "soon.forms"),
+      built("forms", "nav.forms", FileText),
       soon("reviews", "nav.reviews", Star, "soon.deferred"),
     ],
   },

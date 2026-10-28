@@ -66,10 +66,10 @@ L243-247):
 | Tasks (`ScreenTasks`) | `/tasks` | 4 | **Implemented (4C)** — tabs with counts, quick add, groups, complete, delete as designed. Differences: real due times (the design's are display strings) with a No due date group; an Edit dialog; priority stored as data; members by ID; task sections in record drawers |
 | Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | **Implemented (4B)** — board, table, drawer, create/edit. Differences: no pipeline switcher (one pipeline); no Won column (won and lost are outcomes, Mark lost asks a reason, closed deals offer Reopen); summary shows open value, weighted forecast and open deals only; values in the deal's currency; drag-and-drop plus keyboard stage buttons in the drawer; members by ID |
 | Settings › Sales pipeline (not in the design; P4 4A) | `/settings?section=pipeline` | 4 | **Implemented** — stage names, probabilities and order; won and lost are outcomes, not stages |
-| Tasks (`ScreenTasks`) | `/tasks` | 4 | Placeholder |
 | Inbox (`ScreenConversations`) | `/inbox` | 6 | Placeholder |
 | Calendar (`ScreenCalendar`) | `/calendar` | 5 (outside MVP, K5) | Placeholder |
-| Campaigns, Automations, Forms & pages, Reviews | `/campaigns`, `/automations`, `/forms`, `/reviews` | 7-10 (Reviews deferred, K5) | Placeholders |
+| Forms (`ScreenForms`) | `/forms`, hosted `/f/{workspace}/{key}` | 7 | **Implemented (7A)** — list cards, editor with fields (move, remove, Add palette), preview, "After someone submits" (tag, thank-you), publish, copy link. Differences: no Landing pages tab, views or conversion; no embed script; no "Start automation"; contact owner and consent wording added; matched contacts are never changed; submissions table and the hosted page added |
+| Campaigns, Automations, Reviews | `/campaigns`, `/automations`, `/reviews` | 7-10 (Reviews deferred, K5) | Placeholders |
 | Assistants, Knowledge, AI activity (`ScreenAssistants`, `ScreenKnowledge`, `ScreenAIActivity`) | `/assistants`, `/knowledge`, `/ai-activity` | 9 | Placeholders |
 | Reports (`ScreenReports`) | `/reports` | 10 | Placeholder |
 | Home / Dashboard (`ScreenDashboard`) | `/home` | needs CRM data | Placeholder |

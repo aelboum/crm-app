@@ -37,6 +37,47 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 7 slice 7A, forms and lead capture (decision P7-A, 2026-10-28):**
+  - **Order:** forms come before the email channel (Phase 6), which waits
+    for a SaaS-OS release with an email provider and a new pin the owner
+    will authorize. Calendar (Phase 5) is outside K5 and not scheduled.
+  - **Built (7A.1, `d8c7361`, CI run 40653263929 green):** migration
+    `0013_forms` (`form`, `form_submission`, append-only
+    `consent_record`); permissions `crm_app.form:read` (every role) and
+    `crm_app.form:manage` (Owner, Admin; gate G7 applies to older
+    workspaces); members' routes for forms, submissions and a contact's
+    consent; the public routes `GET`/`POST /v1/public/forms/{workspace}/{key}`
+    with per-address and per-form limits, a 16 KiB body, a required
+    `Idempotency-Key`, a honeypot and one 404 for unknown, draft and closed
+    forms. A submission creates a Lead (source Form) or matches the active
+    contact by email without changing it (only the form's tag is added),
+    records consent with the exact wording, and counts the submission.
+  - **Built (7A.2):** the Forms list, the editor (fields with move, remove
+    and an Add palette; a live preview from the same renderer as the hosted
+    page; tag, contact owner, thank-you message and consent wording; save,
+    publish and unpublish with `If-Match`; copy link; delete), the
+    submissions table, the hosted page `/app/f/{workspace}/{key}` (no app
+    frame, no sign-in, errors per field) and a Consent section in the
+    contact drawer.
+  - **Tests:** unit `test_form_rules.py` (22) and route policies (public
+    routes are the only public API routes besides signup status);
+    integration `test_form_tables.py` and `test_form_routes.py`; full
+    integration suite 564 passed in sequential chunks; unit 473; Vitest
+    209, run twice, including `forms.test.tsx` (10, with axe).
+  - **Browser** (local stack, dev DB migrated to 0013 without reset, a new
+    local workspace provisioned because of G7): created, renamed and
+    published a form with consent wording; on the hosted page at 390 px an
+    empty submission showed the per-field messages, then a real one showed
+    the thank-you message; the submission appeared as "New lead" and the
+    contact (source Form, stage Lead) shows the consent with its wording.
+    Editor and list checked at 1440 px and 390 px with no horizontal
+    scroll; no console errors other than the expected 422.
+  - **Not built (P7-A 1):** landing pages, embedding on other sites, view
+    counts and conversion, "Start automation", CAPTCHA, double opt-in,
+    file uploads, custom-field targets, a retention period for
+    submissions. A suspended workspace's public form is refused by the
+    same check as a closed one; that path has no integration test because
+    no role may suspend a workspace in tests.
 - **Phase 4 slice 4C, tasks (decision P4-C, 2026-10-27):**
   - **Built:** migration `0012_tasks` (`task`: title, priority, optional
     due time with time zone and assignee, completion with who and when,

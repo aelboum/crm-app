@@ -666,7 +666,7 @@ Implement:
 
 # 12. Phase 7 — Marketing, Forms, and Campaigns
 
-**Status:** Not started.
+**Status:** In progress. 7.3 Forms built (slice 7A, decision P7-A); 7.4 landing pages deferred; templates, campaigns and the remaining safeguards wait for the email channel (Phase 6).
 
 ## Objectives
 

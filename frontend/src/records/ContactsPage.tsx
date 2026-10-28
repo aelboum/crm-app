@@ -27,6 +27,7 @@ import { useT } from "../i18n/useT";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
 import { CustomFieldsSection } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
+import { ConsentSection } from "./ConsentSection";
 import { TasksSection } from "./TasksSection";
 import { ActivitySection, NotesSection } from "./NotesSection";
 import { ListTags, TagSection } from "./TagEditor";
@@ -497,6 +498,7 @@ function ContactDrawer({
             </div>
           ) : null}
           <TasksSection workspaceId={workspaceId} link={{ kind: "contact", id: record.id }} />
+          <ConsentSection workspaceId={workspaceId} contactId={record.id} />
           <CustomFieldsSection
             workspaceId={workspaceId}
             fields={activeFields(definitions.data?.items, "contact")}
