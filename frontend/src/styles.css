@@ -1276,3 +1276,26 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .visitor-booking { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .visitor-booking p { margin: 0; }
 .visitor-booking-icon { color: var(--accent); }
+
+/* Consent and suppression (decision P7-B 10). */
+.consent-status { margin: 0 0 8px; }
+.consent-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.suppression-settings { display: flex; flex-direction: column; gap: 14px; padding: 16px 20px; }
+.suppression-settings > .profile-note, .suppression-settings > .notice, .suppression-settings > .muted { margin: 0; }
+.suppression-add { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.suppression-add-row { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 10px; }
+.suppression-search { display: flex; gap: 8px; align-items: center; }
+.suppression-search .form-input { flex: 1; min-width: 0; }
+.suppression-table-wrap { overflow-x: auto; }
+.suppression-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.suppression-table th { padding: 6px 8px; text-align: left; font-size: 11.5px; font-weight: 600; color: #687082; border-bottom: 1px solid var(--line); }
+.suppression-table td { padding: 8px; vertical-align: top; border-bottom: 1px solid #eef0f3; }
+.suppression-email { font-family: "Geist Mono Variable", monospace; font-size: 12px; overflow-wrap: anywhere; }
+.suppression-note { display: block; font-size: 12px; color: #687082; white-space: pre-line; }
+@media (max-width: 640px) {
+  .suppression-add-row { grid-template-columns: minmax(0, 1fr); }
+  .suppression-table thead { display: none; }
+  .suppression-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px 0; border-bottom: 1px solid #eef0f3; }
+  .suppression-table td { padding: 0; border: 0; }
+  .suppression-table td.suppression-email { grid-column: 1 / -1; }
+}

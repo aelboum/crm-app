@@ -510,7 +510,7 @@ function ContactDrawer({
             contact={{ id: record.id, name: fullName(record) }}
             onOpen={onOpenAppointment}
           />
-          <ConsentSection workspaceId={workspaceId} contactId={record.id} />
+          <ConsentSection workspaceId={workspaceId} contactId={record.id} meId={meId} canUpdate={canUpdate} />
           <CustomFieldsSection
             workspaceId={workspaceId}
             fields={activeFields(definitions.data?.items, "contact")}

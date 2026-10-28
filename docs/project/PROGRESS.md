@@ -37,6 +37,38 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 7 slice 7B, consent and suppression (decision P7-B, 2026-10-28):**
+  - **Built:** migration `0017_suppression` (table `suppression`:
+    tenant-owned, forced RLS, append-only for the runtime role, in
+    `PURGE_TABLES`, one lower-cased address per workspace, no link to a
+    contact; `consent_record` gains `withdrawn`, `manual` and who recorded
+    it, still append-only); catalogue permissions
+    `crm_app.suppression:read` (Owner, Admin, Member) and `:manage`
+    (Owner, Admin), reported by `/access` (gate G7 for older workspaces);
+    routes to list (search, paging), add (pasted, up to 1,000, refusals by
+    position) and remove suppressions; a contact's email status; recording
+    consent with its exact wording and withdrawing it (a contact update),
+    which suppresses the address in the same transaction and keeps an
+    earlier reason; `crm_app.suppression.may_send`, the check the email
+    channel must call. Settings › Suppression list and the contact
+    drawer's Consent section (status, history, record, withdraw).
+  - **Tests:** unit `test_suppression_rules.py` and route policies;
+    integration `test_suppression_tables.py` (isolation, uniqueness,
+    checks, no UPDATE, consent states, purge, rollback) and
+    `test_suppression_routes.py` (roles, isolation, adding, the list,
+    status, record, withdraw, removal, audit without addresses or
+    wording); Vitest `consent.test.tsx` (with axe). Whole suites: Python
+    unit 527, integration 681 (one worker start-up test timed out once under load and passed on its own rerun) (four sequential chunks), Vitest
+    247.
+  - **Browser** (local stack, dev DB migrated to 0017 without reset, new
+    workspace "E2E Consent 7B"): pasted three addresses as Bounced with a
+    note; recorded consent for a contact ("May receive marketing email"),
+    withdrew it (the address appeared on the list as Unsubscribed ·
+    Consent withdrawn, the drawer read "Suppressed"); removed an address
+    at 390 px after the confirmation; no page overflow; no console errors.
+  - **Not built (P7-B 1):** the public unsubscribe page and tokens (come
+    with the email channel), bounce and complaint events (need a
+    provider), CSV import of suppressions, double opt-in, other channels.
 - **Phase 5 slice 5C, public booking pages (decision P5-C, 2026-10-28):**
   - **Built:** migration `0016_booking_pages` (`booking_page` and `booking`,
     tenant-owned, forced RLS, composite links, in `PURGE_TABLES`; contact

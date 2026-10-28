@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Eye,
   Kanban,
+  MailX,
   ListPlus,
   Minus,
   Palette,
@@ -32,6 +33,7 @@ import { useT } from "../i18n/useT";
 import { BusinessSettings } from "./BusinessSettings";
 import { FieldSettings } from "./FieldSettings";
 import { PipelineSettings } from "./PipelineSettings";
+import { SuppressionSettings } from "./SuppressionSettings";
 import { TagSettings } from "./TagSettings";
 import { type Invitation, useInvitations } from "../api/invitations";
 import { availableActions, highestRole, type MemberAction } from "../members/actions";
@@ -433,6 +435,7 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
       { id: "notifications", label: "settings.notifications", icon: Bell },
       { id: "fields", label: "settings.fields", icon: ListPlus },
       { id: "pipeline", label: "settings.pipeline", icon: Kanban },
+      { id: "suppression", label: "settings.suppression", icon: MailX },
       { id: "ai", label: "settings.ai", icon: Sparkles },
       { id: "integrations", label: "settings.integrations", icon: Plug },
       { id: "appearance", label: "settings.appearance", icon: Palette },
@@ -441,8 +444,8 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
 ];
 
 /** The settings sections that exist; every other one is marked "soon". */
-export type SettingsSection = "team" | "profile" | "business" | "tags" | "fields" | "pipeline";
-const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business", "tags", "fields", "pipeline"];
+export type SettingsSection = "team" | "profile" | "business" | "tags" | "fields" | "pipeline" | "suppression";
+const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business", "tags", "fields", "pipeline", "suppression"];
 
 const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId }> = {
   team: { title: "settings.team", desc: "settings.teamDesc" },
@@ -451,6 +454,7 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
   tags: { title: "settings.tags", desc: "settings.tagsDesc" },
   fields: { title: "settings.fields", desc: "settings.fieldsDesc" },
   pipeline: { title: "settings.pipeline", desc: "settings.pipelineDesc" },
+  suppression: { title: "settings.suppression", desc: "settings.suppressionDesc" },
 };
 
 /**
@@ -600,6 +604,13 @@ export function SettingsPage({
           ) : null}
           {access.data && section === "pipeline" ? (
             <PipelineSettings workspaceId={workspaceId} canEdit={access.data.actions.manage_pipeline === true} />
+          ) : null}
+          {access.data && section === "suppression" ? (
+            <SuppressionSettings
+              workspaceId={workspaceId}
+              canRead={access.data.actions.read_suppressions === true}
+              canManage={access.data.actions.manage_suppressions === true}
+            />
           ) : null}
           {access.data && section === "tags" ? (
             <TagSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />
