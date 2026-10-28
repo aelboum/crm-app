@@ -134,6 +134,20 @@ RECORDS |= {
     f"DELETE {_TASKS}/{{task_id}}": "crm_app.task:delete",
 }
 
+# Forms (decision P7-A 4): every role reads forms and their submissions;
+# Owner and Admin manage them, through the new `form:manage`.
+_FORMS = "/v1/workspaces/{tenant_id}/forms"
+CONFIGURATION |= {
+    f"GET {_FORMS}": "crm_app.form:read",
+    f"POST {_FORMS}": "crm_app.form:manage",
+    f"GET {_FORMS}/{{form_id}}": "crm_app.form:read",
+    f"PATCH {_FORMS}/{{form_id}}": "crm_app.form:manage",
+    f"DELETE {_FORMS}/{{form_id}}": "crm_app.form:manage",
+    f"GET {_FORMS}/{{form_id}}/submissions": "crm_app.form:read",
+}
+# A contact's consent records (P7-A 10): a contact read.
+RECORDS["GET /v1/workspaces/{tenant_id}/contacts/{record_id}/consent"] = "crm_app.contact:read"
+
 # CSV import (decision P3-F 1): Owner and Admin only, through the
 # catalogue's `crm_data:import`.
 _IMPORTS = "/v1/workspaces/{tenant_id}/imports"
@@ -292,3 +306,23 @@ def test_signup_routes_need_only_a_signed_in_person(tmp_path: Path) -> None:
     assert set(policies) == SIGNUPS
     assert {kind for kind, _, _ in policies.values()} == {"authenticated"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
+
+
+# A published form's page and submission (decision P7-A 5): public, with
+# their own limits; nothing else under /v1/public.
+PUBLIC_FORMS = {
+    "GET /v1/public/forms/{workspace_id}/{key}",
+    "POST /v1/public/forms/{workspace_id}/{key}",
+}
+
+
+def test_public_form_routes_are_the_only_public_api_routes(tmp_path: Path) -> None:
+    policies = _policies(tmp_path)
+    public = {
+        key
+        for key, (kind, _, _) in policies.items()
+        if kind == "public" and key not in FRONTEND and key != SIGNUP_STATUS
+    }
+    platform = {key for key in public if "/v1/public/" not in key}
+    assert public - platform == PUBLIC_FORMS
+    assert not any("/v1/workspaces" in key for key in platform)

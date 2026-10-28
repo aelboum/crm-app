@@ -815,12 +815,14 @@ def insert_record(  # noqa: PLR0913 - the record, then how it came to be
     record_id: uuid.UUID,
     custom: Mapping[str, Any] | None = None,
     import_id: uuid.UUID | None = None,
+    form_id: uuid.UUID | None = None,
 ) -> None:
     """Insert one record with its `created` history and audit entries, in
     the caller's transaction, which already holds `lock_open_tenant`.
     Raises `DuplicateRecordError` when an active record holds its email or
     domain, before anything is written. An imported record's audit entry
-    names the import (decision P3-F 8)."""
+    names the import (decision P3-F 8), and one created by a form
+    submission names the form (decision P7-A 8)."""
     now = _now()
     merged = _merge_custom_fields(session, scope, kind, {}, custom or {})
     row = kind.model(
@@ -847,6 +849,8 @@ def insert_record(  # noqa: PLR0913 - the record, then how it came to be
         metadata["custom_field_keys"] = sorted(merged)
     if import_id is not None:
         metadata["import_id"] = str(import_id)
+    if form_id is not None:
+        metadata["form_id"] = str(form_id)
     _audit(session, kind, scope, _Event("created", record_id, metadata))
 
 

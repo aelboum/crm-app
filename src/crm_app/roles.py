@@ -156,6 +156,13 @@ PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
         Kind.ADMINISTRATIVE,
         "Bounded, audited and rate-limited; never updates existing records (P3-F).",
     ),
+    Permission(f"{PREFIX}form", "read", Kind.READ),
+    Permission(
+        f"{PREFIX}form",
+        "manage",
+        Kind.ADMINISTRATIVE,
+        "A published form lets anyone create contacts; rate-limited (P7-A).",
+    ),
 )
 
 CATALOGUE: tuple[Permission, ...] = PLATFORM_PERMISSIONS + PRODUCT_PERMISSIONS
@@ -181,6 +188,7 @@ _READ_ONLY = _keys(
     f"{PREFIX}pipeline:read",
     f"{PREFIX}task:read",
     f"{PREFIX}activity:read",
+    f"{PREFIX}form:read",
 )
 
 _MEMBER = _READ_ONLY | _keys(
@@ -207,6 +215,7 @@ _ADMIN = _MEMBER | _keys(
     f"{PREFIX}pipeline:manage",
     f"{PREFIX}crm_data:export",
     f"{PREFIX}crm_data:import",
+    f"{PREFIX}form:manage",
     "invitation:read",
     "invitation:create",
     "invitation:revoke",

@@ -1181,6 +1181,98 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   8. **Not in 4C:** reminders and notifications, recurring tasks, task
      descriptions, bulk actions.
 
+## P7-A — Forms and lead capture (2026-10-28, under M1)
+
+- **Status:** Decided under M1. The owner's instructions of 2026-10-27
+  ("continue automatically through the remaining approved roadmap") and
+  2026-10-28 (the email channel waits for a SaaS-OS release with an email
+  provider, so forms come first). Forms are in the K5 MVP; roadmap 7.3;
+  the design's `ScreenForms.dc.html`; slice 7A.
+- **Design audit:** a "Forms & pages" list with Forms and Landing pages
+  tabs; cards with name, status, field count and views, leads and
+  conversion; an editor with a field list (move up, move down, remove),
+  an "Add" palette (Text, Email, Phone, Dropdown, Date, Message,
+  Checkbox), a live preview, Publish/Unpublish, Copy link, and "After
+  someone submits": create or update the contact matched by email or
+  phone, add a tag, start an automation, a thank-you message and an embed
+  script. Publishing, copying, the test submission and every metric are
+  simulated in the prototype.
+- **Decisions:**
+  1. **Scope of 7A:** forms only. Landing pages (roadmap 7.4) are
+     deferred: a page builder needs its own business case. Also deferred:
+     the embed script (the app's CSP forbids framing and third-party
+     origins), view counts and conversion (an unauthenticated view counter
+     can be inflated by anyone), "Start automation" (Phase 8), CAPTCHA
+     (evaluated with edge protection in Phase 13, decision S-1), double
+     opt-in (needs the email channel), file uploads and custom-field
+     targets.
+  2. **Tables** (migration `0013_forms`), tenant-owned, forced RLS, in
+     `PURGE_TABLES`:
+     - `form`: name (1-120), status `draft` or `published`, a random
+       public key, the fields, an optional tag (`ON DELETE SET NULL`), a
+       thank-you message, optional consent wording, the owner of new
+       contacts, a submission count and the last submission time, and a
+       version.
+     - `form_submission`: the form (`ON DELETE CASCADE`), the contact
+       (`ON DELETE SET NULL`), the answers, the outcome (`created` or
+       `matched`), whether consent was given, and the time.
+     - `consent_record`: append-only (the runtime role has no UPDATE):
+       contact (`ON DELETE CASCADE`), channel `email`, status `granted`,
+       method `web_form`, the wording shown, the form and submission
+       (`ON DELETE SET NULL`), and the time.
+  3. **Fields:** 1-20, each with a stable key, a type (`text`, `email`,
+     `phone`, `textarea`, `select`, `date`, `checkbox`), a label, required
+     or not, options for a select (1-20), and an optional contact target
+     (`first_name`, `last_name`, `email`, `phone`, `job_title`, `city`),
+     each target at most once and matching the type. A form can be
+     published only with a required first-name field and an email or
+     phone field.
+  4. **Who:** new catalogue permissions `crm_app.form:read` (every role)
+     and `crm_app.form:manage` (Owner and Admin): a published form opens
+     an unauthenticated path into the CRM. `/access` reports `read_forms`
+     and `manage_forms`. As in P3-F, workspaces created before this change
+     do not receive them (gate G7).
+  5. **Public routes** `GET` and `POST /v1/public/forms/{workspace}/{key}`
+     (SaaS-OS `public_route`):
+     - an unknown workspace or key, a draft form and a closed workspace
+       all answer the same 404;
+     - per-address and per-form limits use the SaaS-OS limiter and fail
+       closed (503); the body is at most 16 KiB; `Idempotency-Key` is
+       required;
+     - a filled honeypot field is answered like a success and nothing is
+       stored;
+     - answers are checked against the form's current fields; unknown
+       keys are refused; errors name field keys, never values.
+  6. **What a submission does**, in one transaction:
+     - the active contact with the same (normalised) email is matched;
+       phone numbers are stored as typed, so they are not matched;
+     - otherwise a contact is created: stage Lead, source Form, owned by
+       the form's contact owner while they are an active member;
+     - **a matched contact is never changed by an anonymous visitor**:
+       only the form's tag is added (skipped at the tag limit), the
+       submission is linked and consent may be recorded;
+     - the submission is stored and the form's count increases.
+  7. **Consent:** when the form has consent wording, the visitor ticks the
+     box and gives an email, a `consent_record` keeps the exact wording,
+     the form, the submission and the time. It is single opt-in and
+     unverified; nothing here is a claim of legal compliance (P2-D).
+  8. **Audit:** `crm_app.form.created`, `.updated` (field names),
+     `.published`, `.unpublished`, `.deleted`. A created contact's audit
+     entry, and a matched contact's tag change, name the form and act as
+     the form's contact owner, as an import's entries name the import
+     (P3-F 8). Every form therefore has a contact owner (by default its
+     creator), who must be an active member when the form is saved. SaaS-OS has no caller for an
+     anonymous visitor, so matched submissions are recorded in
+     `form_submission` only.
+  9. **Retention:** submissions are kept while their form exists; deleting
+     a form deletes its submissions but not the contacts or consent
+     records. A retention period for submissions is a later,
+     market-specific decision (P2-D).
+  10. **Screens:** the Forms list (no Landing pages tab), the editor
+      (fields, preview, settings, publish, copy link), the submissions
+      list, a contact's consent in its drawer, and the hosted form page
+      `/app/f/{workspace}/{key}` without the app frame or sign-in.
+
 ## P3-F — CSV import (2026-10-26)
 
 - **Status:** The owner decided the two open questions on 2026-10-26

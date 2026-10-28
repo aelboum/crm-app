@@ -84,6 +84,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/forms/{workspace_id}/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Form */
+        get: operations["public_form_v1_public_forms__workspace_id___key__get"];
+        put?: never;
+        /** Submit Public Form */
+        post: operations["submit_public_form_v1_public_forms__workspace_id___key__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sign-out-url": {
         parameters: {
             query?: never;
@@ -472,6 +490,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contact Consent */
+        get: operations["list_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/contacts/{record_id}/notes": {
         parameters: {
             query?: never;
@@ -587,6 +622,60 @@ export interface paths {
         put?: never;
         /** Restore Custom Field */
         post: operations["restore_custom_field_v1_workspaces__tenant_id__custom_fields__field_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Forms */
+        get: operations["list_forms_v1_workspaces__tenant_id__forms_get"];
+        put?: never;
+        /** Create Form */
+        post: operations["create_form_v1_workspaces__tenant_id__forms_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/forms/{form_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Form */
+        get: operations["get_form_v1_workspaces__tenant_id__forms__form_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Form */
+        delete: operations["delete_form_v1_workspaces__tenant_id__forms__form_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Form */
+        patch: operations["update_form_v1_workspaces__tenant_id__forms__form_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/forms/{form_id}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Form Submissions */
+        get: operations["list_form_submissions_v1_workspaces__tenant_id__forms__form_id__submissions_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1159,6 +1248,11 @@ export interface components {
             /** Token */
             token: string;
         };
+        /** Accepted */
+        Accepted: {
+            /** Thank You */
+            thank_you: string;
+        };
         /** AcceptedInvitationResponse */
         AcceptedInvitationResponse: {
             /** Status */
@@ -1357,6 +1451,45 @@ export interface components {
             /** Website */
             website?: string | null;
         };
+        /** ConsentList */
+        ConsentList: {
+            /** Items */
+            items: components["schemas"]["ConsentOut"][];
+        };
+        /** ConsentOut */
+        ConsentOut: {
+            /**
+             * Channel
+             * @constant
+             */
+            channel: "email";
+            /** Form Id */
+            form_id: string | null;
+            /** Form Name */
+            form_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @constant
+             */
+            method: "web_form";
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "granted";
+            /** Wording */
+            wording: string;
+        };
         /** ContactCreate */
         ContactCreate: {
             /** City */
@@ -1453,6 +1586,18 @@ export interface components {
             total: number;
             /** Total Capped */
             total_capped: boolean;
+        };
+        /** ContactRef */
+        ContactRef: {
+            /** Archived */
+            archived: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /**
          * ContactUpdate
@@ -1759,6 +1904,137 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** FieldIn */
+        FieldIn: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options?: string[] | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Target */
+            target?: ("first_name" | "last_name" | "email" | "phone" | "job_title" | "city") | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "email" | "phone" | "textarea" | "select" | "date" | "checkbox";
+        };
+        /** FieldOut */
+        FieldOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[] | null;
+            /** Required */
+            required: boolean;
+            /** Target */
+            target: ("first_name" | "last_name" | "email" | "phone" | "job_title" | "city") | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "email" | "phone" | "textarea" | "select" | "date" | "checkbox";
+        };
+        /** FormIn */
+        FormIn: {
+            /** Consent Text */
+            consent_text?: string | null;
+            /** Contact Owner User Id */
+            contact_owner_user_id?: string | null;
+            /** Fields */
+            fields: components["schemas"]["FieldIn"][];
+            /** Name */
+            name: string;
+            /** Tag Id */
+            tag_id?: string | null;
+            /** Thank You */
+            thank_you?: string | null;
+        };
+        /** FormList */
+        FormList: {
+            /** Items */
+            items: components["schemas"]["FormOut"][];
+        };
+        /** FormOut */
+        FormOut: {
+            /** Consent Text */
+            consent_text: string | null;
+            /**
+             * Contact Owner User Id
+             * Format: uuid
+             */
+            contact_owner_user_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /** Fields */
+            fields: components["schemas"]["FieldOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Submission At */
+            last_submission_at: string | null;
+            /** Name */
+            name: string;
+            /** Public Key */
+            public_key: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published";
+            /** Submission Count */
+            submission_count: number;
+            tag: components["schemas"]["TagRef"] | null;
+            /** Tag Id */
+            tag_id: string | null;
+            /** Thank You */
+            thank_you: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By User Id */
+            updated_by_user_id: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * FormPatch
+         * @description Only the fields sent change; `null` clears the tag or the consent
+         *     wording.
+         */
+        FormPatch: {
+            /** Consent Text */
+            consent_text?: string | null;
+            /** Contact Owner User Id */
+            contact_owner_user_id?: string | null;
+            /** Fields */
+            fields?: components["schemas"]["FieldIn"][] | null;
+            /** Name */
+            name?: string | null;
+            /** Status */
+            status?: ("draft" | "published") | null;
+            /** Tag Id */
+            tag_id?: string | null;
+            /** Thank You */
+            thank_you?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2026,6 +2302,33 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** PublicField */
+        PublicField: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[] | null;
+            /** Required */
+            required: boolean;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "email" | "phone" | "textarea" | "select" | "date" | "checkbox";
+        };
+        /** PublicForm */
+        PublicForm: {
+            /** Consent Text */
+            consent_text: string | null;
+            /** Fields */
+            fields: components["schemas"]["PublicField"][];
+            /** Name */
+            name: string;
+            /** Thank You */
+            thank_you: string;
+        };
         /**
          * Role
          * @enum {string}
@@ -2180,6 +2483,44 @@ export interface components {
              * @default false
              */
             confirm_owner_change: boolean;
+        };
+        /** SubmissionOut */
+        SubmissionOut: {
+            /** Answers */
+            answers: {
+                [key: string]: string | boolean;
+            };
+            /** Consent */
+            consent: boolean;
+            contact: components["schemas"]["ContactRef"] | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "created" | "matched";
+        };
+        /** SubmissionPage */
+        SubmissionPage: {
+            /** Items */
+            items: components["schemas"]["SubmissionOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+            /** Total Capped */
+            total_capped: boolean;
         };
         /** TagIn */
         TagIn: {
@@ -2481,6 +2822,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurrentUserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_form_v1_public_forms__workspace_id___key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicForm"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_public_form_v1_public_forms__workspace_id___key__post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                workspace_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Answers */
+                    answers: {
+                        [key: string]: string | boolean | null;
+                    };
+                    /**
+                     * Consent
+                     * @default false
+                     */
+                    consent?: boolean;
+                    /**
+                     * Website
+                     * @default
+                     */
+                    website?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Accepted"];
                 };
             };
             /** @description Validation Error */
@@ -3529,6 +3955,40 @@ export interface operations {
             };
         };
     };
+    list_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_contact_notes_v1_workspaces__tenant_id__contacts__record_id__notes_get: {
         parameters: {
             query?: {
@@ -3844,6 +4304,219 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DefinitionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_forms_v1_workspaces__tenant_id__forms_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_form_v1_workspaces__tenant_id__forms_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_form_v1_workspaces__tenant_id__forms__form_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                form_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_form_v1_workspaces__tenant_id__forms__form_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                form_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_form_v1_workspaces__tenant_id__forms__form_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                form_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_form_submissions_v1_workspaces__tenant_id__forms__form_id__submissions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                form_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionPage"];
                 };
             };
             /** @description Validation Error */

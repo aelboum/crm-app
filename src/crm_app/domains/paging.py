@@ -61,6 +61,8 @@ ORDER_KEYS: Mapping[str, Mapping[str, Sequence[str]]] = {
         "created_at": ("datetime", "uuid"),
         "updated_at": ("datetime", "uuid"),
     },
+    # A form's submissions, newest first (decision P7-A 10).
+    "form_submission": {"created_at": ("datetime", "uuid")},
 }
 
 Value = str | datetime | date | Decimal | int | uuid.UUID | None

@@ -37,6 +37,8 @@ def create_app() -> FastAPI:
     from crm_app.api.access import router as access_router  # noqa: PLC0415
     from crm_app.api.custom_fields import router as custom_fields_router  # noqa: PLC0415
     from crm_app.api.errors import validation_error  # noqa: PLC0415
+    from crm_app.api.forms import public_router as public_forms_router  # noqa: PLC0415
+    from crm_app.api.forms import router as forms_router  # noqa: PLC0415
     from crm_app.api.headers import NoStoreMiddleware  # noqa: PLC0415
     from crm_app.api.history import router as history_router  # noqa: PLC0415
     from crm_app.api.imports import router as imports_router  # noqa: PLC0415
@@ -75,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(pipelines_router)
     app.include_router(opportunities_router)
     app.include_router(tasks_router)
+    app.include_router(forms_router)
     app.include_router(invitations_router)
     # SaaS-OS's acceptance route (ADR-0046): the invitee, signed in with the
     # invited verified email, redeems the token; no role is given (Q5).
@@ -82,5 +85,6 @@ def create_app() -> FastAPI:
     app.include_router(sign_out_router)
     # Self-service signup (S-1): 404 while SIGNUP_ENABLED is off.
     app.include_router(signups_router)
+    app.include_router(public_forms_router)
     app.include_router(spa_router)
     return app

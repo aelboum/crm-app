@@ -81,6 +81,10 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "opportunity_event",
         # P4-C (tasks).
         "task",
+        # P7-A (forms).
+        "form",
+        "form_submission",
+        "consent_record",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -91,7 +95,9 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
 # record history; S-1: the signup attempt counter). The guard requires the
 # runtime role to lack UPDATE on them, a stricter rule than for other
 # tables, never a looser one.
-APPEND_ONLY_TABLES: frozenset[str] = frozenset({"activity", "signup_attempt", "opportunity_event"})
+APPEND_ONLY_TABLES: frozenset[str] = frozenset(
+    {"activity", "signup_attempt", "opportunity_event", "consent_record"}
+)
 
 # Product tables that deliberately hold no tenant data and so carry no
 # `tenant_id`. Every other product table must be tenant-owned; listing a

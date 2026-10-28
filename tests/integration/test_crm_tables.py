@@ -347,4 +347,7 @@ def test_the_migration_rolls_back_and_forward(
         "opportunity",
         "opportunity_event",
         "task",
+        "form",
+        "form_submission",
+        "consent_record",
     }

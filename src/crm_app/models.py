@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0012_tasks` own the
+Migrations `0002_contacts_companies` to `0013_forms` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -513,3 +513,66 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
+
+
+class Form(Base):
+    """A lead-capture form (migration 0013, decision P7-A). `fields` is the
+    list `crm_app.domains.forms.fields` validates; the public key is random
+    and never changes."""
+
+    __tablename__ = "form"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    public_key: Mapped[str] = mapped_column(Text)
+    fields: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    tag_id: Mapped[uuid.UUID | None] = mapped_column()
+    thank_you: Mapped[str] = mapped_column(Text)
+    consent_text: Mapped[str | None] = mapped_column(Text)
+    contact_owner_user_id: Mapped[uuid.UUID] = mapped_column()
+    submission_count: Mapped[int] = mapped_column(Integer)
+    last_submission_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class FormSubmission(Base):
+    """One accepted submission of a form: the answers by field key, and the
+    contact it created or matched."""
+
+    __tablename__ = "form_submission"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    form_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    answers: Mapped[dict[str, Any]] = mapped_column(JSON)
+    outcome: Mapped[str] = mapped_column(Text)
+    consent: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ConsentRecord(Base):
+    """Evidence that a contact gave consent (decision P7-A 7). The
+    application only inserts these: the runtime role holds no UPDATE."""
+
+    __tablename__ = "consent_record"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID] = mapped_column()
+    channel: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    method: Mapped[str] = mapped_column(Text)
+    wording: Mapped[str] = mapped_column(Text)
+    form_id: Mapped[uuid.UUID | None] = mapped_column()
+    submission_id: Mapped[uuid.UUID | None] = mapped_column()
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

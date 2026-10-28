@@ -67,6 +67,9 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "create_task": ("crm_app.task", "create"),
     "update_task": ("crm_app.task", "update"),
     "delete_task": ("crm_app.task", "delete"),
+    # Forms (decision P7-A 4): every role reads; Owner and Admin manage.
+    "read_forms": ("crm_app.form", "read"),
+    "manage_forms": ("crm_app.form", "manage"),
 }
 
 

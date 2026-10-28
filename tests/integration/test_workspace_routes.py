@@ -139,6 +139,8 @@ def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> 
         "create_task": False,
         "update_task": False,
         "delete_task": False,
+        "read_forms": True,
+        "manage_forms": False,
     }
     assert owner["membership_id"] != reader["membership_id"]
 
