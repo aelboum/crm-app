@@ -154,7 +154,10 @@ export function useSignOut() {
 export type WorkspaceSettings = components["schemas"]["SettingsOut"];
 export type WorkspaceSettingsUpdate = components["schemas"]["SettingsUpdate"];
 
-/** Locale, time zone and currency (decision P2-F 1); version 0 is the defaults. */
+/**
+ * Locale, time zone and currency (decision P2-F 1) and business hours
+ * (decision P5-B; `null` until set); version 0 is the defaults.
+ */
 export function useWorkspaceSettings(workspaceId: string) {
   return useQuery({
     queryKey: keys.settings(workspaceId),
@@ -173,6 +176,10 @@ export function useSaveWorkspaceSettings(workspaceId: string) {
           body: changes,
         }),
       ),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.settings(workspaceId) }),
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey: keys.settings(workspaceId) });
+      // The calendar's open hours follow the hours and the time zone.
+      await client.invalidateQueries({ queryKey: ["workspace", workspaceId, "appointments"] });
+    },
   });
 }

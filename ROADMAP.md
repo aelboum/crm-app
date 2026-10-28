@@ -563,7 +563,7 @@ Only show metrics whose definitions are documented and whose calculations are co
 
 # 10. Phase 5 — Calendar and Appointment Booking
 
-**Status:** In progress (decision P5-A, started by the owner on 2026-10-28). Slice 5A built: appointments, views, status, cancel, rescheduling, conflict detection, time zones, contact association, team assignment. Availability (5B), a public booking page, and reminders (need a delivery channel) remain.
+**Status:** In progress (decision P5-A, started by the owner on 2026-10-28). Slice 5A built: appointments, views, status, cancel, rescheduling, conflict detection, time zones, contact association, team assignment. Slice 5B built: business hours, availability, the outside-hours warning (decision P5-B). A public booking page and reminders (need a delivery channel) remain.
 
 ## Objectives
 

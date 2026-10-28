@@ -6,6 +6,9 @@ import { useIntl } from "react-intl";
 import {
   addDays,
   type Appointment,
+  type Availability,
+  closedSpans,
+  isOpen,
   lanes,
   minutesInto,
   onDay,
@@ -15,6 +18,7 @@ import {
   timeZoneName,
   useAppointment,
   useAppointments,
+  useAvailability,
   useUpcoming,
   type View,
   viewDays,
@@ -43,6 +47,11 @@ import { type Option, ownerOptions } from "./parts";
  * time; keyboard users book with "New appointment". Times are the viewer's
  * own time zone, which the header names. The grid shows the whole day and
  * opens at 07:00. Appointments shorter than 45 minutes show on one line.
+ *
+ * Business hours (decision P5-B) hatch the closed time and give each team
+ * member a status line from today's appointments: in an appointment until
+ * its end, outside business hours, or free. Nothing is hatched while the
+ * workspace has not set its hours.
  */
 
 const HOUR = 56; // pixels per hour, as in the design
@@ -103,9 +112,13 @@ export function CalendarPage({
   const first = days[0] ?? anchor;
   const end = addDays(days[days.length - 1] ?? anchor, 1);
   const range = useAppointments(workspaceId, first, end);
+  const hours = useAvailability(workspaceId, first, end);
   const items = (range.data?.items ?? []).filter((a) => !hidden.has(a.host_user_id));
   const today = startOfDay(now);
-  const todays = onDay(range.data?.items ?? [], today);
+  // Today's own queries: the side panel speaks of today whichever range is in view.
+  const todayRange = useAppointments(workspaceId, today, addDays(today, 1));
+  const todayHours = useAvailability(workspaceId, today, addDays(today, 1));
+  const todays = onDay(todayRange.data?.items ?? [], today);
 
   const label =
     view === "month"
@@ -200,7 +213,13 @@ export function CalendarPage({
           <ul className="calendar-team">
             {hosts.map((host) => {
               const shown = !hidden.has(host.id);
-              const count = todays.filter((a) => a.host_user_id === host.id).length;
+              const mine = todays.filter((a) => a.host_user_id === host.id);
+              const current = mine.find((a) => new Date(a.starts_at) <= now && now < new Date(a.ends_at));
+              const [tone, presence] = current
+                ? ["busy", t("calendar.busyUntil", { time: intl.formatTime(new Date(current.ends_at)) })]
+                : isOpen(todayHours.data, now)
+                  ? ["free", t("calendar.freeNow")]
+                  : ["closed", t("calendar.closedNow")];
               return (
                 <li key={host.id}>
                   <label className="calendar-person">
@@ -217,8 +236,11 @@ export function CalendarPage({
                       }}
                     />
                     <span className="calendar-swatch" style={{ background: hostColour(host.id) }} aria-hidden="true" />
-                    <span className="calendar-person-name">{host.label}</span>
-                    <span className="calendar-load">{t("calendar.todayCount", { count })}</span>
+                    <span className="calendar-person-text">
+                      <span className="calendar-person-name">{host.label}</span>
+                      <span className={`calendar-presence ${tone}`}>{presence}</span>
+                    </span>
+                    <span className="calendar-load">{t("calendar.todayCount", { count: mine.length })}</span>
                   </label>
                 </li>
               );
@@ -238,6 +260,12 @@ export function CalendarPage({
                 {t(STATUS_LABEL[status])}
               </li>
             ))}
+            {hours.data?.hours_set ? (
+              <li>
+                <span className="legend-chip closed" aria-hidden="true" />
+                {t("calendar.closed")}
+              </li>
+            ) : null}
           </ul>
         </aside>
 
@@ -267,6 +295,7 @@ export function CalendarPage({
                     }))
               }
               items={items}
+              availability={hours.data}
               now={now}
               canBook={can("create_appointment")}
               onBook={book}
@@ -340,6 +369,7 @@ interface Column {
 function TimeGrid({
   columns,
   items,
+  availability,
   now,
   canBook,
   onBook,
@@ -347,6 +377,7 @@ function TimeGrid({
 }: {
   columns: Column[];
   items: Appointment[];
+  availability: Availability | undefined;
   now: Date;
   canBook: boolean;
   onBook: (start: Date, host?: string) => void;
@@ -385,6 +416,14 @@ function TimeGrid({
             const isToday = sameDay(column.day, now);
             return (
               <div key={column.key} className="calendar-col" style={{ height: 24 * HOUR }}>
+                {closedSpans(column.day, availability).map(([from, to]) => (
+                  <div
+                    key={from}
+                    className="calendar-closed"
+                    style={{ top: (from / 60) * HOUR, height: ((to - from) / 60) * HOUR }}
+                    aria-hidden="true"
+                  />
+                ))}
                 {canBook ? (
                   // Clicking a free half hour books at that time, for pointer
                   // users; keyboard users book with "New appointment".

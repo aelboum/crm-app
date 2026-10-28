@@ -869,6 +869,21 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .business-fields {
   padding: 18px 20px 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
 }
+/* Business hours (decision P5-B). */
+.hours-section { margin: 0 20px 14px; display: flex; flex-direction: column; gap: 8px; }
+.hours-section > .notice, .hours-section > .profile-note { margin: 0; }
+.hours-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.hours-head .field-label { margin: 0; }
+.hours-list { list-style: none; margin: 0; padding: 0; border: 1px solid #eef0f3; border-radius: 8px; }
+.hours-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 7px 12px; border-bottom: 1px solid #f5f6f8; min-height: 46px; }
+.hours-row:last-child { border-bottom: 0; }
+.hours-day { display: flex; align-items: center; gap: 10px; width: 140px; font-weight: 500; cursor: pointer; }
+.hours-day input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.hours-times { display: flex; align-items: center; gap: 8px; }
+.hours-times .field-input { width: 116px; height: 32px; }
+.hours-closed { color: #8a91a0; }
+.hours-unset { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 8px; }
+.hours-unset .profile-note { margin: 0; flex: 1; min-width: 200px; }
 .business-footer {
   display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid #eef0f3;
   background: #fafafb; border-radius: 0 0 10px 10px;
@@ -1119,6 +1134,11 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .calendar-person:hover { background: var(--hover); }
 .calendar-person input { accent-color: var(--accent); margin: 0; }
 .calendar-person-name { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calendar-person-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.calendar-presence { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: #687082; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calendar-presence::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: #8a91a0; }
+.calendar-presence.free::before { background: #1f8a4c; }
+.calendar-presence.busy::before { background: #b7791f; }
 .calendar-load { font-size: 11.5px; color: #687082; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .calendar-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
 .calendar-swatch.tall { width: 3px; height: auto; align-self: stretch; border-radius: 2px; }
@@ -1133,6 +1153,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .legend-chip.pending { border-style: dashed; border-color: #d9b66a; background: #fffdf7; }
 .legend-chip.completed { border-color: #d3e5d9; background: #f3f7f4; }
 .legend-chip.no_show { border-color: #a3302a; background: #f7f7f8; }
+.legend-chip.closed { background: repeating-linear-gradient(135deg, #e3e6ea 0 3px, #fff 3px 6px); }
 .calendar-main { flex: 1; min-width: 0; }
 .calendar-scroll { overflow: auto; max-height: calc(100vh - 170px); position: relative; }
 .calendar-head-row { display: flex; position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--line); }
@@ -1151,6 +1172,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
   background: repeating-linear-gradient(to bottom, #eef0f3 0 1px, transparent 1px 28px, #f6f7f8 28px 29px, transparent 29px 56px);
 }
 .calendar-hit { position: absolute; inset: 0; cursor: pointer; }
+/* Closed time (P5-B): hatched under the hour lines' colour, never clickable itself. */
+.calendar-closed { position: absolute; left: 0; right: 0; pointer-events: none; background: repeating-linear-gradient(135deg, rgba(138, 145, 160, 0.13) 0 6px, transparent 6px 12px); }
+.calendar-outside { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; padding: 9px 12px; background: #f6f7f9; border: 1px solid var(--line); border-radius: 8px; color: var(--ink-2); font-size: 12.5px; }
 .calendar-event {
   position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 1px; padding: 3px 7px; overflow: hidden;
   border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 6px; background: #fff;

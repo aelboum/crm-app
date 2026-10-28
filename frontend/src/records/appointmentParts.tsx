@@ -1,4 +1,4 @@
-import { CalendarClock, MapPin, Pencil, Phone, Trash2, TriangleAlert, Video } from "lucide-react";
+import { CalendarClock, Clock, MapPin, Pencil, Phone, Trash2, TriangleAlert, Video } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { useIntl } from "react-intl";
@@ -37,7 +37,8 @@ import { Drawer, FieldRow, type Option, ownerLabel } from "./parts";
  * Pieces shared by the Calendar and the contact drawer's appointments
  * (decision P5-A): labels and colours, the booking dialog with its live
  * conflict check (a conflict turns "Book" into "Book anyway", which the
- * server then allows), and the appointment drawer with the design's status
+ * server then allows) and its business-hours warning (P5-B 7: a warning,
+ * never a refusal), and the appointment drawer with the design's status
  * buttons, its details, Edit, Cancel (a status, after a confirmation) and,
  * for Owners and Admins, Delete. Each change sends the appointment's
  * version; the server decides.
@@ -192,7 +193,8 @@ export function AppointmentDialog({
       ? { host, start: startDate.toISOString(), end: endDate.toISOString(), exclude: appointment?.id ?? null }
       : null,
   );
-  const conflicts = refused ?? check.data ?? [];
+  const conflicts = refused ?? check.data?.conflicts ?? [];
+  const outsideHours = valid && check.data?.outside_hours === true;
   const busy = create.isPending || update.isPending;
 
   const failed = (error: unknown) => {
@@ -421,6 +423,12 @@ export function AppointmentDialog({
             <ConflictList conflicts={conflicts} />
           ) : valid && check.isSuccess ? (
             <p className="calendar-free">{t("appointments.free")}</p>
+          ) : null}
+          {outsideHours ? (
+            <p className="calendar-outside">
+              <Clock size={14} aria-hidden="true" />
+              {t("appointments.outsideHours")}
+            </p>
           ) : null}
         </div>
         {refusal ? (

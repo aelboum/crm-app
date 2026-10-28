@@ -17,6 +17,7 @@ export type AppointmentCreate = components["schemas"]["AppointmentIn"];
 /** The fields a change may send; whether to allow a conflict is passed beside them. */
 export type AppointmentChanges = Omit<components["schemas"]["AppointmentPatch"], "allow_conflict">;
 export type Conflict = components["schemas"]["Conflict"];
+export type Availability = components["schemas"]["Availability"];
 export type Kind = Appointment["kind"];
 export type Status = Appointment["status"];
 export const KINDS: readonly Kind[] = ["in_person", "video", "phone"];
@@ -66,6 +67,8 @@ export const appointmentKeys = {
     [...appointmentKeys.all(workspaceId), "upcoming", contactId] as const,
   conflicts: (workspaceId: string, check: ConflictCheck | null) =>
     [...appointmentKeys.all(workspaceId), "conflicts", check] as const,
+  availability: (workspaceId: string, start: string, end: string) =>
+    [...appointmentKeys.all(workspaceId), "availability", start, end] as const,
 };
 
 /** Every appointment overlapping `[start, end)` (at most 42 days), earliest first. */
@@ -110,7 +113,27 @@ export function useUpcoming(workspaceId: string, contactId: string | null = null
   });
 }
 
-/** The booking dialog's live check (P5-A 4); off until the times make sense. */
+/** The business hours' open intervals overlapping `[start, end)` (decision P5-B). */
+export function useAvailability(workspaceId: string, start: Date, end: Date) {
+  const from = start.toISOString();
+  const to = end.toISOString();
+  return useQuery({
+    queryKey: appointmentKeys.availability(workspaceId, from, to),
+    placeholderData: keepPreviousData,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/appointments/availability", {
+          params: { path: where(workspaceId), query: { start: from, end: to } },
+        }),
+      ),
+  });
+}
+
+/**
+ * The booking dialog's live check (P5-A 4): the host's conflicts and
+ * whether the time is outside business hours (P5-B 7); off until the times
+ * make sense.
+ */
 export function useConflicts(workspaceId: string, check: ConflictCheck | null) {
   return useQuery({
     queryKey: appointmentKeys.conflicts(workspaceId, check),
@@ -128,7 +151,7 @@ export function useConflicts(workspaceId: string, check: ConflictCheck | null) {
             },
           },
         }),
-      ).conflicts,
+      ),
   });
 }
 
@@ -237,6 +260,33 @@ export function sameDay(a: Date, b: Date): boolean {
 export function minutesInto(day: Date, moment: Date): number {
   const minutes = (moment.getTime() - day.getTime()) / 60_000;
   return Math.max(0, Math.min(24 * 60, minutes));
+}
+
+/**
+ * The closed stretches of `day` as minutes from its start, given the open
+ * intervals (P5-B 8). Nothing is closed while no hours are set.
+ */
+export function closedSpans(day: Date, availability: Availability | undefined): [number, number][] {
+  if (!availability?.hours_set) return [];
+  const open = availability.open
+    .map((i) => [minutesInto(day, new Date(i.starts_at)), minutesInto(day, new Date(i.ends_at))] as const)
+    .filter(([from, to]) => to > from)
+    .sort((a, b) => a[0] - b[0]);
+  const closed: [number, number][] = [];
+  let cursor = 0;
+  for (const [from, to] of open) {
+    if (from > cursor) closed.push([cursor, from]);
+    cursor = Math.max(cursor, to);
+  }
+  if (cursor < 24 * 60) closed.push([cursor, 24 * 60]);
+  return closed;
+}
+
+/** Whether `moment` falls inside an open interval; true while no hours are set. */
+export function isOpen(availability: Availability | undefined, moment: Date): boolean {
+  if (!availability?.hours_set) return true;
+  const at = moment.getTime();
+  return availability.open.some((i) => new Date(i.starts_at).getTime() <= at && at < new Date(i.ends_at).getTime());
 }
 
 /** The appointments that touch `day`. */

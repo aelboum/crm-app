@@ -9,7 +9,9 @@ import { accessibilityViolations, type Handler, renderApp } from "../test/render
  * Calendar (decision P5-A): the week grid with today's appointments, booking
  * with the live conflict check ("Book anyway" sends `allow_conflict`), the
  * drawer's status buttons and the confirmed cancel, what a Read-only member
- * sees, and the month view. The server enforces every rule.
+ * sees, and the month view; business hours (decision P5-B) hatch closed
+ * time, give each member a status line and warn before booking outside
+ * them. The server enforces every rule.
  */
 
 const WS = "11111111-2222-4333-8444-555555555555";
@@ -53,6 +55,8 @@ function workspace(
   options: {
     items?: unknown[];
     conflicts?: unknown[];
+    outsideHours?: boolean;
+    open?: { starts_at: string; ends_at: string }[];
     onWrite?: (method: string, path: string, body: unknown) => Reply;
   } = {},
 ): Handler {
@@ -79,7 +83,13 @@ function workspace(
       return { status: 200, body: { items: options.items ?? [appointment()] } };
     }
     if (method === "GET" && path.startsWith(`${appointments}/conflicts`)) {
-      return { status: 200, body: { conflicts: options.conflicts ?? [] } };
+      return { status: 200, body: { conflicts: options.conflicts ?? [], outside_hours: options.outsideHours ?? false } };
+    }
+    if (method === "GET" && path.startsWith(`${appointments}/availability`)) {
+      return {
+        status: 200,
+        body: { hours_set: options.open !== undefined, time_zone: "Europe/Amsterdam", open: options.open ?? [] },
+      };
     }
     if (method === "GET" && path === `${appointments}/${APPT}`) return { status: 200, body: appointment() };
     if (method === "GET" && path.startsWith(`${appointments}?`)) {
@@ -211,6 +221,55 @@ describe("calendar", () => {
       expect.stringContaining("Call 1"),
       expect.stringContaining("Call 2"),
     ]);
+  });
+});
+
+describe("business hours on the calendar", () => {
+  // Open 09:00-17:00 every day of this week, in the viewer's own zone.
+  const open = Array.from({ length: 14 }, (_, i) => ({ starts_at: at(9, 0, i - 7), ends_at: at(17, 0, i - 7) }));
+
+  it("hatches closed time, names it in the legend and gives each member a status line", async () => {
+    renderApp(`/w/${WS}/calendar`, workspace(MANAGER, { open }));
+    expect(await screen.findByText("Outside business hours", { selector: "li" })).toBeInTheDocument();
+    // Seven day columns, each closed before 09:00 and after 17:00.
+    await waitFor(() => {
+      expect(document.querySelectorAll(".calendar-closed")).toHaveLength(14);
+    });
+    const presence = document.querySelector(".calendar-presence");
+    const hour = new Date().getHours();
+    const busy = hour === 10 && new Date().getMinutes() < 30;
+    expect(presence?.textContent).toBe(
+      busy ? expect.stringContaining("In an appointment until") : hour >= 9 && hour < 17 ? "Free now" : "Outside business hours",
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("hatches nothing while the workspace has not set its hours", async () => {
+    renderApp(`/w/${WS}/calendar`, workspace(MANAGER));
+    await screen.findAllByRole("button", { name: /Intro call with Sam/ });
+    expect(document.querySelectorAll(".calendar-closed")).toHaveLength(0);
+    expect(screen.queryByText("Outside business hours", { selector: "li" })).toBeNull();
+  });
+
+  it("warns before booking outside business hours and still books", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/calendar`,
+      workspace(MANAGER, {
+        open,
+        outsideHours: true,
+        onWrite: (method) => (method === "POST" ? { status: 201, body: appointment({ id: "new" }) } : undefined),
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "New appointment" }));
+    const dialog = await screen.findByRole("dialog", { name: "New appointment" });
+    await user.type(within(dialog).getByLabelText("Title"), "Late call");
+    expect(await within(dialog).findByText(/outside the business hours/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Book appointment" }));
+    await waitFor(() => {
+      expect(sent.filter((r) => r.method === "POST")).toHaveLength(1);
+    });
+    expect(sent.find((r) => r.method === "POST")?.body).toMatchObject({ allow_conflict: false });
   });
 });
 

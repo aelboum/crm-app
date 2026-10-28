@@ -37,6 +37,41 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 5 slice 5B, business hours and availability (decision P5-B, 2026-10-28):**
+  - **Built:** migration `0015_business_hours` (a nullable `business_hours`
+    column on `workspace_settings`: seven days, Monday first, each closed or
+    one `HH:MM` range in the workspace time zone; a `CHECK` on the outer
+    shape), saved by the existing settings `PATCH` (version, `If-Match`,
+    audit with field names; Owner and Admin) and cleared with `null`;
+    `GET /appointments/availability` (open intervals in UTC for a range of at
+    most 42 days, daylight saving handled on the server); the live conflict
+    check's `outside_hours` flag. Outside hours is a warning, never a
+    refusal. Settings › Business profile has a Business hours editor (a
+    switch and two times per day; "Set business hours" offers Monday to
+    Friday 09:00-17:00 until saved; "Clear business hours"); the calendar
+    hatches closed time, names it in the legend, warns in the booking dialog
+    and gives each team member a status line (free now, in an appointment
+    until, outside business hours) from today's own queries, so the side
+    panel speaks of today in any range.
+  - **Tests:** unit `test_appointment_rules.py` (open intervals, a
+    daylight-saving change, containment), `test_settings_values.py`
+    (business hours shape) and route policies; integration
+    `test_workspace_settings.py` and `test_appointment_routes.py` (hours set,
+    unchanged, refused, cleared, audited; Tokyo hours as UTC intervals;
+    outside-hours flag; booking outside hours allowed; bounded ranges; other
+    workspaces 404); Vitest `calendar.test.tsx` and
+    `BusinessSettings.test.tsx` (with axe). Whole suites: Python unit 499,
+    integration 610 (four sequential chunks), Vitest 223.
+  - **Browser** (local stack, dev DB migrated to 0015 without reset,
+    workspace "E2E Calendar 5A"): set the suggested hours at 390 px and saved;
+    the week view at 1440 px hatched before 09:00, after 17:00 and the
+    weekend, the legend named it; at 16:59 the status line read "Free now",
+    the dialog warned that 17:00 is outside business hours and booked it; at
+    17:01 the line read "In an appointment until 5:30 PM". Day view at 390 px
+    without page overflow; no console errors.
+  - **Not built (P5-B 1, 2):** hours per member, holidays and days off, a
+    lunch break, presence ("Away"). Enforcing hours waits for the public
+    booking page.
 - **Phase 5 slice 5A, calendar and appointments (decision P5-A, 2026-10-28):**
   - **Order:** the owner chose to start Calendar now (2026-10-28, "Yes"),
     while the email channel waits for SaaS-OS. Calendar stays outside the
@@ -70,7 +105,7 @@ decisions P2-A to P2-E approved)
     opened it on the Calendar. Checked at 1440 px and 390 px (Day view by
     default on phones; Week and Month without page overflow); no console
     errors.
-  - **Not built (P5-A 1):** working hours and availability (5B), a public
+  - **Not built (P5-A 1):** working hours and availability (built in 5B), a public
     booking page, reminders and notifications (need a delivery channel),
     external calendar sync, recurring appointments, rooms, several hosts.
     Members are shown as "You" or "Member <id>" as elsewhere, because
