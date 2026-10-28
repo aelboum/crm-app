@@ -37,6 +37,47 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 5 slice 5A, calendar and appointments (decision P5-A, 2026-10-28):**
+  - **Order:** the owner chose to start Calendar now (2026-10-28, "Yes"),
+    while the email channel waits for SaaS-OS. Calendar stays outside the
+    K5 MVP list; this is the timing decision K5 asks for.
+  - **Built:** migration `0014_appointments` (one table, forced RLS, in
+    the purge manifest); permissions `crm_app.appointment` read (every
+    role), create and update (Owner, Admin, Member), delete (Owner, Admin;
+    gate G7 applies to older workspaces); routes for a range of at most 42
+    days (at most 500 items, with `truncated`), upcoming appointments, the
+    live conflict check, booking (`Idempotency-Key`), changes, status and
+    cancel (`If-Match`) and delete. A host's overlapping booking is 409
+    `appointment_conflict` with the conflicting appointments unless
+    `allow_conflict` is sent, serialised by a per-host advisory lock;
+    back-to-back appointments do not conflict. Cancelling is a final
+    status and frees the slot. The Calendar page (Day, Week, Month; team
+    filter with today's counts; Up next; status legend; click a free half
+    hour to book; the drawer with status buttons, Reschedule, Cancel after
+    confirmation and Delete for Owners and Admins; the booking dialog with
+    the live check and "Book anyway"), and an Appointments section in the
+    contact drawer that books with the contact filled in and opens an
+    appointment on the Calendar.
+  - **Tests:** unit `test_appointment_rules.py` and route policies;
+    integration `test_appointment_tables.py` and
+    `test_appointment_routes.py` (38); Vitest `calendar.test.tsx` (8, with
+    axe).
+  - **Browser** (local stack, dev DB migrated to 0014 without reset, new
+    workspace "E2E Calendar 5A" because of G7): booked by clicking a slot,
+    saw the live conflict for an overlapping time and booked anyway (two
+    lanes), marked Pending, cancelled after confirming (gone from the grid
+    and Up next, drawer read-only), booked from a contact's drawer and
+    opened it on the Calendar. Checked at 1440 px and 390 px (Day view by
+    default on phones; Week and Month without page overflow); no console
+    errors.
+  - **Not built (P5-A 1):** working hours and availability (5B), a public
+    booking page, reminders and notifications (need a delivery channel),
+    external calendar sync, recurring appointments, rooms, several hosts.
+    Members are shown as "You" or "Member <id>" as elsewhere, because
+    member display names are not available yet.
+  - **Local test note:** on this 24-core machine the default Vitest worker
+    count makes some `findBy` waits time out under load; with
+    `--maxWorkers=6` the whole suite passed twice (217).
 - **Phase 7 slice 7A, forms and lead capture (decision P7-A, 2026-10-28):**
   - **Order:** forms come before the email channel (Phase 6), which waits
     for a SaaS-OS release with an email provider and a new pin the owner

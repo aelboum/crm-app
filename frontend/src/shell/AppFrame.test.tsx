@@ -26,16 +26,17 @@ const signedIn: Handler = (method, path) => {
 
 describe("app frame", () => {
   it("shows the design's navigation, marking every module that is not built", async () => {
-    renderApp(`/w/${WS}/calendar`, signedIn);
+    renderApp(`/w/${WS}/campaigns`, signedIn);
     const nav = await screen.findByRole("navigation", { name: "Workspace" });
     for (const group of ["CRM", "Scheduling", "Marketing", "AI", "Insights"]) {
       expect(within(nav).getByRole("button", { name: group })).toHaveAttribute("aria-expanded", "true");
     }
-    const calendar = within(nav).getByRole("link", { name: /Calendar/ });
-    expect(calendar).toHaveAttribute("aria-current", "page");
-    expect(calendar).toHaveTextContent("soon");
-    // Contacts, Companies (slice 3A), Opportunities (4B) and Tasks (4C) are
-    // built, so they carry no marker.
+    const campaigns = within(nav).getByRole("link", { name: /Campaigns/ });
+    expect(campaigns).toHaveAttribute("aria-current", "page");
+    expect(campaigns).toHaveTextContent("soon");
+    // Contacts, Companies (slice 3A), Opportunities (4B), Tasks (4C) and
+    // Calendar (5A) are built, so they carry no marker.
+    expect(within(nav).getByRole("link", { name: "Calendar" })).not.toHaveTextContent("soon");
     expect(within(nav).getByRole("link", { name: "Opportunities" })).not.toHaveTextContent("soon");
     expect(within(nav).getByRole("link", { name: "Tasks" })).not.toHaveTextContent("soon");
     expect(within(nav).getByRole("link", { name: "Contacts" })).not.toHaveTextContent("soon");
@@ -44,8 +45,8 @@ describe("app frame", () => {
   });
 
   it("opens the design's placeholder page for a module that is not built", async () => {
-    renderApp(`/w/${WS}/calendar`, signedIn);
-    expect(await screen.findByRole("heading", { level: 1, name: "Calendar" })).toBeInTheDocument();
+    renderApp(`/w/${WS}/campaigns`, signedIn);
+    expect(await screen.findByRole("heading", { level: 1, name: "Campaigns" })).toBeInTheDocument();
     expect(screen.getByText("Not available yet")).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });

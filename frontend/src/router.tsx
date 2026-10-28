@@ -18,6 +18,7 @@ import { InvitePage } from "./pages/InvitePage";
 import { PublicFormPage } from "./pages/PublicFormPage";
 import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
+import { CalendarPage } from "./records/CalendarPage";
 import { FormsPage } from "./records/FormsPage";
 import { OpportunitiesPage } from "./records/OpportunitiesPage";
 import { TasksPage } from "./records/TasksPage";
@@ -140,6 +141,21 @@ function SectionPage() {
         startCreate={create === "contact"}
         onCreateDone={() => {
           void navigate({ search: record ? { record } : {}, replace: true });
+        }}
+        onOpenAppointment={(id) => {
+          void navigate({ params: { workspaceId, section: "calendar" }, search: { record: id } });
+        }}
+      />
+    );
+  }
+  if (slug === "calendar") {
+    return (
+      <CalendarPage
+        workspaceId={workspaceId}
+        openId={record ?? null}
+        onOpen={openRecord}
+        onOpenContact={(id) => {
+          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
         }}
       />
     );

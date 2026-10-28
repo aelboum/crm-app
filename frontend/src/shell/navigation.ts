@@ -76,7 +76,7 @@ export const GROUPS: Group[] = [
   {
     key: "sched",
     label: "nav.group.scheduling",
-    sections: [soon("calendar", "nav.calendar", Calendar, "soon.later")],
+    sections: [built("calendar", "nav.calendar", Calendar)],
   },
   {
     key: "mkt",
