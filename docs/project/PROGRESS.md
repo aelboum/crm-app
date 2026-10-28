@@ -37,6 +37,45 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 5 slice 5C, public booking pages (decision P5-C, 2026-10-28):**
+  - **Built:** migration `0016_booking_pages` (`booking_page` and `booking`,
+    tenant-owned, forced RLS, composite links, in `PURGE_TABLES`; contact
+    source `booking`; an appointment cancelled by the visitor has no
+    cancelling member); catalogue permissions `crm_app.booking_page:read`
+    (every role) and `:manage` (Owner, Admin), reported by `/access` (gate
+    G7 for older workspaces); members' routes to list, create (idempotent),
+    edit, publish (needs business hours), unpublish and delete pages; public
+    routes for the page, its free times (14 days at a time), a booking
+    (Idempotency-Key, 8 KiB, honeypot, per-address and per-page limits that
+    fail closed) and the visitor's own booking by a token sent in the body
+    (view, cancel until it starts). A booking checks the time again under
+    the host's lock, creates or matches the contact (never changing a
+    matched one), refuses a fourth upcoming booking of the same contact on
+    the same page, and creates a confirmed appointment; the token is kept
+    only as its SHA-256 and returned once. Appointments say how they were
+    booked. Calendar › Booking pages (a drawer and an editor), the hosted
+    page `/app/b/<workspace>/<key>`, the visitor's link
+    `/app/b/<workspace>/manage#<token>` and the drawer's Source row.
+  - **Tests:** unit `test_booking_page_rules.py` (free times, visitor
+    details, title, token), route policies (five public routes), purge
+    order, contact sources; integration `test_booking_page_tables.py`
+    (isolation, links, checks, cascades, purge, rollback) and
+    `test_booking_page_routes.py` (roles, isolation, publishing, the public
+    page, free times, booking rules, matching, the limit, the honeypot,
+    the visitor's link, audit acting as the host); Vitest
+    `bookingPages.test.tsx` (with axe). Whole suites: Python unit 514,
+    integration 657 (four sequential chunks), Vitest 236.
+  - **Browser** (local stack, dev DB migrated to 0016 without reset, new
+    workspace "E2E Booking 5C" made with `crm_app.provision`): creating a
+    page; publishing refused until business hours were set, then
+    published; the hosted page at 390 px listed free times by day in
+    Europe/Amsterdam; a booking showed the private link; the link showed
+    the booking and cancelled it; the appointment drawer at 1440 px read
+    "Booked online · Intro call" and "Cancelled by the visitor"; the
+    drawer at 390 px without page overflow; no console errors.
+  - **Not built (P5-C 1):** emails or reminders to the visitor or the host
+    (need a delivery channel), the visitor rescheduling, several hosts,
+    buffers, custom questions, payments, an embed script, CAPTCHA.
 - **Phase 5 slice 5B, business hours and availability (decision P5-B, 2026-10-28):**
   - **Built:** migration `0015_business_hours` (a nullable `business_hours`
     column on `workspace_settings`: seven days, Monday first, each closed or
@@ -70,8 +109,8 @@ decisions P2-A to P2-E approved)
     17:01 the line read "In an appointment until 5:30 PM". Day view at 390 px
     without page overflow; no console errors.
   - **Not built (P5-B 1, 2):** hours per member, holidays and days off, a
-    lunch break, presence ("Away"). Enforcing hours waits for the public
-    booking page.
+    lunch break, presence ("Away"). Enforcing hours belongs to the public
+    booking page (built in 5C).
 - **Phase 5 slice 5A, calendar and appointments (decision P5-A, 2026-10-28):**
   - **Order:** the owner chose to start Calendar now (2026-10-28, "Yes"),
     while the email channel waits for SaaS-OS. Calendar stays outside the

@@ -554,7 +554,10 @@ export function AppointmentDrawer({
             ) : (
               <p>
                 <Badge tone="neutral">{t("appointments.status.cancelled")}</Badge>{" "}
-                <span className="muted">{t("appointments.cancelledHint")}</span>
+                <span className="muted">
+                  {query.data.booking?.cancelled_by_visitor ? `${t("appointments.cancelledByVisitor")} ` : null}
+                  {t("appointments.cancelledHint")}
+                </span>
               </p>
             )}
           </section>
@@ -579,6 +582,13 @@ export function AppointmentDrawer({
             </FieldRow>
             <FieldRow label={t("appointments.field.note")}>
               {query.data.note ? <span className="appointment-note">{query.data.note}</span> : null}
+            </FieldRow>
+            <FieldRow label={t("appointments.field.source")}>
+              {query.data.booking
+                ? query.data.booking.page_name
+                  ? t("appointments.source.onlinePage", { page: query.data.booking.page_name })
+                  : t("appointments.source.online")
+                : t("appointments.source.calendar")}
             </FieldRow>
           </dl>
 

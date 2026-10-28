@@ -73,6 +73,7 @@ const SOURCE_LABEL: Record<string, MessageId> = {
   form: "source.form",
   referral: "source.referral",
   other: "source.other",
+  booking: "source.booking",
 };
 
 export function sourceLabel(t: ReturnType<typeof useT>, source: string): string {

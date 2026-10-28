@@ -7,6 +7,7 @@ import {
   Outlet,
   redirect,
   type RouterHistory,
+  useLocation,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 
@@ -15,7 +16,9 @@ import { keys } from "./api/queries";
 import { LoadError } from "./components/StateNotice";
 import { HomePage, isWorkspaceId } from "./pages/HomePage";
 import { InvitePage } from "./pages/InvitePage";
+import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { PublicFormPage } from "./pages/PublicFormPage";
+import { VisitorBookingPage } from "./pages/VisitorBookingPage";
 import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
 import { CalendarPage } from "./records/CalendarPage";
@@ -69,6 +72,42 @@ const publicFormRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/f/$workspaceId/$formKey",
   component: PublicFormRoutePage,
+});
+
+function PublicNotFound() {
+  return (
+    <main id="main" className="public-form-page">
+      <div className="public-form-card">{notFound}</div>
+    </main>
+  );
+}
+
+function PublicBookingRoutePage() {
+  const { workspaceId, pageKey } = publicBookingRoute.useParams();
+  if (!isWorkspaceId(workspaceId)) return <PublicNotFound />;
+  return <PublicBookingPage workspaceId={workspaceId} pageKey={pageKey} />;
+}
+
+// A published booking page (decision P5-C 10): no app frame, no sign-in.
+const publicBookingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/b/$workspaceId/$pageKey",
+  component: PublicBookingRoutePage,
+});
+
+function VisitorBookingRoutePage() {
+  const { workspaceId } = visitorBookingRoute.useParams();
+  // The token is the fragment: browsers never send it to the server.
+  const token = useLocation({ select: (location) => location.hash });
+  if (!isWorkspaceId(workspaceId)) return <PublicNotFound />;
+  return <VisitorBookingPage workspaceId={workspaceId} token={token} />;
+}
+
+// The visitor's own booking (P5-C 7): /app/b/<workspace>/manage#<token>.
+const visitorBookingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/b/$workspaceId/manage",
+  component: VisitorBookingRoutePage,
 });
 
 const notFound = <LoadError error={new ApiError(404)} onRetry={() => undefined} />;
@@ -256,6 +295,8 @@ const routeTree = rootRoute.addChildren([
   plainRoute.addChildren([homeRoute, inviteRoute]),
   workspaceRoute.addChildren([workspaceIndexRoute, sectionRoute]),
   publicFormRoute,
+  visitorBookingRoute,
+  publicBookingRoute,
 ]);
 
 export function createAppRouter(history: RouterHistory = createBrowserHistory()) {

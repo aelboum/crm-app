@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { useIntl } from "react-intl";
@@ -36,6 +36,7 @@ import {
   STATUS_LABEL,
   TimeRange,
 } from "./appointmentParts";
+import { BookingPagesDrawer } from "./BookingPages";
 import { type Option, ownerOptions } from "./parts";
 
 /*
@@ -86,6 +87,7 @@ export function CalendarPage({
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState<Appointment | null>(null);
+  const [bookingPages, setBookingPages] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -184,6 +186,16 @@ export function CalendarPage({
             </AriaButton>
           ))}
         </div>
+        {can("read_booking_pages") ? (
+          <Button
+            onPress={() => {
+              setBookingPages(true);
+            }}
+          >
+            <CalendarPlus size={15} aria-hidden="true" />
+            {t("bookingPages.open")}
+          </Button>
+        ) : null}
         {can("create_appointment") ? (
           <Button
             variant="primary"
@@ -317,6 +329,17 @@ export function CalendarPage({
           }}
           onEdit={setEditing}
           onOpenContact={onOpenContact}
+        />
+      ) : null}
+      {bookingPages ? (
+        <BookingPagesDrawer
+          workspaceId={workspaceId}
+          hosts={hosts}
+          meId={meId}
+          canManage={can("manage_booking_pages")}
+          onClose={() => {
+            setBookingPages(false);
+          }}
         />
       ) : null}
       {draft || editing ? (

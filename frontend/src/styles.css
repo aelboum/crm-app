@@ -462,7 +462,7 @@ p { margin: 0; }
 .btn-ghost[data-hovered] { background: var(--hover); }
 .btn-destructive { background: var(--surface); color: var(--risk-fg); border-color: var(--line-strong); }
 .btn-destructive[data-hovered] { background: var(--risk-bg); }
-.btn[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+.btn[data-disabled], .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 a.btn-primary:hover { filter: brightness(0.94); }
 
 /* --- Badges ---------------------------------------------------------------- */
@@ -1244,3 +1244,35 @@ a.btn-primary:hover { filter: brightness(0.94); }
   .calendar-month-cell { min-height: 76px; padding: 4px 3px; }
   .calendar-chip { padding: 1px 3px; font-size: 10px; }
 }
+
+/* Booking pages (decision P5-C 10): the Calendar drawer and the hosted page. */
+.booking-intro { margin: 0 0 4px; }
+.booking-pages { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.booking-page-card { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.booking-page-card p { margin: 0; font-size: 12.5px; }
+.booking-page-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.booking-page-name { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.booking-page-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.booking-page-url { display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-family: "Geist Mono Variable", monospace; font-size: 11.5px; color: var(--accent); overflow-wrap: anywhere; word-break: break-all; }
+.booking-page-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.booking-card { display: flex; flex-direction: column; gap: 12px; }
+.booking-card > p { margin: 0; }
+.booking-description { white-space: pre-line; }
+.booking-step-title { margin: 0; font-size: 14px; font-weight: 600; }
+.booking-week { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.booking-week-steps { display: flex; align-items: center; gap: 8px; }
+.booking-week-label { font-size: 12.5px; color: #4a5160; white-space: nowrap; }
+.booking-times { display: flex; flex-direction: column; gap: 12px; }
+.booking-day { display: flex; flex-direction: column; gap: 6px; }
+.booking-day-title { margin: 0; font-size: 13px; font-weight: 600; }
+.booking-slots { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.booking-slot { width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 7px; background: #fff; color: var(--accent); font: inherit; font-size: 13px; font-weight: 550; cursor: pointer; }
+.booking-slot:hover { background: var(--accent-soft); }
+.booking-slot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.booking-chosen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--accent-soft); font-weight: 550; }
+.booking-location { overflow-wrap: anywhere; }
+.booking-manage { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 12px; border: 1px dashed var(--line-strong); border-radius: 8px; }
+.booking-manage-link { max-width: 100%; font-family: "Geist Mono Variable", monospace; font-size: 11.5px; color: var(--accent); word-break: break-all; }
+.visitor-booking { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.visitor-booking p { margin: 0; }
+.visitor-booking-icon { color: var(--accent); }
