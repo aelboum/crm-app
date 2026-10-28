@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0014_appointments` own the
+Migrations `0002_contacts_companies` to `0015_business_hours` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -314,7 +314,8 @@ class ImportExpiry(Base):
 
 class WorkspaceSettings(Base):
     """A workspace's locale, time zone and default currency (migration
-    0004, decision P2-F 1). No row means the product defaults."""
+    0004, decision P2-F 1) and business hours (migration 0015, decision
+    P5-B). No row means the product defaults."""
 
     __tablename__ = "workspace_settings"
     __table_args__ = ({"schema": SCHEMA},)
@@ -323,6 +324,10 @@ class WorkspaceSettings(Base):
     locale: Mapped[str] = mapped_column(Text)
     time_zone: Mapped[str] = mapped_column(Text)
     currency: Mapped[str] = mapped_column(Text)
+    # SQL NULL, not JSON null, while the hours are not set (P5-B 3).
+    business_hours: Mapped[list[dict[str, str] | None] | None] = mapped_column(
+        JSON(none_as_null=True)
+    )
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)

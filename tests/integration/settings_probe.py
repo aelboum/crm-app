@@ -29,7 +29,7 @@ from tests.integration.workspace_route_probe import PROVISIONING, _new_user, _ne
 ROLES = (Role.OWNER, Role.ADMIN, Role.MEMBER, Role.READ_ONLY)
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
     if os.environ.get("ENVIRONMENT") != "test":
         raise SystemExit("settings_probe runs only with ENVIRONMENT=test")
     a = _new_workspace("settings-a")
@@ -105,6 +105,33 @@ def main() -> None:
             "tenant_id": patch(path, {"tenant_id": str(b.id)}, version).status_code,
             "version_field": patch(path, {"version": 99}, version).status_code,
         }
+
+        # Business hours (P5-B): set, unchanged, refused, cleared.
+        week = [{"opens": "09:00", "closes": "17:00"}] * 5 + [None, None]
+        hours = patch(path, {"business_hours": week}, version)
+        version = hours.json()["version"]
+        result["hours"] = {
+            "set": [hours.status_code, hours.json()["business_hours"], version],
+            "same": patch(path, {"business_hours": week}, version).json()["version"],
+            "member": patch(path, {"business_hours": None}, version, "Member").status_code,
+            "backwards": patch(
+                path, {"business_hours": [{"opens": "17:00", "closes": "09:00"}] * 7}, version
+            ).status_code,
+            "six_days": patch(path, {"business_hours": week[:6]}, version).status_code,
+            "extra_key": patch(
+                path,
+                {"business_hours": [{"opens": "09:00", "closes": "17:00", "x": 1}] * 7},
+                version,
+            ).status_code,
+        }
+        cleared = patch(path, {"business_hours": None, "currency": None}, version)
+        version = cleared.json()["version"]
+        result["hours"]["cleared"] = [
+            cleared.status_code,
+            cleared.json()["business_hours"],
+            cleared.json()["currency"],
+            version,
+        ]
 
         # Another workspace's member naming A's settings, and B's own.
         result["cross"] = {

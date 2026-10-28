@@ -6,9 +6,10 @@
 The path's `tenant_id` is only the request: `require_permission` admits
 an active member of an open workspace, and the handlers use
 `context.tenant_id` alone. `PATCH` needs `If-Match: <version>` (version 0
-before the first save) and accepts only the three fields, each validated
+before the first save) and accepts only the four fields, each validated
 and normalised by `crm_app.domains.settings`; unknown fields are refused,
-and refusals never echo the value sent.
+and refusals never echo the value sent. `business_hours: null` clears the
+hours (P5-B 3); `null` for the other fields means "unchanged".
 """
 
 from __future__ import annotations
@@ -35,10 +36,25 @@ UpdateWorkspace = Annotated[
 ]
 
 
+class DayHours(BaseModel):
+    """One open day (P5-B 2): `HH:MM` wall-clock times in the workspace's zone."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    opens: str = Field(max_length=5)
+    closes: str = Field(max_length=5)
+
+
+# Seven days, Monday first; `null` is a closed day.
+Week = Annotated[list[DayHours | None], Field(max_length=values.DAYS)]
+
+
 class SettingsOut(BaseModel):
     locale: str
     time_zone: str
     currency: str
+    # `null` until the hours are first saved (P5-B 3).
+    business_hours: Week | None
     # 0 until the first save: the product defaults.
     version: int
     updated_at: datetime | None
@@ -51,6 +67,7 @@ class SettingsUpdate(BaseModel):
     locale: str | None = Field(default=None, max_length=64)
     time_zone: str | None = Field(default=None, max_length=64)
     currency: str | None = Field(default=None, max_length=64)
+    business_hours: Week | None = None
 
     @field_validator("locale")
     @classmethod
@@ -66,6 +83,14 @@ class SettingsUpdate(BaseModel):
     @classmethod
     def _currency(cls, value: str | None) -> str | None:
         return None if value is None else values.currency(value)
+
+    @field_validator("business_hours")
+    @classmethod
+    def _business_hours(cls, value: list[DayHours | None] | None) -> list[DayHours | None] | None:
+        if value is None:
+            return None
+        week = values.business_hours([None if day is None else day.model_dump() for day in value])
+        return [None if day is None else DayHours(**day) for day in week or []]
 
 
 def _scope(context: RequestContext) -> Scope:
@@ -91,7 +116,11 @@ def update_settings(
     if_match: IfMatch = None,
 ) -> Any:
     expected = _version(if_match)
-    changes = {name: value for name, value in body.model_dump().items() if value is not None}
+    changes = {
+        name: value
+        for name, value in body.model_dump(exclude_unset=True).items()
+        if value is not None or name == "business_hours"
+    }
     try:
         settings = workspace_settings.update(_scope(context), changes, expected_version=expected)
     except RecordError as exc:

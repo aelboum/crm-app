@@ -14,6 +14,10 @@ unless the caller allows the conflict (P5-A 4); a per-host advisory lock
 serialises the check and the write. A cancelled appointment never changes
 again (P5-A 3).
 
+The workspace's business hours (decision P5-B) give the open intervals
+the calendar shades around and the "outside business hours" warning of
+the live check; booking outside them is allowed (P5-B 7).
+
 SaaS-OS resolves configuration at import time; only code that runs after
 validation imports this module.
 """
@@ -41,8 +45,9 @@ from saas_os.infra.db import (
 )
 
 from crm_app.domains import appointments as rules
+from crm_app.domains import settings as setting_values
 from crm_app.domains.records import InvalidValue
-from crm_app.models import Appointment, Contact
+from crm_app.models import Appointment, Contact, WorkspaceSettings
 from crm_app.records import (
     ConstraintViolationError,
     InvalidReferenceError,
@@ -357,6 +362,30 @@ def upcoming(
         return _items(session, scope, rows)
 
 
+def _hours(session: Session, scope: Scope) -> tuple[list[dict[str, str] | None] | None, str]:
+    """The workspace's business hours (`None` while not set) and its zone."""
+    row = session.execute(
+        select(WorkspaceSettings.business_hours, WorkspaceSettings.time_zone).where(
+            WorkspaceSettings.tenant_id == scope.workspace
+        )
+    ).one_or_none()
+    if row is None:
+        return None, setting_values.DEFAULT_TIME_ZONE
+    return row.business_hours, row.time_zone
+
+
+def availability(scope: Scope, start: datetime, end: datetime) -> dict[str, Any]:
+    """The open intervals of `[start, end)` from the business hours (P5-B 6)."""
+    with tenant_session_scope(scope.workspace) as session:
+        hours, zone = _hours(session, scope)
+    opened = [] if hours is None else rules.open_intervals(hours, zone, start, end)
+    return {
+        "hours_set": hours is not None,
+        "time_zone": zone,
+        "open": [{"starts_at": opens, "ends_at": closes} for opens, closes in opened],
+    }
+
+
 def conflicts(
     scope: Scope,
     host: uuid.UUID,
@@ -364,11 +393,18 @@ def conflicts(
     ends_at: datetime,
     *,
     exclude: uuid.UUID | None = None,
-) -> list[dict[str, Any]]:
-    """The live check behind the booking dialog (P5-A 4)."""
+) -> dict[str, Any]:
+    """The live check behind the booking dialog (P5-A 4): the host's
+    conflicting appointments, and whether the time falls outside business
+    hours (P5-B 6; always false while they are not set)."""
     _check_times(starts_at, ends_at)
     with tenant_session_scope(scope.workspace) as session:
-        return _conflicting(session, scope, host, (starts_at, ends_at), exclude=exclude)
+        found = _conflicting(session, scope, host, (starts_at, ends_at), exclude=exclude)
+        hours, zone = _hours(session, scope)
+    outside = hours is not None and not rules.within(
+        rules.open_intervals(hours, zone, starts_at, ends_at), starts_at, ends_at
+    )
+    return {"conflicts": found, "outside_hours": outside}
 
 
 # --- Writes ----------------------------------------------------------------------------

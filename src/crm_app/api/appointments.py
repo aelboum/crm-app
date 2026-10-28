@@ -1,8 +1,9 @@
-"""Appointment routes (decision P5-A, slice 5A).
+"""Appointment routes (decisions P5-A and P5-B).
 
     GET    /v1/workspaces/{tenant_id}/appointments                   crm_app.appointment:read
     GET    /v1/workspaces/{tenant_id}/appointments/upcoming          crm_app.appointment:read
     GET    /v1/workspaces/{tenant_id}/appointments/conflicts         crm_app.appointment:read
+    GET    /v1/workspaces/{tenant_id}/appointments/availability      crm_app.appointment:read
     POST   /v1/workspaces/{tenant_id}/appointments                   crm_app.appointment:create
     GET    /v1/workspaces/{tenant_id}/appointments/{appointment_id}  crm_app.appointment:read
     PATCH  /v1/workspaces/{tenant_id}/appointments/{appointment_id}  crm_app.appointment:update
@@ -177,22 +178,39 @@ class Conflict(BaseModel):
 
 class ConflictList(BaseModel):
     conflicts: list[Conflict]
+    # Whether the time falls outside the business hours (P5-B 6, 7): a
+    # warning, never a refusal; false while no hours are set.
+    outside_hours: bool
 
 
-class RangeParams(BaseModel):
+class OpenInterval(BaseModel):
+    starts_at: datetime
+    ends_at: datetime
+
+
+class Availability(BaseModel):
+    hours_set: bool
+    time_zone: str
+    open: list[OpenInterval]
+
+
+class WindowParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     start: AwareDatetime
     end: AwareDatetime
-    host: list[str] = Field(default_factory=list, max_length=_MAX_VALUES)
-    contact_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)
-    include_cancelled: bool = False
 
     @model_validator(mode="after")
     def _range(self) -> Self:
         if not self.start < self.end <= self.start + rules.RANGE_MAX:
             raise ValueError("the range must end after it starts and span at most 42 days")
         return self
+
+
+class RangeParams(WindowParams):
+    host: list[str] = Field(default_factory=list, max_length=_MAX_VALUES)
+    contact_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)
+    include_cancelled: bool = False
 
 
 class UpcomingParams(BaseModel):
@@ -283,7 +301,14 @@ def appointment_conflicts(context: Read, params: Annotated[ConflictParams, Query
         )
     except RecordError as exc:
         raise _refused(exc) from None
-    return {"conflicts": found}
+    return found
+
+
+@router.get(
+    f"{_APPOINTMENTS}/availability", response_model=Availability, name="appointment_availability"
+)
+def appointment_availability(context: Read, params: Annotated[WindowParams, Query()]) -> Any:
+    return appointments.availability(_scope(context), params.start, params.end)
 
 
 @router.post(

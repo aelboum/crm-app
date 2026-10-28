@@ -13,6 +13,7 @@ appointments; and audit entries without titles, locations or notes.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 from typing import Any
 
 import psycopg
@@ -188,3 +189,32 @@ def test_changes_are_audited_without_titles_locations_or_notes(
     text = json.dumps([metadata for _, metadata in rows])
     for secret in ("Intro call", "meet.example", "Bring the quote"):
         assert secret not in text
+
+
+def test_without_business_hours_nothing_is_closed(probe: Probe) -> None:
+    availability, outside = probe["hours_unset"]
+    assert availability == {"hours_set": False, "time_zone": "Europe/Amsterdam", "open": []}
+    assert outside is False
+
+
+def test_business_hours_are_open_intervals_in_the_workspace_zone(probe: Probe) -> None:
+    hours = probe["hours"]
+    day = datetime.fromisoformat(probe["hours_day"])
+    assert hours["reader"]["hours_set"] is True
+    assert hours["reader"]["time_zone"] == "Asia/Tokyo"
+    assert [
+        (datetime.fromisoformat(i["starts_at"]), datetime.fromisoformat(i["ends_at"]))
+        for i in hours["reader"]["open"]
+    ] == [(day, day + timedelta(hours=8))]
+    assert (hours["inside"], hours["straddling"], hours["after"]) == (False, True, True)
+
+
+def test_booking_outside_business_hours_is_a_warning_not_a_refusal(probe: Probe) -> None:
+    assert probe["hours"]["booked_outside"] == [201, None]
+
+
+def test_availability_needs_a_bounded_aware_range_and_a_member(probe: Probe) -> None:
+    hours = probe["hours"]
+    assert (hours["too_long"], hours["naive"]) == (422, 422)
+    assert (hours["anonymous"], hours["other_owner"]) == (401, 404)
+    assert hours["theirs"] is False

@@ -54,6 +54,7 @@ def test_a_new_workspace_has_the_defaults_at_version_0(probe: Probe) -> None:
         "EUR",
     )
     assert (body["version"], body["updated_at"], etag) == (0, None, '"0"')
+    assert body["business_hours"] is None
 
 
 def test_every_role_reads_and_nobody_else_does(probe: Probe) -> None:
@@ -87,6 +88,17 @@ def test_values_are_normalised_and_versions_checked(probe: Probe) -> None:
     assert probe["unchanged"] == 2  # nothing changed: no new version
     assert probe["stale"] == [409, {"code": "stale_version", "current_version": 2}]
     assert probe["missing_version"] == 428
+
+
+def test_business_hours_are_set_checked_and_cleared(probe: Probe) -> None:
+    hours = probe["hours"]
+    week = [{"opens": "09:00", "closes": "17:00"}] * 5 + [None, None]
+    assert hours["set"] == [200, week, 3]
+    assert hours["same"] == 3  # the same week again: no new version
+    assert hours["member"] == 403
+    assert (hours["backwards"], hours["six_days"], hours["extra_key"]) == (422, 422, 422)
+    # `null` clears the hours; for another field it leaves the value alone.
+    assert hours["cleared"] == [200, None, "EUR", 4]
 
 
 def test_invalid_values_and_extra_fields_are_refused_without_echo(probe: Probe) -> None:
@@ -127,6 +139,8 @@ def test_each_save_is_audited_with_field_names_only(
     assert [json.loads(metadata) for (metadata,) in rows] == [
         {"fields": ["currency"]},
         {"fields": ["currency", "locale", "time_zone"]},
+        {"fields": ["business_hours"]},
+        {"fields": ["business_hours"]},
     ]
 
 
@@ -174,4 +188,20 @@ def test_the_table_refuses_values_outside_the_rules(
             "INSERT INTO crm_app.workspace_settings (tenant_id, locale, time_zone, currency)"
             " VALUES (%(tenant_id)s, %(locale)s, %(time_zone)s, %(currency)s)",
             row,
+        )
+
+
+@pytest.mark.parametrize("hours", ['"open"', "[null, null, null, null, null, null]", "{}"])
+def test_the_table_refuses_business_hours_that_are_not_seven_days(
+    env: dict[str, str],  # noqa: F811
+    owner_connection: psycopg.Connection,
+    hours: str,
+) -> None:
+    a = _workspace(env)["tenant"]
+    with pytest.raises(errors.CheckViolation):
+        owner_connection.execute(
+            "INSERT INTO crm_app.workspace_settings"
+            " (tenant_id, locale, time_zone, currency, business_hours)"
+            " VALUES (%s, 'en', 'UTC', 'EUR', %s::jsonb)",
+            (a, hours),
         )

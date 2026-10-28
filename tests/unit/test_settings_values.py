@@ -80,3 +80,31 @@ def test_stored_forms_satisfy_the_migration_checks() -> None:
         assert re.match(patterns["LOCALE_PATTERN"], values.locale(tag))
     for zone in ("Europe/Amsterdam", "UTC", "America/Argentina/Buenos_Aires", "Etc/GMT+5"):
         assert re.match(patterns["TIME_ZONE_PATTERN"], values.time_zone(zone))
+
+
+def test_business_hours_are_seven_days_monday_first() -> None:
+    week = [{"opens": "09:00", "closes": "17:30"}] * 5 + [
+        {"opens": "00:00", "closes": "23:59"},
+        None,
+    ]
+    assert values.business_hours(week) == week
+    assert values.business_hours(None) is None
+
+
+@pytest.mark.parametrize(
+    "week",
+    [
+        [None] * 6,
+        [None] * 8,
+        [{"opens": "17:00", "closes": "09:00"}] + [None] * 6,
+        [{"opens": "09:00", "closes": "09:00"}] + [None] * 6,
+        [{"opens": "9:00", "closes": "17:00"}] + [None] * 6,
+        [{"opens": "09:00", "closes": "24:00"}] + [None] * 6,
+        [{"opens": "09:00"}] + [None] * 6,
+        [{"opens": "09:00", "closes": "17:00", "lunch": "12:00"}] + [None] * 6,
+        [{"opens": 900, "closes": "17:00"}] + [None] * 6,
+    ],
+)
+def test_other_business_hours_are_refused(week: list[dict[str, object] | None]) -> None:
+    with pytest.raises(InvalidValue):
+        values.business_hours(week)

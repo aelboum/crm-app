@@ -272,6 +272,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/appointments/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Appointment Availability */
+        get: operations["appointment_availability_v1_workspaces__tenant_id__appointments_availability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/appointments/conflicts": {
         parameters: {
             query?: never;
@@ -1544,6 +1561,15 @@ export interface components {
             /** Truncated */
             truncated: boolean;
         };
+        /** Availability */
+        Availability: {
+            /** Hours Set */
+            hours_set: boolean;
+            /** Open */
+            open: components["schemas"]["OpenInterval"][];
+            /** Time Zone */
+            time_zone: string;
+        };
         /**
          * CompanyCreate
          * @description `domain` is derived from `website` when it is not given.
@@ -1692,6 +1718,8 @@ export interface components {
         ConflictList: {
             /** Conflicts */
             conflicts: components["schemas"]["Conflict"][];
+            /** Outside Hours */
+            outside_hours: boolean;
         };
         /** ConsentList */
         ConsentList: {
@@ -1884,6 +1912,16 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /**
+         * DayHours
+         * @description One open day (P5-B 2): `HH:MM` wall-clock times in the workspace's zone.
+         */
+        DayHours: {
+            /** Closes */
+            closes: string;
+            /** Opens */
+            opens: string;
         };
         /** DealEvent */
         DealEvent: {
@@ -2498,6 +2536,19 @@ export interface components {
             /** Record Archived */
             record_archived: boolean;
         };
+        /** OpenInterval */
+        OpenInterval: {
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+        };
         /** OutcomeIn */
         OutcomeIn: {
             /** Lost Reason */
@@ -2596,6 +2647,8 @@ export interface components {
         };
         /** SettingsOut */
         SettingsOut: {
+            /** Business Hours */
+            business_hours: (components["schemas"]["DayHours"] | null)[] | null;
             /** Currency */
             currency: string;
             /** Locale */
@@ -2611,6 +2664,8 @@ export interface components {
         };
         /** SettingsUpdate */
         SettingsUpdate: {
+            /** Business Hours */
+            business_hours?: (components["schemas"]["DayHours"] | null)[] | null;
             /** Currency */
             currency?: string | null;
             /** Locale */
@@ -3488,6 +3543,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppointmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    appointment_availability_v1_workspaces__tenant_id__appointments_availability_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Availability"];
                 };
             };
             /** @description Validation Error */

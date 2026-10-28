@@ -1,12 +1,15 @@
-"""Pure rules for appointments (decision P5-A, migration 0014).
+"""Pure rules for appointments (decision P5-A, migration 0014) and the
+open time that business hours give (decision P5-B).
 
-Each function returns the value as the database stores it, or raises
-`InvalidValue`.
+Each validating function returns the value as the database stores it, or
+raises `InvalidValue`.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from collections.abc import Sequence
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from crm_app.domains.records import InvalidValue, visible_text
 
@@ -76,3 +79,41 @@ def overlaps(a_start: datetime, a_end: datetime, b_start: datetime, b_end: datet
     """Half-open intervals `[start, end)` overlap (P5-A 4): back-to-back
     appointments do not."""
     return a_start < b_end and b_start < a_end
+
+
+def _wall(day: date, clock: str, zone: ZoneInfo) -> datetime:
+    hours, minutes = clock.split(":")
+    return datetime.combine(day, time(int(hours), int(minutes)), tzinfo=zone).astimezone(UTC)
+
+
+def open_intervals(
+    hours: Sequence[dict[str, str] | None],
+    zone_name: str,
+    start: datetime,
+    end: datetime,
+) -> list[tuple[datetime, datetime]]:
+    """The open intervals (UTC, ordered) that overlap `[start, end)`.
+
+    The hours are wall-clock times in `zone_name`, so each day is turned
+    into UTC with that day's offset: a daylight-saving change moves the
+    UTC times, never the local ones (P5-B 4).
+    """
+    zone = ZoneInfo(zone_name)
+    first = start.astimezone(zone).date() - timedelta(days=1)
+    last = end.astimezone(zone).date() + timedelta(days=1)
+    found: list[tuple[datetime, datetime]] = []
+    day = first
+    while day <= last:
+        today = hours[day.weekday()]
+        if today is not None:
+            opens = _wall(day, today["opens"], zone)
+            closes = _wall(day, today["closes"], zone)
+            if overlaps(opens, closes, start, end):
+                found.append((opens, closes))
+        day += timedelta(days=1)
+    return found
+
+
+def within(intervals: Sequence[tuple[datetime, datetime]], start: datetime, end: datetime) -> bool:
+    """Whether `[start, end)` lies inside one open interval."""
+    return any(opens <= start and end <= closes for opens, closes in intervals)

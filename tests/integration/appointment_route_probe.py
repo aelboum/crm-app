@@ -353,6 +353,62 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         result["upcoming_expected"] = [soon["id"]]
         result["past_id"] = past["id"]
 
+        # --- Business hours (P5-B) -----------------------------------------------------
+        availability = f"{base}/availability"
+
+        def outside(start: str, end: str) -> bool:
+            return client.get(
+                check,
+                params={"host_user_id": str(member_id), "starts_at": start, "ends_at": end},
+                headers=auth("reader"),
+            ).json()["outside_hours"]
+
+        before = client.get(availability, params=window, headers=auth("reader")).json()
+        result["hours_unset"] = [before, outside(at(1), at(2))]
+        # Every day 09:00-17:00 in Tokyo (UTC+9, no daylight saving): 00:00-08:00 UTC.
+        settings_path = f"/v1/workspaces/{a.id}/settings"
+        version = client.get(settings_path, headers=auth("owner")).json()["version"]
+        client.patch(
+            settings_path,
+            json={
+                "time_zone": "Asia/Tokyo",
+                "business_hours": [{"opens": "09:00", "closes": "17:00"}] * 7,
+            },
+            headers=auth("owner", version),
+        )
+        result["hours"] = {
+            "reader": client.get(availability, params=window, headers=auth("reader")).json(),
+            "inside": outside(at(1), at(2)),
+            "straddling": outside(at(7, 30), at(8, 30)),
+            "after": outside(at(9), at(10)),
+            "too_long": client.get(
+                availability,
+                params={"start": window["start"], "end": _iso(day + timedelta(days=43))},
+                headers=auth("reader"),
+            ).status_code,
+            "naive": client.get(
+                availability,
+                params={"start": "2026-10-28T00:00:00", "end": "2026-10-29T00:00:00"},
+                headers=auth("reader"),
+            ).status_code,
+            "anonymous": client.get(availability, params=window).status_code,
+            "other_owner": client.get(
+                availability, params=window, headers=auth("other_owner")
+            ).status_code,
+            "theirs": client.get(
+                f"/v1/workspaces/{b.id}/appointments/availability",
+                params=window,
+                headers=auth("other_owner"),
+            ).json()["hours_set"],
+        }
+        late = client.post(
+            base, json=booking(at(18), at(18, 30), title="After hours"), headers=auth("member")
+        )
+        result["hours"]["booked_outside"] = [late.status_code, late.json().get("detail")]
+        if late.status_code == 201:
+            client.delete(f"{base}/{late.json()['id']}", headers=auth("owner"))
+        result["hours_day"] = _iso(day)
+
         # --- Another workspace -----------------------------------------------------------
         theirs = client.post(
             f"/v1/workspaces/{b.id}/appointments",

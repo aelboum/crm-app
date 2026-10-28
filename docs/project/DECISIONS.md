@@ -1268,6 +1268,62 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      the grid shows the whole day and opens at 07:00; on narrow screens
      the grid scrolls inside its own frame.
 
+## P5-B — Business hours and availability (2026-10-28, under M1)
+
+- **Status:** Decided under M1, inside the scope the owner approved with
+  P5-A ("working hours and availability (5B, also the "outside working
+  hours" warning and the shading)"). Roadmap 5 "Availability
+  management"; the design's `ScreenSettings.dc.html` (Business profile ›
+  Business hours) and `ScreenCalendar.dc.html`; slice 5B.
+- **Design audit:** Settings › Business profile has "Business hours": a
+  row per weekday with an on/off switch and one time range ("08:00 –
+  18:00", "Closed"), saved with the rest of the profile, next to the time
+  zone. The calendar hatches the time outside working hours ("Outside
+  working hours"), tints a lunch hour ("Lunch block"), and the booking
+  dialog says "Outside working hours for this team member." The side
+  panel gives each person a status line ("Available now", "In appointment
+  until 11:00", "Away · back 1:00 PM"). In the prototype the hours are
+  fixed in code, the switches change nothing else, and the status lines
+  are invented.
+- **Decisions:**
+  1. **One set of business hours per workspace**, as the design's
+     Settings page has it. Hours per member, holidays and days off are
+     not built now; every host shares the workspace's hours. The design's
+     "for this team member" becomes "outside business hours".
+  2. **Shape:** seven days, Monday first; each day closed or one range
+     `opens`–`closes` in `HH:MM` (24-hour, whole minutes, `opens` before
+     `closes`, both within the day). One range a day: the design's lunch
+     block is not modelled (a break can be booked as an appointment).
+  3. **Not set until saved.** A workspace without hours has no shading
+     and no warning; nothing is invented. Settings offers Monday to Friday
+     09:00–17:00 as a starting point that only applies once saved. Hours
+     can be cleared again.
+  4. **Time zone:** the hours are wall-clock times in the workspace's time
+     zone (setting P2-F 1). The server turns them into UTC intervals with
+     the IANA rules, so daylight-saving changes are handled in one place;
+     the calendar shows them in the viewer's time zone.
+  5. **Storage:** a nullable `business_hours` column on
+     `workspace_settings` (migration `0015_business_hours`), saved by the
+     existing settings `PATCH` with its version, `If-Match` and audit
+     (field names only). The table `CHECK` requires a seven-item JSON
+     array; the API checks every day. Owner and Admin change them
+     (`crm_app.workspace:update`); every role reads them.
+  6. **Availability:** `GET /appointments/availability?start&end` (any
+     range of at most 42 days; `crm_app.appointment:read`) returns
+     whether hours are set, the workspace time zone and the open
+     intervals in UTC. The live conflict check also says whether the time
+     is outside business hours.
+  7. **Outside hours is a warning, not a refusal.** Staff may book
+     outside hours (a late call, an exception); the dialog says so before
+     booking. Enforcing hours belongs to the later public booking page.
+  8. **Screens:** a Business hours section in Settings › Business profile
+     (a switch and two times per day; read-only for other roles); the
+     calendar shades closed time and labels it; the booking dialog warns;
+     the side panel's status line per member is computed from the hours
+     and the appointments shown ("Available now", "In an appointment
+     until …", "Outside business hours"). The design's "Away" is not
+     shown: there is no presence data.
+
 ## P7-A — Forms and lead capture (2026-10-28, under M1)
 
 - **Status:** Decided under M1. The owner's instructions of 2026-10-27

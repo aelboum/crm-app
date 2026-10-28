@@ -1,5 +1,6 @@
 """Workspace settings: locale, time zone and default currency
-(`PHASE2-PLAN.md` S10, decision P2-F 1).
+(`PHASE2-PLAN.md` S10, decision P2-F 1) and business hours (decision
+P5-B; `None` while not set).
 
 A workspace without a row has the product defaults
 (`crm_app.domains.settings`) at version 0; the first save inserts the row
@@ -43,7 +44,7 @@ from crm_app.records import (
     TransactionConflictError,
 )
 
-FIELDS = ("locale", "time_zone", "currency")
+FIELDS = ("locale", "time_zone", "currency", "business_hours")
 RESOURCE = "crm_app.workspace_settings"
 _PRIMARY_KEY = "workspace_settings_pkey"
 
@@ -53,6 +54,7 @@ def _defaults() -> dict[str, Any]:
         "locale": values.DEFAULT_LOCALE,
         "time_zone": values.DEFAULT_TIME_ZONE,
         "currency": values.DEFAULT_CURRENCY,
+        "business_hours": None,
         "version": 0,
         "updated_at": None,
         "updated_by_user_id": None,
@@ -64,6 +66,7 @@ def _out(row: WorkspaceSettings) -> dict[str, Any]:
         "locale": row.locale,
         "time_zone": row.time_zone,
         "currency": row.currency,
+        "business_hours": row.business_hours,
         "version": row.version,
         "updated_at": row.updated_at,
         "updated_by_user_id": row.updated_by_user_id,
@@ -78,10 +81,10 @@ def get(scope: Scope) -> dict[str, Any]:
         return _defaults() if row is None else _out(row)
 
 
-def update(scope: Scope, changes: Mapping[str, str], *, expected_version: int) -> dict[str, Any]:
-    """Apply `changes` (already normalised) if the settings are still at
-    `expected_version`. Changing nothing is a no-op: no new version, no
-    audit entry."""
+def update(scope: Scope, changes: Mapping[str, Any], *, expected_version: int) -> dict[str, Any]:
+    """Apply `changes` (already normalised; `business_hours` may be `None`
+    to clear them) if the settings are still at `expected_version`.
+    Changing nothing is a no-op: no new version, no audit entry."""
     try:
         with tenant_session_scope(scope.workspace) as session:
             lock_open_tenant(session, scope.workspace)

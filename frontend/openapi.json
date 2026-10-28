@@ -717,6 +717,32 @@
         "title": "AppointmentRange",
         "type": "object"
       },
+      "Availability": {
+        "properties": {
+          "hours_set": {
+            "title": "Hours Set",
+            "type": "boolean"
+          },
+          "open": {
+            "items": {
+              "$ref": "#/components/schemas/OpenInterval"
+            },
+            "title": "Open",
+            "type": "array"
+          },
+          "time_zone": {
+            "title": "Time Zone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hours_set",
+          "time_zone",
+          "open"
+        ],
+        "title": "Availability",
+        "type": "object"
+      },
       "CompanyCreate": {
         "additionalProperties": false,
         "description": "`domain` is derived from `website` when it is not given.",
@@ -1252,10 +1278,15 @@
             },
             "title": "Conflicts",
             "type": "array"
+          },
+          "outside_hours": {
+            "title": "Outside Hours",
+            "type": "boolean"
           }
         },
         "required": [
-          "conflicts"
+          "conflicts",
+          "outside_hours"
         ],
         "title": "ConflictList",
         "type": "object"
@@ -1931,6 +1962,28 @@
           "user_id"
         ],
         "title": "CurrentUserResponse",
+        "type": "object"
+      },
+      "DayHours": {
+        "additionalProperties": false,
+        "description": "One open day (P5-B 2): `HH:MM` wall-clock times in the workspace's zone.",
+        "properties": {
+          "closes": {
+            "maxLength": 5,
+            "title": "Closes",
+            "type": "string"
+          },
+          "opens": {
+            "maxLength": 5,
+            "title": "Opens",
+            "type": "string"
+          }
+        },
+        "required": [
+          "opens",
+          "closes"
+        ],
+        "title": "DayHours",
         "type": "object"
       },
       "DealEvent": {
@@ -3863,6 +3916,26 @@
         "title": "NotePage",
         "type": "object"
       },
+      "OpenInterval": {
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "OpenInterval",
+        "type": "object"
+      },
       "OutcomeIn": {
         "additionalProperties": false,
         "properties": {
@@ -4123,6 +4196,28 @@
       },
       "SettingsOut": {
         "properties": {
+          "business_hours": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DayHours"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxItems": 7,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Hours"
+          },
           "currency": {
             "title": "Currency",
             "type": "string"
@@ -4168,6 +4263,7 @@
           "locale",
           "time_zone",
           "currency",
+          "business_hours",
           "version",
           "updated_at",
           "updated_by_user_id"
@@ -4178,6 +4274,28 @@
       "SettingsUpdate": {
         "additionalProperties": false,
         "properties": {
+          "business_hours": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DayHours"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxItems": 7,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Hours"
+          },
           "currency": {
             "anyOf": [
               {
@@ -6214,6 +6332,85 @@
           }
         },
         "summary": "Create Appointment",
+        "tags": [
+          "appointments"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/appointments/availability": {
+      "get": {
+        "operationId": "appointment_availability_v1_workspaces__tenant_id__appointments_availability_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Availability"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Appointment Availability",
         "tags": [
           "appointments"
         ]

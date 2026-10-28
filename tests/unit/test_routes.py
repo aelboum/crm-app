@@ -141,6 +141,7 @@ RECORDS |= {
     f"GET {_APPOINTMENTS}": "crm_app.appointment:read",
     f"GET {_APPOINTMENTS}/upcoming": "crm_app.appointment:read",
     f"GET {_APPOINTMENTS}/conflicts": "crm_app.appointment:read",
+    f"GET {_APPOINTMENTS}/availability": "crm_app.appointment:read",
     f"POST {_APPOINTMENTS}": "crm_app.appointment:create",
     f"GET {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:read",
     f"PATCH {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:update",
