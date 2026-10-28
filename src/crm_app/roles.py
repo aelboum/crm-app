@@ -143,6 +143,7 @@ PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
         "Changing stages affects every open opportunity.",
     ),
     *_crud(f"{PREFIX}task"),
+    *_crud(f"{PREFIX}appointment"),
     *_crud(f"{PREFIX}activity"),
     Permission(
         f"{PREFIX}crm_data",
@@ -187,6 +188,7 @@ _READ_ONLY = _keys(
     f"{PREFIX}opportunity:read",
     f"{PREFIX}pipeline:read",
     f"{PREFIX}task:read",
+    f"{PREFIX}appointment:read",
     f"{PREFIX}activity:read",
     f"{PREFIX}form:read",
 )
@@ -201,6 +203,8 @@ _MEMBER = _READ_ONLY | _keys(
     f"{PREFIX}task:create",
     f"{PREFIX}task:update",
     f"{PREFIX}task:delete",
+    f"{PREFIX}appointment:create",
+    f"{PREFIX}appointment:update",
     f"{PREFIX}activity:create",
 )
 
@@ -210,6 +214,7 @@ _ADMIN = _MEMBER | _keys(
     f"{PREFIX}contact:delete",
     f"{PREFIX}company:delete",
     f"{PREFIX}opportunity:delete",
+    f"{PREFIX}appointment:delete",
     f"{PREFIX}activity:update",
     f"{PREFIX}activity:delete",
     f"{PREFIX}pipeline:manage",

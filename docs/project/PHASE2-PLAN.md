@@ -241,6 +241,10 @@ check" is enforced by product code in addition to the permission.
 | `crm_app.task:create` | ✓ | ✓ | ✓ | – | C | — |
 | `crm_app.task:update` | ✓ | ✓ | ✓ | – | U | — |
 | `crm_app.task:delete` | ✓ | ✓ | ✓ | – | D | — |
+| `crm_app.appointment:read` | ✓ | ✓ | ✓ | ✓ | R | Added by P5-A |
+| `crm_app.appointment:create` | ✓ | ✓ | ✓ | – | C | Added by P5-A |
+| `crm_app.appointment:update` | ✓ | ✓ | ✓ | – | U | Includes status and cancelling; added by P5-A |
+| `crm_app.appointment:delete` | ✓ | ✓ | – | – | D | Confirmation; cancelling keeps the record; added by P5-A |
 | `crm_app.activity:read` | ✓ | ✓ | ✓ | ✓ | R | — |
 | `crm_app.activity:create` | ✓ | ✓ | ✓ | – | C | — |
 | `crm_app.activity:update` | ✓ | ✓ | – | – | U | — |

@@ -60,6 +60,7 @@ def test_every_approved_product_table_is_purged_children_first() -> None:
     assert order("activity") < order("note") < order("contact") < order("company")
     assert order("consent_record") < order("form_submission") < order("form")
     assert order("form") < order("contact") < order("tag")
+    assert order("appointment") < order("contact")
 
 
 def test_the_manifest_resolves_to_the_mapped_tables_in_a_fresh_process(tmp_path: Path) -> None:

@@ -62,6 +62,7 @@ PURGE_TABLES: tuple[str, ...] = (
     "contact_tag",
     "company_tag",
     "task",
+    "appointment",
     "opportunity_event",
     "opportunity",
     "contact",

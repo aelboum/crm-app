@@ -1181,6 +1181,93 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   8. **Not in 4C:** reminders and notifications, recurring tasks, task
      descriptions, bulk actions.
 
+## P5-A — Calendar and appointments (2026-10-28, owner approval)
+
+- **Status:** Approved by the owner on 2026-10-28. Asked "Should Calendar
+  and booking (Phase 5, outside the approved MVP) start now, or wait until
+  after email?", the owner answered "Yes": start now. This is the separate
+  timing decision K5 requires. It brings Phase 5 forward; it does not add
+  calendar or booking to the K5 MVP list. Roadmap 5; the design's
+  `ScreenCalendar.dc.html`; slice 5A.
+- **Design audit:** a Calendar page with Day, Week and Month views,
+  previous/Today/next, a range label and "New appointment". A side panel
+  (wide screens only) shows "Team availability" (a toggle per person with
+  a status line and today's load), "Up next" and a status legend
+  (Confirmed, Pending, Completed, No-show). Week view has a column per
+  day; Day view a column per team member. Overlapping appointments share
+  a column in lanes; clicking a free slot books at that time; working
+  hours and lunch are shaded. Month view shows up to three chips a day
+  and "+N more". A drawer shows the appointment: status buttons, With,
+  type and location, reminders, source, the contact, "Send reminder",
+  "Reschedule" and "Cancel appointment". The New appointment dialog has
+  title, contact, With, day, start, length (30 min to 2 h), type (In
+  person, Video, Phone) and a live conflict or "available" message. In
+  the prototype times are hours on a fixed sample week, cancel deletes the
+  appointment without confirmation, reminders and "Send reminder" are
+  visual only, and the availability lines are invented.
+- **Decisions:**
+  1. **Scope of 5A:** appointments; Day, Week and Month views; create,
+     edit and reschedule; status; cancel; conflict detection; time zones;
+     an Appointments section in the contact drawer. **Later slices:**
+     working hours and availability (5B, also the "outside working hours"
+     warning and the shading); a public booking page (after 5B);
+     reminders and notifications (need a delivery channel; the email
+     channel waits for SaaS-OS, Phase 6). **Not planned now:** external
+     calendar sync (roadmap: evaluate first), recurring appointments,
+     rooms and resources, several hosts per appointment.
+  2. **Table `appointment`** (migration `0014_appointments`):
+     tenant-owned, forced RLS, in `PURGE_TABLES`. Title trimmed, 1-200
+     characters, no control characters; `starts_at` and `ends_at`
+     timestamps with time zone, at least 5 minutes and at most 24 hours
+     apart; kind `in_person`, `video` or `phone`; an optional location of
+     up to 300 characters (an address, a phone number or a meeting link,
+     stored as text, never fetched); an optional note of up to 2,000
+     characters; a host, required, who must be an active member when set;
+     an optional contact by a composite key `ON DELETE SET NULL
+     (contact_id)`, active when linked; a version.
+  3. **Status:** `pending`, `confirmed` (the default), `completed`,
+     `no_show` or `cancelled`. The design books as Pending because it
+     simulates a confirmation SMS; nothing here sends one, so nothing
+     would ever move an appointment out of Pending. A member may still
+     choose Pending. **Cancel is a status, not a delete:** `cancelled_at`
+     and `cancelled_by_user_id` are set together exactly while cancelled;
+     a cancelled appointment cannot be changed or reopened (book a new
+     one). Cancelling asks for confirmation.
+  4. **Conflicts:** two appointments conflict when they have the same
+     host, neither is cancelled, and their half-open intervals
+     `[starts_at, ends_at)` overlap. Creating an appointment, or moving
+     one to another time or host, is refused with 409
+     `appointment_conflict` and the conflicting appointments (ID, title
+     and times; every member may read them) unless the request sets
+     `allow_conflict: true`; the UI shows the conflict and offers "Book
+     anyway". A per-host advisory lock serialises the check and the write.
+     `GET /appointments/conflicts` gives the dialog its live check.
+  5. **Time:** stored in UTC. The calendar shows the viewer's browser
+     time zone and names it. The list takes a `from`/`to` range of at most
+     42 days and returns every appointment overlapping it, at most 500,
+     ordered by start, with a `truncated` flag; cancelled ones only when
+     asked.
+  6. **Who:** permissions `crm_app.appointment` read (every role), create
+     and update (Owner, Admin, Member), delete (Owner, Admin; for
+     mistakes, since cancelling keeps the record). Gate G7 applies to
+     existing workspaces. `/access` gains `create_appointment`,
+     `update_appointment` and `delete_appointment`. Every member sees
+     every appointment of the workspace, as with tasks.
+  7. **Writes:** create accepts `Idempotency-Key`; every change needs
+     `If-Match`.
+  8. **Audit:** `crm_app.appointment.created`, `.updated` (field names),
+     `.status_changed` (old and new status), `.cancelled`, `.deleted`;
+     never titles, locations or notes.
+  9. **Screens:** the design's three views, toolbar and side panel (team
+     filter with today's count, Up next, legend); clicking a free slot
+     books at that time; the drawer with status buttons, details, the
+     contact, Edit (reschedule) and Cancel; the dialog with a live
+     conflict check. Differences: no "Send reminder", reminders row,
+     source row or availability lines (no channel, no working hours yet);
+     the Day view's columns are the members chosen in the team filter;
+     the grid shows the whole day and opens at 07:00; on narrow screens
+     the grid scrolls inside its own frame.
+
 ## P7-A — Forms and lead capture (2026-10-28, under M1)
 
 - **Status:** Decided under M1. The owner's instructions of 2026-10-27

@@ -437,6 +437,7 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "opportunity",
         "opportunity_event",
         "task",
+        "appointment",
         "form",
         "form_submission",
         "consent_record",

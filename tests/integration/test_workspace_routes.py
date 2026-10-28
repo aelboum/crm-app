@@ -139,6 +139,9 @@ def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> 
         "create_task": False,
         "update_task": False,
         "delete_task": False,
+        "create_appointment": False,
+        "update_appointment": False,
+        "delete_appointment": False,
         "read_forms": True,
         "manage_forms": False,
     }

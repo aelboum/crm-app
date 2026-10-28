@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
     from saas_os.api.v1 import invitation_acceptance_router  # noqa: PLC0415
 
     from crm_app.api.access import router as access_router  # noqa: PLC0415
+    from crm_app.api.appointments import router as appointments_router  # noqa: PLC0415
     from crm_app.api.custom_fields import router as custom_fields_router  # noqa: PLC0415
     from crm_app.api.errors import validation_error  # noqa: PLC0415
     from crm_app.api.forms import public_router as public_forms_router  # noqa: PLC0415
@@ -64,21 +65,26 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_error)
     # Responses with personal data are never stored by browsers or proxies.
     app.add_middleware(NoStoreMiddleware)
-    app.include_router(workspaces_router)
-    app.include_router(settings_router)
-    app.include_router(access_router)
-    app.include_router(members_router)
-    app.include_router(records_router)
-    app.include_router(history_router)
-    app.include_router(notes_router)
-    app.include_router(tags_router)
-    app.include_router(custom_fields_router)
-    app.include_router(imports_router)
-    app.include_router(pipelines_router)
-    app.include_router(opportunities_router)
-    app.include_router(tasks_router)
-    app.include_router(forms_router)
-    app.include_router(invitations_router)
+    # The workspace's own routes, in the order OpenAPI lists them.
+    for router in (
+        workspaces_router,
+        settings_router,
+        access_router,
+        members_router,
+        records_router,
+        history_router,
+        notes_router,
+        tags_router,
+        custom_fields_router,
+        imports_router,
+        pipelines_router,
+        opportunities_router,
+        tasks_router,
+        appointments_router,
+        forms_router,
+        invitations_router,
+    ):
+        app.include_router(router)
     # SaaS-OS's acceptance route (ADR-0046): the invitee, signed in with the
     # invited verified email, redeems the token; no role is given (Q5).
     app.include_router(invitation_acceptance_router)

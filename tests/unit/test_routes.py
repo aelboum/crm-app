@@ -134,6 +134,19 @@ RECORDS |= {
     f"DELETE {_TASKS}/{{task_id}}": "crm_app.task:delete",
 }
 
+# Appointments (decision P5-A 6): every role reads; Owner, Admin and Member
+# book, change and cancel; Owner and Admin delete.
+_APPOINTMENTS = "/v1/workspaces/{tenant_id}/appointments"
+RECORDS |= {
+    f"GET {_APPOINTMENTS}": "crm_app.appointment:read",
+    f"GET {_APPOINTMENTS}/upcoming": "crm_app.appointment:read",
+    f"GET {_APPOINTMENTS}/conflicts": "crm_app.appointment:read",
+    f"POST {_APPOINTMENTS}": "crm_app.appointment:create",
+    f"GET {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:read",
+    f"PATCH {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:update",
+    f"DELETE {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:delete",
+}
+
 # Forms (decision P7-A 4): every role reads forms and their submissions;
 # Owner and Admin manage them, through the new `form:manage`.
 _FORMS = "/v1/workspaces/{tenant_id}/forms"

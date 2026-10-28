@@ -254,6 +254,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Appointments */
+        get: operations["list_appointments_v1_workspaces__tenant_id__appointments_get"];
+        put?: never;
+        /** Create Appointment */
+        post: operations["create_appointment_v1_workspaces__tenant_id__appointments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/appointments/conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Appointment Conflicts */
+        get: operations["appointment_conflicts_v1_workspaces__tenant_id__appointments_conflicts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/appointments/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Upcoming Appointments */
+        get: operations["upcoming_appointments_v1_workspaces__tenant_id__appointments_upcoming_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/appointments/{appointment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Appointment */
+        get: operations["get_appointment_v1_workspaces__tenant_id__appointments__appointment_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Appointment */
+        delete: operations["delete_appointment_v1_workspaces__tenant_id__appointments__appointment_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Appointment */
+        patch: operations["update_appointment_v1_workspaces__tenant_id__appointments__appointment_id__patch"];
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/companies": {
         parameters: {
             query?: never;
@@ -1327,6 +1398,152 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** AppointmentIn */
+        AppointmentIn: {
+            /**
+             * Allow Conflict
+             * @default false
+             */
+            allow_conflict: boolean;
+            /** Contact Id */
+            contact_id?: string | null;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Host User Id
+             * Format: uuid
+             */
+            host_user_id: string;
+            /**
+             * Kind
+             * @default in_person
+             * @enum {string}
+             */
+            kind: "in_person" | "video" | "phone";
+            /** Location */
+            location?: string | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Status
+             * @default confirmed
+             * @enum {string}
+             */
+            status: "pending" | "confirmed" | "completed" | "no_show";
+            /** Title */
+            title: string;
+        };
+        /** AppointmentList */
+        AppointmentList: {
+            /** Items */
+            items: components["schemas"]["AppointmentOut"][];
+        };
+        /** AppointmentOut */
+        AppointmentOut: {
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Cancelled By User Id */
+            cancelled_by_user_id: string | null;
+            contact: components["schemas"]["ContactRef"] | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Host User Id
+             * Format: uuid
+             */
+            host_user_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "in_person" | "video" | "phone";
+            /** Location */
+            location: string | null;
+            /** Note */
+            note: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "confirmed" | "completed" | "no_show" | "cancelled";
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By User Id */
+            updated_by_user_id: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * AppointmentPatch
+         * @description Only the fields sent change; `null` clears an optional one.
+         */
+        AppointmentPatch: {
+            /**
+             * Allow Conflict
+             * @default false
+             */
+            allow_conflict: boolean;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Host User Id */
+            host_user_id?: string | null;
+            /** Kind */
+            kind?: ("in_person" | "video" | "phone") | null;
+            /** Location */
+            location?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Status */
+            status?: ("pending" | "confirmed" | "completed" | "no_show" | "cancelled") | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** AppointmentRange */
+        AppointmentRange: {
+            /** Items */
+            items: components["schemas"]["AppointmentOut"][];
+            /** Truncated */
+            truncated: boolean;
+        };
         /**
          * CompanyCreate
          * @description `domain` is derived from `website` when it is not given.
@@ -1450,6 +1667,31 @@ export interface components {
             phone?: string | null;
             /** Website */
             website?: string | null;
+        };
+        /** Conflict */
+        Conflict: {
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Title */
+            title: string;
+        };
+        /** ConflictList */
+        ConflictList: {
+            /** Conflicts */
+            conflicts: components["schemas"]["Conflict"][];
         };
         /** ConsentList */
         ConsentList: {
@@ -3169,6 +3411,263 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Access"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_appointments_v1_workspaces__tenant_id__appointments_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+                host?: string[];
+                contact_id?: string[];
+                include_cancelled?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentRange"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_appointment_v1_workspaces__tenant_id__appointments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    appointment_conflicts_v1_workspaces__tenant_id__appointments_conflicts_get: {
+        parameters: {
+            query: {
+                host_user_id: string;
+                starts_at: string;
+                ends_at: string;
+                exclude_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upcoming_appointments_v1_workspaces__tenant_id__appointments_upcoming_get: {
+        parameters: {
+            query?: {
+                host?: string[];
+                contact_id?: string[];
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_appointment_v1_workspaces__tenant_id__appointments__appointment_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                appointment_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_appointment_v1_workspaces__tenant_id__appointments__appointment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                appointment_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_appointment_v1_workspaces__tenant_id__appointments__appointment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                appointment_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppointmentPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentOut"];
                 };
             };
             /** @description Validation Error */
