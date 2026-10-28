@@ -79,6 +79,10 @@ ACTIONS: dict[str, tuple[str, str]] = {
     # manage.
     "read_booking_pages": ("crm_app.booking_page", "read"),
     "manage_booking_pages": ("crm_app.booking_page", "manage"),
+    # The suppression list (decision P7-B 7): Owner, Admin and Member read;
+    # Owner and Admin add and remove.
+    "read_suppressions": ("crm_app.suppression", "read"),
+    "manage_suppressions": ("crm_app.suppression", "manage"),
 }
 
 

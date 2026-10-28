@@ -197,13 +197,18 @@ class SubmissionParams(BaseModel):
 
 
 class ConsentOut(BaseModel):
+    """One consent record (P7-A 7, P7-B 3): given on a form, or recorded or
+    withdrawn by a member. Wording is the exact text agreed to, or a
+    withdrawal's optional note."""
+
     id: uuid.UUID
     channel: Literal["email"]
-    status: Literal["granted"]
-    method: Literal["web_form"]
-    wording: str
+    status: Literal["granted", "withdrawn"]
+    method: Literal["web_form", "manual"]
+    wording: str | None
     form_id: uuid.UUID | None
     form_name: str | None
+    recorded_by_user_id: uuid.UUID | None
     recorded_at: datetime
 
 

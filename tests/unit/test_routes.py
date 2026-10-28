@@ -169,6 +169,21 @@ CONFIGURATION |= {
     f"PATCH {_BOOKING_PAGES}/{{page_id}}": "crm_app.booking_page:manage",
     f"DELETE {_BOOKING_PAGES}/{{page_id}}": "crm_app.booking_page:manage",
 }
+# The suppression list (decision P7-B 7): Owner, Admin and Member read;
+# Owner and Admin add and remove. A contact's email status is a contact
+# read; recording and withdrawing its consent a contact update.
+_SUPPRESSIONS = "/v1/workspaces/{tenant_id}/suppressions"
+SUPPRESSIONS = {
+    f"GET {_SUPPRESSIONS}": "crm_app.suppression:read",
+    f"POST {_SUPPRESSIONS}": "crm_app.suppression:manage",
+    f"DELETE {_SUPPRESSIONS}/{{suppression_id}}": "crm_app.suppression:manage",
+}
+_CONTACT = "/v1/workspaces/{tenant_id}/contacts/{record_id}"
+RECORDS |= {
+    f"GET {_CONTACT}/email-status": "crm_app.contact:read",
+    f"POST {_CONTACT}/consent": "crm_app.contact:update",
+    f"POST {_CONTACT}/consent/withdraw": "crm_app.contact:update",
+}
 # A contact's consent records (P7-A 10): a contact read.
 RECORDS["GET /v1/workspaces/{tenant_id}/contacts/{record_id}/consent"] = "crm_app.contact:read"
 
@@ -236,18 +251,22 @@ def test_the_directory_needs_only_a_signed_in_person(tmp_path: Path) -> None:
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
     policies = {k: v for k, v in _product_policies(tmp_path).items() if k != DIRECTORY}
     assert {key: detail for key, (_, detail, _) in policies.items()} == (
-        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION
+        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS
     )
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
     changing = {key for key in policies if not key.startswith("GET ")}
     assert changing == CHANGING | {
-        key for key in RECORDS | INVITATIONS | CONFIGURATION | EXPORTS if not key.startswith("GET ")
+        key
+        for key in RECORDS | INVITATIONS | CONFIGURATION | EXPORTS | SUPPRESSIONS
+        if not key.startswith("GET ")
     }
 
 
 def test_route_permissions_are_registered() -> None:
-    for detail in (EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION).values():
+    for detail in (
+        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS
+    ).values():
         resource, _, action = detail.rpartition(":")
         assert (resource, action) in PERMISSIONS
 
@@ -260,6 +279,16 @@ def test_configuration_is_read_by_every_role_and_changed_by_owners_and_admins() 
         }
         expected = set(Role) if key.startswith("GET ") else {Role.OWNER, Role.ADMIN}
         assert holders == expected, key
+
+
+def test_the_suppression_list_is_read_by_members_and_changed_by_owners_and_admins() -> None:
+    for key, detail in SUPPRESSIONS.items():
+        resource, _, action = detail.rpartition(":")
+        holders = {
+            role for role, template in ROLE_TEMPLATES.items() if (resource, action) in template
+        }
+        reading = {Role.OWNER, Role.ADMIN, Role.MEMBER}
+        assert holders == (reading if key.startswith("GET ") else {Role.OWNER, Role.ADMIN}), key
 
 
 def test_contact_export_is_for_owners_and_admins_only() -> None:

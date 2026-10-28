@@ -694,6 +694,41 @@ export interface paths {
         /** List Contact Consent */
         get: operations["list_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_get"];
         put?: never;
+        /** Record Contact Consent */
+        post: operations["record_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/consent/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Contact Consent */
+        post: operations["withdraw_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/email-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contact Email Status */
+        get: operations["contact_email_status_v1_workspaces__tenant_id__contacts__record_id__email_status_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1343,6 +1378,41 @@ export interface paths {
         patch: operations["update_settings_v1_workspaces__tenant_id__settings_patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/suppressions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Suppressions */
+        get: operations["list_suppressions_v1_workspaces__tenant_id__suppressions_get"];
+        put?: never;
+        /** Add Suppressions */
+        post: operations["add_suppressions_v1_workspaces__tenant_id__suppressions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/suppressions/{suppression_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Suppression */
+        delete: operations["remove_suppression_v1_workspaces__tenant_id__suppressions__suppression_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/tags": {
         parameters: {
             query?: never;
@@ -1520,6 +1590,13 @@ export interface components {
             items: components["schemas"]["ActivityOut"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** Added */
+        Added: {
+            /** Added */
+            added: number;
+            /** Already Suppressed */
+            already_suppressed: number;
         };
         /** AppointmentIn */
         AppointmentIn: {
@@ -2007,12 +2084,22 @@ export interface components {
             /** Outside Hours */
             outside_hours: boolean;
         };
+        /** ConsentIn */
+        ConsentIn: {
+            /** Wording */
+            wording: string;
+        };
         /** ConsentList */
         ConsentList: {
             /** Items */
             items: components["schemas"]["ConsentOut"][];
         };
-        /** ConsentOut */
+        /**
+         * ConsentOut
+         * @description One consent record (P7-A 7, P7-B 3): given on a form, or recorded or
+         *     withdrawn by a member. Wording is the exact text agreed to, or a
+         *     withdrawal's optional note.
+         */
         ConsentOut: {
             /**
              * Channel
@@ -2030,21 +2117,23 @@ export interface components {
             id: string;
             /**
              * Method
-             * @constant
+             * @enum {string}
              */
-            method: "web_form";
+            method: "web_form" | "manual";
             /**
              * Recorded At
              * Format: date-time
              */
             recorded_at: string;
+            /** Recorded By User Id */
+            recorded_by_user_id: string | null;
             /**
              * Status
-             * @constant
+             * @enum {string}
              */
-            status: "granted";
+            status: "granted" | "withdrawn";
             /** Wording */
-            wording: string;
+            wording: string | null;
         };
         /** ContactCreate */
         ContactCreate: {
@@ -2469,6 +2558,22 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * EmailStatus
+         * @description A contact's email status (P7-B 6, 10).
+         */
+        EmailStatus: {
+            /**
+             * Consent
+             * @enum {string}
+             */
+            consent: "granted" | "withdrawn" | "none";
+            /** Has Email */
+            has_email: boolean;
+            /** Marketing Allowed */
+            marketing_allowed: boolean;
+            suppression: components["schemas"]["SuppressionRef"] | null;
         };
         /** FieldIn */
         FieldIn: {
@@ -3128,6 +3233,77 @@ export interface components {
             /** Total Capped */
             total_capped: boolean;
         };
+        /** SuppressionIn */
+        SuppressionIn: {
+            /** Emails */
+            emails: string[];
+            /** Note */
+            note?: string | null;
+            /**
+             * Reason
+             * @default manual
+             * @enum {string}
+             */
+            reason: "unsubscribed" | "bounced" | "complained" | "manual";
+        };
+        /** SuppressionOut */
+        SuppressionOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "manual" | "consent_withdrawn";
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "unsubscribed" | "bounced" | "complained" | "manual";
+        };
+        /** SuppressionPage */
+        SuppressionPage: {
+            /** Items */
+            items: components["schemas"]["SuppressionOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+            /** Total Capped */
+            total_capped: boolean;
+        };
+        /** SuppressionRef */
+        SuppressionRef: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "unsubscribed" | "bounced" | "complained" | "manual";
+        };
         /** TagIn */
         TagIn: {
             /** Name */
@@ -3307,6 +3483,11 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WithdrawIn */
+        WithdrawIn: {
+            /** Note */
+            note?: string | null;
         };
         /** Workspace */
         Workspace: {
@@ -5266,6 +5447,116 @@ export interface operations {
             };
         };
     };
+    record_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contact_email_status_v1_workspaces__tenant_id__contacts__record_id__email_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_contact_notes_v1_workspaces__tenant_id__contacts__record_id__notes_get: {
         parameters: {
             query?: {
@@ -7063,6 +7354,112 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SettingsOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_suppressions_v1_workspaces__tenant_id__suppressions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+                search?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuppressionPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_suppressions_v1_workspaces__tenant_id__suppressions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuppressionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Added"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_suppression_v1_workspaces__tenant_id__suppressions__suppression_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                suppression_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

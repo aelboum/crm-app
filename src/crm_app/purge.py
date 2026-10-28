@@ -50,6 +50,7 @@ SCHEMA = "crm_app"
 # `company_tag` reference their record and `tag`; `contact` references
 # `company`; the form tables reference `contact`, `tag` and each other;
 # `booking` references `booking_page`, `appointment` and `contact`.
+# `suppression` references no product table.
 # `workspace_settings` and `invitation_intent` reference no
 # product table.
 PURGE_TABLES: tuple[str, ...] = (
@@ -58,6 +59,7 @@ PURGE_TABLES: tuple[str, ...] = (
     "form",
     "booking",
     "booking_page",
+    "suppression",
     "activity",
     "note",
     "import_row",

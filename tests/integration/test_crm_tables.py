@@ -353,4 +353,5 @@ def test_the_migration_rolls_back_and_forward(
         "consent_record",
         "booking_page",
         "booking",
+        "suppression",
     }

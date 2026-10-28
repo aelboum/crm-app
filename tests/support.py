@@ -90,6 +90,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         # P5-C (booking pages).
         "booking_page",
         "booking",
+        # P7-B (consent and suppression).
+        "suppression",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -101,7 +103,7 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
 # runtime role to lack UPDATE on them, a stricter rule than for other
 # tables, never a looser one.
 APPEND_ONLY_TABLES: frozenset[str] = frozenset(
-    {"activity", "signup_attempt", "opportunity_event", "consent_record"}
+    {"activity", "signup_attempt", "opportunity_event", "consent_record", "suppression"}
 )
 
 # Product tables that deliberately hold no tenant data and so carry no

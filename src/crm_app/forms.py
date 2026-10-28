@@ -383,7 +383,8 @@ def submissions(scope: Scope, form_id: uuid.UUID, query: SubmissionQuery) -> Pag
 
 
 def consent_of_contact(scope: Scope, contact_id: uuid.UUID) -> list[Item]:
-    """A contact's consent records, newest first (at most 100). Another
+    """A contact's consent records, newest first (at most 100): given on a
+    form, recorded or withdrawn by a member (decision P7-B 3). Another
     workspace's contact, or an unknown one, is `RecordNotFoundError`."""
     with tenant_session_scope(scope.workspace) as session:
         found = session.execute(
@@ -412,6 +413,7 @@ def consent_of_contact(scope: Scope, contact_id: uuid.UUID) -> list[Item]:
                 "wording": record.wording,
                 "form_id": record.form_id,
                 "form_name": form_name,
+                "recorded_by_user_id": record.recorded_by_user_id,
                 "recorded_at": record.recorded_at,
             }
             for record, form_name in rows

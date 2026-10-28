@@ -165,9 +165,12 @@ def test_links_stay_inside_their_workspace(
         ("form_submission", {"outcome": "updated"}),
         ("form_submission", {"answers": Jsonb(["Sam"])}),
         ("consent_record", {"channel": "sms"}),
-        ("consent_record", {"status": "withdrawn"}),
+        # Migration 0017 (P7-B 3) adds `withdrawn` and `manual`, nothing else.
+        ("consent_record", {"status": "revoked"}),
         ("consent_record", {"method": "import"}),
         ("consent_record", {"wording": ""}),
+        # Given consent keeps its wording.
+        ("consent_record", {"wording": None}),
     ],
     ids=lambda value: value if isinstance(value, str) else next(iter(value)),
 )

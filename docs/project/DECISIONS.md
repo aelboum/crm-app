@@ -1508,6 +1508,74 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
       list, a contact's consent in its drawer, and the hosted form page
       `/app/f/{workspace}/{key}` without the app frame or sign-in.
 
+## P7-B — Consent and suppression (2026-10-28, under M1)
+
+- **Status:** Decided under M1 after the owner's "Go" (2026-10-28) to the
+  proposal "suppression and consent controls". K5's MVP includes "one email
+  channel with consent and suppression controls"; P2-D lists consent per
+  contact and channel, suppression and unsubscribe as Phase 6 and 7 work.
+  Roadmap 7.5 "Consent and suppression management"; slice 7B. Sending
+  still waits for the email channel (SaaS-OS release and a pin the owner
+  authorises).
+- **Design audit:** the design shows consent only as a form option
+  ("Email consent") and has no suppression list or unsubscribe screen.
+  Slice 7A records consent from forms (`consent_record`, append-only,
+  status `granted`, method `web_form`). SaaS-OS has no consent or
+  suppression API (P2-D).
+- **Decisions:**
+  1. **Scope of 7B:** a suppression list per workspace; recording and
+     withdrawing a contact's email consent by hand; a contact's email
+     status (suppressed or not, consent given, withdrawn or none); and one
+     service check every future send must pass. **Not now:** the public
+     unsubscribe page and its tokens (they only make sense in a sent
+     message, so they come with the email channel), bounce and complaint
+     handling (need provider events), CSV import of suppressions (a pasted
+     list instead), double opt-in, and channels other than email.
+  2. **Suppression** (migration `0017_suppression`, table `suppression`,
+     tenant-owned, forced RLS, in `PURGE_TABLES`): one row per email
+     address in the workspace, stored lower-cased and unique; a reason
+     (`unsubscribed`, `bounced`, `complained` or `manual`); how it was
+     added (`manual` or `consent_withdrawn`); an optional note of up to 500
+     characters; who and when. It has no link to a contact, so deleting or
+     changing a contact never lifts it. Removing an address is a delete.
+     At most 100,000 addresses a workspace; at most 1,000 added at once.
+  3. **Consent history** stays append-only. `consent_record` gains status
+     `withdrawn` and method `manual`; the member who recorded it is kept;
+     wording stays required for `granted` and becomes an optional note for
+     `withdrawn`. A contact's current email consent is its latest record:
+     `granted`, `withdrawn` or none.
+  4. **Recording consent by hand** needs the exact wording the person
+     agreed to (1-500 characters) and a contact with an email address;
+     the record says it was recorded by a member, not given on a form.
+  5. **Withdrawing consent** adds a `withdrawn` record and suppresses the
+     contact's email address (reason `unsubscribed`, added by
+     `consent_withdrawn`) in the same transaction; an address already
+     suppressed keeps its first reason. Granting consent again never
+     lifts a suppression: only removing the address does.
+  6. **The send check** (`crm_app.suppression.email_status`): an address
+     that is suppressed may not be sent to; a marketing send also needs
+     consent `granted`. No send exists yet; the email channel must call it.
+  7. **Who:** new catalogue permissions `crm_app.suppression:read` (Owner,
+     Admin, Member) and `crm_app.suppression:manage` (Owner, Admin) for
+     the list, adding and removing; Read-only does not see the list.
+     Recording and withdrawing consent need `crm_app.contact:update`
+     (Members honour opt-outs). A contact's email status is part of the
+     contact (`crm_app.contact:read`). `/access` reports
+     `read_suppressions` and `manage_suppressions`. Gate G7 applies.
+  8. **Audit:** `crm_app.suppression.added` (count, reason),
+     `.removed`; `crm_app.contact.consent_recorded` and
+     `.consent_withdrawn` (the contact and channel). Addresses, wording and
+     notes are never in audit entries.
+  9. **Retention:** a suppression is kept until a member removes it,
+     because forgetting it would allow mail the person refused. Whether
+     a data-subject erasure should keep a suppression (and in what form)
+     is a market-specific decision for Phase 13 (P2-D).
+  10. **Screens:** Settings › Suppression list (search, add by pasting
+      addresses with a reason and note, remove with confirmation); the
+      contact drawer's Consent section shows the email status, the full
+      history (form, recorded by a member, withdrawn) and "Record consent"
+      and "Withdraw consent".
+
 ## P3-F — CSV import (2026-10-26)
 
 - **Status:** The owner decided the two open questions on 2026-10-26

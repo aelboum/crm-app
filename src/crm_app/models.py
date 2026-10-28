@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0016_booking_pages` own the
+Migrations `0002_contacts_companies` to `0017_suppression` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -594,8 +594,9 @@ class FormSubmission(Base):
 
 
 class ConsentRecord(Base):
-    """Evidence that a contact gave consent (decision P7-A 7). The
-    application only inserts these: the runtime role holds no UPDATE."""
+    """Evidence that a contact gave or withdrew consent (decisions P7-A 7,
+    P7-B 3). The application only inserts these: the runtime role holds no
+    UPDATE. A contact's current consent is its latest record."""
 
     __tablename__ = "consent_record"
     __table_args__ = ({"schema": SCHEMA},)
@@ -606,9 +607,10 @@ class ConsentRecord(Base):
     channel: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text)
     method: Mapped[str] = mapped_column(Text)
-    wording: Mapped[str] = mapped_column(Text)
+    wording: Mapped[str | None] = mapped_column(Text)
     form_id: Mapped[uuid.UUID | None] = mapped_column()
     submission_id: Mapped[uuid.UUID | None] = mapped_column()
+    recorded_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
@@ -657,4 +659,22 @@ class Booking(Base):
     outcome: Mapped[str] = mapped_column(Text)
     token_hash: Mapped[str] = mapped_column(Text)
     cancelled_by_visitor_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Suppression(Base):
+    """An email address the workspace must not send to (migration 0017,
+    decision P7-B 2). Added and removed, never changed; no link to a
+    contact."""
+
+    __tablename__ = "suppression"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    email: Mapped[str] = mapped_column(Text)
+    reason: Mapped[str] = mapped_column(Text)
+    origin: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

@@ -278,6 +278,24 @@
         "title": "ActivityPage",
         "type": "object"
       },
+      "Added": {
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "integer"
+          },
+          "already_suppressed": {
+            "title": "Already Suppressed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "added",
+          "already_suppressed"
+        ],
+        "title": "Added",
+        "type": "object"
+      },
       "AppointmentIn": {
         "additionalProperties": false,
         "properties": {
@@ -1817,6 +1835,21 @@
         "title": "ConflictList",
         "type": "object"
       },
+      "ConsentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "wording": {
+            "maxLength": 2000,
+            "title": "Wording",
+            "type": "string"
+          }
+        },
+        "required": [
+          "wording"
+        ],
+        "title": "ConsentIn",
+        "type": "object"
+      },
       "ConsentList": {
         "properties": {
           "items": {
@@ -1834,6 +1867,7 @@
         "type": "object"
       },
       "ConsentOut": {
+        "description": "One consent record (P7-A 7, P7-B 3): given on a form, or recorded or\nwithdrawn by a member. Wording is the exact text agreed to, or a\nwithdrawal's optional note.",
         "properties": {
           "channel": {
             "const": "email",
@@ -1869,7 +1903,10 @@
             "type": "string"
           },
           "method": {
-            "const": "web_form",
+            "enum": [
+              "web_form",
+              "manual"
+            ],
             "title": "Method",
             "type": "string"
           },
@@ -1878,14 +1915,36 @@
             "title": "Recorded At",
             "type": "string"
           },
+          "recorded_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded By User Id"
+          },
           "status": {
-            "const": "granted",
+            "enum": [
+              "granted",
+              "withdrawn"
+            ],
             "title": "Status",
             "type": "string"
           },
           "wording": {
-            "title": "Wording",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wording"
           }
         },
         "required": [
@@ -1896,6 +1955,7 @@
           "wording",
           "form_id",
           "form_name",
+          "recorded_by_user_id",
           "recorded_at"
         ],
         "title": "ConsentOut",
@@ -3421,6 +3481,46 @@
           "name"
         ],
         "title": "DirectoryEntry",
+        "type": "object"
+      },
+      "EmailStatus": {
+        "description": "A contact's email status (P7-B 6, 10).",
+        "properties": {
+          "consent": {
+            "enum": [
+              "granted",
+              "withdrawn",
+              "none"
+            ],
+            "title": "Consent",
+            "type": "string"
+          },
+          "has_email": {
+            "title": "Has Email",
+            "type": "boolean"
+          },
+          "marketing_allowed": {
+            "title": "Marketing Allowed",
+            "type": "boolean"
+          },
+          "suppression": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuppressionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "has_email",
+          "consent",
+          "suppression",
+          "marketing_allowed"
+        ],
+        "title": "EmailStatus",
         "type": "object"
       },
       "FieldIn": {
@@ -5323,6 +5423,188 @@
         "title": "SubmissionPage",
         "type": "object"
       },
+      "SuppressionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "emails": {
+            "items": {
+              "maxLength": 1280,
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Emails",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "default": "manual",
+            "enum": [
+              "unsubscribed",
+              "bounced",
+              "complained",
+              "manual"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "emails"
+        ],
+        "title": "SuppressionIn",
+        "type": "object"
+      },
+      "SuppressionOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "origin": {
+            "enum": [
+              "manual",
+              "consent_withdrawn"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "unsubscribed",
+              "bounced",
+              "complained",
+              "manual"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "reason",
+          "origin",
+          "note",
+          "created_by_user_id",
+          "created_at"
+        ],
+        "title": "SuppressionOut",
+        "type": "object"
+      },
+      "SuppressionPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuppressionOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "total_capped": {
+            "title": "Total Capped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "total",
+          "total_capped"
+        ],
+        "title": "SuppressionPage",
+        "type": "object"
+      },
+      "SuppressionRef": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "unsubscribed",
+              "bounced",
+              "complained",
+              "manual"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "created_at"
+        ],
+        "title": "SuppressionRef",
+        "type": "object"
+      },
       "TagIn": {
         "additionalProperties": false,
         "properties": {
@@ -5931,6 +6213,25 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WithdrawIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "WithdrawIn",
         "type": "object"
       },
       "Workspace": {
@@ -10286,6 +10587,231 @@
         "tags": [
           "forms"
         ]
+      },
+      "post": {
+        "operationId": "record_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Contact Consent",
+        "tags": [
+          "consent and suppression"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/consent/withdraw": {
+      "post": {
+        "operationId": "withdraw_contact_consent_v1_workspaces__tenant_id__contacts__record_id__consent_withdraw_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Withdraw Contact Consent",
+        "tags": [
+          "consent and suppression"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/contacts/{record_id}/email-status": {
+      "get": {
+        "operationId": "contact_email_status_v1_workspaces__tenant_id__contacts__record_id__email_status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Contact Email Status",
+        "tags": [
+          "consent and suppression"
+        ]
       }
     },
     "/v1/workspaces/{tenant_id}/contacts/{record_id}/notes": {
@@ -14407,6 +14933,240 @@
         "summary": "Update Settings",
         "tags": [
           "workspaces"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/suppressions": {
+      "get": {
+        "operationId": "list_suppressions_v1_workspaces__tenant_id__suppressions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1280,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuppressionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Suppressions",
+        "tags": [
+          "consent and suppression"
+        ]
+      },
+      "post": {
+        "operationId": "add_suppressions_v1_workspaces__tenant_id__suppressions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuppressionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Added"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Suppressions",
+        "tags": [
+          "consent and suppression"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/suppressions/{suppression_id}": {
+      "delete": {
+        "operationId": "remove_suppression_v1_workspaces__tenant_id__suppressions__suppression_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "suppression_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Suppression Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Suppression",
+        "tags": [
+          "consent and suppression"
         ]
       }
     },
