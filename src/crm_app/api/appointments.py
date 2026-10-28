@@ -139,6 +139,15 @@ class ContactRef(BaseModel):
     archived: bool
 
 
+class BookingRef(BaseModel):
+    """How an appointment booked online was booked (P5-C 10); the page is
+    `null` once deleted."""
+
+    page_id: uuid.UUID | None
+    page_name: str | None
+    cancelled_by_visitor: bool
+
+
 class AppointmentOut(BaseModel):
     id: uuid.UUID
     title: str
@@ -151,6 +160,7 @@ class AppointmentOut(BaseModel):
     host_user_id: uuid.UUID
     contact_id: uuid.UUID | None
     contact: ContactRef | None
+    booking: BookingRef | None
     cancelled_at: datetime | None
     cancelled_by_user_id: uuid.UUID | None
     created_at: datetime

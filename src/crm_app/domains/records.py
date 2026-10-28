@@ -16,8 +16,8 @@ import unicodedata
 from urllib.parse import urlsplit
 
 STAGES = ("lead", "prospect", "customer", "inactive")
-SOURCES = ("manual", "import", "form", "referral", "other")
-# Users may choose only these sources; `import` and `form` are set by the
+SOURCES = ("manual", "import", "form", "referral", "other", "booking")
+# Users may choose only these sources; `import`, `form` and `booking` are set by the
 # system in later slices (decision P3-A 2).
 USER_SOURCES = ("manual", "referral", "other")
 

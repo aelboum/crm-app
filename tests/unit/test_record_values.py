@@ -8,6 +8,7 @@ stored value.
 from __future__ import annotations
 
 import ast
+from pathlib import Path
 
 import pytest
 
@@ -15,6 +16,10 @@ from crm_app.domains import records as values
 from tests.support import REPO_ROOT
 
 MIGRATION = REPO_ROOT / "src" / "crm_app" / "migrations" / "versions" / "0002_contacts_companies.py"
+# Widens the contact sources with `booking` (decision P5-C 2).
+SOURCES_MIGRATION = (
+    REPO_ROOT / "src" / "crm_app" / "migrations" / "versions" / "0016_booking_pages.py"
+)
 
 
 @pytest.mark.parametrize(
@@ -107,26 +112,35 @@ def test_country_codes_are_two_upper_case_letters() -> None:
 
 def test_stages_and_user_sources_follow_p3a() -> None:
     assert values.STAGES == ("lead", "prospect", "customer", "inactive")
-    assert values.SOURCES == ("manual", "import", "form", "referral", "other")
+    assert values.SOURCES == ("manual", "import", "form", "referral", "other", "booking")
     for source in ("manual", "referral", "other"):
         assert values.user_source(source) == source
-    for reserved in ("import", "form", "web"):
+    for reserved in ("import", "form", "booking", "web"):
         with pytest.raises(values.InvalidValue):
             values.user_source(reserved)
     with pytest.raises(values.InvalidValue):
         values.stage("patient")
 
 
-def test_the_migration_checks_exactly_these_stages_and_sources() -> None:
-    tree = ast.parse(MIGRATION.read_text(encoding="utf-8"))
-    constants = {
+def _constants(path: Path, names: set[str]) -> dict[str, object]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return {
         node.targets[0].id: ast.literal_eval(node.value)
         for node in tree.body
         if isinstance(node, ast.Assign)
         and isinstance(node.targets[0], ast.Name)
-        and node.targets[0].id in {"STAGES", "SOURCES"}
+        and node.targets[0].id in names
     }
-    assert constants == {"STAGES": values.STAGES, "SOURCES": values.SOURCES}
+
+
+def test_the_migrations_check_exactly_these_stages_and_sources() -> None:
+    first = _constants(MIGRATION, {"STAGES", "SOURCES"})
+    widened = _constants(SOURCES_MIGRATION, {"SOURCES_BEFORE"})
+    assert first == {"STAGES": values.STAGES, "SOURCES": widened["SOURCES_BEFORE"]}
+    # `SOURCES_AFTER` is `(*SOURCES_BEFORE, "booking")`.
+    before = tuple(str(source) for source in widened["SOURCES_BEFORE"])  # type: ignore[attr-defined]
+    assert (*before, "booking") == values.SOURCES
+    assert '(*SOURCES_BEFORE, "booking")' in SOURCES_MIGRATION.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("check", [values.email, values.phone, values.website, values.domain])

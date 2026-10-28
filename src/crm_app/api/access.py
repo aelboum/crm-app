@@ -75,6 +75,10 @@ ACTIONS: dict[str, tuple[str, str]] = {
     # Forms (decision P7-A 4): every role reads; Owner and Admin manage.
     "read_forms": ("crm_app.form", "read"),
     "manage_forms": ("crm_app.form", "manage"),
+    # Booking pages (decision P5-C 8): every role reads; Owner and Admin
+    # manage.
+    "read_booking_pages": ("crm_app.booking_page", "read"),
+    "manage_booking_pages": ("crm_app.booking_page", "manage"),
 }
 
 

@@ -1324,6 +1324,98 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      until …", "Outside business hours"). The design's "Away" is not
      shown: there is no presence data.
 
+## P5-C — Public booking pages (2026-10-28, under M1)
+
+- **Status:** Decided under M1, inside the scope the owner approved with
+  P5-A ("a public booking page (after 5B)"). Roadmap 5 "Appointment
+  booking"; discovery's recommendation "Phase 3–5: single-user booking";
+  slice 5C.
+- **Design audit:** the Claude Design project has no booking page. The
+  calendar's drawer has a "Source" row ("Booked online", "Added by …"),
+  simulated in the prototype. The reference ZIP books publicly with
+  reschedule and cancel tokens (an idea only, decision K1). Without a
+  delivery channel nothing can be emailed to the visitor (Phase 6).
+- **Decisions:**
+  1. **Scope of 5C:** booking pages. Each page has one host and offers
+     that host's free times inside the workspace's business hours. A
+     visitor picks a time, gives a name and an email (and optionally a
+     phone and a message) and books. The confirmation shows a private
+     link to view and cancel the booking. **Not now:** emails or reminders
+     to the visitor or the host (need a delivery channel), the visitor
+     rescheduling (cancel and book again), several hosts or round robin,
+     buffers between appointments, custom questions, payments, an embed
+     script (the CSP forbids framing), CAPTCHA (decision S-1, Phase 13)
+     and per-member hours (P5-B 1).
+  2. **Tables** (migration `0016_booking_pages`), tenant-owned, forced
+     RLS, in `PURGE_TABLES`:
+     - `booking_page`: name (1-120), an optional description (up to 1,000
+       characters), status `draft` or `published`, a random public key,
+       the host (an active member when saved or published), the length
+       (15, 30, 45, 60, 90 or 120 minutes), the step between start times
+       (15, 30 or 60 minutes), the kind and an optional location (as on
+       an appointment), the minimum notice (0 to 7 days, in minutes;
+       default 4 hours), how far ahead (1 to 90 days; default 30), a
+       booking count, the last booking time and a version. At most 50 a
+       workspace.
+     - `booking`: the page (`ON DELETE SET NULL`), the appointment (`ON
+       DELETE CASCADE`, one booking each), the contact (`ON DELETE SET
+       NULL`), the outcome (`created` or `matched`), the SHA-256 of the
+       visitor's link token (unique), when the visitor cancelled, and the
+       time.
+     - The contact `source` gains `booking`; an appointment cancelled by
+       the visitor has `cancelled_at` without `cancelled_by_user_id`.
+  3. **Publishing** needs the workspace's business hours (P5-B 7: hours
+     are enforced here) and an active host. A page whose host has left
+     answers like an unpublished one.
+  4. **Free times:** on the step grid from each day's opening time; the
+     whole appointment inside one open interval; not before now plus the
+     notice; not after the horizon; and free of the host's appointments
+     that are not cancelled (any appointment, booked online or not). The
+     public answer lists start times only, never other appointments, for
+     at most 14 days at a time.
+  5. **Public routes** under `/v1/public/booking-pages/{workspace}/{key}`
+     (`GET` the page, `GET .../times`, `POST` a booking) and
+     `/v1/public/bookings/{workspace}` (`POST .../view`, `POST
+     .../cancel`, the token in the body, never in an address or a log),
+     all SaaS-OS `public_route`, limited per address, the booking also
+     per page, failing closed (503). An unknown workspace or key, a draft
+     page and a closed or suspended workspace answer the same 404; an
+     unknown token too. A booking needs an `Idempotency-Key`, is at most
+     8 KiB, and a filled honeypot field is answered like a time that is no
+     longer free (409), storing nothing.
+  6. **What a booking does**, in one transaction under the host's lock
+     (P5-A 4): it checks the time again (`409 time_unavailable` when it is
+     no longer free), matches the active contact with the same email or
+     creates one (stage Lead, source Booking, owned by the host); a
+     matched contact is never changed (as P7-A 6). It refuses a fourth
+     upcoming booking of the same contact on the same page (`409
+     booking_limit`). It creates a `confirmed` appointment titled "page
+     name — visitor's name", with the page's kind and location and the
+     visitor's message as its note, hosted by the page's host, and the
+     `booking` with the token's hash. The token is returned once.
+  7. **The visitor's link** shows the time, the page's name, kind and
+     location and whether it is cancelled, and cancels until the
+     appointment starts. It works while the booking exists.
+  8. **Who:** new catalogue permissions `crm_app.booking_page:read` (every
+     role) and `crm_app.booking_page:manage` (Owner and Admin), as forms
+     (P7-A 4): a published page lets anyone create contacts and
+     appointments. `/access` reports `read_booking_pages` and
+     `manage_booking_pages`. Gate G7 applies.
+  9. **Audit:** `crm_app.booking_page.created`, `.updated` (field
+     names), `.published`, `.unpublished`, `.deleted`. A booking's
+     appointment `created` entry and the contact's `created` entry name
+     the page and act as the host; a visitor's cancellation is the
+     appointment's `cancelled` entry with `by: visitor`. SaaS-OS has no
+     caller for an anonymous visitor (as P7-A 8).
+  10. **Screens:** Calendar › Booking pages (a list and an editor: name,
+      description, host, length, step, kind, location, notice, horizon;
+      publish, copy link, delete). The hosted page `/app/b/{workspace}/{key}`
+      without the app frame: days with free times, times in the visitor's
+      time zone (named), the form, the confirmation with the private link
+      `/app/b/{workspace}/manage#{token}`. The appointment drawer's
+      "Source" row: "Booked online · page name", and "Cancelled by the
+      visitor".
+
 ## P7-A — Forms and lead capture (2026-10-28, under M1)
 
 - **Status:** Decided under M1. The owner's instructions of 2026-10-27

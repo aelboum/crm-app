@@ -159,6 +159,16 @@ CONFIGURATION |= {
     f"DELETE {_FORMS}/{{form_id}}": "crm_app.form:manage",
     f"GET {_FORMS}/{{form_id}}/submissions": "crm_app.form:read",
 }
+# Booking pages (decision P5-C 8): every role reads them; Owner and Admin
+# manage them, through the new `booking_page:manage`.
+_BOOKING_PAGES = "/v1/workspaces/{tenant_id}/booking-pages"
+CONFIGURATION |= {
+    f"GET {_BOOKING_PAGES}": "crm_app.booking_page:read",
+    f"POST {_BOOKING_PAGES}": "crm_app.booking_page:manage",
+    f"GET {_BOOKING_PAGES}/{{page_id}}": "crm_app.booking_page:read",
+    f"PATCH {_BOOKING_PAGES}/{{page_id}}": "crm_app.booking_page:manage",
+    f"DELETE {_BOOKING_PAGES}/{{page_id}}": "crm_app.booking_page:manage",
+}
 # A contact's consent records (P7-A 10): a contact read.
 RECORDS["GET /v1/workspaces/{tenant_id}/contacts/{record_id}/consent"] = "crm_app.contact:read"
 
@@ -322,11 +332,17 @@ def test_signup_routes_need_only_a_signed_in_person(tmp_path: Path) -> None:
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
 
 
-# A published form's page and submission (decision P7-A 5): public, with
-# their own limits; nothing else under /v1/public.
+# A published form's page and submission (decision P7-A 5) and a published
+# booking page, its times, a booking and the visitor's own booking (decision
+# P5-C 5): public, with their own limits; nothing else under /v1/public.
 PUBLIC_FORMS = {
     "GET /v1/public/forms/{workspace_id}/{key}",
     "POST /v1/public/forms/{workspace_id}/{key}",
+    "GET /v1/public/booking-pages/{workspace_id}/{key}",
+    "GET /v1/public/booking-pages/{workspace_id}/{key}/times",
+    "POST /v1/public/booking-pages/{workspace_id}/{key}",
+    "POST /v1/public/bookings/{workspace_id}/view",
+    "POST /v1/public/bookings/{workspace_id}/cancel",
 }
 
 

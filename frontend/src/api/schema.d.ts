@@ -84,6 +84,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/booking-pages/{workspace_id}/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Booking Page */
+        get: operations["public_booking_page_v1_public_booking_pages__workspace_id___key__get"];
+        put?: never;
+        /** Book Public Page */
+        post: operations["book_public_page_v1_public_booking_pages__workspace_id___key__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/booking-pages/{workspace_id}/{key}/times": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Booking Times */
+        get: operations["public_booking_times_v1_public_booking_pages__workspace_id___key__times_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/bookings/{workspace_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Public Booking */
+        post: operations["cancel_public_booking_v1_public_bookings__workspace_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/bookings/{workspace_id}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** View Public Booking */
+        post: operations["view_public_booking_v1_public_bookings__workspace_id__view_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/forms/{workspace_id}/{key}": {
         parameters: {
             query?: never;
@@ -340,6 +409,43 @@ export interface paths {
         head?: never;
         /** Update Appointment */
         patch: operations["update_appointment_v1_workspaces__tenant_id__appointments__appointment_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/booking-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Booking Pages */
+        get: operations["list_booking_pages_v1_workspaces__tenant_id__booking_pages_get"];
+        put?: never;
+        /** Create Booking Page */
+        post: operations["create_booking_page_v1_workspaces__tenant_id__booking_pages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/booking-pages/{page_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Booking Page */
+        get: operations["get_booking_page_v1_workspaces__tenant_id__booking_pages__page_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Booking Page */
+        delete: operations["delete_booking_page_v1_workspaces__tenant_id__booking_pages__page_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Booking Page */
+        patch: operations["update_booking_page_v1_workspaces__tenant_id__booking_pages__page_id__patch"];
         trace?: never;
     };
     "/v1/workspaces/{tenant_id}/companies": {
@@ -1465,6 +1571,7 @@ export interface components {
         };
         /** AppointmentOut */
         AppointmentOut: {
+            booking: components["schemas"]["BookingRef"] | null;
             /** Cancelled At */
             cancelled_at: string | null;
             /** Cancelled By User Id */
@@ -1569,6 +1676,185 @@ export interface components {
             open: components["schemas"]["OpenInterval"][];
             /** Time Zone */
             time_zone: string;
+        };
+        /**
+         * Booked
+         * @description The booking and the visitor's link token, which only the first
+         *     answer carries (`null` on a replay).
+         */
+        Booked: {
+            booking: components["schemas"]["BookingView"];
+            /** Token */
+            token: string | null;
+        };
+        /** BookingPageIn */
+        BookingPageIn: {
+            /** Description */
+            description?: string | null;
+            /**
+             * Horizon Days
+             * @default 30
+             */
+            horizon_days: number;
+            /** Host User Id */
+            host_user_id?: string | null;
+            /**
+             * Kind
+             * @default video
+             * @enum {string}
+             */
+            kind: "in_person" | "video" | "phone";
+            /**
+             * Length Minutes
+             * @default 30
+             */
+            length_minutes: number;
+            /** Location */
+            location?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Notice Minutes
+             * @default 240
+             */
+            notice_minutes: number;
+            /**
+             * Step Minutes
+             * @default 30
+             */
+            step_minutes: number;
+        };
+        /** BookingPageList */
+        BookingPageList: {
+            /** Items */
+            items: components["schemas"]["BookingPageOut"][];
+        };
+        /** BookingPageOut */
+        BookingPageOut: {
+            /** Booking Count */
+            booking_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /** Description */
+            description: string | null;
+            /** Horizon Days */
+            horizon_days: number;
+            /**
+             * Host User Id
+             * Format: uuid
+             */
+            host_user_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "in_person" | "video" | "phone";
+            /** Last Booked At */
+            last_booked_at: string | null;
+            /** Length Minutes */
+            length_minutes: number;
+            /** Location */
+            location: string | null;
+            /** Name */
+            name: string;
+            /** Notice Minutes */
+            notice_minutes: number;
+            /** Public Key */
+            public_key: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published";
+            /** Step Minutes */
+            step_minutes: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By User Id */
+            updated_by_user_id: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * BookingPagePatch
+         * @description Only the fields sent change; `null` clears the description or the
+         *     location.
+         */
+        BookingPagePatch: {
+            /** Description */
+            description?: string | null;
+            /** Horizon Days */
+            horizon_days?: number | null;
+            /** Host User Id */
+            host_user_id?: string | null;
+            /** Kind */
+            kind?: ("in_person" | "video" | "phone") | null;
+            /** Length Minutes */
+            length_minutes?: number | null;
+            /** Location */
+            location?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notice Minutes */
+            notice_minutes?: number | null;
+            /** Status */
+            status?: ("draft" | "published") | null;
+            /** Step Minutes */
+            step_minutes?: number | null;
+        };
+        /**
+         * BookingRef
+         * @description How an appointment booked online was booked (P5-C 10); the page is
+         *     `null` once deleted.
+         */
+        BookingRef: {
+            /** Cancelled By Visitor */
+            cancelled_by_visitor: boolean;
+            /** Page Id */
+            page_id: string | null;
+            /** Page Name */
+            page_name: string | null;
+        };
+        /** BookingView */
+        BookingView: {
+            /** Can Cancel */
+            can_cancel: boolean;
+            /** Cancelled */
+            cancelled: boolean;
+            /** Cancelled By Visitor */
+            cancelled_by_visitor: boolean;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "in_person" | "video" | "phone";
+            /** Location */
+            location: string | null;
+            /** Page Name */
+            page_name: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
         };
         /**
          * CompanyCreate
@@ -2315,6 +2601,11 @@ export interface components {
             /** Thank You */
             thank_you?: string | null;
         };
+        /** FreeTimes */
+        FreeTimes: {
+            /** Times */
+            times: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2594,6 +2885,24 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+        };
+        /** PublicBookingPage */
+        PublicBookingPage: {
+            /** Description */
+            description: string | null;
+            /** Horizon Days */
+            horizon_days: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "in_person" | "video" | "phone";
+            /** Length Minutes */
+            length_minutes: number;
+            /** Name */
+            name: string;
+            /** Time Zone */
+            time_zone: string;
         };
         /** PublicField */
         PublicField: {
@@ -3119,6 +3428,208 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurrentUserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_booking_page_v1_public_booking_pages__workspace_id___key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBookingPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    book_public_page_v1_public_booking_pages__workspace_id___key__post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                workspace_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Email */
+                    email: string;
+                    /** First Name */
+                    first_name: string;
+                    /** Last Name */
+                    last_name?: string | null;
+                    /** Message */
+                    message?: string | null;
+                    /** Phone */
+                    phone?: string | null;
+                    /**
+                     * Starts At
+                     * Format: date-time
+                     */
+                    starts_at: string;
+                    /**
+                     * Website
+                     * @default
+                     */
+                    website?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_booking_times_v1_public_booking_pages__workspace_id___key__times_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreeTimes"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_public_booking_v1_public_bookings__workspace_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Token */
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_public_booking_v1_public_bookings__workspace_id__view_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Token */
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingView"];
                 };
             };
             /** @description Validation Error */
@@ -3759,6 +4270,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppointmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_booking_pages_v1_workspaces__tenant_id__booking_pages_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPageList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_booking_page_v1_workspaces__tenant_id__booking_pages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingPageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_booking_page_v1_workspaces__tenant_id__booking_pages__page_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                page_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_booking_page_v1_workspaces__tenant_id__booking_pages__page_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                page_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_booking_page_v1_workspaces__tenant_id__booking_pages__page_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                page_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingPagePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPageOut"];
                 };
             };
             /** @description Validation Error */

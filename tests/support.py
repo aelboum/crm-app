@@ -87,6 +87,9 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "form",
         "form_submission",
         "consent_record",
+        # P5-C (booking pages).
+        "booking_page",
+        "booking",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",

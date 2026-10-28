@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0015_business_hours` own the
+Migrations `0002_contacts_companies` to `0016_booking_pages` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -522,8 +522,9 @@ class Task(Base):
 
 class Appointment(Base):
     """An appointment (migration 0014, decision P5-A). Cancelled exactly
-    while `cancelled_at` is set; its contact link is cleared, not cascaded,
-    when the contact is deleted."""
+    while `cancelled_at` is set, by `cancelled_by_user_id` or, for one
+    booked online, by the visitor (migration 0016, P5-C 2); its contact link
+    is cleared, not cascaded, when the contact is deleted."""
 
     __tablename__ = "appointment"
     __table_args__ = ({"schema": SCHEMA},)
@@ -609,3 +610,51 @@ class ConsentRecord(Base):
     form_id: Mapped[uuid.UUID | None] = mapped_column()
     submission_id: Mapped[uuid.UUID | None] = mapped_column()
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class BookingPage(Base):
+    """A public booking page (migration 0016, decision P5-C): one host's
+    free time inside the business hours. The public key is random and never
+    changes."""
+
+    __tablename__ = "booking_page"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    public_key: Mapped[str] = mapped_column(Text)
+    host_user_id: Mapped[uuid.UUID] = mapped_column()
+    length_minutes: Mapped[int] = mapped_column(Integer)
+    step_minutes: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(Text)
+    location: Mapped[str | None] = mapped_column(Text)
+    notice_minutes: Mapped[int] = mapped_column(Integer)
+    horizon_days: Mapped[int] = mapped_column(Integer)
+    booking_count: Mapped[int] = mapped_column(Integer)
+    last_booked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class Booking(Base):
+    """How a visitor booked an appointment (P5-C 2). The visitor's link
+    token is kept only as its SHA-256."""
+
+    __tablename__ = "booking"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    booking_page_id: Mapped[uuid.UUID | None] = mapped_column()
+    appointment_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    outcome: Mapped[str] = mapped_column(Text)
+    token_hash: Mapped[str] = mapped_column(Text)
+    cancelled_by_visitor_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

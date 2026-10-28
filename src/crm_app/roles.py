@@ -164,6 +164,14 @@ PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
         Kind.ADMINISTRATIVE,
         "A published form lets anyone create contacts; rate-limited (P7-A).",
     ),
+    Permission(f"{PREFIX}booking_page", "read", Kind.READ),
+    Permission(
+        f"{PREFIX}booking_page",
+        "manage",
+        Kind.ADMINISTRATIVE,
+        "A published booking page lets anyone create contacts and appointments;"
+        " rate-limited (P5-C).",
+    ),
 )
 
 CATALOGUE: tuple[Permission, ...] = PLATFORM_PERMISSIONS + PRODUCT_PERMISSIONS
@@ -191,6 +199,7 @@ _READ_ONLY = _keys(
     f"{PREFIX}appointment:read",
     f"{PREFIX}activity:read",
     f"{PREFIX}form:read",
+    f"{PREFIX}booking_page:read",
 )
 
 _MEMBER = _READ_ONLY | _keys(
@@ -221,6 +230,7 @@ _ADMIN = _MEMBER | _keys(
     f"{PREFIX}crm_data:export",
     f"{PREFIX}crm_data:import",
     f"{PREFIX}form:manage",
+    f"{PREFIX}booking_page:manage",
     "invitation:read",
     "invitation:create",
     "invitation:revoke",

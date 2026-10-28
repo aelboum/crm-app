@@ -48,13 +48,16 @@ SCHEMA = "crm_app"
 # Children before parents: `activity` references `note`, `contact` and
 # `company`; `note` references both records; `contact_tag` and
 # `company_tag` reference their record and `tag`; `contact` references
-# `company`; the form tables reference `contact`, `tag` and each other.
+# `company`; the form tables reference `contact`, `tag` and each other;
+# `booking` references `booking_page`, `appointment` and `contact`.
 # `workspace_settings` and `invitation_intent` reference no
 # product table.
 PURGE_TABLES: tuple[str, ...] = (
     "consent_record",
     "form_submission",
     "form",
+    "booking",
+    "booking_page",
     "activity",
     "note",
     "import_row",

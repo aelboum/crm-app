@@ -16,7 +16,8 @@ again (P5-A 3).
 
 The workspace's business hours (decision P5-B) give the open intervals
 the calendar shades around and the "outside business hours" warning of
-the live check; booking outside them is allowed (P5-B 7).
+the live check; booking outside them is allowed (P5-B 7). An appointment
+booked on a booking page says so (decision P5-C 10).
 
 SaaS-OS resolves configuration at import time; only code that runs after
 validation imports this module.
@@ -47,7 +48,7 @@ from saas_os.infra.db import (
 from crm_app.domains import appointments as rules
 from crm_app.domains import settings as setting_values
 from crm_app.domains.records import InvalidValue
-from crm_app.models import Appointment, Contact, WorkspaceSettings
+from crm_app.models import Appointment, Booking, BookingPage, Contact, WorkspaceSettings
 from crm_app.records import (
     ConstraintViolationError,
     InvalidReferenceError,
@@ -253,8 +254,40 @@ def _contacts(
     return found
 
 
+def _bookings(
+    session: Session, scope: Scope, rows: Sequence[Appointment]
+) -> dict[uuid.UUID, dict[str, Any]]:
+    """How the appointments booked online were booked (P5-C 10): the page,
+    if it still exists, and whether the visitor cancelled."""
+    ids = [row.id for row in rows]
+    if not ids:
+        return {}
+    found: dict[uuid.UUID, dict[str, Any]] = {}
+    for appointment_id, page_id, page_name, cancelled_at in session.execute(
+        select(
+            Booking.appointment_id,
+            Booking.booking_page_id,
+            BookingPage.name,
+            Booking.cancelled_by_visitor_at,
+        )
+        .outerjoin(
+            BookingPage,
+            (BookingPage.tenant_id == Booking.tenant_id)
+            & (BookingPage.id == Booking.booking_page_id),
+        )
+        .where(Booking.tenant_id == scope.workspace, Booking.appointment_id.in_(ids))
+    ):
+        found[appointment_id] = {
+            "page_id": page_id,
+            "page_name": page_name,
+            "cancelled_by_visitor": cancelled_at is not None,
+        }
+    return found
+
+
 def _items(session: Session, scope: Scope, rows: Sequence[Appointment]) -> list[Item]:
     contacts = _contacts(session, scope, rows)
+    bookings = _bookings(session, scope, rows)
     return [
         {
             "id": row.id,
@@ -268,6 +301,7 @@ def _items(session: Session, scope: Scope, rows: Sequence[Appointment]) -> list[
             "host_user_id": row.host_user_id,
             "contact_id": row.contact_id,
             "contact": contacts.get(row.contact_id) if row.contact_id else None,
+            "booking": bookings.get(row.id),
             "cancelled_at": row.cancelled_at,
             "cancelled_by_user_id": row.cancelled_by_user_id,
             "created_at": row.created_at,
@@ -362,11 +396,14 @@ def upcoming(
         return _items(session, scope, rows)
 
 
-def _hours(session: Session, scope: Scope) -> tuple[list[dict[str, str] | None] | None, str]:
-    """The workspace's business hours (`None` while not set) and its zone."""
+def workspace_hours(
+    session: Session, workspace: uuid.UUID
+) -> tuple[list[dict[str, str] | None] | None, str]:
+    """The workspace's business hours (`None` while not set) and its zone;
+    the booking pages offer times inside them too (P5-C 4)."""
     row = session.execute(
         select(WorkspaceSettings.business_hours, WorkspaceSettings.time_zone).where(
-            WorkspaceSettings.tenant_id == scope.workspace
+            WorkspaceSettings.tenant_id == workspace
         )
     ).one_or_none()
     if row is None:
@@ -377,7 +414,7 @@ def _hours(session: Session, scope: Scope) -> tuple[list[dict[str, str] | None] 
 def availability(scope: Scope, start: datetime, end: datetime) -> dict[str, Any]:
     """The open intervals of `[start, end)` from the business hours (P5-B 6)."""
     with tenant_session_scope(scope.workspace) as session:
-        hours, zone = _hours(session, scope)
+        hours, zone = workspace_hours(session, scope.workspace)
     opened = [] if hours is None else rules.open_intervals(hours, zone, start, end)
     return {
         "hours_set": hours is not None,
@@ -400,7 +437,7 @@ def conflicts(
     _check_times(starts_at, ends_at)
     with tenant_session_scope(scope.workspace) as session:
         found = _conflicting(session, scope, host, (starts_at, ends_at), exclude=exclude)
-        hours, zone = _hours(session, scope)
+        hours, zone = workspace_hours(session, scope.workspace)
     outside = hours is not None and not rules.within(
         rules.open_intervals(hours, zone, starts_at, ends_at), starts_at, ends_at
     )

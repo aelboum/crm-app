@@ -144,6 +144,8 @@ def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> 
         "delete_appointment": False,
         "read_forms": True,
         "manage_forms": False,
+        "read_booking_pages": True,
+        "manage_booking_pages": False,
     }
     assert owner["membership_id"] != reader["membership_id"]
 

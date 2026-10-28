@@ -103,10 +103,7 @@ def test_an_appointment_links_only_to_its_own_workspaces_contacts(
         {"status": "maybe"},
         {"status": "cancelled"},
         {"cancelled_at": "2026-10-28T10:00:00Z"},
-        {
-            "status": "cancelled",
-            "cancelled_at": "2026-10-28T10:00:00Z",
-        },
+        {"cancelled_by_user_id": uuid.UUID(int=7)},
     ],
     ids=[
         "empty-title",
@@ -125,7 +122,7 @@ def test_an_appointment_links_only_to_its_own_workspaces_contacts(
         "unknown-status",
         "cancelled-without-when",
         "when-without-cancelled",
-        "cancelled-without-who",
+        "who-without-cancelled",
     ],
 )
 def test_appointments_outside_the_rules_are_refused(
@@ -150,6 +147,16 @@ def test_a_cancelled_appointment_records_when_and_by_whom(
         cancelled_at="2026-10-28T10:00:00Z",
         cancelled_by_user_id=uuid.uuid4(),
     )
+    assert _count(owner_connection, "appointment", a) == 1
+
+
+def test_a_visitor_cancels_without_a_member(
+    env: dict[str, str],  # noqa: F811
+    owner_connection: psycopg.Connection,
+) -> None:
+    """Migration 0016 (P5-C 2): a visitor's cancellation has no member."""
+    a = _workspace(env)["tenant"]
+    _appointment(owner_connection, a, status="cancelled", cancelled_at="2026-10-28T10:00:00Z")
     assert _count(owner_connection, "appointment", a) == 1
 
 
