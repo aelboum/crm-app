@@ -22,6 +22,7 @@ import { VisitorBookingPage } from "./pages/VisitorBookingPage";
 import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
 import { CalendarPage } from "./records/CalendarPage";
+import { DashboardPage } from "./records/DashboardPage";
 import { FormsPage } from "./records/FormsPage";
 import { OpportunitiesPage } from "./records/OpportunitiesPage";
 import { TasksPage } from "./records/TasksPage";
@@ -150,7 +151,8 @@ const workspaceIndexRoute = createRoute({
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- the router's redirect protocol
     throw redirect({
       to: "/w/$workspaceId/$section",
-      params: { workspaceId: params.workspaceId, section: SETTINGS_SLUG },
+      // A workspace opens on its Home page (P4-D 5).
+      params: { workspaceId: params.workspaceId, section: "home" },
       replace: true,
     });
   },
@@ -162,15 +164,33 @@ interface SectionSearch {
   record?: string;
   /** Opens a new-record dialog (the header's "New" menu). */
   create?: "contact" | "opportunity";
+  /** A filtered list opened from the Home page (P4-D 1). */
+  view?: "overdue" | "idle";
 }
 
 function SectionPage() {
   const { workspaceId, section: slug } = sectionRoute.useParams();
-  const { section: settingsSection, record, create } = sectionRoute.useSearch();
+  const { section: settingsSection, record, create, view } = sectionRoute.useSearch();
   const navigate = sectionRoute.useNavigate();
   const openRecord = (next: string | null) => {
     void navigate({ search: next ? { record: next } : {} });
   };
+  if (slug === "home") {
+    return (
+      <DashboardPage
+        workspaceId={workspaceId}
+        onGo={(target) => {
+          void navigate({
+            params: { workspaceId, section: target.section },
+            search: {
+              ...(target.record ? { record: target.record } : {}),
+              ...(target.view ? { view: target.view } : {}),
+            },
+          });
+        }}
+      />
+    );
+  }
   if (slug === "contacts") {
     return (
       <ContactsPage
@@ -227,6 +247,7 @@ function SectionPage() {
         onOpenCompany={(id) => {
           void navigate({ params: { workspaceId, section: "companies" }, search: { record: id } });
         }}
+        initialIdle={view === "idle"}
       />
     );
   }
@@ -234,6 +255,7 @@ function SectionPage() {
     return (
       <TasksPage
         workspaceId={workspaceId}
+        initialTab={view === "overdue" ? "overdue" : "open"}
         onOpenLink={(kind, id) => {
           const target = kind === "contact" ? "contacts" : kind === "company" ? "companies" : "opportunities";
           void navigate({ params: { workspaceId, section: target }, search: { record: id } });
@@ -288,6 +310,7 @@ const sectionRoute = createRoute({
       : {}),
     ...(typeof search.record === "string" && isWorkspaceId(search.record) ? { record: search.record } : {}),
     ...(search.create === "contact" || search.create === "opportunity" ? { create: search.create } : {}),
+    ...(search.view === "overdue" || search.view === "idle" ? { view: search.view } : {}),
   }),
   component: SectionPage,
 });

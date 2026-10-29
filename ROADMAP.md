@@ -505,7 +505,7 @@ Support:
 
 # 9. Phase 4 — Sales, Tasks, and Pipelines
 
-**Status:** Done (decisions P4, P4-B, P4-C): 4A pipeline and stages, 4B deals and 4C tasks are built, tested and pushed.
+**Status:** Done (decisions P4, P4-B, P4-C, P4-D): 4A pipeline and stages, 4B deals and 4C tasks are built, tested and pushed; 4.4 dashboard foundations built as the workspace's Home page (slice 4D, 2026-10-29).
 
 ## Objectives
 

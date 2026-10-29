@@ -40,16 +40,19 @@ const GROUPS: [DueGroup, MessageId][] = [
 export function TasksPage({
   workspaceId,
   onOpenLink,
+  initialTab = "open",
 }: {
   workspaceId: string;
   onOpenLink: (kind: "contact" | "company" | "opportunity", id: string) => void;
+  /** The Home page opens the Overdue tab (P4-D 1). */
+  initialTab?: Tab;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
   const me = useMe();
   const meId = me.data?.user_id;
   const members = useMembers(workspaceId, 0, access.data?.actions.read_members === true);
-  const [tab, setTab] = useState<Tab>("open");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [assignee, setAssignee] = useState("");
   const [editing, setEditing] = useState<Task | null>(null);
   const [refusal, setRefusal] = useState<MessageId | null>(null);

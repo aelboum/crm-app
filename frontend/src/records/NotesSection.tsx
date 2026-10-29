@@ -370,7 +370,8 @@ const STAGE_LABELS: Partial<Record<string, MessageId>> = {
   inactive: "stage.inactive",
 };
 
-function useDescribe() {
+/** One history entry as a sentence; also used by the Home page's feed. */
+export function useDescribe() {
   const t = useT();
   const intl = useIntl();
   const label = (labels: Partial<Record<string, MessageId>>, value: string | null | undefined) => {
@@ -412,7 +413,7 @@ function useDescribe() {
   };
 }
 
-const ICONS = {
+export const ACTIVITY_ICONS = {
   created: Plus,
   updated: PenLine,
   stage_changed: Flag,
@@ -456,7 +457,7 @@ export function ActivitySection({
       ) : (
         <ol className="activity-list">
           {items.map((entry) => {
-            const Icon = ICONS[entry.kind];
+            const Icon = ACTIVITY_ICONS[entry.kind];
             return (
               <li key={entry.id} className={`activity-item activity-${entry.kind}`}>
                 <span className="activity-icon" aria-hidden="true">

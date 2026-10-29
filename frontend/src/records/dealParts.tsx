@@ -1,6 +1,6 @@
 import { type IntlShape, useIntl } from "react-intl";
 
-import { type Deal, type DealEvent, IDLE_DAYS, minorDigits } from "../api/opportunities";
+import { type Deal, type DealEvent, type DealSummary, IDLE_DAYS, minorDigits } from "../api/opportunities";
 import type { MessageId } from "../i18n/en";
 import type { useT } from "../i18n/useT";
 import { ownerLabel } from "./parts";
@@ -41,6 +41,50 @@ export function formatMoney(format: Format, amount: string, currency: string): s
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
+}
+
+/** Totals per currency, the workspace's first. */
+export function totalsOf(summary: DealSummary | undefined, currency: string) {
+  const sums = new Map<string, { text: string[]; weightedText: string[] }>();
+  let count = 0;
+  for (const stage of summary?.stages ?? []) {
+    count += stage.count;
+    for (const total of stage.totals) {
+      const entry = sums.get(total.currency) ?? { text: [], weightedText: [] };
+      entry.text.push(total.amount);
+      entry.weightedText.push(total.weighted_amount);
+      sums.set(total.currency, entry);
+    }
+  }
+  const currencies = [...sums.keys()].sort((a, b) => (a === currency ? -1 : b === currency ? 1 : a.localeCompare(b)));
+  return { count, currencies, sums };
+}
+
+/** Exact decimal addition of amount strings (no floating point). */
+export function addDecimals(values: string[], digits: number): string {
+  const scale = 10n ** BigInt(digits);
+  let total = 0n;
+  for (const value of values) {
+    const [whole = "0", fraction = ""] = value.split(".");
+    total += BigInt(whole) * scale + BigInt((fraction + "0".repeat(digits)).slice(0, digits) || "0");
+  }
+  const text = total.toString().padStart(digits + 1, "0");
+  return digits === 0 ? text : `${text.slice(0, -digits)}.${text.slice(-digits)}`;
+}
+
+/** Each currency's total joined ("€1,200.00 · $50.00"), or zero in the
+    workspace's currency when there is nothing to add. */
+export function moneyTotal(
+  format: Format,
+  currencies: string[],
+  sums: Map<string, { text: string[]; weightedText: string[] }>,
+  pick: "text" | "weightedText",
+  currency: string,
+): string {
+  if (currencies.length === 0) return formatMoney(format, "0", currency);
+  return currencies
+    .map((code) => formatMoney(format, addDecimals(sums.get(code)?.[pick] ?? [], minorDigits(code)), code))
+    .join(" · ");
 }
 
 /** Whole days the open deal has been in its stage; null when closed. */

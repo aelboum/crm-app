@@ -59,7 +59,7 @@ export const GROUPS: Group[] = [
     key: "g0",
     label: null,
     sections: [
-      soon("home", "nav.home", House, "soon.home"),
+      built("home", "nav.home", House),
       soon("inbox", "nav.inbox", Inbox, "soon.inbox"),
     ],
   },

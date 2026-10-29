@@ -280,9 +280,9 @@ describe("home", () => {
     await user.clear(field);
     await user.type(field, "11111111-2222-4333-8444-555555555555");
     await user.click(open);
-    // The workspace opens on Settings › Team & roles, the one module that exists.
+    // The workspace opens on its Home page (decision P4-D 5).
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/w/11111111-2222-4333-8444-555555555555/settings");
+      expect(router.state.location.pathname).toBe("/w/11111111-2222-4333-8444-555555555555/home");
     });
     expect(await accessibilityViolations()).toEqual([]);
   });

@@ -75,7 +75,7 @@ L243-247):
 | Campaigns, Automations, Reviews | `/campaigns`, `/automations`, `/reviews` | 7-10 (Reviews deferred, K5) | Placeholders |
 | Assistants, Knowledge, AI activity (`ScreenAssistants`, `ScreenKnowledge`, `ScreenAIActivity`) | `/assistants`, `/knowledge`, `/ai-activity` | 9 | Placeholders |
 | Reports (`ScreenReports`) | `/reports` | 10 | Placeholder |
-| Home / Dashboard (`ScreenDashboard`) | `/home` | needs CRM data | Placeholder |
+| Home / Dashboard (`ScreenDashboard`) | `/w/{id}/home` (where a workspace opens) | 4 (4.4, P4-D) | **Implemented (foundations)** — needs-attention strip (overdue tasks, idle deals), Contacts, Open deals, Pipeline value with weighted value, Open tasks, pipeline by stage with forecast, today's appointments, tasks due today with completion in place, recent activity. Not built: agency view, "My day" lens, Customize, setup checklist, deltas, lead trend and sources, conversion, conversations, campaigns and AI cards (P4-D 2) |
 | Agency views: Workspaces, Templates (empty), Team, Billing | none yet | 11 (agency model undecided, P2-B) | Not implemented |
 | Sign-in (account step of `LeadStack Signup.dc.html`, L23-50, L118-125) | `/app` and `/app/invite/{id}` when signed out | 2 (approved 2026-10-24) | **Implemented; compared (§4e)** |
 | Self-service signup (the rest of `LeadStack Signup.dc.html`) | none | P2-C | Not implemented; excluded by P2-C |

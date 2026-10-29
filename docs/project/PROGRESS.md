@@ -37,6 +37,32 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 4 slice 4D, Home dashboard foundations (decision P4-D, 2026-10-29):**
+  - **Built:** `GET /v1/workspaces/{tenant_id}/activity` (`crm_app.activity:
+    read`, every role): the newest 1-20 history entries across contacts
+    and companies with the record's kind, ID and name, never note text or
+    field values. The Home page, where a workspace now opens: overdue
+    tasks and idle deals (each opening the filtered list through a new
+    `view` search parameter), Contacts, Open deals, Pipeline value with its
+    weighted value, Open tasks with the overdue count, pipeline by stage
+    with the weighted forecast, today's appointments, tasks due today with
+    completion in place (for members who may update tasks), recent
+    activity linking to the record; each card loads and fails on its own,
+    and a signed-out member sees one notice. Every number comes from the
+    endpoint of the page it links to; the deal totals helper moved to
+    `dealParts` so Opportunities and Home add amounts the same exact way.
+  - **Tests:** unit route policy for the new route; integration
+    `test_history.py` (12 passed: the feed's order, limit, records,
+    isolation from another workspace, roles, no note text or values);
+    Vitest `dashboard.test.tsx` (8, with axe) and updated landing tests;
+    whole suites: Python unit 528, Vitest 255. ruff, pyright, import
+    contracts, ESLint and tsc clean.
+  - **Browser** (local stack, workspace "E2E Consent 7B", after adding a
+    task and a €12,500.50 deal in Proposal): the numbers matched the
+    Tasks and Opportunities pages (weighted €7,500.30 at 60 %), completing
+    the task in place updated the counts, the idle tile opened
+    Opportunities with the idle filter on, an activity entry opened the
+    contact; 1440 px and 390 px without page overflow; no console errors.
 - **Phase 3 screens at phone width (2026-10-29):** checked in Chrome at
   390 px (mobile emulation) on the local stack: the Contacts and Companies
   lists (view tabs and table scroll inside their own boxes), the contact

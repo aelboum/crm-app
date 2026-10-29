@@ -55,7 +55,7 @@ const rowFor = (id: string) => {
 
 describe("workspace members", () => {
   it("lists members with roles and status, and passes an accessibility scan", async () => {
-    renderApp(`/w/${WS}`, workspace({ roles: ["Owner"], actions: ALL }));
+    renderApp(`/w/${WS}/settings`, workspace({ roles: ["Owner"], actions: ALL }));
     expect(await screen.findByRole("heading", { name: "Team & roles" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /^Acme/ })).toBeInTheDocument();
     expect(await screen.findByText("3 members")).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe("workspace members", () => {
 
   it("offers an Admin no action on an Owner", async () => {
     renderApp(
-      `/w/${WS}`,
+      `/w/${WS}/settings`,
       workspace({ roles: ["Admin"], actions: { ...ALL, manage_owners: false } }),
     );
     await screen.findByText("3 members");
@@ -78,7 +78,7 @@ describe("workspace members", () => {
   it("confirms an Owner change before sending it, with the confirmation flag", async () => {
     const user = userEvent.setup();
     const base = workspace({ roles: ["Owner"], actions: ALL });
-    const { sent } = renderApp(`/w/${WS}`, (method, path, body) =>
+    const { sent } = renderApp(`/w/${WS}/settings`, (method, path, body) =>
       method === "POST" ? { status: 200, body: {} } : base(method, path, body),
     );
     await screen.findByText("3 members");
@@ -105,7 +105,7 @@ describe("workspace members", () => {
     const user = userEvent.setup();
     let revoked = false;
     const base = workspace({ roles: ["Owner"], actions: ALL });
-    renderApp(`/w/${WS}`, (method, path, body) => {
+    renderApp(`/w/${WS}/settings`, (method, path, body) => {
       if (method === "POST" && path.endsWith(`/members/${MEMBER}/revoke`)) {
         revoked = true;
         return { status: 200, body: {} };
@@ -134,7 +134,7 @@ describe("workspace members", () => {
     const user = userEvent.setup();
     let signedOut = false;
     const base = workspace({ roles: ["Owner"], actions: ALL });
-    renderApp(`/w/${WS}`, (method, path, body) => {
+    renderApp(`/w/${WS}/settings`, (method, path, body) => {
       if (method === "POST" && path === "/auth/logout") {
         signedOut = true;
         return { status: 204 };
@@ -154,7 +154,7 @@ describe("workspace members", () => {
   it("shows the server's refusal when the last Owner would be removed", async () => {
     const user = userEvent.setup();
     const base = workspace({ roles: ["Owner"], actions: ALL });
-    renderApp(`/w/${WS}`, (method, path, body) =>
+    renderApp(`/w/${WS}/settings`, (method, path, body) =>
       method === "DELETE"
         ? { status: 409, body: { detail: { code: "last_owner" } } }
         : base(method, path, body),
@@ -170,7 +170,7 @@ describe("workspace members", () => {
   });
 
   it("does not say whether a workspace it cannot open exists", async () => {
-    renderApp(`/w/${WS}`, (_, path) =>
+    renderApp(`/w/${WS}/settings`, (_, path) =>
       path === "/auth/me" ? { status: 200, body: { user_id: "u" } } : undefined,
     );
     expect(
@@ -187,7 +187,7 @@ describe("workspace members", () => {
   });
 
   it("asks a signed-out visitor to sign in again", async () => {
-    renderApp(`/w/${WS}`, () => ({ status: 401, body: { detail: "Not authenticated" } }));
+    renderApp(`/w/${WS}/settings`, () => ({ status: 401, body: { detail: "Not authenticated" } }));
     expect(
       await screen.findByText("Your session has ended. Sign in again to continue."),
     ).toBeInTheDocument();

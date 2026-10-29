@@ -9,7 +9,6 @@ import {
   type DealFilters,
   type DealSort,
   type DealSummary,
-  minorDigits,
   type Outcome,
   useDealList,
   useDealSummary,
@@ -23,7 +22,7 @@ import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { DealDialog, refusalOf } from "./DealDialog";
 import { DealDrawer } from "./DealDrawer";
-import { daysInStage, formatMoney, isIdle, Money, stageShade } from "./dealParts";
+import { daysInStage, formatMoney, isIdle, Money, moneyTotal, stageShade, totalsOf } from "./dealParts";
 import { FilterMenu, OwnerCell, ownerOptions, SortHeader, When } from "./parts";
 import { useDebounced } from "./useDebounced";
 
@@ -64,6 +63,7 @@ export function OpportunitiesPage({
   onCreateDone,
   onOpenContact,
   onOpenCompany,
+  initialIdle = false,
 }: {
   workspaceId: string;
   openId: string | null;
@@ -72,6 +72,8 @@ export function OpportunitiesPage({
   onCreateDone: () => void;
   onOpenContact: (id: string) => void;
   onOpenCompany: (id: string) => void;
+  /** The Home page opens the idle deals (P4-D 1). */
+  initialIdle?: boolean;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -83,7 +85,7 @@ export function OpportunitiesPage({
   const [view, setView] = useState<View>("board");
   const [search, setSearch] = useState("");
   const [owners, setOwners] = useState<string[]>([]);
-  const [idle, setIdle] = useState(false);
+  const [idle, setIdle] = useState(initialIdle);
   const [outcome, setOutcome] = useState<TableOutcome>("open");
   const [sort, setSort] = useState<DealSort>("updated_at");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
@@ -329,48 +331,11 @@ export function OpportunitiesPage({
   );
 }
 
-/** Totals per currency, the workspace's first. */
-function totalsOf(summary: DealSummary | undefined, currency: string) {
-  const sums = new Map<string, { text: string[]; weightedText: string[] }>();
-  let count = 0;
-  for (const stage of summary?.stages ?? []) {
-    count += stage.count;
-    for (const total of stage.totals) {
-      const entry = sums.get(total.currency) ?? { text: [], weightedText: [] };
-      entry.text.push(total.amount);
-      entry.weightedText.push(total.weighted_amount);
-      sums.set(total.currency, entry);
-    }
-  }
-  const currencies = [...sums.keys()].sort((a, b) => (a === currency ? -1 : b === currency ? 1 : a.localeCompare(b)));
-  return { count, currencies, sums };
-}
-
-/** Exact decimal addition of amount strings (no floating point). */
-function addDecimals(values: string[], digits: number): string {
-  const scale = 10n ** BigInt(digits);
-  let total = 0n;
-  for (const value of values) {
-    const [whole = "0", fraction = ""] = value.split(".");
-    total += BigInt(whole) * scale + BigInt((fraction + "0".repeat(digits)).slice(0, digits) || "0");
-  }
-  const text = total.toString().padStart(digits + 1, "0");
-  return digits === 0 ? text : `${text.slice(0, -digits)}.${text.slice(-digits)}`;
-}
-
 function SummaryStrip({ summary, currency }: { summary: DealSummary | undefined; currency: string }) {
   const t = useT();
   const intl = useIntl();
   const { count, currencies, sums } = totalsOf(summary, currency);
-  const money = (pick: "text" | "weightedText") =>
-    currencies.length === 0
-      ? formatMoney(intl.formatNumber, "0", currency)
-      : currencies
-          .map((code) => {
-            const values = sums.get(code)?.[pick] ?? [];
-            return formatMoney(intl.formatNumber, addDecimals(values, minorDigits(code)), code);
-          })
-          .join(" · ");
+  const money = (pick: "text" | "weightedText") => moneyTotal(intl.formatNumber, currencies, sums, pick, currency);
   const items: [MessageId, string][] = [
     ["deals.summary.open", money("text")],
     ["deals.summary.weighted", money("weightedText")],

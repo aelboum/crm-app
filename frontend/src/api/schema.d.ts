@@ -323,6 +323,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Recent Activity */
+        get: operations["list_recent_activity_v1_workspaces__tenant_id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/appointments": {
         parameters: {
             query?: never;
@@ -3036,6 +3053,67 @@ export interface components {
             /** Thank You */
             thank_you: string;
         };
+        /** RecentActivity */
+        RecentActivity: {
+            /** Items */
+            items: components["schemas"]["RecentActivityOut"][];
+        };
+        /**
+         * RecentActivityOut
+         * @description An entry of the workspace's feed, with the record it belongs to; a
+         *     record deleted since has no name.
+         */
+        RecentActivityOut: {
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /** Fields */
+            fields: string[] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "created" | "updated" | "archived" | "restored" | "stage_changed" | "owner_changed" | "company_linked" | "company_unlinked" | "note_added" | "note_deleted";
+            /** Note Excerpt */
+            note_excerpt: string | null;
+            /** Note Id */
+            note_id: string | null;
+            /** Note Truncated */
+            note_truncated: boolean;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Owner From */
+            owner_from: string | null;
+            /** Owner To */
+            owner_to: string | null;
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /** Record Name */
+            record_name: string | null;
+            /**
+             * Record Type
+             * @enum {string}
+             */
+            record_type: "contact" | "company";
+            /** Stage From */
+            stage_from: string | null;
+            /** Stage To */
+            stage_to: string | null;
+        };
         /**
          * Role
          * @enum {string}
@@ -4158,6 +4236,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Access"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_recent_activity_v1_workspaces__tenant_id__activity_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentActivity"];
                 };
             };
             /** @description Validation Error */
