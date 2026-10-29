@@ -24,7 +24,7 @@ from typing import Any
 from saas_os.infra.db import Session, select, tenant_session_scope
 
 from crm_app.domains import paging
-from crm_app.models import Activity, Company, Note
+from crm_app.models import Activity, Company, Contact, Note
 from crm_app.records import CONTACT, Kind, Scope, load_record
 
 ORDER, DIRECTION = "occurred_at", "desc"
@@ -76,6 +76,51 @@ def list_history(
     if more and last_key is not None:
         next_cursor = paging.encode("activity", ORDER, DIRECTION, filters, last_key)
     return HistoryPage(items=items, next_cursor=next_cursor)
+
+
+def recent(scope: Scope, *, limit: int) -> list[dict[str, Any]]:
+    """The workspace's newest `limit` entries across contacts and companies
+    (decision P4-D 4), each with its record's kind, ID and current name. No
+    note text: the Home page names what happened, the record shows the rest."""
+    with tenant_session_scope(scope.workspace) as session:
+        rows = list(
+            session.execute(
+                select(Activity)
+                .where(Activity.tenant_id == scope.workspace)
+                .order_by(Activity.occurred_at.desc(), Activity.id.desc())
+                .limit(limit)
+            ).scalars()
+        )
+        contacts = {entry.contact_id for entry in rows if entry.contact_id is not None}
+        people: dict[uuid.UUID, str] = {}
+        if contacts:
+            query = select(Contact.id, Contact.first_name, Contact.last_name).where(
+                Contact.tenant_id == scope.workspace, Contact.id.in_(contacts)
+            )
+            people = {
+                row_id: " ".join(part for part in (first, last) if part)
+                for row_id, first, last in session.execute(query).tuples()
+            }
+        companies = _company_names(
+            session,
+            scope,
+            {entry.company_id for entry in rows} | {entry.company_ref_id for entry in rows},
+        )
+        return [
+            {
+                **_item(entry, None, companies),
+                "record_type": "contact" if entry.contact_id is not None else "company",
+                "record_id": entry.contact_id or entry.company_id,
+                "record_name": (
+                    people.get(entry.contact_id)
+                    if entry.contact_id is not None
+                    else companies.get(entry.company_id)
+                    if entry.company_id is not None
+                    else None
+                ),
+            }
+            for entry in rows
+        ]
 
 
 def _company_names(

@@ -4830,6 +4830,220 @@
         "title": "PublicForm",
         "type": "object"
       },
+      "RecentActivity": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecentActivityOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RecentActivity",
+        "type": "object"
+      },
+      "RecentActivityOut": {
+        "description": "An entry of the workspace's feed, with the record it belongs to; a\nrecord deleted since has no name.",
+        "properties": {
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "created",
+              "updated",
+              "archived",
+              "restored",
+              "stage_changed",
+              "owner_changed",
+              "company_linked",
+              "company_unlinked",
+              "note_added",
+              "note_deleted"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Excerpt"
+          },
+          "note_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Id"
+          },
+          "note_truncated": {
+            "title": "Note Truncated",
+            "type": "boolean"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "owner_from": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner From"
+          },
+          "owner_to": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner To"
+          },
+          "record_id": {
+            "format": "uuid",
+            "title": "Record Id",
+            "type": "string"
+          },
+          "record_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Name"
+          },
+          "record_type": {
+            "enum": [
+              "contact",
+              "company"
+            ],
+            "title": "Record Type",
+            "type": "string"
+          },
+          "stage_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage From"
+          },
+          "stage_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage To"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "occurred_at",
+          "actor_user_id",
+          "fields",
+          "stage_from",
+          "stage_to",
+          "owner_from",
+          "owner_to",
+          "company_id",
+          "company_name",
+          "note_id",
+          "note_excerpt",
+          "note_truncated",
+          "record_type",
+          "record_id",
+          "record_name"
+        ],
+        "title": "RecentActivityOut",
+        "type": "object"
+      },
       "Role": {
         "enum": [
           "Owner",
@@ -7418,6 +7632,77 @@
         "summary": "Get Access",
         "tags": [
           "workspaces"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/activity": {
+      "get": {
+        "operationId": "list_recent_activity_v1_workspaces__tenant_id__activity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentActivity"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recent Activity",
+        "tags": [
+          "activity"
         ]
       }
     },

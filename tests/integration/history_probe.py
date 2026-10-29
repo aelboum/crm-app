@@ -27,6 +27,8 @@ from tests.integration.workspace_route_probe import PROVISIONING, _new_user, _ne
 # Values that must never appear in a history response (D5).
 LEAK_CITY = "Leakcity-4b1d"
 LEAK_EMAIL = "leak.history.9c2e@example.test"
+# A note's text, which the workspace feed must not carry (P4-D 4).
+FEED_NOTE = "Feednote-7a3e private remark"
 
 
 def _email() -> str:
@@ -142,6 +144,37 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         result["cursor_garbage"] = history(item, cursor="not-a-cursor").status_code
         result["limit_too_high"] = history(item, limit=101).status_code
         result["unknown_param"] = history(item, sort="kind").status_code
+
+        # --- The workspace's feed (P4-D 4) ----------------------------------------------
+        note = post(f"{item}/notes", {"body": FEED_NOTE})
+        post(f"{other}/contacts", {"first_name": "Elsewhere", "email": _email()}, "other_owner")
+
+        def feed(caller: str | None = "owner", **params: object) -> Any:
+            return client.get(f"{base}/activity", params=params, headers=auth(caller))
+
+        response = feed(Role.READ_ONLY.value, limit=20)
+        result["feed_status"] = [note.status_code, response.status_code]
+        result["feed"] = response.json()["items"]
+        result["feed_text"] = response.text
+        result["feed_default"] = len(feed().json()["items"])
+        result["contact"] = contact["id"]
+        result["feed_records"] = {
+            "contacts": [contact["id"], taken["id"], linked["id"]],
+            "companies": [first["id"], second["id"], doomed["id"]],
+        }
+        result["feed_access"] = {
+            "member": feed(Role.MEMBER.value).status_code,
+            "outsider": feed("outsider").status_code,
+            "other_owner": feed("other_owner").status_code,
+            "anonymous": feed(None).status_code,
+            "limit_zero": feed(limit=0).status_code,
+            "limit_too_high": feed(limit=21).status_code,
+            "unknown_param": feed(cursor="x").status_code,
+        }
+        result["other_feed"] = [
+            e["record_name"]
+            for e in client.get(f"{other}/activity", headers=auth("other_owner")).json()["items"]
+        ]
 
         # --- Who may read it ---------------------------------------------------------
         foreign = f"{other}/contacts/{contact['id']}"

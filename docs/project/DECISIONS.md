@@ -1181,6 +1181,69 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   8. **Not in 4C:** reminders and notifications, recurring tasks, task
      descriptions, bulk actions.
 
+## P4-D — Home dashboard foundations (2026-10-29, under M1)
+
+- **Status:** Decided under M1 after the owner's "proceed" (2026-10-29),
+  following the proposal of the Home dashboard as the next unblocked
+  slice. Roadmap 4.4 "Dashboard foundations" (total contacts, active
+  opportunities, pipeline value, tasks due, recent activity; "only show
+  metrics whose definitions are documented"); DESIGN-INSPECTION.md lists
+  the Home dashboard as "foundations only".
+- **Design audit (`ScreenDashboard.dc.html`):** an agency view across
+  client workspaces; for a client workspace a "Business overview" and a
+  "My day" lens, a setup checklist, a "Needs attention" strip (unread
+  conversations, conversations without an owner, overdue tasks, deals idle
+  7+ days), four KPIs with deltas against an earlier period, a 12-week
+  lead trend, lead sources, pipeline by stage with a weighted forecast,
+  today's appointments, tasks due today with a checkbox, recent
+  conversations, campaign performance, AI assistants and recent activity.
+  Every number in it is illustrative.
+- **Decisions:**
+  1. **Built now (slice 4D):** the workspace's Home page with
+     - KPIs: **Contacts**, **Open deals**, **Pipeline value** (with its
+       weighted value) and **Open tasks** (with the overdue count);
+     - **Needs attention:** overdue tasks and deals idle 7+ days, each
+       opening the matching filtered list;
+     - **Pipeline by stage:** each stage's open deals and value, and the
+       weighted forecast;
+     - **Today's appointments** in the workspace;
+     - **Tasks due today or overdue**, with completing a task in place for
+       members who may update tasks;
+     - **Recent activity** on contacts and companies.
+  2. **Not now:** the agency view (Phase 11, P2-B), the "My day" lens and
+     "Customize", the setup checklist, deltas against an earlier period, the
+     lead trend, lead sources and conversion rate (no defined lead or
+     conversion event yet), and the conversations, campaigns and AI cards
+     (their modules are not built). Nothing on the page is a placeholder
+     number.
+  3. **Definitions:**
+     - *Contacts:* contacts not archived, as the Contacts list counts them;
+       above 10,000 shown as "10,000+".
+     - *Open deals:* deals of the workspace's pipeline whose outcome is
+       open. *Pipeline value:* the sum of their amounts in the workspace's
+       currency (a deal without an amount counts but adds nothing);
+       *weighted:* each amount times its stage's probability (P4-B).
+     - *Open tasks* and *overdue:* open tasks of every assignee; overdue
+       means due before now (P4-C).
+     - *Idle deals:* open deals that have stayed in their stage at least 7
+       days (P4-B).
+     - *Today:* the viewer's own calendar day in the browser's time zone.
+       Tasks shown are open ones due before the end of today, earliest
+       first, at most 8; appointments are those starting today and not
+       cancelled, at most 8.
+     - *Recent activity:* the 10 newest history entries of contacts and
+       companies (P3-B), with the record's name.
+  4. **Data:** the page reads the existing list, summary, count and range
+     endpoints, so each card keeps its own permission check, loads and
+     fails on its own, and agrees with the page it links to. One new
+     route, `GET /v1/workspaces/{tenant_id}/activity` (`crm_app.activity:
+     read`, every role), returns the newest entries across contacts and
+     companies (limit 1-20, default 10, no paging) with the record's kind,
+     ID and display name. It carries what the record history already
+     shows, minus note text: field names, never values.
+  5. **Navigation:** Home is no longer "soon" and is where a workspace
+     opens (it opened on Settings before).
+
 ## P5-A — Calendar and appointments (2026-10-28, owner approval)
 
 - **Status:** Approved by the owner on 2026-10-28. Asked "Should Calendar

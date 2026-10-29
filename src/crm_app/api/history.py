@@ -2,6 +2,7 @@
 
     GET /v1/workspaces/{tenant_id}/contacts/{record_id}/activity
     GET /v1/workspaces/{tenant_id}/companies/{record_id}/activity
+    GET /v1/workspaces/{tenant_id}/activity     (P4-D 4: the Home page's feed)
 
 Each declares `crm_app.activity:read` (every role, Q6). The path's
 `tenant_id` is only the request; handlers use `context.tenant_id` alone, and
@@ -64,6 +65,25 @@ class ActivityOut(BaseModel):
     note_truncated: bool
 
 
+class RecentActivityOut(ActivityOut):
+    """An entry of the workspace's feed, with the record it belongs to; a
+    record deleted since has no name."""
+
+    record_type: Literal["contact", "company"]
+    record_id: uuid.UUID
+    record_name: str | None
+
+
+class RecentActivity(BaseModel):
+    items: list[RecentActivityOut]
+
+
+class RecentParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(default=10, ge=1, le=20)
+
+
 class ActivityPage(BaseModel):
     items: list[ActivityOut]
     next_cursor: str | None
@@ -105,3 +125,14 @@ def _add_route(kind: Kind, path: str) -> None:
 
 _add_route(CONTACT, "contacts")
 _add_route(COMPANY, "companies")
+
+
+@router.get(
+    "/{tenant_id}/activity",
+    response_model=RecentActivity,
+    name="list_recent_activity",
+    tags=["activity"],
+)
+def list_recent_activity(context: Read, params: Annotated[RecentParams, Query()]) -> Any:
+    scope = Scope(workspace=context.tenant_id, actor=context.actor_id)
+    return {"items": history.recent(scope, limit=params.limit)}

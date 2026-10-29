@@ -5,7 +5,8 @@ database. Covers: every contact and company change writes its entries in
 the same transaction (a refused change writes none), the payload carries
 field names, stages, user IDs and company references only (D5), a deleted
 company leaves `company_unlinked` on its contacts, keyset paging, and who
-may read a history (every role of the workspace; nobody else).
+may read a history (every role of the workspace; nobody else), and the
+workspace's feed across contacts and companies for the Home page (P4-D 4).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from tests.integration.history_probe import LEAK_CITY, LEAK_EMAIL
+from tests.integration.history_probe import FEED_NOTE, LEAK_CITY, LEAK_EMAIL
 from tests.support import REPO_ROOT, run_module
 
 pytestmark = pytest.mark.usefixtures("migrated")
@@ -135,3 +136,46 @@ def test_every_role_reads_history_and_nobody_else_does(probe: Probe) -> None:
         "unknown_record": 404,
         "company_path_for_contact": 404,
     }
+
+
+def test_the_feed_lists_the_newest_entries_of_the_workspace(probe: Probe) -> None:
+    assert probe["feed_status"] == [201, 200]
+    feed = probe["feed"]
+    # 16 or more entries were written above; the limit caps the answer.
+    assert 16 <= len(feed) <= 20
+    assert probe["feed_default"] == 10
+    stamps = [entry["occurred_at"] for entry in feed]
+    assert stamps == sorted(stamps, reverse=True)
+    newest = feed[0]
+    assert (newest["kind"], newest["record_type"]) == ("note_added", "contact")
+    assert (newest["record_id"], newest["record_name"]) == (probe["contact"], "Hist")
+    assert newest["note_excerpt"] is None
+    records = probe["feed_records"]
+    plural = {"contact": "contacts", "company": "companies"}
+    for entry in feed:
+        assert entry["record_id"] in records[plural[entry["record_type"]]]
+    assert {e["record_name"] for e in feed if e["record_type"] == "contact"} <= {
+        "Hist",
+        "Taken",
+        "Linked",
+    }
+
+
+def test_the_feed_carries_no_values_or_note_text(probe: Probe) -> None:
+    text = probe["feed_text"]
+    assert FEED_NOTE not in text
+    assert LEAK_CITY not in text
+    assert LEAK_EMAIL not in text
+
+
+def test_the_feed_is_for_members_of_the_workspace_only(probe: Probe) -> None:
+    assert probe["feed_access"] == {
+        "member": 200,
+        "outsider": 404,
+        "other_owner": 404,
+        "anonymous": 401,
+        "limit_zero": 422,
+        "limit_too_high": 422,
+        "unknown_param": 422,
+    }
+    assert probe["other_feed"] == ["Elsewhere"]

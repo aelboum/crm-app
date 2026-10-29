@@ -65,6 +65,8 @@ _NOTE = "/v1/workspaces/{tenant_id}/notes/{note_id}"
 RECORDS |= {
     f"PATCH {_NOTE}": "crm_app.activity:create",
     f"DELETE {_NOTE}": "crm_app.activity:create",
+    # The Home page's feed across contacts and companies (P4-D 4).
+    "GET /v1/workspaces/{tenant_id}/activity": "crm_app.activity:read",
 }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 
