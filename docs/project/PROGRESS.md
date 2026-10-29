@@ -37,6 +37,20 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 3 screens at phone width (2026-10-29):** checked in Chrome at
+  390 px (mobile emulation) on the local stack: the Contacts and Companies
+  lists (view tabs and table scroll inside their own boxes), the contact
+  drawer with every section, the Edit contact and Edit tags dialogs, the
+  Import dialog through column mapping, counts and the refused-rows table,
+  Settings › Custom fields and Tags. One fault found and fixed: the Import
+  dialog's mapping step was 14 px wider than the dialog, because a dialog
+  is a grid whose implicit column could not shrink below its content and a
+  fieldset defaults to `min-width: min-content`; `.dialog` now uses
+  `minmax(0, 1fr)` and fieldsets `min-width: 0`. Desktop dialogs
+  unchanged at 1440 px; no console errors. Also fixed: a calendar test
+  compared with `toBe` against an asymmetric matcher, so it failed
+  whenever it ran between 10:00 and 10:30; it now uses `toEqual`. Vitest
+  247 passed, ESLint and tsc clean.
 - **Security review of the public routes, 13-H1 (decision 13-H1, 2026-10-29):**
   - **Reviewed:** every `public_route` (booking pages and visitor
     bookings, hosted forms, signup status, sign-out address) and the three

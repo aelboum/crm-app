@@ -50,6 +50,9 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+/* Browsers give a fieldset `min-width: min-content`, so a long select
+   option could push it wider than a phone-width dialog. */
+fieldset { min-width: 0; }
 body {
   font: 13px/1.45 var(--font);
   color: var(--ink);
@@ -539,7 +542,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
      itself, so its actions stay reachable. */
   max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto;
 }
-.dialog { display: grid; gap: var(--space-4); outline: none; }
+.dialog { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); outline: none; }
 .dialog-title { font-size: 16px; font-weight: 650; margin: 0; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
 

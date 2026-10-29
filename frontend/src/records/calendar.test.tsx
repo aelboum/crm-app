@@ -238,7 +238,8 @@ describe("business hours on the calendar", () => {
     const presence = document.querySelector(".calendar-presence");
     const hour = new Date().getHours();
     const busy = hour === 10 && new Date().getMinutes() < 30;
-    expect(presence?.textContent).toBe(
+    // `toEqual`, so the asymmetric matcher applies between 10:00 and 10:30.
+    expect(presence?.textContent).toEqual(
       busy ? expect.stringContaining("In an appointment until") : hour >= 9 && hour < 17 ? "Free now" : "Outside business hours",
     );
     expect(await accessibilityViolations()).toEqual([]);
