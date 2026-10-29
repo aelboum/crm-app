@@ -28,7 +28,6 @@ from typing import Annotated, Any, Literal, Self
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import (
-    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -40,6 +39,7 @@ from saas_os.api.dependencies import require_permission
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
 
 from crm_app import appointments
+from crm_app.api.inputs import Instant
 from crm_app.api.records import IdempotencyKey, IfMatch, _http, _owners, _version
 from crm_app.domains import appointments as rules
 from crm_app.records import RecordError, Scope
@@ -66,8 +66,8 @@ class AppointmentIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str = Field(max_length=_TITLE_RAW)
-    starts_at: AwareDatetime
-    ends_at: AwareDatetime
+    starts_at: Instant
+    ends_at: Instant
     kind: Kind = "in_person"
     location: str | None = Field(default=None, max_length=_LOCATION_RAW)
     note: str | None = Field(default=None, max_length=_NOTE_RAW)
@@ -98,8 +98,8 @@ class AppointmentPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(default=None, max_length=_TITLE_RAW)
-    starts_at: AwareDatetime | None = None
-    ends_at: AwareDatetime | None = None
+    starts_at: Instant | None = None
+    ends_at: Instant | None = None
     kind: Kind | None = None
     location: str | None = Field(default=None, max_length=_LOCATION_RAW)
     note: str | None = Field(default=None, max_length=_NOTE_RAW)
@@ -207,8 +207,8 @@ class Availability(BaseModel):
 class WindowParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    start: AwareDatetime
-    end: AwareDatetime
+    start: Instant
+    end: Instant
 
     @model_validator(mode="after")
     def _range(self) -> Self:
@@ -235,8 +235,8 @@ class ConflictParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     host_user_id: uuid.UUID
-    starts_at: AwareDatetime
-    ends_at: AwareDatetime
+    starts_at: Instant
+    ends_at: Instant
     exclude_id: uuid.UUID | None = None
 
 

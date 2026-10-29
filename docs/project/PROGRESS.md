@@ -37,6 +37,24 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Security review of the public routes, 13-H1 (decision 13-H1, 2026-10-29):**
+  - **Reviewed:** every `public_route` (booking pages and visitor
+    bookings, hosted forms, signup status, sign-out address) and the three
+    public pages, read-only. No critical findings; one high finding (a
+    public form re-granting consent a member withdrew) is contained by
+    suppression and recorded with the other items in 13-H1.
+  - **Fixed:** deeply nested JSON and extreme times were 500s; both are now
+    422s through `crm_app.api.inputs` (`json_body`, which also refuses a
+    too-large declared `Content-Length` before reading, and `Instant`,
+    1900-2999, for every time a client sends). A booking's creation audit
+    entry says `"by": "visitor"`. The CI audit failure on `87cc643`
+    (seroval advisory) was fixed separately in `b64f206`.
+  - **Tests:** unit `test_inputs.py` (sizes, nesting, time range) and the
+    booking audit assertion. Unit suite 528 passed; integration for the
+    touched routes (appointments, booking pages, forms, signups, tasks)
+    85 passed; ruff, pyright, import contracts clean; OpenAPI unchanged.
+  - **Launch gate recorded:** `TRUST_PROXY_HEADERS=true` behind an edge
+    that overwrites `X-Forwarded-For`, with a request-size cap.
 - **Phase 7 slice 7B, consent and suppression (decision P7-B, 2026-10-28):**
   - **Built:** migration `0017_suppression` (table `suppression`:
     tenant-owned, forced RLS, append-only for the runtime role, in

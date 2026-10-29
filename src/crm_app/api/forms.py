@@ -29,7 +29,6 @@ storing anything. Errors name field keys and rules, never answers.
 
 from __future__ import annotations
 
-import json
 import re
 import uuid
 from datetime import datetime
@@ -64,6 +63,7 @@ from saas_os.infra.ratelimit import (
 )
 
 from crm_app import forms
+from crm_app.api.inputs import json_body
 from crm_app.api.records import DEFAULT_LIMIT, MAX_LIMIT, IdempotencyKey, IfMatch, _http, _version
 from crm_app.domains import forms as rules
 from crm_app.domains import paging
@@ -398,15 +398,7 @@ def _idempotency_key(request: Request) -> str:
 
 
 async def _submission(request: Request) -> SubmissionIn:
-    raw = await request.body()
-    if len(raw) > _MAX_BODY_BYTES:
-        raise invalid_request("body_too_large")
-    try:
-        payload = json.loads(raw)
-    except ValueError:
-        raise RequestValidationError(
-            [{"loc": ("body",), "msg": "The body is not JSON.", "type": "json_invalid"}]
-        ) from None
+    payload = await json_body(request, _MAX_BODY_BYTES)
     try:
         return SubmissionIn.model_validate(payload)
     except ValidationError as exc:

@@ -33,7 +33,6 @@ body or the workspace limit; 429 when the cap is reached.
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
@@ -64,6 +63,7 @@ from saas_os.infra.ratelimit import (
 )
 
 from crm_app import signups
+from crm_app.api.inputs import json_body
 from crm_app.domains.signup import InvalidWorkspaceNameError, normalize_workspace_name
 from crm_app.settings import signup_enabled, signup_limit
 
@@ -147,15 +147,7 @@ def _idempotency_key(request: Request) -> str:
 
 
 async def _payload(request: Request) -> Any:
-    raw = await request.body()
-    if len(raw) > _MAX_BODY_BYTES:
-        raise invalid_request("body_too_large")
-    try:
-        return json.loads(raw)
-    except ValueError:
-        raise RequestValidationError(
-            [{"loc": ("body",), "msg": "The body is not JSON.", "type": "json_invalid"}]
-        ) from None
+    return await json_body(request, _MAX_BODY_BYTES)
 
 
 def _validated(payload: Any) -> str:

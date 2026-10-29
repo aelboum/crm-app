@@ -24,12 +24,13 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
 
 from crm_app import tasks
+from crm_app.api.inputs import Instant
 from crm_app.api.records import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
@@ -61,7 +62,7 @@ class TaskIn(BaseModel):
 
     title: str = Field(max_length=_TITLE_RAW)
     priority: Priority = "medium"
-    due_at: AwareDatetime | None = None
+    due_at: Instant | None = None
     assignee_user_id: uuid.UUID | None = None
     contact_id: uuid.UUID | None = None
     company_id: uuid.UUID | None = None
@@ -80,7 +81,7 @@ class TaskPatch(BaseModel):
 
     title: str | None = Field(default=None, max_length=_TITLE_RAW)
     priority: Priority | None = None
-    due_at: AwareDatetime | None = None
+    due_at: Instant | None = None
     assignee_user_id: uuid.UUID | None = None
     contact_id: uuid.UUID | None = None
     company_id: uuid.UUID | None = None
@@ -153,8 +154,8 @@ class CountParams(BaseModel):
 class TaskListParams(CountParams):
     status: Literal["open", "done", "all"] = "open"
     overdue: bool = False
-    due_from: AwareDatetime | None = None
-    due_to: AwareDatetime | None = None
+    due_from: Instant | None = None
+    due_to: Instant | None = None
     contact_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)
     company_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)
     opportunity_id: list[uuid.UUID] = Field(default_factory=list, max_length=_MAX_VALUES)

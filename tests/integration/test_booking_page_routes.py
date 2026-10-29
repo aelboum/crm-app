@@ -279,6 +279,7 @@ def test_changes_are_audited_by_id_and_act_as_the_host(
     ]
     created, cancelled = appointment_rows
     assert created[1]["booking_page_id"] == probe["page_id"]
+    assert created[1]["by"] == "visitor"
     assert str(created[2]) == probe["admin_id"]
     assert cancelled[1] == {
         "previous_status": "confirmed",

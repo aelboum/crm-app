@@ -32,7 +32,6 @@ never what the visitor typed.
 
 from __future__ import annotations
 
-import json
 import re
 import uuid
 from datetime import datetime
@@ -41,16 +40,17 @@ from typing import Annotated, Any, Literal, Self
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from saas_os.api.auth.config import get_auth_http_config, resolve_client_address
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
-from saas_os.api.errors import invalid_request, route_not_found
+from saas_os.api.errors import route_not_found
 from saas_os.api.route_policy import public_route
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
 
 from crm_app import booking_pages
 from crm_app.api.forms import _idempotency_key, _limited
+from crm_app.api.inputs import Instant, json_body
 from crm_app.api.records import IdempotencyKey, IfMatch, _http, _version
 from crm_app.domains import appointments as appointment_rules
 from crm_app.domains import booking_pages as rules
@@ -245,8 +245,8 @@ class FreeTimesParams(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    start: AwareDatetime
-    end: AwareDatetime
+    start: Instant
+    end: Instant
 
     @model_validator(mode="after")
     def _bounded(self) -> Self:
@@ -264,7 +264,7 @@ class FreeTimes(BaseModel):
 class BookingIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    starts_at: AwareDatetime
+    starts_at: Instant
     first_name: str = Field(max_length=_RAW * 200)
     last_name: str | None = Field(default=None, max_length=_RAW * 200)
     email: str = Field(max_length=_RAW * 320)
@@ -313,15 +313,7 @@ def _known_key(key: str) -> None:
 
 
 async def _body[M: BaseModel](request: Request, model: type[M]) -> M:
-    raw = await request.body()
-    if len(raw) > _MAX_BODY_BYTES:
-        raise invalid_request("body_too_large")
-    try:
-        payload = json.loads(raw)
-    except ValueError:
-        raise RequestValidationError(
-            [{"loc": ("body",), "msg": "The body is not JSON.", "type": "json_invalid"}]
-        ) from None
+    payload = await json_body(request, _MAX_BODY_BYTES)
     try:
         return model.model_validate(payload)
     except ValidationError as exc:

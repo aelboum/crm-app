@@ -1002,7 +1002,7 @@ Do not build a large public integration marketplace before core integration patt
 
 # 18. Phase 13 — Production Hardening
 
-**Status:** Not started.
+**Status:** Not started as a phase. Brought forward under M1: the security review of the public routes (decision 13-H1, 2026-10-29), with its fixes done and a proxy-header launch gate recorded.
 
 ## Objectives
 

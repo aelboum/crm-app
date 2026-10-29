@@ -702,6 +702,8 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             "fields": sorted(given),
             "status": appointment_rules.DEFAULT_STATUS,
             "booking_page_id": str(page.id),
+            # The host is the actor, but a visitor made the booking (13-H1).
+            "by": "visitor",
         },
     )
     session.add(

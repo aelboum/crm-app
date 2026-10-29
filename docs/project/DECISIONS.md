@@ -1508,6 +1508,56 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
       list, a contact's consent in its drawer, and the hosted form page
       `/app/f/{workspace}/{key}` without the app frame or sign-in.
 
+## 13-H1 — Security review of the public routes (2026-10-29, under M1)
+
+- **Status:** Decided under M1 after the owner's "go" (2026-10-29) to the
+  proposal "hardening: a security review of the public routes". Roadmap
+  Phase 13 work brought forward; nothing here changes SaaS-OS, its pin,
+  identity or invitation semantics.
+- **Review:** a read-only review of every `public_route` (hosted booking
+  pages and visitor bookings, hosted forms, signup status, sign-out
+  address) and the three public pages. No critical findings. Sound:
+  tenant scope taken from the looked-up row under forced RLS, one
+  indistinguishable 404, 256-bit visitor tokens stored as hashes and sent
+  in bodies, limits before any database access, no input echoed in
+  errors, no mass assignment, React text rendering only, CSP and
+  `Referrer-Policy: same-origin`.
+- **Decisions:**
+  1. **Fixed now:**
+     - A deeply nested JSON body raised `RecursionError` (a 500); an
+       extreme time (year 1 or 9999 with an offset) raised `OverflowError`
+       (a 500). `crm_app.api.inputs` now reads small JSON bodies with the
+       size checked against `Content-Length` and while streaming, treats
+       nesting too deep to parse as "not JSON" (422), and offers `Instant`,
+       an aware time between 1900 and 2999, used for every time a client
+       sends (bookings, free times, appointments, tasks).
+     - The audit entry for an appointment made on a booking page now
+       carries `"by": "visitor"`, as its cancellation already did; the host
+       remains the actor because SaaS-OS records a user caller.
+  2. **Already contained (finding F1):** a public form submission can
+     record `granted` for an existing contact whose consent a member
+     withdrew. Withdrawing suppresses the address (P7-B 5) and
+     `may_send` refuses a suppressed address whatever the consent says,
+     so no email follows. Recording new consent for a contact who never
+     withdrew remains the documented single opt-in (P7-A 7): **double
+     opt-in is a precondition for campaigns** and is built with the email
+     channel.
+  3. **Launch gate (F2):** per-visitor limits on public routes key on the
+     client address, so production must run with
+     `TRUST_PROXY_HEADERS=true` behind an edge that overwrites
+     `X-Forwarded-For`, and the application must not be reachable around
+     the edge. The production topology is decided in Phase 13/14; this is
+     recorded there rather than enforced at start-up now. The edge's own
+     request-size cap is part of the same gate.
+  4. **Accepted for now, revisit with the email channel or Phase 13:** a
+     limiter key is created for a well-formed but unknown page before the
+     lookup (bounded by the per-address limit); the per-page limit is
+     shared by every visitor of that page; a visitor's booking token works
+     while the booking exists (P5-C 7), so a leaked link shows the
+     booking's time and location; rotating email addresses avoids the
+     per-contact cap of upcoming bookings, leaving only the rate limits
+     (no CAPTCHA or workspace contact cap yet).
+
 ## P7-B — Consent and suppression (2026-10-28, under M1)
 
 - **Status:** Decided under M1 after the owner's "Go" (2026-10-28) to the
