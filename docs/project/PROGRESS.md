@@ -37,6 +37,20 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 4 slice 4E, a record's deals in its drawer (decision P4-E, 2026-10-31):**
+  the contact and company drawers list the record's deals (every
+  outcome, newest change first, at most 10, with stage, outcome and
+  value) and open them on the Opportunities page; "New opportunity"
+  starts a deal linked to the record. Frontend only, on the existing
+  `contact_id`/`company_id` filters. Vitest 259 passed (4 new).
+  Checked in Chrome on 2026-10-31 in "Local test workspace" as its
+  Owner: a deal created from Anna Bakker's drawer was linked to her and
+  ACME, appeared in the list at once, opened on the Opportunities page,
+  and after "Mark won" showed a Won tag in ACME's drawer; no page
+  overflow at 390 px, no console errors at 1440 px. Seen but not changed:
+  that workspace's roles lack the appointment grant, so the contact
+  drawer shows the permission notice and also "No upcoming
+  appointments".
 - **Phase 4 slice 4D, Home dashboard foundations (decision P4-D, 2026-10-29):**
   - **Built:** `GET /v1/workspaces/{tenant_id}/activity` (`crm_app.activity:
     read`, every role): the newest 1-20 history entries across contacts

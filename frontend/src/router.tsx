@@ -204,6 +204,9 @@ function SectionPage() {
         onOpenAppointment={(id) => {
           void navigate({ params: { workspaceId, section: "calendar" }, search: { record: id } });
         }}
+        onOpenDeal={(id) => {
+          void navigate({ params: { workspaceId, section: "opportunities" }, search: { record: id } });
+        }}
       />
     );
   }
@@ -227,6 +230,9 @@ function SectionPage() {
         onOpen={openRecord}
         onOpenContact={(id) => {
           void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+        }}
+        onOpenDeal={(id) => {
+          void navigate({ params: { workspaceId, section: "opportunities" }, search: { record: id } });
         }}
       />
     );

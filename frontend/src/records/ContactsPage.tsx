@@ -29,6 +29,7 @@ import { CustomFieldsSection } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
 import { AppointmentsSection } from "./AppointmentsSection";
 import { ConsentSection } from "./ConsentSection";
+import { DealsSection } from "./DealsSection";
 import { TasksSection } from "./TasksSection";
 import { ActivitySection, NotesSection } from "./NotesSection";
 import { ListTags, TagSection } from "./TagEditor";
@@ -86,6 +87,7 @@ export function ContactsPage({
   startCreate = false,
   onCreateDone = () => undefined,
   onOpenAppointment = () => undefined,
+  onOpenDeal = () => undefined,
 }: {
   workspaceId: string;
   /** The contact whose preview is open (`?record=` in the URL). */
@@ -97,6 +99,8 @@ export function ContactsPage({
   onCreateDone?: () => void;
   /** Opens an appointment on the Calendar (decision P5-A). */
   onOpenAppointment?: (id: string) => void;
+  /** Opens a deal on the Opportunities page (decision P4-E). */
+  onOpenDeal?: (id: string) => void;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -345,6 +349,7 @@ export function ContactsPage({
           onClose={() => { onOpen(null); }}
           onEdit={(contact) => { setDialog({ contact }); }}
           onOpenAppointment={onOpenAppointment}
+          onOpenDeal={onOpenDeal}
         />
       ) : null}
       {activeDialog ? (
@@ -380,6 +385,7 @@ function ContactDrawer({
   onClose,
   onEdit,
   onOpenAppointment,
+  onOpenDeal,
 }: {
   workspaceId: string;
   id: string;
@@ -391,6 +397,7 @@ function ContactDrawer({
   onClose: () => void;
   onEdit: (contact: Contact) => void;
   onOpenAppointment: (id: string) => void;
+  onOpenDeal: (id: string) => void;
 }) {
   const t = useT();
   const toast = useToast();
@@ -505,6 +512,11 @@ function ContactDrawer({
             </div>
           ) : null}
           <TasksSection workspaceId={workspaceId} link={{ kind: "contact", id: record.id }} />
+          <DealsSection
+            workspaceId={workspaceId}
+            link={{ kind: "contact", contact: { id: record.id, name: fullName(record) }, company: record.company ?? null }}
+            onOpen={onOpenDeal}
+          />
           <AppointmentsSection
             workspaceId={workspaceId}
             contact={{ id: record.id, name: fullName(record) }}

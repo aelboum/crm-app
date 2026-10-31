@@ -58,6 +58,7 @@ import {
 } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
 import { ActivitySection, NotesSection } from "./NotesSection";
+import { DealsSection } from "./DealsSection";
 import { TasksSection } from "./TasksSection";
 import { ListTags, TagSection } from "./TagEditor";
 import { useDebounced } from "./useDebounced";
@@ -90,11 +91,13 @@ export function CompaniesPage({
   openId,
   onOpen,
   onOpenContact,
+  onOpenDeal = () => undefined,
 }: {
   workspaceId: string;
   openId: string | null;
   onOpen: (id: string | null) => void;
   onOpenContact: (id: string) => void;
+  onOpenDeal?: (id: string) => void;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -329,6 +332,7 @@ export function CompaniesPage({
           onClose={() => { onOpen(null); }}
           onEdit={(company) => { setDialog({ company }); }}
           onOpenContact={onOpenContact}
+          onOpenDeal={onOpenDeal}
         />
       ) : null}
       {dialog ? (
@@ -361,6 +365,7 @@ function CompanyDrawer({
   onClose,
   onEdit,
   onOpenContact,
+  onOpenDeal,
 }: {
   workspaceId: string;
   id: string;
@@ -372,6 +377,7 @@ function CompanyDrawer({
   onClose: () => void;
   onEdit: (company: Company) => void;
   onOpenContact: (id: string) => void;
+  onOpenDeal: (id: string) => void;
 }) {
   const t = useT();
   const toast = useToast();
@@ -453,6 +459,11 @@ function CompanyDrawer({
             </FieldRow>
           </dl>
           <TasksSection workspaceId={workspaceId} link={{ kind: "company", id: record.id }} />
+          <DealsSection
+            workspaceId={workspaceId}
+            link={{ kind: "company", company: { id: record.id, name: record.name } }}
+            onOpen={onOpenDeal}
+          />
           <CustomFieldsSection
             workspaceId={workspaceId}
             fields={activeFields(definitions.data?.items, "company")}
@@ -551,7 +562,6 @@ function CompanyDrawer({
             onDirtyChange={setDraftOpen}
           />
           <ActivitySection workspaceId={workspaceId} kind="companies" id={id} meId={meId} />
-          <p className="drawer-note">{t("company.notBuilt")}</p>
           <ConfirmDialog
             isOpen={confirmDiscard}
             title={t("notes.discardTitle")}

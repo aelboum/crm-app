@@ -61,6 +61,7 @@ export function DealDialog({
   currency,
   owners,
   meId,
+  links,
   onClose,
   onSaved,
 }: {
@@ -72,6 +73,8 @@ export function DealDialog({
   currency: string;
   owners: Option[];
   meId: string | undefined;
+  /** The contact and company a new deal starts linked to (decision P4-E). */
+  links?: { contact?: PickedCompany | null; company?: PickedCompany | null };
   onClose: () => void;
   onSaved: (deal: Deal) => void;
 }) {
@@ -88,8 +91,12 @@ export function DealDialog({
     owner_user_id: deal ? (deal.owner_user_id ?? "") : (meId ?? ""),
     expected_close_date: deal?.expected_close_date ?? "",
   });
-  const [contact, setContact] = useState<PickedCompany | null>(deal?.contact ?? null);
-  const [company, setCompany] = useState<PickedCompany | null>(deal?.company ?? null);
+  const [contact, setContact] = useState<PickedCompany | null>(
+    deal ? deal.contact ?? null : links?.contact ?? null,
+  );
+  const [company, setCompany] = useState<PickedCompany | null>(
+    deal ? deal.company ?? null : links?.company ?? null,
+  );
   const [invalid, setInvalid] = useState<Set<Field>>(new Set());
   const [refusal, setRefusal] = useState<MessageId | null>(null);
   const pending = create.isPending || update.isPending;

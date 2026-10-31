@@ -81,6 +81,33 @@ export function useDealList(workspaceId: string, filters: DealFilters) {
   });
 }
 
+/** How many of a record's deals its drawer lists (decision P4-E). */
+export const RECORD_DEALS = 10;
+
+/**
+ * A contact's or company's deals, every outcome, most recently changed first.
+ * Under `dealKeys.all`, so any deal change refreshes it.
+ */
+export function useRecordDeals(workspaceId: string, link: { kind: "contact" | "company"; id: string }) {
+  return useQuery({
+    queryKey: [...dealKeys.all(workspaceId), "record", link.kind, link.id] as const,
+    queryFn: async (): Promise<DealPage> =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/opportunities", {
+          params: {
+            path: where(workspaceId),
+            query: {
+              ...(link.kind === "contact" ? { contact_id: [link.id] } : { company_id: [link.id] }),
+              sort: "updated_at",
+              direction: "desc",
+              limit: RECORD_DEALS,
+            },
+          },
+        }),
+      ),
+  });
+}
+
 export function useDealSummary(workspaceId: string, filters: DealFilters) {
   return useQuery({
     queryKey: dealKeys.summary(workspaceId, filters),

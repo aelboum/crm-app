@@ -1303,6 +1303,37 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   5. **Navigation:** Home is no longer "soon" and is where a workspace
      opens (it opened on Settings before).
 
+## P4-E — A record's deals in its drawer (2026-10-31, under M1)
+
+- **Status:** Decided under M1 after the owner's instruction of
+  2026-10-31 to continue with the next approved roadmap work. Roadmap
+  3.3 lists "Associated opportunities" on a contact's details; the
+  contact and company drawers showed tasks, appointments and notes but
+  not deals.
+- **Decisions:**
+  1. **Scope:** an "Opportunities" section in the contact and company
+     drawers. Frontend only: `GET /opportunities` already filters by
+     `contact_id` and `company_id` under `crm_app.opportunity:read`
+     (P4-B), so every role that may read deals sees them.
+  2. **What it lists:** the record's deals of every outcome, most
+     recently changed first, at most 10, with stage, a Won or Lost tag
+     and the value in the deal's own currency. The heading counts all of
+     them; when there are more than 10 a line says so. A row opens the
+     deal on the Opportunities page.
+  3. **New deal from the drawer:** "New opportunity" (only with
+     `create_opportunity`) opens the existing deal dialog with the
+     contact, and the contact's company, or the company filled in; both
+     stay changeable. The server checks the links as for any deal.
+  4. **Not built:** totals per record, filtering the Opportunities page
+     by record, and showing deals on the deal's contact through its
+     company only (a company's section lists deals linked to the company
+     itself).
+  5. **Stale notes corrected:** the company drawer no longer says
+     opportunities and pipeline are unavailable; the contact drawer's
+     note names only messages and calls; the contact dialog's hint no
+     longer says tags, notes and custom fields are unavailable.
+- **Tests:** `frontend/src/records/recordDeals.test.tsx`.
+
 ## P5-A — Calendar and appointments (2026-10-28, owner approval)
 
 - **Status:** Approved by the owner on 2026-10-28. Asked "Should Calendar
