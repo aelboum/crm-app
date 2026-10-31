@@ -13,7 +13,7 @@ import saas_os
 
 from tests.support import REPO_ROOT
 
-APPROVED_PIN = "b03d87a5272924d1e413c144dc5c3b41ac430580"
+APPROVED_PIN = "d980e73b0313ed63f2a59fd4a991a89f75791c0e"
 APPROVED_REQUIREMENT = f"saas-os @ git+https://github.com/aelboum/saas-os@{APPROVED_PIN}"
 
 

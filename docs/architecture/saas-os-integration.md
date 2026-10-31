@@ -3,16 +3,18 @@
 ## Pin
 
 ```text
-saas-os @ git+https://github.com/aelboum/saas-os@b03d87a5272924d1e413c144dc5c3b41ac430580
+saas-os @ git+https://github.com/aelboum/saas-os@d980e73b0313ed63f2a59fd4a991a89f75791c0e
 ```
 
-- **Release:** v0.5.0. The annotated tag object is `1254662`, and the
-  remote tag resolved to this commit on 2026-10-23. SaaS-OS CI run
-  40002133371 passed on it.
-- **Platform migration head:** `f6a2c8e4b1d9` (unchanged since v0.1.2).
+- **Release:** v0.6.0. The tag is annotated and signed, GitHub reports
+  the signature as verified, and it resolved to this commit on
+  2026-10-31. SaaS-OS CI run 41200882248 passed on it.
+- **Platform migration head:** `b3d5f7a9c2e4` (was `f6a2c8e4b1d9` from
+  v0.1.2 to v0.5.0); it widens the platform-permission check only.
 - **Approval:** decision K3, moved from v0.1.2 (`b0809ee`) by decision
-  K3.1 and from v0.3.0 (`5905156`) by decision K3.2. The pin is fixed
-  until a further approved decision.
+  K3.1, from v0.3.0 (`5905156`) by decision K3.2 and from v0.5.0
+  (`b03d87a`) by decision K3.3. The pin is fixed until a further
+  approved decision.
 - **Guard:** `tests/unit/test_dependency_pin.py` checks the manifest, the
   `uv.lock` source, the installed `direct_url.json` commit, that the
   install is non-editable, and that no URL carries credentials.

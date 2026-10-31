@@ -3,7 +3,7 @@
 **Status:** Phase 1 complete (CI passed on the pushed commit, 2026-10-21); Phase 2 complete (2026-10-24, see §7). Current state: `docs/project/PROGRESS.md`
 **Product name:** LeadStack CRM (internal provisional name only; see decision K4)
 **Architecture:** New product consuming SaaS-OS as an external package
-**SaaS-OS pin:** `b03d87a5272924d1e413c144dc5c3b41ac430580` (v0.5.0; decisions K3, K3.1 and K3.2)
+**SaaS-OS pin:** `d980e73b0313ed63f2a59fd4a991a89f75791c0e` (v0.6.0; decisions K3, K3.1, K3.2 and K3.3)
 **Product approach:** Modular monolith initially
 **Database:** PostgreSQL
 **Identity:** ZITADEL, subject to compatibility verification
@@ -324,8 +324,8 @@ Create a clean, maintainable product foundation that consumes SaaS-OS correctly.
 ### 1.4 Observability
 
 * Establish structured logging.
-* Integrate the tracing the pinned SaaS-OS supports (OpenTelemetry with a console exporter at v0.5.0).
-* Metrics: SaaS-OS v0.5.0 does not provide metrics. Record this as a known gap; do not build a parallel metrics platform without an approved decision.
+* Integrate the tracing the pinned SaaS-OS supports (OpenTelemetry with a console exporter at v0.6.0).
+* Metrics: SaaS-OS v0.6.0 does not provide metrics. Record this as a known gap; do not build a parallel metrics platform without an approved decision.
 * Add health and readiness checks where appropriate.
 * Ensure logs identify failures without leaking customer information.
 

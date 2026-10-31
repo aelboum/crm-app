@@ -5,7 +5,7 @@ destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
 **Last updated:** 2026-10-24 (Phase 2 complete, decisions P2-F and P2-G).
-Earlier: 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2); 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
+Earlier: 2026-10-31 (SaaS-OS pin moved to v0.6.0, decision K3.3); 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2); 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
 first local commits, decision K2.1; remote, push and first CI run,
 decision K2.2; Claude Design inspection, D-DES and K5.1; Phase 2
 decisions P2-A to P2-E approved)
@@ -996,6 +996,45 @@ The table above records the evidence at `b0809ee`. On the new pin
 | Clean copy (criterion 1): trackable files copied to a fresh temporary directory, empty uv cache | `uv sync --locked` and `uv lock --check` exit 0; installed commit `5905156…`; unit tests 43 passed; directory removed afterwards |
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
+
+## SaaS-OS upgrade to v0.6.0 (decision K3.3, 2026-10-31)
+
+On the new pin `d980e73` every check was run again, locally on Windows,
+on `main`:
+
+| Check | Result |
+| --- | --- |
+| Tag | `v0.6.0` is annotated and signed, resolves to `d980e73…`; GitHub reports the signature verified (`valid`) |
+| `uv lock --upgrade-package saas-os`, `uv lock --check`, `uv sync --frozen` | Only the saas-os entry changed (0.5.0 → 0.6.0); 72 packages, the other 71 unchanged; installed `saas-os` 0.6.0 from commit `d980e73…` |
+| `ruff format --check .` / `ruff check .` | All formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| detect-secrets hook over tracked files | Exit 0, after replacing the audited false-positive hashes of the pin SHA and of the SaaS-OS migration head in `.secrets.baseline` |
+| `pytest tests/unit` | 542 passed (528 before, plus 14 in the new `tests/unit/test_provision_request.py`); includes the pin test, now asserting `d980e73` |
+| `pytest tests/integration` against `crm_app_test`, in four sequential batches (memory) | 188 passed; 124 passed and 1 failed; 194 passed and 1 failed; 190 passed |
+
+The two failures:
+
+- `test_both_migration_histories_are_at_head` named the old SaaS-OS head
+  `f6a2c8e4b1d9`. The expected head is now `b3d5f7a9c2e4`; the test passed
+  in batches 3 and 4.
+- `test_worker_starts_and_passes_its_health_probe` timed out after 60
+  seconds in batch 3, with no error output from the probe. It passed in
+  batch 2 on the same pin, twice on its own (11 s and 8 s) and again in
+  batch 4. Recorded as a timing flake under load; watch it in CI.
+
+Every integration file passed in its last run on the final code.
+
+The local development database `crm_app` was migrated with
+`python -m crm_app.migrate`: SaaS-OS head `b3d5f7a9c2e4`, product head
+`0017_suppression`. The migration only widens a check; existing rows were
+kept (68 contacts present afterwards).
+
+Code change: `crm_app.provision.validate_request` refuses a control
+character in the name, issuer or subject before the run starts, as
+SaaS-OS v0.6.0 refuses them during it.
+
+Not run for this move: `tests/identity` (opt-in, needs the local
+ZITADEL) and the frontend checks (no frontend file changed).
 
 ## SaaS-OS upgrade to v0.5.0 (decision K3.2, 2026-10-23)
 

@@ -265,6 +265,65 @@ approval), **Superseded**.
 - **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
   `.secrets.baseline` hash back. Both releases share the migration head.
 
+## K3.3 — SaaS-OS pin moved to v0.6.0
+
+- **Status:** Approved by the owner, 2026-10-31 ("saas-os is ready we can
+  upgrade"). Supersedes the commit named in K3.2; every other part of K3
+  stands. The pin stays fixed until a further approved decision.
+- **Decision:** Exactly one SaaS-OS dependency:
+  `saas-os @ git+https://github.com/aelboum/saas-os@d980e73b0313ed63f2a59fd4a991a89f75791c0e`
+- **Evidence (verified 2026-10-31):**
+  - The tag `v0.6.0` is annotated and signed; it resolves to
+    `d980e73…`, the merge commit of release pull request #185. GitHub
+    reports the tag signature as verified (`verification.reason: valid`).
+    The release notes report SaaS-OS CI run 41200882248 (7 of 7 jobs)
+    passed on that commit.
+  - Between `b03d87a` (v0.5.0) and `d980e73` (212 commits, pull requests
+    #102 to #132 and #134 to #185): one migration, `b3d5f7a9c2e4`, that
+    widens the platform-permission check for the new
+    `platform.outbox:replay` permission (head was `f6a2c8e4b1d9`); a
+    Resend email provider (`EMAIL_PROVIDER=resend`, ADR-0058); worker
+    egress through a proxy (ADR-0059); a per-user API key limit; paging
+    arguments on `list_tenant_members`, `list_invitations_for_tenant` and
+    `list_api_keys` (keyword-only and optional); refusal of control
+    characters in stored strings; less detail in errors and logs; PyJWT
+    raised to at least 2.15.1.
+  - CONSUMER-GUIDE §14, v0.5.0 → v0.6.0, step by step:
+    1. Migration: `crm_app.migrate` runs SaaS-OS's migrations before the
+       product's, so local and test databases move to `b3d5f7a9c2e4` the
+       next time it runs. The migration only widens a check.
+    2. `platform.outbox:replay`: not needed; this product does not replay
+       outbox events.
+    3. Reference stack (ZITADEL master key file, egress proxy, SMTP on
+       `internal`): this product does not run SaaS-OS's
+       `docker-compose.prod.yml`. Its own deployment must settle worker
+       egress before email is sent (Phase 6).
+    4. Stripe: this product sets no `STRIPE_API_KEY`.
+    5. New refusals: this product creates no API keys, uses no AI
+       inference and moves no tenants. The strings it passes to SaaS-OS
+       are checked first: workspace names refuse every control character
+       (`normalize_workspace_name`), role and permission names are fixed
+       in code, and an `InvalidInvitationEmailError` is already mapped
+       to a validation error (`crm_app/invitations.py`).
+       The provisioning command (`crm_app.provision`) now refuses a
+       control character in the name, issuer or subject before it starts,
+       instead of meeting SaaS-OS's refusal during the run
+       (`tests/unit/test_provision_request.py`).
+    6. Optional additions: none adopted in this move.
+    7. Tag signature: checked as above.
+  - Every SaaS-OS import is still a public export
+    (`tests/unit/test_import_surface.py`).
+  - `uv lock --upgrade-package saas-os` changed only the saas-os entry;
+    the other 71 packages are unchanged (PyJWT was already 2.15.1). The
+    checks in `PROGRESS.md` passed on the new pin.
+- **Not decided here:** the email channel (Phase 6). v0.6.0 makes
+  `saas_os.core.email.send_email` with SMTP or Resend available; choosing
+  the provider, the sending domain and the delivery design needs its own
+  decision.
+- **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
+  `.secrets.baseline` hash back. v0.5.0 runs on the widened check; to
+  downgrade the schema too, no `platform.outbox:replay` grant may exist.
+
 ## K2.1 — First local commits
 
 - **Status:** Approved by the owner, 2026-10-21, and completed. Extends

@@ -69,6 +69,9 @@ def validate_request(request: Request) -> None:
     ):
         if not value.strip():
             raise ProvisioningRefusedError(f"The {label} must not be empty.")
+        # SaaS-OS v0.6.0 refuses these too, but only after the run started.
+        if any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
+            raise ProvisioningRefusedError(f"The {label} must not contain control characters.")
     if len(request.name) > 255:
         raise ProvisioningRefusedError("The name must be at most 255 characters.")
 
