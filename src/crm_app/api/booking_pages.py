@@ -20,8 +20,11 @@ Public, for the hosted booking page (SaaS-OS `public_route`, P5-C 5):
     POST   /v1/public/bookings/{workspace_id}/view
     POST   /v1/public/bookings/{workspace_id}/cancel
 
-Every one is limited per client address, and the booking also per page,
-with the SaaS-OS limiter, which fails closed (503). An unknown workspace or
+Every one is limited per client address with the SaaS-OS limiter, which
+fails closed (503); a booking also per visitor and page, a link view or
+cancellation also per visitor, and a workspace takes a bounded number of
+online bookings a day (decision 13-H2). A link expires a week after its
+appointment ends and then answers as an unknown one. An unknown workspace or
 key, a draft page and a closed or suspended workspace are the same 404, as
 is an unknown token. The visitor's token travels in a body, never in an
 address. A booking needs an `Idempotency-Key`, is read only after the
@@ -34,6 +37,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from dataclasses import replace
 from datetime import datetime
 from typing import Annotated, Any, Literal, Self
 
@@ -44,9 +48,15 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from saas_os.api.auth.config import get_auth_http_config, resolve_client_address
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
-from saas_os.api.errors import route_not_found
+from saas_os.api.errors import rate_limited, route_not_found, service_unavailable
 from saas_os.api.route_policy import public_route
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
+from saas_os.infra.ratelimit import (
+    RateLimitBackendError,
+    RateLimitExceededError,
+    enforce_rate_limit,
+    get_ratelimit_config,
+)
 
 from crm_app import booking_pages
 from crm_app.api.forms import _idempotency_key, _limited
@@ -55,6 +65,7 @@ from crm_app.api.records import IdempotencyKey, IfMatch, _http, _version
 from crm_app.domains import appointments as appointment_rules
 from crm_app.domains import booking_pages as rules
 from crm_app.records import RecordError, Scope
+from crm_app.settings import booking_limit
 
 router = APIRouter(prefix="/v1/workspaces", tags=["booking pages"])
 public_router = APIRouter(prefix="/v1/public", tags=["public booking pages"])
@@ -299,11 +310,38 @@ class TokenIn(BaseModel):
     token: str = Field(max_length=_TOKEN_MAX)
 
 
-async def _address_limit(request: Request) -> None:
-    address = resolve_client_address(
+_HOUR = 3600
+_LIMITER_RETRY_SECONDS = 30
+
+
+def _address(request: Request) -> str:
+    return resolve_client_address(
         request, trust_proxy_headers=get_auth_http_config().trust_proxy_headers
     )
-    await _limited(f"booking:client:{address}")
+
+
+async def _address_limit(request: Request) -> None:
+    await _limited(f"booking:client:{_address(request)}")
+
+
+async def _hourly(key: str, setting: str) -> None:
+    """A per-visitor hourly budget (13-H2 2), failing closed like `_limited`."""
+    config = replace(
+        get_ratelimit_config(), requests_per_window=booking_limit(setting), window_seconds=_HOUR
+    )
+    try:
+        await enforce_rate_limit(key, config=config)
+    except RateLimitExceededError as exc:
+        raise rate_limited(exc.retry_after_seconds) from None
+    except RateLimitBackendError:
+        raise service_unavailable(_LIMITER_RETRY_SECONDS) from None
+
+
+async def _lookup_limit(request: Request) -> None:
+    """Link views and cancellations: per address, then a visitor's own hourly
+    budget, so guessing tokens stays slow even under the general limit."""
+    await _address_limit(request)
+    await _hourly(f"booking:lookup:{_address(request)}", "BOOKING_LOOKUPS_PER_VISITOR_PER_HOUR")
 
 
 def _known_key(key: str) -> None:
@@ -398,7 +436,12 @@ async def read_free_times(
 async def book(workspace_id: uuid.UUID, key: str, request: Request) -> Any:
     _known_key(key)
     await _address_limit(request)
-    await _limited(f"booking:page:{workspace_id}:{key}")
+    # Each visitor's own budget per page, never one shared by every visitor
+    # of the page (13-H2 2).
+    await _hourly(
+        f"booking:visitor:{workspace_id}:{key}:{_address(request)}",
+        "BOOKING_REQUESTS_PER_VISITOR_PER_HOUR",
+    )
     idempotency_key = _idempotency_key(request)
     body = await _body(request, BookingIn)
     try:
@@ -415,7 +458,13 @@ async def book(workspace_id: uuid.UUID, key: str, request: Request) -> Any:
             message=body.message,
         )
         view, token = await run_in_threadpool(
-            lambda: booking_pages.book(workspace_id, key, booking, idempotency_key=idempotency_key)
+            lambda: booking_pages.book(
+                workspace_id,
+                key,
+                booking,
+                idempotency_key=idempotency_key,
+                daily_capacity=booking_limit("BOOKINGS_PER_WORKSPACE_PER_24H"),
+            )
         )
     except booking_pages.BookingPageNotFoundError:
         raise route_not_found() from None
@@ -436,7 +485,7 @@ async def book(workspace_id: uuid.UUID, key: str, request: Request) -> Any:
     openapi_extra=_body_schema(TokenIn),
 )
 async def view_booking(workspace_id: uuid.UUID, request: Request) -> Any:
-    await _address_limit(request)
+    await _lookup_limit(request)
     body = await _body(request, TokenIn)
     try:
         return await run_in_threadpool(booking_pages.view, workspace_id, body.token)
@@ -452,7 +501,7 @@ async def view_booking(workspace_id: uuid.UUID, request: Request) -> Any:
     openapi_extra=_body_schema(TokenIn),
 )
 async def cancel_booking(workspace_id: uuid.UUID, request: Request) -> Any:
-    await _address_limit(request)
+    await _lookup_limit(request)
     body = await _body(request, TokenIn)
     try:
         return await run_in_threadpool(booking_pages.cancel, workspace_id, body.token)

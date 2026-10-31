@@ -117,6 +117,12 @@ class BookingLimitError(RecordError):
     status, code = 409, "booking_limit"
 
 
+class BookingCapacityError(RecordError):
+    """The workspace took its most online bookings in 24 hours (13-H2 3)."""
+
+    status, code = 429, "booking_capacity"
+
+
 class NotCancellableError(RecordError):
     """The appointment has started: the visitor can no longer cancel."""
 
@@ -617,6 +623,22 @@ class _Accepted:
     starts_at: datetime
     visitor: dict[str, str | None]
     token_hash: str
+    daily_capacity: int
+
+
+_CAPACITY_WINDOW = timedelta(hours=24)
+
+
+def _over_capacity(session: Session, workspace: uuid.UUID, capacity: int, now: datetime) -> bool:
+    """Whether the workspace already took `capacity` online bookings in the
+    last 24 hours. Callers hold the workspace's capacity lock, so two
+    bookings cannot both take the last place."""
+    rows = session.execute(
+        select(Booking.id)
+        .where(Booking.tenant_id == workspace, Booking.created_at > now - _CAPACITY_WINDOW)
+        .limit(capacity)
+    ).all()
+    return len(rows) >= capacity
 
 
 def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
@@ -630,6 +652,9 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     scope = Scope(workspace=workspace, actor=offer.host)
     starts_at = accepted.starts_at
     ends_at = starts_at + offer.length
+    acquire_tenant_advisory_lock(session, workspace, "crm_app.booking.capacity")
+    if _over_capacity(session, workspace, accepted.daily_capacity, _now()):
+        raise BookingCapacityError
     acquire_tenant_advisory_lock(session, workspace, f"{appointments.RESOURCE}.host:{offer.host}")
     if starts_at not in _free(session, workspace, offer, starts_at, ends_at):
         raise TimeUnavailableError
@@ -725,11 +750,17 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
 
 
 def book(
-    workspace: uuid.UUID, key: str, request: BookingRequest, *, idempotency_key: str
+    workspace: uuid.UUID,
+    key: str,
+    request: BookingRequest,
+    *,
+    idempotency_key: str,
+    daily_capacity: int,
 ) -> tuple[Item, str | None]:
     """Book a free time on a published page; returns what the visitor sees
     and their link token, which only the first answer carries: a replay
-    returns `None` for it, since only its hash is kept (P5-C 6)."""
+    returns `None` for it, since only its hash is kept (P5-C 6). At most
+    `daily_capacity` online bookings per workspace in 24 hours (13-H2 3)."""
     with tenant_session_scope(workspace) as session:
         _gate(session, workspace)
         offer = _offer(_published(session, workspace, key, lock=False))
@@ -752,6 +783,7 @@ def book(
         starts_at=request.starts_at.astimezone(UTC),
         visitor=visitor,
         token_hash=token_hash,
+        daily_capacity=daily_capacity,
     )
     fingerprint = {
         "starts_at": accepted.starts_at.isoformat(),
@@ -830,7 +862,8 @@ def _by_token(
     if lock:
         query = query.with_for_update(of=[Booking, Appointment])
     row = session.execute(query).tuples().one_or_none()
-    if row is None:
+    # An expired link is the same 404 as an unknown one (13-H2 1).
+    if row is None or rules.link_expired(row[1].ends_at, _now()):
         raise BookingNotFoundError
     return row
 

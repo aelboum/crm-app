@@ -34,6 +34,8 @@ TIMES_RANGE_MAX = timedelta(days=14)
 TIMES_MAX = 2000
 # Upcoming bookings one contact may hold on one page (P5-C 6).
 UPCOMING_PER_CONTACT = 3
+# A visitor's link works until this long after the appointment ends (13-H2 1).
+LINK_VALID_AFTER_END = timedelta(days=7)
 VISITOR_MESSAGE_MAX = 1000
 _TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")
 # All control characters but line feed.
@@ -161,6 +163,12 @@ def free_times(  # noqa: PLR0913 - the open time, then what narrows it
                     return found
             start += step
     return found
+
+
+def link_expired(ends_at: datetime, now: datetime) -> bool:
+    """Whether a visitor's link to an appointment ending at `ends_at` has
+    expired: it answers as an unknown link from then on (13-H2 1)."""
+    return now >= ends_at + LINK_VALID_AFTER_END
 
 
 def token_hash(token: str) -> str | None:

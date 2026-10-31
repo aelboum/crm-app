@@ -33,6 +33,9 @@ def probe(integration_env: dict[str, str], tmp_path_factory: pytest.TempPathFact
         **integration_env,
         "PYTHONPATH": str(REPO_ROOT),
         "RATE_LIMIT_REQUESTS_PER_WINDOW": "1000",
+        # The 13-H2 limits have their own test (test_booking_limits.py).
+        "BOOKING_REQUESTS_PER_VISITOR_PER_HOUR": "1000",
+        "BOOKING_LOOKUPS_PER_VISITOR_PER_HOUR": "1000",
     }
     tmp = tmp_path_factory.mktemp("booking-pages")
     result = run_module("tests.integration.booking_page_route_probe", [], env, tmp, timeout=600)

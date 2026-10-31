@@ -51,8 +51,9 @@ function failure(error: unknown): MessageId {
   if (error instanceof ApiError) {
     if (error.code === "time_unavailable") return "publicBooking.error.taken";
     if (error.code === "booking_limit") return "publicBooking.error.limit";
+    if (error.code === "booking_capacity") return "publicBooking.error.capacity";
     if (error.status === 404) return "publicBooking.error.gone";
-    if (error.status === 429) return "publicForm.error.busy";
+    if (error.status === 429) return "publicBooking.error.busy";
     if (error.status === 503) return "publicForm.error.unavailable";
   }
   return "publicBooking.error.failed";

@@ -37,6 +37,12 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **13-H2, public booking limits and link expiry (2026-11-01):** visitor
+  links expire 7 days after their appointment ends; bookings and link
+  lookups count against each visitor's own hourly budget instead of one
+  shared per page; a workspace takes at most 200 online bookings in 24
+  hours (settings `BOOKING_*`). Verified: `test_booking_limits.py` 6
+  passed, booking route and table tests 46 passed, unit 549, Vitest 261.
 - **Phase 4 slice 4E, a record's deals in its drawer (decision P4-E, 2026-10-31):**
   the contact and company drawers list the record's deals (every
   outcome, newest change first, at most 10, with stage, outcome and

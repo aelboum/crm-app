@@ -350,6 +350,20 @@ describe("hosted booking page", () => {
     expect(sent.filter((r) => r.path.startsWith(`${PUBLIC}/times?`)).length).toBeGreaterThan(1);
   });
 
+  it("says when the workspace takes no more bookings today or the visitor tried too often", async () => {
+    const user = userEvent.setup();
+    let answer: Reply = { status: 429, body: { detail: { code: "booking_capacity" } } };
+    renderApp(`/b/${WS}/${KEY}`, visitor({ onBook: () => answer }));
+    await user.click((await screen.findAllByRole("button", { name: SLOT }))[0] as HTMLElement);
+    await user.type(screen.getByRole("textbox", { name: /First name/ }), "Ada");
+    await user.type(screen.getByRole("textbox", { name: /Email/ }), "ada@example.test");
+    await user.click(screen.getByRole("button", { name: "Book" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("not taking more online bookings today");
+    answer = { status: 429, body: { detail: "Too Many Requests" } };
+    await user.click(screen.getByRole("button", { name: "Book" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Try again in an hour.");
+  });
+
   it("says when a page is not available", async () => {
     renderApp(`/b/${WS}/${KEY}`, visitor({ page: { status: 404, body: { detail: "Not Found" } } }));
     expect(await screen.findByRole("alert")).toHaveTextContent("This booking page is not available.");
@@ -394,6 +408,8 @@ describe("the visitor's booking link", () => {
 
   it("says when the booking cannot be found", async () => {
     renderApp(`/b/${WS}/manage#${TOKEN}`, manage(undefined, { status: 404, body: { detail: "Not Found" } }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("This booking could not be found.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This booking could not be found. Links stop working a week after the appointment.",
+    );
   });
 });

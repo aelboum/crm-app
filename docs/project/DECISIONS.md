@@ -1711,6 +1711,56 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      per-contact cap of upcoming bookings, leaving only the rate limits
      (no CAPTCHA or workspace contact cap yet).
 
+## 13-H2 — Public booking limits and link expiry (2026-11-01, under M1)
+
+- **Status:** Decided under M1. The owner's mission of 2026-10-31 puts
+  "13-H1 — Public booking security" first: expiring visitor links,
+  limits per visitor instead of one shared per page, abuse and resource
+  limits, with tests for expiry, replay, brute force, concurrency and
+  tenant boundaries. It supersedes P5-C 5 ("the booking also per page")
+  and P5-C 7 ("it works while the booking exists"), and settles the
+  items 13-H1 4 accepted for now.
+- **Decisions:**
+  1. **Link expiry:** a visitor's link works until 7 days after its
+     appointment ends (the appointment's current end, so a host's
+     rescheduling moves it). After that, view and cancel answer the same
+     404 as an unknown token, and the visitor page says links stop
+     working a week after the appointment. No migration: the expiry is
+     derived from the appointment, and only the token's SHA-256 is kept
+     (P5-C 6).
+  2. **Per-visitor limits:** besides the general per-address limit on
+     every public route, a booking counts against the visitor's own
+     hourly budget for that page (`BOOKING_REQUESTS_PER_VISITOR_PER_HOUR`,
+     default 10), and a link view or cancellation against the visitor's
+     own hourly budget (`BOOKING_LOOKUPS_PER_VISITOR_PER_HOUR`, default
+     30), which keeps guessing a 256-bit token slow even within the
+     general limit. The page-wide budget, which one visitor could spend
+     for everyone, is gone. A visitor is a client address, so these hold
+     in production only with the F2 launch gate (13-H1 3).
+  3. **Workspace capacity:** a workspace takes at most
+     `BOOKINGS_PER_WORKSPACE_PER_24H` (default 200) online bookings in any
+     rolling 24 hours; the next answers `429 booking_capacity` and stores
+     nothing. Counted from stored bookings under a workspace lock, so
+     refused requests never use it up and two visitors cannot both take
+     the last place. It bounds the contacts and appointments a flood
+     can create, including one that rotates email addresses past the
+     per-contact cap (13-H1 4); a flood can therefore close a workspace's
+     online booking for the rest of the day, a trade accepted over
+     unbounded data.
+  4. **Tokens** stay as they were: 256-bit `secrets.token_urlsafe(32)`,
+     returned once, kept only as SHA-256, sent in request bodies, looked
+     up within the workspace's row security.
+  5. **Still accepted:** a limiter key is created for a well-formed but
+     unknown page before the lookup (bounded by the per-address limit).
+     No CAPTCHA.
+  6. **Settings** are validated at start-up like the signup limits
+     (whole numbers of at least 1) and listed in `.env.example`.
+- **Tests:** `tests/integration/test_booking_limits.py` (per-visitor
+  budgets, capacity and a race for the last place, token guessing,
+  expiry, two cancellations at once, another workspace),
+  `tests/unit/test_settings.py`, `tests/unit/test_booking_page_rules.py`,
+  `frontend/src/records/bookingPages.test.tsx`.
+
 ## 13-A1 — Dated exceptions in the frontend dependency audit (2026-10-31)
 
 - **Status:** Approved by the owner, 2026-10-31 ("Narrow exception

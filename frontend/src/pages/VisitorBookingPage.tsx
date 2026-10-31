@@ -21,7 +21,7 @@ function failure(error: unknown): MessageId {
   if (error instanceof ApiError) {
     if (error.status === 404 || error.status === 422) return "visitorBooking.gone";
     if (error.code === "booking_not_cancellable") return "visitorBooking.started";
-    if (error.status === 429) return "publicForm.error.busy";
+    if (error.status === 429) return "publicBooking.error.busy";
     if (error.status === 503) return "publicForm.error.unavailable";
   }
   return "visitorBooking.failed";

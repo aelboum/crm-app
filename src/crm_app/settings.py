@@ -255,6 +255,24 @@ SIGNUP_LIMITS = {
 }
 
 
+# Public booking limits (decision 13-H2), per client address unless named.
+BOOKING_LIMITS = {
+    # Booking requests one visitor may send to one page in an hour.
+    "BOOKING_REQUESTS_PER_VISITOR_PER_HOUR": 10,
+    # Link views and cancellations one visitor may send in an hour.
+    "BOOKING_LOOKUPS_PER_VISITOR_PER_HOUR": 30,
+    # Online bookings one workspace takes in any rolling 24 hours.
+    "BOOKINGS_PER_WORKSPACE_PER_24H": 200,
+}
+
+
+def booking_limit(name: str, env: Mapping[str, str] | None = None) -> int:
+    """The configured value of one of `BOOKING_LIMITS`, or its default.
+    Start-up validation has already refused anything but a whole number >= 1."""
+    raw = (os.environ if env is None else env).get(name, "").strip()
+    return int(raw) if raw else BOOKING_LIMITS[name]
+
+
 def signup_limit(name: str, env: Mapping[str, str] | None = None) -> int:
     """The configured value of one of `SIGNUP_LIMITS`, or its default.
     Start-up validation has already refused anything but a whole number >= 1."""
@@ -280,7 +298,7 @@ def _check_signup(env: Mapping[str, str], *, production: bool) -> list[str]:
     enabled = _flag(env, "SIGNUP_ENABLED")
     if enabled is None:
         problems.append("SIGNUP_ENABLED must be true or false.")
-    for name in SIGNUP_LIMITS:
+    for name in (*SIGNUP_LIMITS, *BOOKING_LIMITS):
         raw = env.get(name, "").strip()
         if raw and not (raw.isascii() and raw.isdigit() and int(raw) >= 1):
             problems.append(f"{name} must be a whole number of at least 1.")

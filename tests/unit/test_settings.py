@@ -9,8 +9,10 @@ import pytest
 from saas_os.infra.secrets import get_secrets_provider
 
 from crm_app.settings import (
+    BOOKING_LIMITS,
     ConfigurationError,
     Process,
+    booking_limit,
     signup_enabled,
     signup_limit,
     validate_settings,
@@ -310,3 +312,23 @@ def test_signup_is_refused_in_production_until_the_launch_gates_pass() -> None:
 
 def test_only_the_application_checks_the_signup_settings() -> None:
     _validate(Process.WORKER, {**PLACEHOLDER_SETTINGS, "SIGNUP_ENABLED": "maybe"})
+
+
+# --- Public booking limits (decision 13-H2) --------------------------------------
+
+
+def test_booking_limits_have_defaults_and_can_be_changed() -> None:
+    assert booking_limit("BOOKING_REQUESTS_PER_VISITOR_PER_HOUR", {}) == 10
+    assert booking_limit("BOOKING_LOOKUPS_PER_VISITOR_PER_HOUR", {}) == 30
+    assert booking_limit("BOOKINGS_PER_WORKSPACE_PER_24H", {}) == 200
+    changed = {"BOOKINGS_PER_WORKSPACE_PER_24H": " 25 "}
+    _validate(Process.APP, {**PLACEHOLDER_SETTINGS, **changed})
+    assert booking_limit("BOOKINGS_PER_WORKSPACE_PER_24H", changed) == 25
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "two", "1.5", "²"])
+def test_booking_limits_must_be_positive_whole_numbers(value: str) -> None:
+    for name in BOOKING_LIMITS:
+        assert _problems(Process.APP, {**PLACEHOLDER_SETTINGS, name: value}) == [
+            f"{name} must be a whole number of at least 1."
+        ]

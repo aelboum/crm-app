@@ -137,3 +137,11 @@ def test_only_issued_tokens_have_a_hash() -> None:
     assert rules.token_hash(token) == digest
     for wrong in ("", "short", token + "x", token[:-1] + "!"):
         assert rules.token_hash(wrong) is None
+
+
+def test_a_link_expires_a_week_after_its_appointment_ends() -> None:
+    ends = datetime(2026, 11, 2, 10, 0, tzinfo=UTC)
+    assert not rules.link_expired(ends, ends)
+    assert not rules.link_expired(ends, ends + timedelta(days=7) - timedelta(seconds=1))
+    assert rules.link_expired(ends, ends + timedelta(days=7))
+    assert rules.link_expired(ends, ends + timedelta(days=400))
