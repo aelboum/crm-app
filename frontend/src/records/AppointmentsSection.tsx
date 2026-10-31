@@ -66,7 +66,7 @@ export function AppointmentsSection({
             </li>
           ))}
         </ul>
-      ) : list.isPending ? null : (
+      ) : list.isPending || list.isError ? null : (
         <p className="muted">{t("appointments.sectionEmpty")}</p>
       )}
       {canBook ? (

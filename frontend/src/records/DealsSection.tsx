@@ -112,7 +112,7 @@ export function DealsSection({
             </li>
           ))}
         </ul>
-      ) : list.isPending ? null : (
+      ) : list.isPending || list.isError ? null : (
         <p className="muted">{t("deals.sectionEmpty")}</p>
       )}
       {total > deals.length ? (

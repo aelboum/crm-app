@@ -68,7 +68,7 @@ export function TasksSection({
             />
           ))}
         </ul>
-      ) : list.isPending ? null : (
+      ) : list.isPending || list.isError ? null : (
         <p className="muted">{t("tasks.sectionEmpty")}</p>
       )}
       {can("create_task") ? (

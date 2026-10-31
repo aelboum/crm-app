@@ -314,6 +314,20 @@ describe("a record's opportunities", () => {
     ).toBe(true);
   });
 
+  it("shows a refused list as refused, not as empty", async () => {
+    const base = workspace(READER);
+    renderApp(`/w/${WS}/contacts?record=${SAM}`, (method, path, body) =>
+      path.startsWith(`/v1/workspaces/${WS}/opportunities?`)
+        ? { status: 403, body: { detail: "Forbidden" } }
+        : base(method, path, body),
+    );
+    const section = await screen.findByRole("region", {
+      name: "Opportunities",
+    });
+    expect(await within(section).findByRole("alert")).toBeInTheDocument();
+    expect(within(section).queryByText("No opportunities.")).toBeNull();
+  });
+
   it("offers no new deal to a member who may not create one", async () => {
     renderApp(`/w/${WS}/contacts?record=${SAM}`, workspace(READER));
     const section = await screen.findByRole("region", {

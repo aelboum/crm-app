@@ -120,7 +120,7 @@ export function ConsentSection({
             </li>
           ))}
         </ul>
-      ) : consent.isPending ? null : (
+      ) : consent.isPending || consent.isError ? null : (
         <p className="muted">{t("consent.none")}</p>
       )}
       {items.some((record) => record.method === "web_form") ? (

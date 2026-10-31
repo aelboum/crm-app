@@ -49,8 +49,10 @@ decisions P2-A to P2-E approved)
   and after "Mark won" showed a Won tag in ACME's drawer; no page
   overflow at 390 px, no console errors at 1440 px. Seen but not changed:
   that workspace's roles lack the appointment grant, so the contact
-  drawer shows the permission notice and also "No upcoming
-  appointments".
+  drawer showed the permission notice and also "No upcoming
+  appointments". Fixed in a follow-up: the drawer's Opportunities,
+  Tasks, Appointments and Consent sections show no empty text while
+  their list failed (test in `recordDeals.test.tsx`; Vitest 260).
 - **Phase 4 slice 4D, Home dashboard foundations (decision P4-D, 2026-10-29):**
   - **Built:** `GET /v1/workspaces/{tenant_id}/activity` (`crm_app.activity:
     read`, every role): the newest 1-20 history entries across contacts
