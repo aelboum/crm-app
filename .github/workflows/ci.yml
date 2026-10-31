@@ -70,8 +70,8 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
-      - name: Dependency audit
-        run: npm audit --audit-level=low
+      - name: Dependency audit (every severity; dated exceptions in audit-exceptions.json, decision 13-A1)
+        run: npm run audit
 
   integration:
     runs-on: ubuntu-24.04

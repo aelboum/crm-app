@@ -1680,6 +1680,38 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      per-contact cap of upcoming bookings, leaving only the rate limits
      (no CAPTCHA or workspace contact cap yet).
 
+## 13-A1 — Dated exceptions in the frontend dependency audit (2026-10-31)
+
+- **Status:** Approved by the owner, 2026-10-31 ("Narrow exception
+  (Recommended)"), after CI run 41244189716 failed only at `npm audit
+  --audit-level=low`.
+- **Cause:** advisory GHSA-g3hv-75wg-m249 (minimatch below 11.0.1,
+  moderate, denial of service through crafted glob patterns), published
+  2026-10-30. Only development tooling depends on minimatch: eslint 9 and
+  eslint-plugin-jsx-a11y 6.10.2 (3.x), openapi-typescript through
+  `@redocly/openapi-core` (5.x) and typescript-eslint (10.x). No patched
+  3.x, 5.x or 10.x exists. Forcing 11.x breaks eslint-plugin-jsx-a11y,
+  which calls the old default export, and redocly, which calls the module
+  as a function. The production bundle contains none of these packages,
+  and the glob patterns they match come from this repository's own
+  configuration.
+- **Decision:**
+  1. typescript-eslint's copy is moved to minimatch 11.0.3 with an npm
+     override (`frontend/package.json`); its API is unchanged and lint
+     passes.
+  2. The CI audit step runs `npm run audit` (`frontend/scripts/audit.mjs`)
+     instead of `npm audit --audit-level=low`. It fails on every advisory
+     of every severity unless the advisory is listed in
+     `frontend/audit-exceptions.json`, and only until that entry's expiry
+     date. It also fails when a listed advisory is no longer reported, so
+     the list cannot go stale, and the production tree
+     (`npm audit --omit=dev`) gets no exceptions at all.
+  3. The only exception is GHSA-g3hv-75wg-m249, until 2026-11-30. Before
+     then, move to fixed releases of eslint, eslint-plugin-jsx-a11y and
+     openapi-typescript when they exist, or decide again.
+- **Verified:** the gate passes with the exception, fails with it expired,
+  and fails for an unlisted advisory and a stale entry.
+
 ## P7-B — Consent and suppression (2026-10-28, under M1)
 
 - **Status:** Decided under M1 after the owner's "Go" (2026-10-28) to the

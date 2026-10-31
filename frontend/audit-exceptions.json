@@ -1,0 +1,9 @@
+[
+  {
+    "id": "GHSA-g3hv-75wg-m249",
+    "package": "minimatch",
+    "expires": "2026-11-30",
+    "decision": "13-A1",
+    "reason": "Development tooling only (eslint, eslint-plugin-jsx-a11y, openapi-typescript); no patched 3.x or 5.x exists and 11.x breaks those packages. Glob patterns come from the repository's own configuration."
+  }
+]

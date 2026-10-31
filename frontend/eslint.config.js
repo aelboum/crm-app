@@ -23,4 +23,10 @@ export default tseslint.config(
     files: ["eslint.config.js"],
     extends: [tseslint.configs.disableTypeChecked],
   },
+  {
+    // Node scripts run by npm (the dependency audit gate, decision 13-A1).
+    files: ["scripts/**/*.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: globals.node },
+  },
 );
