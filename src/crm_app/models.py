@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0027_websites` own the
+Migrations `0002_contacts_companies` to `0028_custom_domains` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -1020,3 +1020,38 @@ class Website(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
+
+
+class CustomDomain(Base):
+    """A hostname a workspace claims for its hosted pages (migration 0028,
+    P12-D)."""
+
+    __tablename__ = "custom_domain"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    hostname: Mapped[str] = mapped_column(Text)
+    token: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class CustomDomainIndex(Base):
+    """Which workspace a hostname belongs to, for Host lookups; global
+    (migration 0028)."""
+
+    __tablename__ = "custom_domain_index"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    domain_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    hostname: Mapped[str] = mapped_column(Text)
+    workspace_id: Mapped[uuid.UUID] = mapped_column()
+    verified: Mapped[bool] = mapped_column(Boolean)

@@ -54,6 +54,7 @@ SCHEMA = "crm_app"
 # `workspace_settings` and `invitation_intent` reference no
 # product table.
 PURGE_TABLES: tuple[str, ...] = (
+    "custom_domain",
     "campaign_recipient",
     "campaign",
     "inbound_quarantine",
@@ -116,6 +117,7 @@ PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
     "automation_due",
     "inbound_email",
     "conversation_route_index",
+    "custom_domain_index",
 )
 
 
@@ -163,6 +165,13 @@ def _forget_inbound(tenant_id: uuid.UUID) -> None:
     inbound.forget_workspace(tenant_id)
     if inbound.remaining_for_workspace(tenant_id):
         raise PurgeIncompleteError("Rows remain in: inbound_email, conversation_route_index")
+
+
+def _forget_custom_domains(tenant_id: uuid.UUID) -> None:
+    from crm_app import custom_domains  # noqa: PLC0415
+
+    if not custom_domains.forget_workspace(tenant_id):
+        raise PurgeIncompleteError("Rows remain in: custom_domain_index")
 
 
 def _forget_automation_due(tenant_id: uuid.UUID) -> None:
@@ -251,6 +260,8 @@ class CrmDataPurgeParticipant:
             _forget_automation_due(tenant_id)
         if {"inbound_email", "conversation_route_index"} & set(self._global_references):
             _forget_inbound(tenant_id)
+        if "custom_domain_index" in self._global_references:
+            _forget_custom_domains(tenant_id)
 
     def _table(self, table: str) -> Any:  # a SQLAlchemy Table; typed loosely to keep SQLAlchemy out
         from saas_os.infra.db import Base  # noqa: PLC0415

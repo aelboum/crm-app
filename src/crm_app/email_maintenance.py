@@ -13,7 +13,8 @@ postponed by `RETRY_DELAY` and its send job enqueued; the job itself
 decides whether to send (only while `EMAIL_SENDING_ENABLED` is on, never
 twice, at most `MAX_ATTEMPTS` tries). Received emails that are due
 (decision P6-I) are processed in this run, which also recovers any whose
-worker died. It prints counts only.
+worker died. Custom domains (decision P12-D) are checked again daily and
+expired claims removed. It prints counts only.
 """
 
 from __future__ import annotations
@@ -53,7 +54,12 @@ def maintain() -> dict[str, int]:
     from crm_app import inbound  # noqa: PLC0415
 
     received = sum(inbound.process_due().values())
+    from crm_app import custom_domains  # noqa: PLC0415
+
+    domains = custom_domains.recheck_due()
     return {
+        "domains_lapsed": domains["lapsed"],
+        "domain_claims_expired": domains["expired"],
         "queued": queued,
         "unreachable": unreachable,
         "orphans": orphans,
@@ -69,7 +75,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = maintain()
     print(
         f"emails: queued {report['queued']}, queue unreachable {report['unreachable']},"
-        f" orphan entries removed {report['orphans']}; inbound processed {report['inbound']}"
+        f" orphan entries removed {report['orphans']}; inbound processed {report['inbound']};"
+        f" domains lapsed {report['domains_lapsed']},"
+        f" expired domain claims removed {report['domain_claims_expired']}"
     )
     return 1 if report["unreachable"] else 0
 

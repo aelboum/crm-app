@@ -153,6 +153,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/domains/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve Domain */
+        get: operations["resolve_domain_v1_public_domains_resolve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/email/resend/events": {
         parameters: {
             query?: never;
@@ -1271,6 +1288,58 @@ export interface paths {
         put?: never;
         /** Restore Custom Field */
         post: operations["restore_custom_field_v1_workspaces__tenant_id__custom_fields__field_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Domains */
+        get: operations["list_domains_v1_workspaces__tenant_id__domains_get"];
+        put?: never;
+        /** Add Domain */
+        post: operations["add_domain_v1_workspaces__tenant_id__domains_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/domains/{domain_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Domain */
+        delete: operations["remove_domain_v1_workspaces__tenant_id__domains__domain_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/domains/{domain_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Domain */
+        post: operations["check_domain_v1_workspaces__tenant_id__domains__domain_id__check_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3434,6 +3503,50 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** DomainIn */
+        DomainIn: {
+            /** Hostname */
+            hostname: string;
+        };
+        /** DomainList */
+        DomainList: {
+            /** Items */
+            items: components["schemas"]["DomainOut"][];
+        };
+        /** DomainOut */
+        DomainOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Hostname */
+            hostname: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Record Name */
+            record_name: string;
+            /** Record Value */
+            record_value: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "verified" | "lapsed";
+            /** Verified At */
+            verified_at: string | null;
+            /** Version */
+            version: number;
+        };
         /**
          * EmailStatus
          * @description A contact's email status (P7-B 6, 10).
@@ -4045,6 +4158,14 @@ export interface components {
         RejectIn: {
             /** Note */
             note: string;
+        };
+        /** Resolved */
+        Resolved: {
+            /**
+             * Workspace Id
+             * Format: uuid
+             */
+            workspace_id: string;
         };
         /** ReviewList */
         ReviewList: {
@@ -5058,6 +5179,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_domain_v1_public_domains_resolve_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resolved"];
                 };
             };
         };
@@ -8214,6 +8355,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DefinitionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_domains_v1_workspaces__tenant_id__domains_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_domain_v1_workspaces__tenant_id__domains_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DomainIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_domain_v1_workspaces__tenant_id__domains__domain_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                domain_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_domain_v1_workspaces__tenant_id__domains__domain_id__check_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                domain_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainOut"];
                 };
             };
             /** @description Validation Error */

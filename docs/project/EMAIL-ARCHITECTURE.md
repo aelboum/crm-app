@@ -150,7 +150,7 @@ each one gets its own decision entry, tests and documentation.
    external sites with per-workspace site keys, allowed origins,
    attribution, consent capture and abuse limits; an optional tracking
    script, off by default.
-5. **Custom domains for hosted pages.** Separate from email domains:
+5. **Custom domains for hosted pages — built (P12-D)** except DNS lookups and edge TLS (owner decisions). Separate from email domains:
    ownership proof by a DNS TXT token, Host-header mapping to one
    workspace, TLS where the deployment's edge supports on-demand
    certificates, takeover protection on removal.

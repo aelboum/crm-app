@@ -27,6 +27,11 @@ EXPECTED = {
     # Owner and Admin.
     "GET /v1/workspaces/{tenant_id}/settings": "crm_app.workspace:read",
     "PATCH /v1/workspaces/{tenant_id}/settings": "crm_app.workspace:update",
+    # Custom domains (P12-D): read for every role, change for Owner and Admin.
+    "GET /v1/workspaces/{tenant_id}/domains": "crm_app.workspace:read",
+    "POST /v1/workspaces/{tenant_id}/domains": "crm_app.workspace:update",
+    "POST /v1/workspaces/{tenant_id}/domains/{domain_id}/check": "crm_app.workspace:update",
+    "DELETE /v1/workspaces/{tenant_id}/domains/{domain_id}": "crm_app.workspace:update",
     f"POST {MEMBER}/roles": "membership_role:create",
     f"DELETE {MEMBER}/roles/{{role}}": "membership_role:delete",
     f"POST {MEMBER}/suspend": "membership:suspend",
@@ -430,6 +435,8 @@ PUBLIC_FORMS = {
     "POST /v1/public/forms/{workspace_id}/{key}",
     # P12-W: the CORS preflight of an external site's submission.
     "OPTIONS /v1/public/forms/{workspace_id}/{key}",
+    # P12-D: which workspace a verified custom domain belongs to.
+    "GET /v1/public/domains/resolve",
     "GET /v1/public/booking-pages/{workspace_id}/{key}",
     "GET /v1/public/booking-pages/{workspace_id}/{key}/times",
     "POST /v1/public/booking-pages/{workspace_id}/{key}",

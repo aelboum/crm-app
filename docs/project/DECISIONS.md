@@ -1820,6 +1820,54 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
 
+## P12-D — Custom domains for hosted pages: ownership and mapping (2026-11-01)
+
+- **Status:** Implemented under the owner's requirement of 2026-11-01
+  ("Custom domains for LeadStack-hosted pages: prepare support for
+  customer-owned custom domains ... Domain ownership verification. Secure
+  tenant-specific domain mapping. Automatic HTTPS/TLS where supported.
+  Host-header validation. Protection against domain takeover. Safe removal
+  and reassignment. Clear DNS setup instructions. Keep this separate from
+  email-domain verification").
+- **Claims:** members with `crm_app.workspace:update` add hostnames (at most
+  20 per workspace): ASCII (punycode for international names), at least
+  two labels, no wildcard, port, path or address, not a reserved or local
+  name, and not the app's own domain or a name under it. Every role reads
+  them. A claim is `pending` for at most seven days with a random 128-bit
+  token; then it must be added again for a new token.
+- **Ownership proof:** a DNS TXT record at
+  `_leadstack-challenge.<hostname>` holding exactly
+  `leadstack-verification=<token>` (compared in constant time). Separate
+  from email-domain records, which Resend supplies.
+- **Mapping:** only verified hostnames are mapped (global
+  `custom_domain_index`, migration `0028_custom_domains`), and a partial
+  unique index lets one workspace hold a hostname verified at a time;
+  another workspace's pending claim never blocks the owner and shows
+  `claimed_elsewhere`. `GET /v1/public/domains/resolve` answers which
+  workspace the request's `Host` belongs to (port and case ignored), 404
+  for anything not verified.
+- **Takeover protection:** the maintenance command re-checks verified
+  domains daily; a domain whose record is gone becomes `lapsed` and stops
+  mapping, so a domain that changed hands is never served for its old
+  workspace, and the new owner can then verify. A lookup that fails never
+  lapses a domain. Removing a claim deletes its mapping at once; expired
+  claims are removed.
+- **Open decisions (owner):**
+  1. *DNS lookups.* The product has no DNS client: either add the
+     `dnspython` dependency or use an external DNS-over-HTTPS service
+     (which SaaS-OS's egress client could reach with POST, RFC 8484). Until
+     one is approved, a check records `resolver_unavailable` and nothing is
+     verified; tests use a test double (`crm_app.custom_domains.TxtResolver`).
+  2. *Serving and TLS.* Pages on a verified domain need the deployment's
+     edge (Caddy) to accept the hostname and obtain a certificate (Caddy's
+     on-demand TLS can ask `/v1/public/domains/resolve` before issuing); the
+     single-page app must then open hosted pages by host. Both are
+     deployment changes not made here; the Settings screen says pages keep
+     their LeadStack address until then.
+- **Verified:** `tests/integration/test_custom_domains.py`,
+  `tests/unit/test_custom_domain_rules.py`,
+  `frontend/src/pages/domainSettings.test.tsx`.
+
 ## P12-W — Website integration: embeddable forms and allowed origins (2026-11-01)
 
 - **Status:** Implemented under the owner's requirement of 2026-11-01

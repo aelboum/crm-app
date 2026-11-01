@@ -1506,3 +1506,15 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .website-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .website-form .field { flex: 1 1 220px; }
 .embed-code { width: 100%; font-size: 0.8rem; white-space: pre; }
+
+/* Domains (P12-D) */
+.domains { padding: 14px; display: grid; gap: 10px; }
+.domain-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.domain-item { border-top: 1px solid var(--line); padding-top: 8px; overflow-wrap: anywhere; }
+.domain-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.domain-host { font-weight: 600; }
+.domain-actions { display: flex; gap: 6px; margin-left: auto; }
+.domain-record { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; margin: 6px 0; }
+.domain-record dd { margin: 0; }
+.domain-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.domain-form .field { flex: 1 1 260px; }

@@ -37,6 +37,19 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 12 slice 12D, custom domains (decision P12-D, 2026-11-01):**
+  migration `0028_custom_domains` (custom_domain, global
+  custom_domain_index); `/domains` API (workspace permissions), public
+  `/v1/public/domains/resolve`; daily re-check in
+  `crm_app.email_maintenance`; Settings › Domains with the TXT record to
+  publish. No DNS client yet (owner decision), so nothing is verified
+  outside tests. Verified: `test_custom_domains.py` (claims and refusals,
+  exact-record verification, one workspace per hostname, hand-over after
+  the daily re-check lapses the old claim, failing lookups lapse nothing,
+  removal, expiry, isolation), unit `test_custom_domain_rules.py` 18,
+  `domainSettings.test.tsx` 3; unit suite plus the domain, website, email,
+  foundation, rollback, table-guard, purge and workspace-route integration
+  tests 843 passed; Vitest 299, lint and build clean.
 - **Phase 12 slice 12W, website integration (decision P12-W, 2026-11-01):**
   migration `0027_websites` (website; `form_submission.website_id` and
   `attribution`); `/websites` API under the form permissions; the public

@@ -116,6 +116,9 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "campaign_recipient",
         # P12-W (websites).
         "website",
+        # P12-D (custom domains).
+        "custom_domain",
+        "custom_domain_index",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -155,6 +158,7 @@ GLOBAL_TABLES: frozenset[str] = frozenset(
         "automation_due",
         "inbound_email",
         "conversation_route_index",
+        "custom_domain_index",
     }
 )
 

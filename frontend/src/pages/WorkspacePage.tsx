@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Eye,
   Kanban,
+  Globe,
   MailX,
   ListPlus,
   Minus,
@@ -33,6 +34,7 @@ import { useT } from "../i18n/useT";
 import { BusinessSettings } from "./BusinessSettings";
 import { FieldSettings } from "./FieldSettings";
 import { PipelineSettings } from "./PipelineSettings";
+import { DomainSettings } from "./DomainSettings";
 import { SuppressionSettings } from "./SuppressionSettings";
 import { TagSettings } from "./TagSettings";
 import { type Invitation, useInvitations } from "../api/invitations";
@@ -436,6 +438,7 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
       { id: "fields", label: "settings.fields", icon: ListPlus },
       { id: "pipeline", label: "settings.pipeline", icon: Kanban },
       { id: "suppression", label: "settings.suppression", icon: MailX },
+      { id: "domains", label: "settings.domains", icon: Globe },
       { id: "ai", label: "settings.ai", icon: Sparkles },
       { id: "integrations", label: "settings.integrations", icon: Plug },
       { id: "appearance", label: "settings.appearance", icon: Palette },
@@ -444,8 +447,25 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
 ];
 
 /** The settings sections that exist; every other one is marked "soon". */
-export type SettingsSection = "team" | "profile" | "business" | "tags" | "fields" | "pipeline" | "suppression";
-const BUILT_SECTIONS: readonly string[] = ["team", "profile", "business", "tags", "fields", "pipeline", "suppression"];
+export type SettingsSection =
+  | "team"
+  | "profile"
+  | "business"
+  | "tags"
+  | "fields"
+  | "pipeline"
+  | "suppression"
+  | "domains";
+const BUILT_SECTIONS: readonly string[] = [
+  "team",
+  "profile",
+  "business",
+  "tags",
+  "fields",
+  "pipeline",
+  "suppression",
+  "domains",
+];
 
 const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId }> = {
   team: { title: "settings.team", desc: "settings.teamDesc" },
@@ -455,6 +475,7 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
   fields: { title: "settings.fields", desc: "settings.fieldsDesc" },
   pipeline: { title: "settings.pipeline", desc: "settings.pipelineDesc" },
   suppression: { title: "settings.suppression", desc: "settings.suppressionDesc" },
+  domains: { title: "settings.domains", desc: "settings.domainsDesc" },
 };
 
 /**
@@ -611,6 +632,9 @@ export function SettingsPage({
               canRead={access.data.actions.read_suppressions === true}
               canManage={access.data.actions.manage_suppressions === true}
             />
+          ) : null}
+          {access.data && section === "domains" ? (
+            <DomainSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />
           ) : null}
           {access.data && section === "tags" ? (
             <TagSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />

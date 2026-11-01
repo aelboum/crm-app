@@ -42,6 +42,8 @@ def create_app() -> FastAPI:
     from crm_app.api.campaigns import public_router as public_unsubscribe_router  # noqa: PLC0415
     from crm_app.api.campaigns import router as campaigns_router  # noqa: PLC0415
     from crm_app.api.conversations import router as conversations_router  # noqa: PLC0415
+    from crm_app.api.custom_domains import public_router as public_domains_router  # noqa: PLC0415
+    from crm_app.api.custom_domains import router as custom_domains_router  # noqa: PLC0415
     from crm_app.api.custom_fields import router as custom_fields_router  # noqa: PLC0415
     from crm_app.api.emails import public_router as public_email_router  # noqa: PLC0415
     from crm_app.api.errors import validation_error  # noqa: PLC0415
@@ -98,6 +100,7 @@ def create_app() -> FastAPI:
         booking_pages_router,
         forms_router,
         websites_router,
+        custom_domains_router,
         suppression_router,
         invitations_router,
     ):
@@ -108,9 +111,15 @@ def create_app() -> FastAPI:
     app.include_router(sign_out_router)
     # Self-service signup (S-1): 404 while SIGNUP_ENABLED is off.
     app.include_router(signups_router)
-    app.include_router(public_forms_router)
-    app.include_router(public_booking_router)
-    app.include_router(public_email_router)
-    app.include_router(public_unsubscribe_router)
-    app.include_router(spa_router)
+    # Public routes: hosted pages, provider webhooks, unsubscribing, custom
+    # domains; then the single-page app.
+    for router in (
+        public_forms_router,
+        public_booking_router,
+        public_email_router,
+        public_unsubscribe_router,
+        public_domains_router,
+        spa_router,
+    ):
+        app.include_router(router)
     return app
