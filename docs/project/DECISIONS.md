@@ -2184,6 +2184,40 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Verified:** the gate passes with the exception, fails with it expired,
   and fails for an unlisted advisory and a stale entry.
 
+## 13-A2 — Review of the minimatch audit exception (2026-11-01, under M1)
+
+- **Status:** Reviewed under the owner's instruction of 2026-11-01
+  ("Dependency audit: review the exception expiring on 2026-11-30.
+  Remediate safely where possible and document any residual risk").
+- **What was checked (npm registry, 2026-11-01):** GHSA-g3hv-75wg-m249
+  still covers every minimatch below 11.0.1; no fixed 3.x, 5.x or 10.x
+  exists.
+  - `eslint-plugin-jsx-a11y` 6.10.2 is still its latest release (2024) and
+    calls minimatch's default export, which 11.x removed; its peer range
+    ends at eslint 9.
+  - eslint 10.14.0 exists but depends on minimatch ^10.2.6, still in the
+    advisory's range, and the plugin above does not support it.
+  - `openapi-typescript` 7.13.0 (latest) needs `@redocly/openapi-core`
+    ^1.34 (latest 1.34.22, minimatch 5.1.9). Redocly 2.72.1 no longer
+    uses minimatch, but forcing it under openapi-typescript fails
+    (`ERR_PACKAGE_PATH_NOT_EXPORTED`): tried and reverted.
+- **Remediated:** nothing further could be fixed without breaking tooling;
+  typescript-eslint stays on minimatch 11.0.3 (13-A1).
+- **Residual risk (unchanged, low):** a denial of service through crafted
+  glob patterns, in development tools only (lint and API type
+  generation). The production bundle contains none of these packages and
+  the production audit (`npm audit --omit=dev`) has no exception. The
+  patterns these tools match come from this repository's own
+  configuration; an attacker would need to commit a hostile pattern,
+  which review and branch protection already gate, and the worst outcome
+  is a slow or hung lint run.
+- **Decision:** the exception is renewed, visibly, until 2026-12-31
+  (`frontend/audit-exceptions.json`, decision 13-A2). The gate still fails
+  the day it expires, for any new advisory and for a stale entry. Before
+  2026-12-31: check for a jsx-a11y release that supports minimatch 11 or
+  eslint 10, an openapi-typescript release on redocly 2, or replace
+  either tool; otherwise the owner decides again.
+
 ## P7-B — Consent and suppression (2026-10-28, under M1)
 
 - **Status:** Decided under M1 after the owner's "Go" (2026-10-28) to the
