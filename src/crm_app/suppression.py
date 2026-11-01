@@ -336,6 +336,50 @@ def _consent_state(session: Session, workspace: uuid.UUID, contact_id: uuid.UUID
     return latest or "none"
 
 
+def consent_state(session: Session, workspace: uuid.UUID, contact_id: uuid.UUID) -> str:
+    """A contact's current email consent (`granted`, `withdrawn` or `none`),
+    inside the caller's session."""
+    return _consent_state(session, workspace, contact_id)
+
+
+def suppress_unsubscribed(
+    session: Session, workspace: uuid.UUID, email: str, contact_id: uuid.UUID | None
+) -> None:
+    """A recipient used a campaign's unsubscribe link (decision P7-C): a
+    `withdrawn` consent record (method `unsubscribe_link`) and the address
+    suppressed (reason `unsubscribed`), in the caller's transaction. Nobody
+    acts for the person, so no member is named; a full list leaves the
+    withdrawn consent, which alone stops marketing mail."""
+    if contact_id is not None:
+        session.add(
+            ConsentRecord(
+                id=uuid.uuid4(),
+                tenant_id=workspace,
+                contact_id=contact_id,
+                channel=_CHANNEL,
+                status="withdrawn",
+                method="unsubscribe_link",
+                wording=None,
+                form_id=None,
+                submission_id=None,
+                recorded_by_user_id=None,
+                recorded_at=_now(),
+            )
+        )
+        session.flush()
+    try:
+        _suppress(
+            session,
+            Scope(workspace=workspace, actor=None),  # type: ignore[arg-type]
+            [email],
+            reason="unsubscribed",
+            origin="consent_withdrawn",
+            note=None,
+        )
+    except SuppressionLimitError:
+        return
+
+
 def may_send(
     session: Session,
     workspace: uuid.UUID,

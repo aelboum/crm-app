@@ -200,6 +200,17 @@ RECORDS |= {
     f"PATCH {_CONVERSATION}": "crm_app.conversation:reply",
     f"POST {_CONVERSATION}/messages": "crm_app.conversation:reply",
     f"POST {_CONVERSATION}/read": "crm_app.conversation:read",
+    # P7-C: campaigns; approval and queuing need `campaign:approve`.
+    "GET /v1/workspaces/{tenant_id}/campaigns": "crm_app.campaign:read",
+    "POST /v1/workspaces/{tenant_id}/campaigns": "crm_app.campaign:manage",
+    "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:read",
+    "PATCH /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:manage",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/validate": "crm_app.campaign:manage",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/submit": "crm_app.campaign:manage",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/cancel": "crm_app.campaign:manage",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/approve": "crm_app.campaign:approve",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/reject": "crm_app.campaign:approve",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/queue": "crm_app.campaign:approve",
     # P6-I: quarantined inbound email, for members who may reply.
     "GET /v1/workspaces/{tenant_id}/conversation-reviews": "crm_app.conversation:reply",
     "POST /v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/accept": (
@@ -370,6 +381,8 @@ def test_record_routes_follow_the_role_matrix() -> None:
             "create": EDITORS,
             "update": EDITORS,
             "reply": EDITORS,
+            "manage": EDITORS,
+            "approve": {Role.OWNER, Role.ADMIN},
             # Q6: Members may delete tasks, not other records.
             "delete": EDITORS if resource == "crm_app.task" else {Role.OWNER, Role.ADMIN},
         }[action]
@@ -417,6 +430,8 @@ PUBLIC_FORMS = {
     "POST /v1/public/email/resend/events",
     # P6-I: the email provider's signed received-email events.
     "POST /v1/public/email/resend/inbound",
+    # P7-C: a campaign recipient's one-click unsubscribe.
+    "POST /v1/public/unsubscribe/{workspace_id}/{token}",
 }
 
 

@@ -369,4 +369,6 @@ def test_the_migration_rolls_back_and_forward(
         "conversation_route",
         "conversation_route_index",
         "inbound_quarantine",
+        "campaign",
+        "campaign_recipient",
     }

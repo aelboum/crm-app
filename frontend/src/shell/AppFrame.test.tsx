@@ -2,7 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { accessibilityViolations, type Handler, renderApp } from "../test/render";
+import {
+  accessibilityViolations,
+  type Handler,
+  renderApp,
+} from "../test/render";
 
 const WS = "11111111-2222-4333-8444-555555555555";
 
@@ -10,12 +14,19 @@ const signedIn: Handler = (method, path) => {
   if (method !== "GET") return undefined;
   if (path === "/auth/me") return { status: 200, body: { user_id: "u" } };
   if (path === `/v1/workspaces/${WS}`) {
-    return { status: 200, body: { id: WS, name: "Acme Studio", status: "active" } };
+    return {
+      status: 200,
+      body: { id: WS, name: "Acme Studio", status: "active" },
+    };
   }
   if (path === `/v1/workspaces/${WS}/access`) {
     return {
       status: 200,
-      body: { membership_id: "m", roles: ["Owner"], actions: { read_members: true } },
+      body: {
+        membership_id: "m",
+        roles: ["Owner"],
+        actions: { read_members: true },
+      },
     };
   }
   if (path.startsWith(`/v1/workspaces/${WS}/members?`)) {
@@ -26,27 +37,48 @@ const signedIn: Handler = (method, path) => {
 
 describe("app frame", () => {
   it("shows the design's navigation, marking every module that is not built", async () => {
-    renderApp(`/w/${WS}/campaigns`, signedIn);
+    renderApp(`/w/${WS}/reviews`, signedIn);
     const nav = await screen.findByRole("navigation", { name: "Workspace" });
     for (const group of ["CRM", "Scheduling", "Marketing", "AI", "Insights"]) {
-      expect(within(nav).getByRole("button", { name: group })).toHaveAttribute("aria-expanded", "true");
+      expect(within(nav).getByRole("button", { name: group })).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
     }
-    const campaigns = within(nav).getByRole("link", { name: /Campaigns/ });
-    expect(campaigns).toHaveAttribute("aria-current", "page");
-    expect(campaigns).toHaveTextContent("soon");
+    const reviews = within(nav).getByRole("link", { name: /Reviews/ });
+    expect(reviews).toHaveAttribute("aria-current", "page");
+    expect(reviews).toHaveTextContent("soon");
+    // Campaigns are built (slice 7C).
+    expect(
+      within(nav).getByRole("link", { name: "Campaigns" }),
+    ).not.toHaveTextContent("soon");
     // Contacts, Companies (slice 3A), Opportunities (4B), Tasks (4C) and
     // Calendar (5A) are built, so they carry no marker.
-    expect(within(nav).getByRole("link", { name: "Calendar" })).not.toHaveTextContent("soon");
-    expect(within(nav).getByRole("link", { name: "Opportunities" })).not.toHaveTextContent("soon");
-    expect(within(nav).getByRole("link", { name: "Tasks" })).not.toHaveTextContent("soon");
-    expect(within(nav).getByRole("link", { name: "Contacts" })).not.toHaveTextContent("soon");
-    expect(within(nav).getByRole("link", { name: "Companies" })).not.toHaveTextContent("soon");
-    expect(within(nav).getByRole("link", { name: "Settings" })).not.toHaveTextContent("soon");
+    expect(
+      within(nav).getByRole("link", { name: "Calendar" }),
+    ).not.toHaveTextContent("soon");
+    expect(
+      within(nav).getByRole("link", { name: "Opportunities" }),
+    ).not.toHaveTextContent("soon");
+    expect(
+      within(nav).getByRole("link", { name: "Tasks" }),
+    ).not.toHaveTextContent("soon");
+    expect(
+      within(nav).getByRole("link", { name: "Contacts" }),
+    ).not.toHaveTextContent("soon");
+    expect(
+      within(nav).getByRole("link", { name: "Companies" }),
+    ).not.toHaveTextContent("soon");
+    expect(
+      within(nav).getByRole("link", { name: "Settings" }),
+    ).not.toHaveTextContent("soon");
   });
 
   it("opens the design's placeholder page for a module that is not built", async () => {
-    renderApp(`/w/${WS}/campaigns`, signedIn);
-    expect(await screen.findByRole("heading", { level: 1, name: "Campaigns" })).toBeInTheDocument();
+    renderApp(`/w/${WS}/reviews`, signedIn);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Reviews" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Not available yet")).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });
@@ -54,13 +86,14 @@ describe("app frame", () => {
   it("collapses and expands the sidebar and its groups", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/settings`, signedIn);
-    const collapse = await screen.findByRole("button", { name: "Collapse sidebar" });
+    const collapse = await screen.findByRole("button", {
+      name: "Collapse sidebar",
+    });
     expect(collapse).toHaveAttribute("aria-expanded", "true");
     await user.click(collapse);
-    expect(screen.getByRole("button", { name: "Expand sidebar" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    expect(
+      screen.getByRole("button", { name: "Expand sidebar" }),
+    ).toHaveAttribute("aria-expanded", "false");
     await user.click(screen.getByRole("button", { name: "Expand sidebar" }));
     const crm = screen.getByRole("button", { name: "CRM" });
     await user.click(crm);
@@ -71,15 +104,23 @@ describe("app frame", () => {
   it("opens a page palette that navigates and never pretends to search records", async () => {
     const user = userEvent.setup();
     const { router } = renderApp(`/w/${WS}/settings`, signedIn);
-    await user.click(await screen.findByRole("button", { name: /Jump to a page/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Jump to a page/ }),
+    );
     const dialog = await screen.findByRole("dialog", { name: "Go to a page" });
     expect(
-      within(dialog).getByText("Searching contacts, deals and other records is not available yet."),
+      within(dialog).getByText(
+        "Searching contacts, deals and other records is not available yet.",
+      ),
     ).toBeInTheDocument();
-    const input = within(dialog).getByRole("searchbox", { name: "Jump to a page…" });
+    const input = within(dialog).getByRole("searchbox", {
+      name: "Jump to a page…",
+    });
     expect(input).toHaveFocus();
     await user.type(input, "zzqq");
-    expect(within(dialog).getByText("No pages match “zzqq”")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("No pages match “zzqq”"),
+    ).toBeInTheDocument();
     await user.clear(input);
     await user.type(input, "my prof");
     await user.keyboard("{ArrowDown}{Enter}");
@@ -94,7 +135,9 @@ describe("app frame", () => {
     renderApp(`/w/${WS}/settings`, signedIn);
     await screen.findByRole("heading", { name: "Team & roles" });
     await user.keyboard("{Control>}k{/Control}");
-    expect(await screen.findByRole("dialog", { name: "Go to a page" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Go to a page" }),
+    ).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
     await user.keyboard("{Escape}");
     await waitFor(() => {
@@ -115,7 +158,8 @@ describe("app frame", () => {
       "ConversationNot available yet",
       "TaskNot available yet",
     ]);
-    for (const item of items) expect(item).toHaveAttribute("aria-disabled", "true");
+    for (const item of items)
+      expect(item).toHaveAttribute("aria-disabled", "true");
     expect(await accessibilityViolations()).toEqual([]);
   });
 
@@ -137,12 +181,13 @@ describe("app frame", () => {
     const menu = await screen.findByRole("menu", { name: "New" });
     const contact = within(menu).getByRole("menuitem", { name: "Contact" });
     expect(contact).not.toHaveAttribute("aria-disabled");
-    expect(within(menu).getByRole("menuitem", { name: /Opportunity/ })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    expect(
+      within(menu).getByRole("menuitem", { name: /Opportunity/ }),
+    ).toHaveAttribute("aria-disabled", "true");
     await user.click(contact);
-    expect(await screen.findByRole("dialog", { name: "New contact" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "New contact" }),
+    ).toBeInTheDocument();
     // The modal hides the page beneath it from assistive technology.
     expect(
       screen.getByRole("heading", { level: 1, name: /Contacts/, hidden: true }),
@@ -169,23 +214,33 @@ describe("app frame", () => {
     await user.click(screen.getByRole("button", { name: /Client workspace/ }));
     // The menu is named by its trigger (the current workspace).
     const menu = await screen.findByRole("menu", { name: /Acme Studio/ });
-    await user.click(await within(menu).findByRole("menuitem", { name: /Beta Ltd/ }));
+    await user.click(
+      await within(menu).findByRole("menuitem", { name: /Beta Ltd/ }),
+    );
     await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(new RegExp(`^/w/${OTHER}`));
+      expect(router.state.location.pathname).toMatch(
+        new RegExp(`^/w/${OTHER}`),
+      );
     });
   });
 
   it("shows an empty notifications panel rather than invented notifications", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/settings`, signedIn);
-    await user.click(await screen.findByRole("button", { name: "Notifications" }));
-    expect(await screen.findByText("No notifications yet.")).toBeInTheDocument();
+    await user.click(
+      await screen.findByRole("button", { name: "Notifications" }),
+    );
+    expect(
+      await screen.findByText("No notifications yet."),
+    ).toBeInTheDocument();
   });
 
   it("answers an unknown section like an unknown workspace", async () => {
     renderApp(`/w/${WS}/nonsense`, signedIn);
     expect(
-      await screen.findByText("This workspace does not exist, or you are not a member of it."),
+      await screen.findByText(
+        "This workspace does not exist, or you are not a member of it.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -193,7 +248,9 @@ describe("app frame", () => {
     const user = userEvent.setup();
     const { router } = renderApp(`/w/${WS}/settings`, signedIn);
     await user.click(await screen.findByRole("button", { name: "My profile" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "My profile" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "My profile" }),
+    ).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ section: "profile" });
     expect(screen.getByText("Owner · Acme Studio")).toBeInTheDocument();
     expect(screen.getByLabelText("Display name")).toBeDisabled();
@@ -202,26 +259,31 @@ describe("app frame", () => {
       /can't be saved yet/,
     );
     expect(screen.getByRole("button", { name: /Manage/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "My profile" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "My profile" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(await accessibilityViolations()).toEqual([]);
   });
 
   it("opens My profile directly from its link", async () => {
     renderApp(`/w/${WS}/settings?section=profile`, signedIn);
-    expect(await screen.findByRole("heading", { level: 1, name: "My profile" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "My profile" }),
+    ).toBeInTheDocument();
   });
 
   it("renders the settings page with the role matrix and passes an accessibility scan", async () => {
     renderApp(`/w/${WS}/settings`, signedIn);
-    expect(await screen.findByRole("heading", { name: "Role permissions" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Role permissions" }),
+    ).toBeInTheDocument();
     const table = screen.getByRole("table");
-    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
-      "Capability",
-      "Owner",
-      "Admin",
-      "Member",
-      "Read-only",
-    ]);
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual(["Capability", "Owner", "Admin", "Member", "Read-only"]);
     expect(await screen.findByText("No members to show.")).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });

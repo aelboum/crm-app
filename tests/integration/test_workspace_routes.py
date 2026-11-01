@@ -152,6 +152,9 @@ def test_access_reports_the_callers_own_membership_and_actions(probe: Probe) -> 
         "manage_automations": False,
         "read_conversations": True,
         "reply_conversations": False,
+        "read_campaigns": True,
+        "manage_campaigns": False,
+        "approve_campaigns": False,
     }
     assert owner["membership_id"] != reader["membership_id"]
 

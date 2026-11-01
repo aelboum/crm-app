@@ -39,6 +39,8 @@ def create_app() -> FastAPI:
     from crm_app.api.automations import router as automations_router  # noqa: PLC0415
     from crm_app.api.booking_pages import public_router as public_booking_router  # noqa: PLC0415
     from crm_app.api.booking_pages import router as booking_pages_router  # noqa: PLC0415
+    from crm_app.api.campaigns import public_router as public_unsubscribe_router  # noqa: PLC0415
+    from crm_app.api.campaigns import router as campaigns_router  # noqa: PLC0415
     from crm_app.api.conversations import router as conversations_router  # noqa: PLC0415
     from crm_app.api.custom_fields import router as custom_fields_router  # noqa: PLC0415
     from crm_app.api.emails import public_router as public_email_router  # noqa: PLC0415
@@ -83,6 +85,7 @@ def create_app() -> FastAPI:
         reports_router,
         automations_router,
         conversations_router,
+        campaigns_router,
         notes_router,
         tags_router,
         custom_fields_router,
@@ -106,5 +109,6 @@ def create_app() -> FastAPI:
     app.include_router(public_forms_router)
     app.include_router(public_booking_router)
     app.include_router(public_email_router)
+    app.include_router(public_unsubscribe_router)
     app.include_router(spa_router)
     return app

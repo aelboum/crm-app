@@ -88,6 +88,9 @@ ACTIONS: dict[str, tuple[str, str]] = {
     # Member reply, log messages, add notes, assign and close.
     "read_conversations": ("crm_app.conversation", "read"),
     "reply_conversations": ("crm_app.conversation", "reply"),
+    "read_campaigns": ("crm_app.campaign", "read"),
+    "manage_campaigns": ("crm_app.campaign", "manage"),
+    "approve_campaigns": ("crm_app.campaign", "approve"),
     "read_automations": ("crm_app.automation", "read"),
     "manage_automations": ("crm_app.automation", "manage"),
 }

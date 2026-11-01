@@ -188,6 +188,14 @@ PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
         Kind.ADMINISTRATIVE,
         "Lifting a suppression allows mail a person refused (P7-B).",
     ),
+    Permission(f"{PREFIX}campaign", "read", Kind.READ),
+    Permission(f"{PREFIX}campaign", "manage", Kind.UPDATE),
+    Permission(
+        f"{PREFIX}campaign",
+        "approve",
+        Kind.ADMINISTRATIVE,
+        "An approval binds the exact content and audience; any change needs a new one (P7-C).",
+    ),
 )
 
 CATALOGUE: tuple[Permission, ...] = PLATFORM_PERMISSIONS + PRODUCT_PERMISSIONS
@@ -218,6 +226,7 @@ _READ_ONLY = _keys(
     f"{PREFIX}booking_page:read",
     f"{PREFIX}automation:read",
     f"{PREFIX}conversation:read",
+    f"{PREFIX}campaign:read",
 )
 
 _MEMBER = _READ_ONLY | _keys(
@@ -235,6 +244,7 @@ _MEMBER = _READ_ONLY | _keys(
     f"{PREFIX}activity:create",
     f"{PREFIX}suppression:read",
     f"{PREFIX}conversation:reply",
+    f"{PREFIX}campaign:manage",
 )
 
 _ADMIN = _MEMBER | _keys(
@@ -253,6 +263,7 @@ _ADMIN = _MEMBER | _keys(
     f"{PREFIX}booking_page:manage",
     f"{PREFIX}suppression:manage",
     f"{PREFIX}automation:manage",
+    f"{PREFIX}campaign:approve",
     "invitation:read",
     "invitation:create",
     "invitation:revoke",

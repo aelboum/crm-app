@@ -54,6 +54,8 @@ SCHEMA = "crm_app"
 # `workspace_settings` and `invitation_intent` reference no
 # product table.
 PURGE_TABLES: tuple[str, ...] = (
+    "campaign_recipient",
+    "campaign",
     "inbound_quarantine",
     "conversation_route",
     "conversation_read",

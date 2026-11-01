@@ -250,8 +250,11 @@ def _claim(  # noqa: PLR0911 - one answer per state
             return "disabled"
         if row.next_attempt_at is not None and row.next_attempt_at > now:
             return _Wait(row.next_attempt_at)
+        # Campaign mail is marketing: it also needs the contact's consent,
+        # checked again here, at send time (P7-C).
+        marketing = stream is streams.Stream.CAMPAIGN
         if not suppression.may_send(
-            session, workspace, row.to_email, row.contact_id, marketing=False
+            session, workspace, row.to_email, row.contact_id, marketing=marketing
         ):
             row.status, row.updated_at = "suppressed", now
             _audit(session, row, "suppressed")

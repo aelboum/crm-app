@@ -37,6 +37,17 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 7 slice 7C, campaign preparation (decision P7-C, 2026-11-01):**
+  migration `0026_campaigns` (campaign, campaign_recipient; email purpose
+  `campaign`; consent method `unsubscribe_link`); the `/campaigns` API with
+  the approval workflow bound to a content hash; one-click unsubscribe;
+  new permissions `campaign:read`, `campaign:manage`, `campaign:approve`;
+  the Campaigns screen. Sending is unavailable (no List-Unsubscribe
+  support in SaaS-OS). Verified: unit 656 (including
+  `test_campaign_rules.py`); full integration suite in four batches, 770
+  passed (191, 181, 221, 177; `test_campaigns.py` included, and the
+  permission-registration guard passing again); Vitest 289 (including
+  `campaigns.test.tsx`); lint and build clean.
 - **Phase 6 slice 6E.3, inbound email (decision P6-I, 2026-11-01):**
   migration `0025_inbound_email` (global `inbound_email` and
   `conversation_route_index`; tenant `conversation_route` and

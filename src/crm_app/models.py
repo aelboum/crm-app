@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0025_inbound_email` own the
+Migrations `0002_contacts_companies` to `0026_campaigns` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -944,3 +944,56 @@ class InboundQuarantine(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
+
+
+class Campaign(Base):
+    """A marketing campaign: content, audience, state and approval
+    (migration 0026, P7-C)."""
+
+    __tablename__ = "campaign"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    subject: Mapped[str] = mapped_column(Text)
+    body: Mapped[str] = mapped_column(Text)
+    segment: Mapped[dict[str, Any]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(Text)
+    content_hash: Mapped[str] = mapped_column(Text)
+    estimate: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    submitted_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_hash: Mapped[str | None] = mapped_column(Text)
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    rejected_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class CampaignRecipient(Base):
+    """One contact a queued campaign reaches, at most once (migration 0026)."""
+
+    __tablename__ = "campaign_recipient"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    campaign_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    email: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    skip_reason: Mapped[str | None] = mapped_column(Text)
+    email_message_id: Mapped[uuid.UUID | None] = mapped_column()
+    unsubscribe_hash: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

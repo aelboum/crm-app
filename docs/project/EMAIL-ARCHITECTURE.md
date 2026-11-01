@@ -132,7 +132,7 @@ each one gets its own decision entry, tests and documentation.
    HTML is converted to text and never rendered. Attachments are recorded
    by name, type and size only and are not downloaded until a malware
    scanner is approved and configured.
-2. **Campaigns (7C).** Drafts, segments over CRM data, preview, recipient
+2. **Campaigns (7C) — built up to approval (P7-C); sending blocked.** Drafts, segments over CRM data, preview, recipient
    estimate and eligibility (consent and suppression), then
    `draft → validated → awaiting_approval → approved → queued → processing
    → completed` (or `rejected`, `cancelled`, `failed`,

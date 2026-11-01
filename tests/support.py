@@ -111,6 +111,9 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "conversation_route",
         "conversation_route_index",
         "inbound_quarantine",
+        # P7-C (campaigns).
+        "campaign",
+        "campaign_recipient",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",

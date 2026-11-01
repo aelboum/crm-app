@@ -48,6 +48,7 @@ PURPOSE_STREAMS: Mapping[str, Stream] = {
     "booking_confirmation": Stream.TRANSACTIONAL,
     "test": Stream.TRANSACTIONAL,
     "conversation_reply": Stream.CONVERSATION,
+    "campaign": Stream.CAMPAIGN,
 }
 
 # The local part each stream sends from unless configured otherwise.

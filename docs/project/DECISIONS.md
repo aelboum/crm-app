@@ -1820,6 +1820,58 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
 
+## P7-C — Campaign drafts, audiences and approval (2026-11-01)
+
+- **Status:** Implemented under the owner's email mission of 2026-11-01
+  ("Campaign sending: Explicit approval required before each campaign ...
+  Implement campaign preparation and approval ... A campaign must never
+  send automatically merely because it is saved, validated or scheduled").
+  K5 had left campaigns outside the MVP; this instruction brings their
+  preparation into scope. Sending stays unavailable.
+- **Workflow:** `draft → validated → awaiting_approval → approved → queued
+  → processing → completed`, or `partially_completed`, `failed`,
+  `rejected` (back to editable, with the approver's note) and `cancelled`.
+  Steps need `If-Match`; a step from the wrong state is 409
+  `campaign_state`.
+- **Approval binds content:** each campaign stores the SHA-256 of its exact
+  name, subject, body and audience (`content_hash`); approval records it
+  (`approved_hash`), and any edit returns the campaign to draft and clears
+  the approval, estimate and submission. Queuing and processing check the
+  approved hash again (409 `approval_outdated`).
+- **Audience:** a segment of the workspace's contacts by lifecycle stage,
+  tag, owner and company (at most 50 of each); an empty segment must say
+  `all_contacts`, so a send to everyone is never an accident; at most
+  50,000 contacts. Validation counts eligible contacts and the excluded
+  ones by reason (no address, duplicate address, suppressed, no marketing
+  consent) and needs at least one eligible.
+- **Content:** plain text, subject one line; placeholders
+  `{{first_name}}` and `{{last_name}}` only, replaced literally (nothing is
+  evaluated); every email gets a footer with the workspace name and an
+  unsubscribe link.
+- **Permissions (new):** `crm_app.campaign:read` (every role),
+  `crm_app.campaign:manage` (Owner, Admin, Member: draft, edit, validate,
+  submit, cancel), `crm_app.campaign:approve` (Owner, Admin, administrative:
+  approve, reject, queue). Existing workspaces get them with
+  `crm_app.role_upgrade` (P2-G7); `approve` is held back there unless
+  `--include-administrative`.
+- **Sending:** `queue` is refused (409 `campaign_sending_unavailable`)
+  unless `crm_app.campaigns.SENDING_AVAILABLE` (false: SaaS-OS v0.6.0
+  cannot set `List-Unsubscribe` headers; `saas-os-gaps.md` item 1), the
+  campaign stream is switched on and the environment is not production.
+  When available, `process` adds each eligible contact once (unique per
+  campaign and contact) and queues one email each on the campaign stream,
+  where suppression and consent are checked again at send time.
+- **Unsubscribe:** `POST /v1/public/unsubscribe/{workspace}/{token}`, one
+  click, rate-limited, always 204; a known token suppresses the address
+  (reason `unsubscribed`) and records consent `withdrawn` (method
+  `unsubscribe_link`). Tokens are random per recipient and stored hashed.
+- **Audit:** every step, with ids, states and hashes; never content.
+- **Not built:** scheduling, templates, HTML email, campaign metrics, the
+  unsubscribe landing page (the link's page is built with sending), tag,
+  owner and company filters in the screen (the API takes them).
+- **Verified:** `tests/integration/test_campaigns.py`,
+  `tests/unit/test_campaign_rules.py`, `frontend/src/records/campaigns.test.tsx`.
+
 ## P6-I — Inbound email: recording, routing, quarantine (2026-11-01)
 
 - **Status:** Implemented under the owner's email mission of 2026-11-01

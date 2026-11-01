@@ -24,6 +24,7 @@ import { ContactsPage } from "./records/ContactsPage";
 import { CalendarPage } from "./records/CalendarPage";
 import { DashboardPage } from "./records/DashboardPage";
 import { AutomationsPage } from "./records/AutomationsPage";
+import { CampaignsPage } from "./records/CampaignsPage";
 import { InboxPage } from "./records/InboxPage";
 import { ReportsPage } from "./records/ReportsPage";
 import { FormsPage } from "./records/FormsPage";
@@ -114,7 +115,9 @@ const visitorBookingRoute = createRoute({
   component: VisitorBookingRoutePage,
 });
 
-const notFound = <LoadError error={new ApiError(404)} onRetry={() => undefined} />;
+const notFound = (
+  <LoadError error={new ApiError(404)} onRetry={() => undefined} />
+);
 
 function WorkspaceLayout() {
   const { workspaceId } = workspaceRoute.useParams();
@@ -173,7 +176,12 @@ interface SectionSearch {
 
 function SectionPage() {
   const { workspaceId, section: slug } = sectionRoute.useParams();
-  const { section: settingsSection, record, create, view } = sectionRoute.useSearch();
+  const {
+    section: settingsSection,
+    record,
+    create,
+    view,
+  } = sectionRoute.useSearch();
   const navigate = sectionRoute.useNavigate();
   const openRecord = (next: string | null) => {
     void navigate({ search: next ? { record: next } : {} });
@@ -183,17 +191,26 @@ function SectionPage() {
       <InboxPage
         workspaceId={workspaceId}
         onOpenContact={(id) => {
-          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "contacts" },
+            search: { record: id },
+          });
         }}
       />
     );
+  }
+  if (slug === "campaigns") {
+    return <CampaignsPage workspaceId={workspaceId} />;
   }
   if (slug === "automations") {
     return (
       <AutomationsPage
         workspaceId={workspaceId}
         onOpenContact={(id) => {
-          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "contacts" },
+            search: { record: id },
+          });
         }}
       />
     );
@@ -228,10 +245,16 @@ function SectionPage() {
           void navigate({ search: record ? { record } : {}, replace: true });
         }}
         onOpenAppointment={(id) => {
-          void navigate({ params: { workspaceId, section: "calendar" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "calendar" },
+            search: { record: id },
+          });
         }}
         onOpenDeal={(id) => {
-          void navigate({ params: { workspaceId, section: "opportunities" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "opportunities" },
+            search: { record: id },
+          });
         }}
       />
     );
@@ -243,7 +266,10 @@ function SectionPage() {
         openId={record ?? null}
         onOpen={openRecord}
         onOpenContact={(id) => {
-          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "contacts" },
+            search: { record: id },
+          });
         }}
       />
     );
@@ -255,10 +281,16 @@ function SectionPage() {
         openId={record ?? null}
         onOpen={openRecord}
         onOpenContact={(id) => {
-          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "contacts" },
+            search: { record: id },
+          });
         }}
         onOpenDeal={(id) => {
-          void navigate({ params: { workspaceId, section: "opportunities" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "opportunities" },
+            search: { record: id },
+          });
         }}
       />
     );
@@ -274,10 +306,16 @@ function SectionPage() {
           void navigate({ search: record ? { record } : {}, replace: true });
         }}
         onOpenContact={(id) => {
-          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "contacts" },
+            search: { record: id },
+          });
         }}
         onOpenCompany={(id) => {
-          void navigate({ params: { workspaceId, section: "companies" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "companies" },
+            search: { record: id },
+          });
         }}
         initialIdle={view === "idle"}
       />
@@ -289,8 +327,16 @@ function SectionPage() {
         workspaceId={workspaceId}
         initialTab={view === "overdue" ? "overdue" : "open"}
         onOpenLink={(kind, id) => {
-          const target = kind === "contact" ? "contacts" : kind === "company" ? "companies" : "opportunities";
-          void navigate({ params: { workspaceId, section: target }, search: { record: id } });
+          const target =
+            kind === "contact"
+              ? "contacts"
+              : kind === "company"
+                ? "companies"
+                : "opportunities";
+          void navigate({
+            params: { workspaceId, section: target },
+            search: { record: id },
+          });
         }}
       />
     );
@@ -304,7 +350,10 @@ function SectionPage() {
           void navigate({ search: id ? { record: id } : {} });
         }}
         onOpenContact={(id) => {
-          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+          void navigate({
+            params: { workspaceId, section: "contacts" },
+            search: { record: id },
+          });
         }}
       />
     );
@@ -340,9 +389,15 @@ const sectionRoute = createRoute({
     search.section === "suppression"
       ? { section: search.section }
       : {}),
-    ...(typeof search.record === "string" && isWorkspaceId(search.record) ? { record: search.record } : {}),
-    ...(search.create === "contact" || search.create === "opportunity" ? { create: search.create } : {}),
-    ...(search.view === "overdue" || search.view === "idle" ? { view: search.view } : {}),
+    ...(typeof search.record === "string" && isWorkspaceId(search.record)
+      ? { record: search.record }
+      : {}),
+    ...(search.create === "contact" || search.create === "opportunity"
+      ? { create: search.create }
+      : {}),
+    ...(search.view === "overdue" || search.view === "idle"
+      ? { view: search.view }
+      : {}),
   }),
   component: SectionPage,
 });
@@ -355,7 +410,9 @@ const routeTree = rootRoute.addChildren([
   publicBookingRoute,
 ]);
 
-export function createAppRouter(history: RouterHistory = createBrowserHistory()) {
+export function createAppRouter(
+  history: RouterHistory = createBrowserHistory(),
+) {
   // Served under /app by the API (crm_app.api.spa).
   return createRouter({ routeTree, history, basepath: "/app" });
 }

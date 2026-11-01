@@ -459,6 +459,8 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "conversation_route",
         "conversation_route_index",
         "inbound_quarantine",
+        "campaign",
+        "campaign_recipient",
     }
     for key, record in (("company_id", company), ("contact_id", contact)):
         rows = owner_connection.execute(
