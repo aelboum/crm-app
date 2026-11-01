@@ -790,7 +790,7 @@ The UI must not imply that unsupported nodes or actions are executable.
 
 # 14. Phase 9 — AI Assistants and Knowledge
 
-**Status:** Not started.
+**Status:** Blocked on owner decisions (decision P9-0, 2026-11-01): AI provider and account, plan entitlements and token limits, and which CRM data may be sent. SaaS-OS's governed inference is verified; the first slice (contact brief) is planned.
 
 **Dependency:** Verified SaaS-OS inference capabilities or an explicitly approved product-side integration strategy.
 

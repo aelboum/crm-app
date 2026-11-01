@@ -1776,6 +1776,54 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Tests:** `tests/unit/test_email_rules.py`,
   `tests/integration/test_emails.py`, settings tests.
 
+## P9-0 — AI: what SaaS-OS provides and the decisions it waits for (2026-11-01)
+
+- **Status:** Analysis recorded under M1; implementation is blocked on the
+  owner decisions below. The owner's mission of 2026-10-31 makes Phase 9 the
+  fourth priority with "do not activate paid external services or incur
+  material external costs without authorization" and "provider-independent
+  architecture where practical". Work continues with 6.1 conversations.
+- **What SaaS-OS v0.6.0 provides (verified in the pinned source,
+  CONSUMER-GUIDE section 12a, ADR-0054 and ADR-0055):** governed,
+  non-streaming inference through `saas_os.inference.run_inference` only:
+  a product registers a `UseCase` once (a ceiling, authorising nothing),
+  then calls with a user or service-account caller, an operator-configured
+  model alias and a classification on every content part (`none`,
+  `tenant_data`, `sensitive`). Every refusal is a typed `InferenceError`
+  without content; each attempt is recorded before it is sent; usage and a
+  cost estimate come back on the result; per-tenant and installation-wide
+  concurrency limits; an optional soft monthly `ai.tokens` quota. No
+  embeddings or retrieval API is in the public surface, so knowledge
+  retrieval (9.3) would be product-side over plain text.
+- **What must be true before any request is sent, and whose decision it
+  is:**
+  1. **Provider and account (owner):** which provider (OpenAI-compatible
+     endpoints are what SaaS-OS's adapters speak), the account and its
+     cost; the credential is provisioned as a secret and listed in
+     `AI_PROVIDER_CREDENTIALS`.
+  2. **Operator setup (platform operator):** provider, model, alias and
+     the installation's destination policy per classification
+     (`saas-os-operator ai-*`), qualified per
+     `AI-PROVIDER-QUALIFICATION.md` section 3.
+  3. **Plans (owner):** which plans grant the `ai.inference` entitlement and
+     what monthly `ai.tokens` limit; whether `AI_INFERENCE_TOKEN_QUOTA_REQUIRED`
+     is on.
+  4. **Data policy (owner):** which CRM data may be sent (contact fields,
+     notes, activity, deal values) and at which classification; whether
+     `sensitive` is ever allowed; residency and retention preferences.
+  5. **Tenant controls (product, after 1-4):** enabling a workspace's AI
+     policy and granting use cases needs `ai.policy:manage`; whether the
+     product shows those controls or the operator sets them.
+- **Planned first slice once decided (9A):** one measurable use case,
+  "contact brief": a member asks for a summary of a contact and suggested
+  next steps from the contact's fields, notes and open tasks
+  (`tenant_data`); suggestions are shown, never acted on, and a member may
+  turn one into a task. No auto-send (K5). Tests run against SaaS-OS's
+  fake provider; nothing is sent to a real provider before the decisions
+  above.
+- **Not decided here:** assistants with tools, knowledge ingestion and
+  retrieval, conversation summaries (they wait for 6.1).
+
 ## P8-A — Automation engine foundation (2026-11-01, under M1)
 
 - **Status:** Decided under M1. The owner's mission of 2026-10-31 makes
