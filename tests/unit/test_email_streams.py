@@ -8,7 +8,8 @@ from crm_app.domains import email_streams as streams
 from crm_app.domains.emails import PURPOSES
 from crm_app.domains.records import InvalidValue
 
-TOKEN = "a1b2c3d4e5f6a7b8c9d0e1f2"
+# A made-up routing token for tests only.
+TOKEN = "a1b2c3d4e5f6a7b8c9d0e1f2"  # pragma: allowlist secret
 
 
 def test_every_email_purpose_belongs_to_exactly_one_stream() -> None:
