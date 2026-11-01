@@ -189,6 +189,18 @@ CONFIGURATION |= {
     f"POST {_AUTOMATION}/pause": "crm_app.automation:manage",
     f"GET {_AUTOMATION}/runs": "crm_app.automation:read",
 }
+# Conversations (decision P6-C): every role reads; Owner, Admin and Member
+# reply, log messages, add notes, assign and close.
+_CONVERSATIONS = "/v1/workspaces/{tenant_id}/conversations"
+_CONVERSATION = f"{_CONVERSATIONS}/{{conversation_id}}"
+RECORDS |= {
+    f"GET {_CONVERSATIONS}": "crm_app.conversation:read",
+    f"POST {_CONVERSATIONS}": "crm_app.conversation:reply",
+    f"GET {_CONVERSATION}": "crm_app.conversation:read",
+    f"PATCH {_CONVERSATION}": "crm_app.conversation:reply",
+    f"POST {_CONVERSATION}/messages": "crm_app.conversation:reply",
+    f"POST {_CONVERSATION}/read": "crm_app.conversation:read",
+}
 # The suppression list (decision P7-B 7): Owner, Admin and Member read;
 # Owner and Admin add and remove. A contact's email status is a contact
 # read; recording and withdrawing its consent a contact update.
@@ -349,6 +361,7 @@ def test_record_routes_follow_the_role_matrix() -> None:
             "read": set(Role),
             "create": EDITORS,
             "update": EDITORS,
+            "reply": EDITORS,
             # Q6: Members may delete tasks, not other records.
             "delete": EDITORS if resource == "crm_app.task" else {Role.OWNER, Role.ADMIN},
         }[action]

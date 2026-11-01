@@ -37,6 +37,21 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 6 slice 6C, conversations foundation (decision P6-C,
+  2026-11-01):** migration `0022_conversations` (conversation,
+  append-only conversation_message, conversation_read); the
+  `/conversations` API with `Idempotency-Key` on create and add-message;
+  new permissions `conversation:read` and `conversation:reply`; the Inbox
+  screen. An email reply is queued through `crm_app.emails` and shown as
+  "Not sent yet"; nothing leaves while `EMAIL_SENDING_ENABLED` is off.
+  Verified: `test_conversations.py` 9, `inbox.test.tsx` 5, unit 585,
+  Vitest 278, tsc, lint and build clean; full integration suite in four
+  batches (186, 164, 207, 171). Local `crm_app` at `0022_conversations`
+  (69 contacts kept). In Chrome, in a workspace provisioned for the check
+  ("E2E Inbox 6C"): a thread started by logging the contact's message, an
+  email reply queued (one `conversation_reply` email, status `queued`), an
+  internal note, assigned and closed; at 390 px the list and the thread
+  show one at a time with a back button; no overflow, no console errors.
 - **Phase 8 slice 8A.1, automation engine (decision P8-A, 2026-11-01):**
   migration `0021_automations` (automation, automation_version,
   automation_run, automation_step, global automation_due); the

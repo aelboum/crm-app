@@ -362,4 +362,7 @@ def test_the_migration_rolls_back_and_forward(
         "automation_run",
         "automation_step",
         "automation_due",
+        "conversation",
+        "conversation_message",
+        "conversation_read",
     }

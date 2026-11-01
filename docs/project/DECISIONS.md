@@ -1776,6 +1776,50 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Tests:** `tests/unit/test_email_rules.py`,
   `tests/integration/test_emails.py`, settings tests.
 
+## P6-C — Conversations foundation (2026-11-01, under M1)
+
+- **Status:** Implemented under the owner's mission of 2026-10-31 (fifth
+  priority, "6.1 Conversations": provider-neutral, no email sending or
+  receiving assumptions in the core model).
+- **Model (migration `0022_conversations`):** `conversation` (one thread
+  with one contact on the `email` channel or `other`, a subject, `open` or
+  `closed`, an assignee, the time of the last message), append-only
+  `conversation_message` (`inbound`, `outbound` or `note`, plain text up to
+  20,000 characters, the author, and for an email reply the
+  `email_message` it queued) and `conversation_read` (when each member last
+  read a thread). Forced Row-Level Security; in the purge. No column names
+  a provider.
+- **Behaviour:**
+  1. Inbound messages are logged by a member: no provider delivers inbound
+     email yet (inbound email remains an open owner decision, P6-E).
+  2. An `outbound` message is allowed only on an email thread and queues
+     one email through `crm_app.emails` (purpose `conversation_reply`) to
+     the contact's address; the message's delivery state is that email's
+     status. While `EMAIL_SENDING_ENABLED` is off nothing leaves and the
+     screen says "Not sent yet"; nothing ever shows a queued message as
+     sent. Suppression is enforced when the email is sent (P6-E).
+  3. Creating a thread and adding a message accept an `Idempotency-Key`
+     (per member), so a retried request never queues a second email.
+  4. A new inbound or outbound message reopens a closed thread; a note
+     does not. Unread means a non-note message by someone else after the
+     member last opened the thread.
+  5. Assignment is to an active member of the workspace; assign, close and
+     reopen need `If-Match`. Deleting the contact keeps the thread
+     without its contact.
+- **Permissions:** new `crm_app.conversation:read` (every role) and
+  `crm_app.conversation:reply` (Owner, Admin, Member). As with every new
+  permission, workspaces created before this change lack the grants
+  until their roles are updated (gate G7).
+  Audit entries name ids, kinds and fields, never message text.
+- **Screen:** the Inbox (`/inbox`, `ScreenConversations`): list by status
+  and assignment with unread marks, the thread with the contact link,
+  assignee and close/reopen, a composer for an email reply, a logged
+  message or an internal note, and a new-conversation dialog. Phones show
+  the list or the thread.
+- **Not built:** text search across threads; SMS, WhatsApp and voice
+  (deferred, K5); inbound email; attachments; the design's suggested
+  reply (Phase 9, blocked by P9-0); bulk actions.
+
 ## P9-0 — AI: what SaaS-OS provides and the decisions it waits for (2026-11-01)
 
 - **Status:** Analysis recorded under M1; implementation is blocked on the

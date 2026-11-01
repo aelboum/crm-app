@@ -24,6 +24,7 @@ import { ContactsPage } from "./records/ContactsPage";
 import { CalendarPage } from "./records/CalendarPage";
 import { DashboardPage } from "./records/DashboardPage";
 import { AutomationsPage } from "./records/AutomationsPage";
+import { InboxPage } from "./records/InboxPage";
 import { ReportsPage } from "./records/ReportsPage";
 import { FormsPage } from "./records/FormsPage";
 import { OpportunitiesPage } from "./records/OpportunitiesPage";
@@ -177,6 +178,16 @@ function SectionPage() {
   const openRecord = (next: string | null) => {
     void navigate({ search: next ? { record: next } : {} });
   };
+  if (slug === "inbox") {
+    return (
+      <InboxPage
+        workspaceId={workspaceId}
+        onOpenContact={(id) => {
+          void navigate({ params: { workspaceId, section: "contacts" }, search: { record: id } });
+        }}
+      />
+    );
+  }
   if (slug === "automations") {
     return (
       <AutomationsPage

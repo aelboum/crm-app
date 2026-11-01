@@ -255,6 +255,8 @@ check" is enforced by product code in addition to the permission.
 | `crm_app.form:manage` | ✓ | ✓ | – | – | A | A published form lets anyone create contacts; rate-limited; added by P7-A |
 | `crm_app.booking_page:read` | ✓ | ✓ | ✓ | ✓ | R | Booking pages; added by P5-C |
 | `crm_app.booking_page:manage` | ✓ | ✓ | – | – | A | A published booking page lets anyone create contacts and appointments; rate-limited; added by P5-C |
+| `crm_app.conversation:read` | ✓ | ✓ | ✓ | ✓ | R | Conversations and their messages; added by P6-C |
+| `crm_app.conversation:reply` | ✓ | ✓ | ✓ | – | U | Reply, log a message, add a note, assign and close; added by P6-C |
 | `crm_app.automation:read` | ✓ | ✓ | ✓ | ✓ | R | Automations and their runs; added by P8-A |
 | `crm_app.automation:manage` | ✓ | ✓ | – | – | A | An active automation changes contacts and creates tasks without a member acting; added by P8-A |
 | `crm_app.suppression:read` | ✓ | ✓ | ✓ | – | R | The suppression list; added by P7-B |

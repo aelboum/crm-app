@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0021_automations` own the
+Migrations `0002_contacts_companies` to `0022_conversations` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -818,3 +818,51 @@ class AutomationDue(Base):
     run_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     workspace_id: Mapped[uuid.UUID] = mapped_column()
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Conversation(Base):
+    """A thread with one contact on one channel (migration 0022, P6-C)."""
+
+    __tablename__ = "conversation"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    channel: Mapped[str] = mapped_column(Text)
+    subject: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    assignee_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    last_message_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class ConversationMessage(Base):
+    """One message of a thread: inbound, outbound or a note (append-only)."""
+
+    __tablename__ = "conversation_message"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    conversation_id: Mapped[uuid.UUID] = mapped_column()
+    kind: Mapped[str] = mapped_column(Text)
+    body: Mapped[str] = mapped_column(Text)
+    author_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    email_message_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ConversationRead(Base):
+    """When a member last read a thread."""
+
+    __tablename__ = "conversation_read"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

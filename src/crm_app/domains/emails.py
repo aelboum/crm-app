@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 
 from crm_app.domains.records import InvalidValue, email
 
-PURPOSES = ("booking_confirmation", "test")
+PURPOSES = ("booking_confirmation", "test", "conversation_reply")
 SUBJECT_MAX = 200
 BODY_MAX = 20_000
 # Tries before a message counts as failed; each try may itself be retried

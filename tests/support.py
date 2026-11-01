@@ -102,6 +102,10 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "automation_run",
         "automation_step",
         "automation_due",
+        # P6-C (conversations).
+        "conversation",
+        "conversation_message",
+        "conversation_read",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -122,6 +126,7 @@ APPEND_ONLY_TABLES: frozenset[str] = frozenset(
         "email_event",
         "automation_version",
         "automation_step",
+        "conversation_message",
     }
 )
 

@@ -60,7 +60,7 @@ export const GROUPS: Group[] = [
     label: null,
     sections: [
       built("home", "nav.home", House),
-      soon("inbox", "nav.inbox", Inbox, "soon.inbox"),
+      built("inbox", "nav.inbox", Inbox),
     ],
   },
   {

@@ -910,6 +910,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations_v1_workspaces__tenant_id__conversations_get"];
+        put?: never;
+        /** Create Conversation */
+        post: operations["create_conversation_v1_workspaces__tenant_id__conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["get_conversation_v1_workspaces__tenant_id__conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Conversation */
+        patch: operations["update_conversation_v1_workspaces__tenant_id__conversations__conversation_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Conversation Message */
+        post: operations["add_conversation_message_v1_workspaces__tenant_id__conversations__conversation_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/conversations/{conversation_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Conversation Read */
+        post: operations["mark_conversation_read_v1_workspaces__tenant_id__conversations__conversation_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/custom-fields": {
         parameters: {
             query?: never;
@@ -2569,6 +2639,124 @@ export interface components {
             /** Source */
             source?: string | null;
         };
+        /** ConversationIn */
+        ConversationIn: {
+            /** Body */
+            body: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "email" | "other";
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "inbound" | "outbound" | "note";
+            /** Subject */
+            subject: string;
+        };
+        /** ConversationList */
+        ConversationList: {
+            /** Items */
+            items: components["schemas"]["ConversationSummary"][];
+        };
+        /** ConversationOut */
+        ConversationOut: {
+            /** Assignee User Id */
+            assignee_user_id: string | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "email" | "other";
+            /** Contact Email */
+            contact_email: string | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /** Contact Name */
+            contact_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Message At
+             * Format: date-time
+             */
+            last_message_at: string;
+            /** Messages */
+            messages: components["schemas"]["MessageOut"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            /** Subject */
+            subject: string;
+            /** Unread */
+            unread: boolean;
+            /** Version */
+            version: number;
+        };
+        /** ConversationPatch */
+        ConversationPatch: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Status */
+            status?: ("open" | "closed") | null;
+        };
+        /** ConversationSummary */
+        ConversationSummary: {
+            /** Assignee User Id */
+            assignee_user_id: string | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "email" | "other";
+            /** Contact Id */
+            contact_id: string | null;
+            /** Contact Name */
+            contact_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Message At
+             * Format: date-time
+             */
+            last_message_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            /** Subject */
+            subject: string;
+            /** Unread */
+            unread: boolean;
+            /** Version */
+            version: number;
+        };
         /** Count */
         Count: {
             /** Count */
@@ -3205,6 +3393,40 @@ export interface components {
             offset: number;
             /** Total */
             total: number;
+        };
+        /** MessageIn */
+        MessageIn: {
+            /** Body */
+            body: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "inbound" | "outbound" | "note";
+        };
+        /** MessageOut */
+        MessageOut: {
+            /** Author User Id */
+            author_user_id: string | null;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delivery */
+            delivery: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "inbound" | "outbound" | "note";
         };
         /** NoteIn */
         NoteIn: {
@@ -6549,6 +6771,225 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ContactOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_conversations_v1_workspaces__tenant_id__conversations_get: {
+        parameters: {
+            query?: {
+                status?: "open" | "closed";
+                assigned?: "all" | "mine" | "unassigned";
+                contact_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_conversation_v1_workspaces__tenant_id__conversations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_conversation_v1_workspaces__tenant_id__conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                conversation_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_conversation_v1_workspaces__tenant_id__conversations__conversation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                conversation_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_conversation_message_v1_workspaces__tenant_id__conversations__conversation_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                conversation_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_conversation_read_v1_workspaces__tenant_id__conversations__conversation_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                conversation_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

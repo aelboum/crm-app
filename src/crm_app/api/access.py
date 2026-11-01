@@ -84,6 +84,10 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "read_suppressions": ("crm_app.suppression", "read"),
     "manage_suppressions": ("crm_app.suppression", "manage"),
     # Automations (decision P8-A): every role reads; Owner and Admin manage.
+    # Conversations (decision P6-C): every role reads; Owner, Admin and
+    # Member reply, log messages, add notes, assign and close.
+    "read_conversations": ("crm_app.conversation", "read"),
+    "reply_conversations": ("crm_app.conversation", "reply"),
     "read_automations": ("crm_app.automation", "read"),
     "manage_automations": ("crm_app.automation", "manage"),
 }
