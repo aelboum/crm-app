@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Eye,
   Kanban,
+  AtSign,
   Globe,
   MailX,
   ListPlus,
@@ -35,6 +36,7 @@ import { BusinessSettings } from "./BusinessSettings";
 import { FieldSettings } from "./FieldSettings";
 import { PipelineSettings } from "./PipelineSettings";
 import { DomainSettings } from "./DomainSettings";
+import { SendingDomainSettings } from "./SendingDomainSettings";
 import { SuppressionSettings } from "./SuppressionSettings";
 import { TagSettings } from "./TagSettings";
 import { type Invitation, useInvitations } from "../api/invitations";
@@ -439,6 +441,7 @@ const SETTINGS_NAV: { group: MessageId; items: { id: string; label: MessageId; i
       { id: "pipeline", label: "settings.pipeline", icon: Kanban },
       { id: "suppression", label: "settings.suppression", icon: MailX },
       { id: "domains", label: "settings.domains", icon: Globe },
+      { id: "sending", label: "settings.sending", icon: AtSign },
       { id: "ai", label: "settings.ai", icon: Sparkles },
       { id: "integrations", label: "settings.integrations", icon: Plug },
       { id: "appearance", label: "settings.appearance", icon: Palette },
@@ -455,7 +458,8 @@ export type SettingsSection =
   | "fields"
   | "pipeline"
   | "suppression"
-  | "domains";
+  | "domains"
+  | "sending";
 const BUILT_SECTIONS: readonly string[] = [
   "team",
   "profile",
@@ -465,6 +469,7 @@ const BUILT_SECTIONS: readonly string[] = [
   "pipeline",
   "suppression",
   "domains",
+  "sending",
 ];
 
 const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId }> = {
@@ -476,6 +481,7 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
   pipeline: { title: "settings.pipeline", desc: "settings.pipelineDesc" },
   suppression: { title: "settings.suppression", desc: "settings.suppressionDesc" },
   domains: { title: "settings.domains", desc: "settings.domainsDesc" },
+  sending: { title: "settings.sending", desc: "settings.sendingDesc" },
 };
 
 /**
@@ -635,6 +641,12 @@ export function SettingsPage({
           ) : null}
           {access.data && section === "domains" ? (
             <DomainSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />
+          ) : null}
+          {access.data && section === "sending" ? (
+            <SendingDomainSettings
+              workspaceId={workspaceId}
+              canEdit={access.data.actions.update_workspace === true}
+            />
           ) : null}
           {access.data && section === "tags" ? (
             <TagSettings workspaceId={workspaceId} canEdit={access.data.actions.update_workspace === true} />

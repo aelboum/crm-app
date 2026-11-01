@@ -374,4 +374,7 @@ def test_the_migration_rolls_back_and_forward(
         "website",
         "custom_domain",
         "custom_domain_index",
+        "sending_domain",
+        "sending_domain_index",
+        "sender_identity",
     }

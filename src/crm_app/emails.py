@@ -61,7 +61,7 @@ from saas_os.infra.ratelimit import (
     get_ratelimit_config,
 )
 
-from crm_app import suppression
+from crm_app import sending_domains, suppression
 from crm_app.domains import email_streams as streams
 from crm_app.domains import emails as rules
 from crm_app.models import EmailEvent, EmailIndex, EmailMessage
@@ -78,6 +78,7 @@ RESOURCE = "crm_app.email"
 JOB_NAME = "crm_app_email_send"
 RETRY_DELAY = timedelta(minutes=10)
 RATE_WINDOW_SECONDS = 60
+SENDER_WAIT_SECONDS = 3600
 _ERROR_CODE = re.compile(r"[^a-z0-9_]+")
 
 
@@ -146,10 +147,15 @@ def queue(  # noqa: PLR0913 - one email's fields
                 email_message_id=email_id, workspace_id=scope.workspace, retry_at=now + RETRY_DELAY
             )
         )
+    # The workspace's own sender for conversation and campaign mail, when it
+    # has a usable default (decision P6-D); kept with the email.
+    own = sending_domains.default_sender(session, scope.workspace, streams.stream_of(purpose))
     row = EmailMessage(
         id=email_id,
         tenant_id=scope.workspace,
         purpose=purpose,
+        sender_identity_id=own[0] if own else None,
+        sender_address=own[1] if own else None,
         to_email=content.to_email,
         contact_id=contact_id,
         subject=content.subject,
@@ -264,7 +270,22 @@ def _claim(  # noqa: PLR0911 - one answer per state
             row.last_error = row.last_error or "attempts_exhausted"
             _audit(session, row, "failed", error=row.last_error)
             return "failed"
-        sender = stream_sender(stream)
+        if row.sender_identity_id is not None and row.sender_address is not None:
+            # Queued with the workspace's own address: sent from it only while
+            # it is still usable, never from another one (decision P6-D).
+            if not sending_domains.sender_valid(
+                session, workspace, row.sender_identity_id, row.sender_address, stream
+            ):
+                until = now + timedelta(seconds=SENDER_WAIT_SECONDS)
+                row.next_attempt_at, row.last_error, row.updated_at = (
+                    until,
+                    "sender_unverified",
+                    now,
+                )
+                return _Wait(until, "sender_unverified")
+            sender: str | None = row.sender_address
+        else:
+            sender = stream_sender(stream)
         if not sender:
             return "no_sender"
         wait = _rate_wait(workspace, stream)

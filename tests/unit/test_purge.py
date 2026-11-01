@@ -173,6 +173,7 @@ def test_global_tables_naming_a_workspace_are_removed_by_the_participant() -> No
         "inbound_email",
         "conversation_route_index",
         "custom_domain_index",
+        "sending_domain_index",
     )
     assert frozenset(PURGE_GLOBAL_REFERENCES) <= GLOBAL_TABLES
 

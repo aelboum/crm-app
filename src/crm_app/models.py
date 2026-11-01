@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0028_custom_domains` own the
+Migrations `0002_contacts_companies` to `0029_sending_domains` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -710,6 +710,9 @@ class EmailMessage(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The workspace's own sender, when one was chosen (migration 0029, P6-D).
+    sender_identity_id: Mapped[uuid.UUID | None] = mapped_column()
+    sender_address: Mapped[str | None] = mapped_column(Text)
 
 
 class EmailEvent(Base):
@@ -1055,3 +1058,57 @@ class CustomDomainIndex(Base):
     hostname: Mapped[str] = mapped_column(Text)
     workspace_id: Mapped[uuid.UUID] = mapped_column()
     verified: Mapped[bool] = mapped_column(Boolean)
+
+
+class SendingDomain(Base):
+    """A domain a workspace sends from, as the provider reports it
+    (migration 0029, P6-D)."""
+
+    __tablename__ = "sending_domain"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    domain: Mapped[str] = mapped_column(Text)
+    provider_id: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    records: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class SendingDomainIndex(Base):
+    """Which workspace a sending domain belongs to; global (migration 0029)."""
+
+    __tablename__ = "sending_domain_index"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    domain: Mapped[str] = mapped_column(Text, primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column()
+    sending_domain_id: Mapped[uuid.UUID] = mapped_column()
+    provider_id: Mapped[str | None] = mapped_column(Text)
+
+
+class SenderIdentity(Base):
+    """An address on a workspace's sending domain (migration 0029)."""
+
+    __tablename__ = "sender_identity"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    sending_domain_id: Mapped[uuid.UUID] = mapped_column()
+    address: Mapped[str] = mapped_column(Text)
+    for_conversation: Mapped[bool] = mapped_column(Boolean)
+    for_campaign: Mapped[bool] = mapped_column(Boolean)
+    default_conversation: Mapped[bool] = mapped_column(Boolean)
+    default_campaign: Mapped[bool] = mapped_column(Boolean)
+    status: Mapped[str] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)

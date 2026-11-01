@@ -359,6 +359,8 @@ STREAM_FLAGS: Mapping[streams.Stream, str] = {
     streams.Stream.CAMPAIGN: "EMAIL_CAMPAIGN_SENDING_ENABLED",
 }
 INBOUND_FLAG = "EMAIL_INBOUND_ENABLED"
+# Creating customer domains at Resend (decision P6-D); refused in production.
+CUSTOMER_DOMAINS_FLAG = "EMAIL_CUSTOMER_DOMAINS_ENABLED"
 
 
 def _stream_setting(stream: streams.Stream, what: str) -> str:
@@ -419,6 +421,14 @@ def stream_limits(stream: streams.Stream, env: Mapping[str, str] | None = None) 
 
 def _check_email_streams(env: Mapping[str, str], *, production: bool) -> list[str]:
     problems, parent_ok = _check_email_identity(env)
+    customer = _flag(env, CUSTOMER_DOMAINS_FLAG)
+    if customer is None:
+        problems.append(f"{CUSTOMER_DOMAINS_FLAG} must be true or false.")
+    elif customer and production:
+        problems.append(
+            f"{CUSTOMER_DOMAINS_FLAG}=true is refused in production: creating Resend"
+            " configuration is not authorized (docs/project/EMAIL-ARCHITECTURE.md)."
+        )
     for flag in (*STREAM_FLAGS.values(), INBOUND_FLAG):
         value = _flag(env, flag)
         if value is None:

@@ -34,11 +34,12 @@ from saas_os.api.errors import route_not_found
 from saas_os.api.route_policy import public_route
 from saas_os.infra.secrets import get_secrets_provider
 
-from crm_app import emails, inbound
+from crm_app import emails, inbound, sending_domains
 from crm_app.api.forms import _limited
 from crm_app.api.inputs import parse_json, raw_body
 from crm_app.domains import emails as rules
 from crm_app.domains import inbound as inbound_rules
+from crm_app.domains import sending_domains as domain_rules
 from crm_app.settings import inbound_enabled
 
 public_router = APIRouter(prefix="/v1/public/email", tags=["email webhooks"])
@@ -95,6 +96,14 @@ async def resend_events(request: Request) -> Response:
     event = rules.provider_event(event_id, payload)
     if event is not None:
         await run_in_threadpool(emails.apply_event, event)
+        return Response(status_code=204)
+    # A customer domain's state (decision P6-D); malformed ones are ignored.
+    try:
+        domain_event = domain_rules.domain_event(payload)
+    except domain_rules.ProviderAnswerError:
+        domain_event = None
+    if domain_event is not None:
+        await run_in_threadpool(sending_domains.apply_event, domain_event)
     return Response(status_code=204)
 
 

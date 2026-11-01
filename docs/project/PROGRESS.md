@@ -37,6 +37,20 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 6 slice 6D, customer-owned sending domains (decision P6-D,
+  2026-11-01):** migration `0029_sending_domains` (sending_domain, global
+  sending_domain_index, sender_identity; `email_message.sender_identity_id`
+  and `sender_address`); `/sending-domains` and `/sender-identities` API
+  (workspace permissions); Resend Domains adapter (POST create and verify,
+  off by default, refused in production); signed `domain.*` events;
+  Settings › Sending domains. Verified: `test_sending_domains.py`
+  (no provider, refusals, exact records, one workspace per domain,
+  identities, verification by signed event, sending from the workspace's
+  address, waiting after a failure, isolation, removal), unit
+  `test_sending_domain_rules.py` 15 (with the Resend adapter),
+  `sendingDomainSettings.test.tsx` 3; unit suite 709; full integration
+  suite in four batches, 786 passed (196, 195, 221, 174); Vitest 302,
+  lint and build clean.
 - **Phase 12 slice 12D, custom domains (decision P12-D, 2026-11-01):**
   migration `0028_custom_domains` (custom_domain, global
   custom_domain_index); `/domains` API (workspace permissions), public

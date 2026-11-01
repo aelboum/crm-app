@@ -1518,3 +1518,12 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .domain-record dd { margin: 0; }
 .domain-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .domain-form .field { flex: 1 1 260px; }
+
+/* Sending domains (P6-D) */
+.sending-domain { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 8px; overflow-wrap: anywhere; }
+.sending-records { width: 100%; border-collapse: collapse; font-size: 0.85rem; display: block; overflow-x: auto; }
+.sending-records th, .sending-records td { text-align: left; padding: 4px 8px 4px 0; vertical-align: top; }
+.sending-identities { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sending-identity { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sending-identity-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.sending-identity-form .field { flex: 1 1 200px; }

@@ -1820,6 +1820,49 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
 
+## P6-D — Customer-owned sending domains and sender identities (2026-11-01)
+
+- **Status:** Implemented under the owner's requirement of 2026-11-01
+  ("Customer-owned outbound email: a workspace must be able to send through
+  Resend using its own verified business email identities ... Never permit
+  a workspace to impersonate an unverified or another workspace's domain.
+  Do not assume domain ownership or create DNS records"). No domain is
+  created at Resend unless `EMAIL_CUSTOMER_DOMAINS_ENABLED` is on, which is
+  refused in production.
+- **Domains:** Owners and Admins (`crm_app.workspace:update`) register a
+  domain (at most 10); every role sees them. A plain, non-reserved domain,
+  never LeadStack's own email parent domain or a name under it. A domain
+  belongs to at most one workspace on the platform (global
+  `sending_domain_index`, migration `0029_sending_domains`); removal frees
+  it at once.
+- **Records come from Resend only:** with the provider on, registering calls
+  Resend's `POST /domains` (sending only) and stores exactly the records it
+  returns; "Verify" calls `POST /domains/{id}/verify`; the result arrives as
+  Resend's signed `domain.created|updated|deleted` events on the existing
+  delivery webhook, checked like every event. Without a provider the
+  domain is kept `not_registered` with `provider_unavailable`, and nothing
+  is invented. The adapter uses SaaS-OS's egress client (POST only), so the
+  product cannot read or delete a Resend domain: a removed domain is left at
+  Resend for an operator (`saas-os-gaps.md`, items 2 and 3).
+- **Sender identities:** addresses on the workspace's own domains (no `+`,
+  no display name), allowed for conversation mail, campaign mail or both,
+  one default per stream. An identity is usable only while it is active
+  and its domain's provider state is `verified`.
+- **Sending:** a conversation or campaign email is queued with the
+  workspace's default identity for its stream when that identity is usable,
+  otherwise with none (LeadStack's stream sender). An email queued with an
+  identity is sent only from that address and only while it is still
+  usable; otherwise it waits (`sender_unverified`) and is never sent from
+  another address. Transactional email always uses the platform's sender.
+- **Verification expiry:** a domain the provider later reports as failed
+  (or deleted) stops its identities at once.
+- **Not built:** reply-to per identity (replies route through the
+  conversation's routing address), display names (SaaS-OS), periodic
+  re-checks without webhooks (no GET in the egress client).
+- **Verified:** `tests/integration/test_sending_domains.py`,
+  `tests/unit/test_sending_domain_rules.py` (including the Resend adapter
+  against a test egress client), `frontend/src/pages/sendingDomainSettings.test.tsx`.
+
 ## P12-D — Custom domains for hosted pages: ownership and mapping (2026-11-01)
 
 - **Status:** Implemented under the owner's requirement of 2026-11-01

@@ -140,7 +140,7 @@ each one gets its own decision entry, tests and documentation.
    audience; any change after approval returns the campaign to draft.
    Sending stays disabled: no campaign can be sent until the campaign
    stream is activated, which also needs `List-Unsubscribe` support.
-3. **Customer-owned sending domains.** A workspace registers its own
+3. **Customer-owned sending domains — built (P6-D)**; creating domains at Resend is off unless `EMAIL_CUSTOMER_DOMAINS_ENABLED` (refused in production). A workspace registers its own
    domain through the Resend Domains API (product adapter), is shown the
    exact records Resend returns, verifies, and then adds sender identities
    on that domain. A workspace can only send from a domain it registered
@@ -168,6 +168,7 @@ each one gets its own decision entry, tests and documentation.
 | `EMAIL_<STREAM>_WORKSPACE_PER_MINUTE`, `EMAIL_<STREAM>_GLOBAL_PER_MINUTE` | whole number ≥ 1 | see §2 | `<STREAM>` is `TRANSACTIONAL`, `CONVERSATION` or `CAMPAIGN`. |
 | `EMAIL_DEFAULT_SENDER` | address | unset | Transactional fallback without a parent domain (development). |
 | `EMAIL_PROVIDER` | SaaS-OS | smtp | `resend` for Resend; `mailpit` locally. |
+| `EMAIL_CUSTOMER_DOMAINS_ENABLED` | flag | off | Creates customer domains at Resend (P6-D); refused in production. |
 | `RESEND_API_KEY` | secret | unset | Secrets provider only. |
 | `RESEND_WEBHOOK_SECRET` | secret | unset | Delivery events webhook; 404 until set. |
 | `RESEND_INBOUND_WEBHOOK_SECRET` | secret | unset | Inbound webhook (P6-I); 404 until set and `EMAIL_INBOUND_ENABLED`. |

@@ -1917,6 +1917,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/sender-identities/{identity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Sender Identity */
+        delete: operations["remove_sender_identity_v1_workspaces__tenant_id__sender_identities__identity_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Sender Identity */
+        patch: operations["update_sender_identity_v1_workspaces__tenant_id__sender_identities__identity_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/sending-domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sending Domains */
+        get: operations["list_sending_domains_v1_workspaces__tenant_id__sending_domains_get"];
+        put?: never;
+        /** Add Sending Domain */
+        post: operations["add_sending_domain_v1_workspaces__tenant_id__sending_domains_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/sending-domains/{domain_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Sending Domain */
+        delete: operations["remove_sending_domain_v1_workspaces__tenant_id__sending_domains__domain_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/sending-domains/{domain_id}/identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Sender Identity */
+        post: operations["add_sender_identity_v1_workspaces__tenant_id__sending_domains__domain_id__identities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/sending-domains/{domain_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Sending Domain */
+        post: operations["verify_sending_domain_v1_workspaces__tenant_id__sending_domains__domain_id__verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/settings": {
         parameters: {
             query?: never;
@@ -3503,11 +3590,6 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** DomainIn */
-        DomainIn: {
-            /** Hostname */
-            hostname: string;
-        };
         /** DomainList */
         DomainList: {
             /** Items */
@@ -3712,6 +3794,71 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** IdentityIn */
+        IdentityIn: {
+            /**
+             * Default Campaign
+             * @default false
+             */
+            default_campaign: boolean;
+            /**
+             * Default Conversation
+             * @default false
+             */
+            default_conversation: boolean;
+            /**
+             * For Campaign
+             * @default false
+             */
+            for_campaign: boolean;
+            /**
+             * For Conversation
+             * @default false
+             */
+            for_conversation: boolean;
+            /** Local Part */
+            local_part: string;
+        };
+        /** IdentityOut */
+        IdentityOut: {
+            /** Address */
+            address: string;
+            /** Default Campaign */
+            default_campaign: boolean;
+            /** Default Conversation */
+            default_conversation: boolean;
+            /** For Campaign */
+            for_campaign: boolean;
+            /** For Conversation */
+            for_conversation: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "disabled";
+            /** Usable */
+            usable: boolean;
+            /** Version */
+            version: number;
+        };
+        /** IdentityPatch */
+        IdentityPatch: {
+            /** Default Campaign */
+            default_campaign?: boolean | null;
+            /** Default Conversation */
+            default_conversation?: boolean | null;
+            /** For Campaign */
+            for_campaign?: boolean | null;
+            /** For Conversation */
+            for_conversation?: boolean | null;
+            /** Status */
+            status?: ("active" | "disabled") | null;
         };
         /** ImportList */
         ImportList: {
@@ -4154,6 +4301,23 @@ export interface components {
             /** Stage To */
             stage_to: string | null;
         };
+        /** RecordOut */
+        RecordOut: {
+            /** Name */
+            name: string;
+            /** Priority */
+            priority: number | null;
+            /** Record */
+            record: string;
+            /** Status */
+            status: string;
+            /** Ttl */
+            ttl: string | null;
+            /** Type */
+            type: string;
+            /** Value */
+            value: string;
+        };
         /** RejectIn */
         RejectIn: {
             /** Note */
@@ -4296,6 +4460,43 @@ export interface components {
             stages: string[];
             /** Tag Ids */
             tag_ids: string[];
+        };
+        /** SendingDomainList */
+        SendingDomainList: {
+            /** Items */
+            items: components["schemas"]["SendingDomainOut"][];
+            /** Provider Configured */
+            provider_configured: boolean;
+        };
+        /** SendingDomainOut */
+        SendingDomainOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Domain */
+            domain: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Identities */
+            identities: components["schemas"]["IdentityOut"][];
+            /** Last Error */
+            last_error: string | null;
+            /** Records */
+            records: components["schemas"]["RecordOut"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_registered" | "not_started" | "pending" | "verified" | "failed" | "temporary_failure" | "unknown";
+            /** Version */
+            version: number;
         };
         /** SettingsOut */
         SettingsOut: {
@@ -4859,6 +5060,16 @@ export interface components {
             name: string;
             /** Status */
             status: string;
+        };
+        /** DomainIn */
+        crm_app__api__custom_domains__DomainIn: {
+            /** Hostname */
+            hostname: string;
+        };
+        /** DomainIn */
+        crm_app__api__sending_domains__DomainIn: {
+            /** Domain */
+            domain: string;
         };
     };
     responses: never;
@@ -8414,7 +8625,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DomainIn"];
+                "application/json": components["schemas"]["crm_app__api__custom_domains__DomainIn"];
             };
         };
         responses: {
@@ -10046,6 +10257,252 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_sender_identity_v1_workspaces__tenant_id__sender_identities__identity_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                identity_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_sender_identity_v1_workspaces__tenant_id__sender_identities__identity_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                identity_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IdentityPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdentityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sending_domains_v1_workspaces__tenant_id__sending_domains_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendingDomainList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_sending_domain_v1_workspaces__tenant_id__sending_domains_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["crm_app__api__sending_domains__DomainIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendingDomainOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_sending_domain_v1_workspaces__tenant_id__sending_domains__domain_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                domain_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_sender_identity_v1_workspaces__tenant_id__sending_domains__domain_id__identities_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                domain_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IdentityIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdentityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_sending_domain_v1_workspaces__tenant_id__sending_domains__domain_id__verify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                domain_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendingDomainOut"];
                 };
             };
             /** @description Validation Error */

@@ -27,6 +27,23 @@ EXPECTED = {
     # Owner and Admin.
     "GET /v1/workspaces/{tenant_id}/settings": "crm_app.workspace:read",
     "PATCH /v1/workspaces/{tenant_id}/settings": "crm_app.workspace:update",
+    # Sending domains and identities (P6-D): read for every role, change
+    # for Owner and Admin.
+    "GET /v1/workspaces/{tenant_id}/sending-domains": "crm_app.workspace:read",
+    "POST /v1/workspaces/{tenant_id}/sending-domains": "crm_app.workspace:update",
+    "POST /v1/workspaces/{tenant_id}/sending-domains/{domain_id}/verify": (
+        "crm_app.workspace:update"
+    ),
+    "DELETE /v1/workspaces/{tenant_id}/sending-domains/{domain_id}": "crm_app.workspace:update",
+    "POST /v1/workspaces/{tenant_id}/sending-domains/{domain_id}/identities": (
+        "crm_app.workspace:update"
+    ),
+    "PATCH /v1/workspaces/{tenant_id}/sender-identities/{identity_id}": (
+        "crm_app.workspace:update"
+    ),
+    "DELETE /v1/workspaces/{tenant_id}/sender-identities/{identity_id}": (
+        "crm_app.workspace:update"
+    ),
     # Custom domains (P12-D): read for every role, change for Owner and Admin.
     "GET /v1/workspaces/{tenant_id}/domains": "crm_app.workspace:read",
     "POST /v1/workspaces/{tenant_id}/domains": "crm_app.workspace:update",

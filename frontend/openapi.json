@@ -4500,21 +4500,6 @@
         "title": "DirectoryEntry",
         "type": "object"
       },
-      "DomainIn": {
-        "additionalProperties": false,
-        "properties": {
-          "hostname": {
-            "maxLength": 300,
-            "title": "Hostname",
-            "type": "string"
-          }
-        },
-        "required": [
-          "hostname"
-        ],
-        "title": "DomainIn",
-        "type": "object"
-      },
       "DomainList": {
         "properties": {
           "items": {
@@ -5205,6 +5190,165 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IdentityIn": {
+        "additionalProperties": false,
+        "properties": {
+          "default_campaign": {
+            "default": false,
+            "title": "Default Campaign",
+            "type": "boolean"
+          },
+          "default_conversation": {
+            "default": false,
+            "title": "Default Conversation",
+            "type": "boolean"
+          },
+          "for_campaign": {
+            "default": false,
+            "title": "For Campaign",
+            "type": "boolean"
+          },
+          "for_conversation": {
+            "default": false,
+            "title": "For Conversation",
+            "type": "boolean"
+          },
+          "local_part": {
+            "maxLength": 100,
+            "title": "Local Part",
+            "type": "string"
+          }
+        },
+        "required": [
+          "local_part"
+        ],
+        "title": "IdentityIn",
+        "type": "object"
+      },
+      "IdentityOut": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "default_campaign": {
+            "title": "Default Campaign",
+            "type": "boolean"
+          },
+          "default_conversation": {
+            "title": "Default Conversation",
+            "type": "boolean"
+          },
+          "for_campaign": {
+            "title": "For Campaign",
+            "type": "boolean"
+          },
+          "for_conversation": {
+            "title": "For Conversation",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usable": {
+            "title": "Usable",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "for_conversation",
+          "for_campaign",
+          "default_conversation",
+          "default_campaign",
+          "status",
+          "usable",
+          "version"
+        ],
+        "title": "IdentityOut",
+        "type": "object"
+      },
+      "IdentityPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "default_campaign": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Campaign"
+          },
+          "default_conversation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Conversation"
+          },
+          "for_campaign": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "For Campaign"
+          },
+          "for_conversation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "For Conversation"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "disabled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "IdentityPatch",
         "type": "object"
       },
       "ImportList": {
@@ -6372,6 +6516,63 @@
         "title": "RecentActivityOut",
         "type": "object"
       },
+      "RecordOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "record": {
+            "title": "Record",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "ttl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttl"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record",
+          "type",
+          "name",
+          "value",
+          "ttl",
+          "priority",
+          "status"
+        ],
+        "title": "RecordOut",
+        "type": "object"
+      },
       "RejectIn": {
         "additionalProperties": false,
         "properties": {
@@ -6781,6 +6982,112 @@
           "all_contacts"
         ],
         "title": "SegmentOut",
+        "type": "object"
+      },
+      "SendingDomainList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SendingDomainOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "provider_configured": {
+            "title": "Provider Configured",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "provider_configured"
+        ],
+        "title": "SendingDomainList",
+        "type": "object"
+      },
+      "SendingDomainOut": {
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "identities": {
+            "items": {
+              "$ref": "#/components/schemas/IdentityOut"
+            },
+            "title": "Identities",
+            "type": "array"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/RecordOut"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "not_registered",
+              "not_started",
+              "pending",
+              "verified",
+              "failed",
+              "temporary_failure",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "status",
+          "records",
+          "last_error",
+          "checked_at",
+          "created_at",
+          "version",
+          "identities"
+        ],
+        "title": "SendingDomainOut",
         "type": "object"
       },
       "SettingsOut": {
@@ -8491,6 +8798,36 @@
           "status"
         ],
         "title": "Workspace",
+        "type": "object"
+      },
+      "crm_app__api__custom_domains__DomainIn": {
+        "additionalProperties": false,
+        "properties": {
+          "hostname": {
+            "maxLength": 300,
+            "title": "Hostname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hostname"
+        ],
+        "title": "DomainIn",
+        "type": "object"
+      },
+      "crm_app__api__sending_domains__DomainIn": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "maxLength": 300,
+            "title": "Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "title": "DomainIn",
         "type": "object"
       }
     }
@@ -16299,7 +16636,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DomainIn"
+                "$ref": "#/components/schemas/crm_app__api__custom_domains__DomainIn"
               }
             }
           },
@@ -20039,6 +20376,513 @@
         "summary": "Report Tasks",
         "tags": [
           "reports"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/sender-identities/{identity_id}": {
+      "delete": {
+        "operationId": "remove_sender_identity_v1_workspaces__tenant_id__sender_identities__identity_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "identity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Identity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Sender Identity",
+        "tags": [
+          "sending domains"
+        ]
+      },
+      "patch": {
+        "operationId": "update_sender_identity_v1_workspaces__tenant_id__sender_identities__identity_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "identity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Identity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Sender Identity",
+        "tags": [
+          "sending domains"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/sending-domains": {
+      "get": {
+        "operationId": "list_sending_domains_v1_workspaces__tenant_id__sending_domains_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendingDomainList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sending Domains",
+        "tags": [
+          "sending domains"
+        ]
+      },
+      "post": {
+        "operationId": "add_sending_domain_v1_workspaces__tenant_id__sending_domains_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/crm_app__api__sending_domains__DomainIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendingDomainOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Sending Domain",
+        "tags": [
+          "sending domains"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/sending-domains/{domain_id}": {
+      "delete": {
+        "operationId": "remove_sending_domain_v1_workspaces__tenant_id__sending_domains__domain_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Sending Domain",
+        "tags": [
+          "sending domains"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/sending-domains/{domain_id}/identities": {
+      "post": {
+        "operationId": "add_sender_identity_v1_workspaces__tenant_id__sending_domains__domain_id__identities_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Sender Identity",
+        "tags": [
+          "sending domains"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/sending-domains/{domain_id}/verify": {
+      "post": {
+        "operationId": "verify_sending_domain_v1_workspaces__tenant_id__sending_domains__domain_id__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendingDomainOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Sending Domain",
+        "tags": [
+          "sending domains"
         ]
       }
     },
