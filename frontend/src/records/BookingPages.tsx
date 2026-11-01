@@ -286,6 +286,7 @@ function BookingPageDialog({
   const [location, setLocation] = useState(page?.location ?? "");
   const [notice, setNotice] = useState<number>(page?.notice_minutes ?? 240);
   const [horizon, setHorizon] = useState(String(page?.horizon_days ?? 30));
+  const [confirm, setConfirm] = useState(page?.confirmation_email ?? true);
   const [failure, setFailure] = useState<MessageId | null>(null);
   const [key] = useState(newIdempotencyKey);
   const busy = create.isPending || update.isPending;
@@ -312,6 +313,7 @@ function BookingPageDialog({
       location: location.trim() || null,
       notice_minutes: notice,
       horizon_days: horizonDays,
+      confirmation_email: confirm,
     };
     const failed = (error: unknown) => {
       setFailure(refusal(error));
@@ -522,6 +524,23 @@ function BookingPageDialog({
           />
           <p id="booking-location-hint" className="form-hint">
             {t("bookingPages.field.locationHint")}
+          </p>
+        </div>
+        <div className="form-field wide">
+          <label className="public-check-label" htmlFor="booking-confirmation">
+            <input
+              id="booking-confirmation"
+              type="checkbox"
+              checked={confirm}
+              aria-describedby="booking-confirmation-hint"
+              onChange={(event) => {
+                setConfirm(event.target.checked);
+              }}
+            />
+            <span>{t("bookingPages.field.confirmation")}</span>
+          </label>
+          <p id="booking-confirmation-hint" className="form-hint">
+            {t("bookingPages.field.confirmationHint")}
           </p>
         </div>
         {failure ? (

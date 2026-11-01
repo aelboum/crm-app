@@ -58,7 +58,7 @@ from saas_os.infra.ratelimit import (
     get_ratelimit_config,
 )
 
-from crm_app import booking_pages
+from crm_app import booking_pages, emails
 from crm_app.api.forms import _idempotency_key, _limited
 from crm_app.api.inputs import Instant, json_body
 from crm_app.api.records import IdempotencyKey, IfMatch, _http, _version
@@ -93,6 +93,7 @@ class BookingPageIn(BaseModel):
     location: str | None = Field(default=None, max_length=_RAW * appointment_rules.LOCATION_MAX)
     notice_minutes: int = rules.DEFAULT_NOTICE
     horizon_days: int = rules.DEFAULT_HORIZON
+    confirmation_email: Annotated[bool, Field(strict=True)] = True
 
 
 class BookingPagePatch(BaseModel):
@@ -110,6 +111,7 @@ class BookingPagePatch(BaseModel):
     location: str | None = Field(default=None, max_length=_RAW * appointment_rules.LOCATION_MAX)
     notice_minutes: int | None = None
     horizon_days: int | None = None
+    confirmation_email: Annotated[bool | None, Field(strict=True)] = None
     status: Status | None = None
 
 
@@ -126,6 +128,7 @@ class BookingPageOut(BaseModel):
     location: str | None
     notice_minutes: int
     horizon_days: int
+    confirmation_email: bool
     booking_count: int
     last_booked_at: datetime | None
     created_at: datetime
@@ -457,7 +460,7 @@ async def book(workspace_id: uuid.UUID, key: str, request: Request) -> Any:
             phone=body.phone,
             message=body.message,
         )
-        view, token = await run_in_threadpool(
+        view, token, email_id = await run_in_threadpool(
             lambda: booking_pages.book(
                 workspace_id,
                 key,
@@ -474,6 +477,9 @@ async def book(workspace_id: uuid.UUID, key: str, request: Request) -> Any:
         raise HTTPException(422, detail={"code": "idempotency_key_reused"}) from None
     except IdempotencyInProgressError:
         raise HTTPException(409, detail={"code": "idempotency_in_progress"}) from None
+    if email_id is not None:
+        # Best effort: a lost job is found again by `email_maintenance`.
+        await emails.enqueue(workspace_id, email_id)
     return {"booking": view, "token": token}
 
 

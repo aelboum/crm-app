@@ -873,6 +873,11 @@
       "BookingPageIn": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_email": {
+            "default": true,
+            "title": "Confirmation Email",
+            "type": "boolean"
+          },
           "description": {
             "anyOf": [
               {
@@ -972,6 +977,10 @@
           "booking_count": {
             "title": "Booking Count",
             "type": "integer"
+          },
+          "confirmation_email": {
+            "title": "Confirmation Email",
+            "type": "boolean"
           },
           "created_at": {
             "format": "date-time",
@@ -1110,6 +1119,7 @@
           "location",
           "notice_minutes",
           "horizon_days",
+          "confirmation_email",
           "booking_count",
           "last_booked_at",
           "created_at",
@@ -1125,6 +1135,17 @@
         "additionalProperties": false,
         "description": "Only the fields sent change; `null` clears the description or the\nlocation.",
         "properties": {
+          "confirmation_email": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation Email"
+          },
           "description": {
             "anyOf": [
               {
@@ -6046,7 +6067,8 @@
           "origin": {
             "enum": [
               "manual",
-              "consent_withdrawn"
+              "consent_withdrawn",
+              "provider"
             ],
             "title": "Origin",
             "type": "string"

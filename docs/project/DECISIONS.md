@@ -1776,6 +1776,37 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Tests:** `tests/unit/test_email_rules.py`,
   `tests/integration/test_emails.py`, settings tests.
 
+## P6-E2 — Booking confirmation emails (2026-11-01, under M1)
+
+- **Status:** Decided under M1 as the first consumer of P6-E. Slice 6E.2.
+- **Decisions:**
+  1. **When:** a booking on a published page queues one transactional
+     email to the visitor, in the same transaction as the booking, when
+     the page's `confirmation_email` is on (migration
+     `0020_booking_confirmation`, default on; Calendar › Booking pages
+     editor "Email a confirmation to the visitor"). A replay queues
+     nothing more; the honeypot and refusals queue nothing. Nothing is
+     handed to a provider while `EMAIL_SENDING_ENABLED` is off (P6-E 3).
+  2. **Content:** subject "Booked: page name, day"; plain text with the
+     visitor's first name, the page's name, the day and time in the
+     workspace's time zone (named), and the kind and location. It acts as
+     the host, as the booking does (P5-C 9), and links to the contact.
+  3. **No private link in the email:** the visitor's link token is kept
+     only as a hash (P5-C 6); putting the link in the email would store
+     the token in the email's text. The email says to use the link shown
+     when booking. **Open decision for the owner:** whether to email the
+     link anyway (the stored copy would then need redacting once sent, or
+     the token a separate, expiring email-only form).
+  4. **Abuse:** a visitor can make the workspace email any address they
+     type. The per-visitor and daily limits (13-H2), the per-contact cap
+     (P5-C 6), the suppression list, and the absence of any link or
+     visitor-supplied text other than the first name bound it.
+  5. The suppression list shows provider-made entries as "Reported by the
+     email provider".
+- **Tests:** `tests/integration/test_booking_emails.py`,
+  `tests/unit/test_booking_page_rules.py`,
+  `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
+
 ## P10-A — Reports over stored CRM data (2026-11-01, under M1)
 
 - **Status:** Decided under M1. The owner's mission of 2026-10-31 makes

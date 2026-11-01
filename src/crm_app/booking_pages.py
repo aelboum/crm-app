@@ -50,11 +50,12 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import appointments
+from crm_app import appointments, emails
 from crm_app.domains import appointments as appointment_rules
 from crm_app.domains import booking_pages as rules
 from crm_app.domains.records import InvalidValue
-from crm_app.models import Appointment, Booking, BookingPage, Contact
+from crm_app.domains.settings import DEFAULT_TIME_ZONE
+from crm_app.models import Appointment, Booking, BookingPage, Contact, WorkspaceSettings
 from crm_app.records import (
     CONTACT,
     ConstraintViolationError,
@@ -200,6 +201,7 @@ _ITEM_FIELDS = (
     "location",
     "notice_minutes",
     "horizon_days",
+    "confirmation_email",
     "booking_count",
     "last_booked_at",
     "created_at",
@@ -236,6 +238,10 @@ def _normalised(values: Mapping[str, Any]) -> dict[str, Any]:  # noqa: PLR0912 -
             elif name == "kind":
                 if value not in appointment_rules.KINDS:
                     raise InvalidValue("unknown kind")
+                result[name] = value
+            elif name == "confirmation_email":
+                if not isinstance(value, bool):
+                    raise InvalidValue("must be true or false")
                 result[name] = value
             elif name == "status":
                 if value not in rules.STATUSES:
@@ -323,6 +329,7 @@ def create(
                 location=given.get("location"),
                 notice_minutes=given.get("notice_minutes", rules.DEFAULT_NOTICE),
                 horizon_days=given.get("horizon_days", rules.DEFAULT_HORIZON),
+                confirmation_email=given.get("confirmation_email", True),
                 booking_count=0,
                 last_booked_at=None,
                 created_by_user_id=scope.actor,
@@ -746,7 +753,35 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     )
     page.booking_count += 1
     page.last_booked_at = now
-    return {"appointment_id": str(appointment_id)}
+    email_id = None
+    if page.confirmation_email:
+        zone = session.execute(
+            select(WorkspaceSettings.time_zone).where(WorkspaceSettings.tenant_id == workspace)
+        ).scalar_one_or_none()
+        subject, body = rules.confirmation(
+            visitor["first_name"] or "",
+            page.name,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            time_zone=zone or DEFAULT_TIME_ZONE,
+            kind=page.kind,
+            location=page.location,
+        )
+        # Acting as the host, as the appointment does (P5-C 9). Sent only
+        # while EMAIL_SENDING_ENABLED is on (P6-E 3).
+        email_id = emails.queue(
+            session,
+            scope,
+            purpose="booking_confirmation",
+            to_email=email,
+            subject=subject,
+            text_body=body,
+            contact_id=contact_id,
+        )
+    return {
+        "appointment_id": str(appointment_id),
+        "email_id": str(email_id) if email_id else None,
+    }
 
 
 def book(
@@ -756,7 +791,7 @@ def book(
     *,
     idempotency_key: str,
     daily_capacity: int,
-) -> tuple[Item, str | None]:
+) -> tuple[Item, str | None, uuid.UUID | None]:
     """Book a free time on a published page; returns what the visitor sees
     and their link token, which only the first answer carries: a replay
     returns `None` for it, since only its hash is kept (P5-C 6). At most
@@ -811,7 +846,8 @@ def book(
                 raise TransactionConflictError from None
             raise
         view = _view_of(workspace, uuid.UUID(str(result["appointment_id"])))
-        return view, None if replay else token
+        email = result.get("email_id")
+        return view, None if replay else token, uuid.UUID(str(email)) if email else None
     raise TransactionConflictError
 
 

@@ -175,6 +175,9 @@ export function SuppressionSettings({
                       {row.origin === "consent_withdrawn" ? (
                         <span className="muted"> · {t("suppression.fromWithdrawal")}</span>
                       ) : null}
+                      {row.origin === "provider" ? (
+                        <span className="muted"> · {t("suppression.fromProvider")}</span>
+                      ) : null}
                       {row.note ? <span className="suppression-note">{row.note}</span> : null}
                     </td>
                     <td>

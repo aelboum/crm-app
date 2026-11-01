@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0019_email` own the
+Migrations `0002_contacts_companies` to `0020_booking_confirmation` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -635,6 +635,7 @@ class BookingPage(Base):
     location: Mapped[str | None] = mapped_column(Text)
     notice_minutes: Mapped[int] = mapped_column(Integer)
     horizon_days: Mapped[int] = mapped_column(Integer)
+    confirmation_email: Mapped[bool] = mapped_column(Boolean)
     booking_count: Mapped[int] = mapped_column(Integer)
     last_booked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()

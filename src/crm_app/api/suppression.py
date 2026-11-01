@@ -49,7 +49,7 @@ class SuppressionOut(BaseModel):
     id: uuid.UUID
     email: str
     reason: Reason
-    origin: Literal["manual", "consent_withdrawn"]
+    origin: Literal["manual", "consent_withdrawn", "provider"]
     note: str | None
     created_by_user_id: uuid.UUID | None
     created_at: datetime

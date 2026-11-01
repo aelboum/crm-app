@@ -1891,6 +1891,11 @@ export interface components {
         };
         /** BookingPageIn */
         BookingPageIn: {
+            /**
+             * Confirmation Email
+             * @default true
+             */
+            confirmation_email: boolean;
             /** Description */
             description?: string | null;
             /**
@@ -1935,6 +1940,8 @@ export interface components {
         BookingPageOut: {
             /** Booking Count */
             booking_count: number;
+            /** Confirmation Email */
+            confirmation_email: boolean;
             /**
              * Created At
              * Format: date-time
@@ -1996,6 +2003,8 @@ export interface components {
          *     location.
          */
         BookingPagePatch: {
+            /** Confirmation Email */
+            confirmation_email?: boolean | null;
             /** Description */
             description?: string | null;
             /** Horizon Days */
@@ -3539,7 +3548,7 @@ export interface components {
              * Origin
              * @enum {string}
              */
-            origin: "manual" | "consent_withdrawn";
+            origin: "manual" | "consent_withdrawn" | "provider";
             /**
              * Reason
              * @enum {string}

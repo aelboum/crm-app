@@ -11,6 +11,7 @@ import hashlib
 import re
 from collections.abc import Sequence
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from crm_app.domains import appointments as appointment_rules
 from crm_app.domains import records as record_rules
@@ -135,6 +136,43 @@ def title(page_name: str, visitor: str) -> str:
     if len(full) <= appointment_rules.TITLE_MAX:
         return full
     return full[: appointment_rules.TITLE_MAX - 1].rstrip() + "…"
+
+
+_KIND_TEXT = {"in_person": "In person", "video": "Video call", "phone": "Phone call"}
+
+
+def confirmation(  # noqa: PLR0913 - what the visitor booked
+    first_name: str,
+    page_name: str,
+    *,
+    starts_at: datetime,
+    ends_at: datetime,
+    time_zone: str,
+    kind: str,
+    location: str | None,
+) -> tuple[str, str]:
+    """The confirmation email's subject and plain text (decision P6-E2): the
+    time in the workspace's time zone, named, and what to expect. It never
+    holds the visitor's private link, whose token is kept only as a hash."""
+    try:
+        zone = ZoneInfo(time_zone)
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = ZoneInfo("UTC")
+    start, end = starts_at.astimezone(zone), ends_at.astimezone(zone)
+    day = f"{start:%A} {start.day} {start:%B %Y}"
+    when = f"{day}, {start:%H:%M} to {end:%H:%M} ({time_zone.replace('_', ' ')})"
+    subject = f"Booked: {page_name}, {day}"
+    lines = [
+        f"Hello {first_name},",
+        "",
+        f"Your booking is confirmed: {page_name}.",
+        "",
+        when,
+        _KIND_TEXT.get(kind, kind) + (f": {location}" if location else ""),
+        "",
+        "To see or cancel this booking, use the private link shown when you booked.",
+    ]
+    return subject[:200], "\n".join(lines)
 
 
 def free_times(  # noqa: PLR0913 - the open time, then what narrows it

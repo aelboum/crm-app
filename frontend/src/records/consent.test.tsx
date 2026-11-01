@@ -46,9 +46,10 @@ const LIST = {
   items: [
     row("s1", "sam@example.test", { reason: "unsubscribed", origin: "consent_withdrawn" }),
     row("s2", "ada@example.test", { reason: "bounced", note: "Old newsletter tool." }),
+    row("s3", "bob@example.test", { reason: "complained", origin: "provider", created_by_user_id: null }),
   ],
   next_cursor: null,
-  total: 2,
+  total: 3,
   total_capped: false,
 };
 
@@ -146,7 +147,8 @@ describe("suppression list", () => {
     expect(rows[1]).toHaveTextContent("Unsubscribed · Consent withdrawn");
     expect(rows[2]).toHaveTextContent("Bounced");
     expect(rows[2]).toHaveTextContent("Old newsletter tool.");
-    expect(screen.getByText("2 addresses")).toBeInTheDocument();
+    expect(rows[3]).toHaveTextContent("Spam complaint · Reported by the email provider");
+    expect(screen.getByText("3 addresses")).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });
 

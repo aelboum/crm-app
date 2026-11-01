@@ -37,6 +37,13 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 6 slice 6E.2, booking confirmation emails (decision P6-E2,
+  2026-11-01):** a booking queues a confirmation to the visitor when the
+  page's new `confirmation_email` setting is on (migration
+  `0020_booking_confirmation`); time in the workspace's zone, never the
+  private link. Verified: `test_booking_emails.py` 4, unit 565, Vitest
+  268, full integration suite in four batches (198, 192, 157, 164). Local
+  `crm_app` at `0020_booking_confirmation` (68 contacts kept).
 - **Phase 6 slice 6E.1, transactional email infrastructure (decision P6-E,
   2026-11-01):** Resend through SaaS-OS `send_email`; migration
   `0019_email` (`email_message`, `email_event`, global `email_index`,

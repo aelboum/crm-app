@@ -145,3 +145,33 @@ def test_a_link_expires_a_week_after_its_appointment_ends() -> None:
     assert not rules.link_expired(ends, ends + timedelta(days=7) - timedelta(seconds=1))
     assert rules.link_expired(ends, ends + timedelta(days=7))
     assert rules.link_expired(ends, ends + timedelta(days=400))
+
+
+def test_the_confirmation_names_the_time_in_the_workspaces_zone_and_holds_no_link() -> None:
+    starts = datetime(2026, 11, 2, 8, 0, tzinfo=UTC)
+    subject, body = rules.confirmation(
+        "Ada",
+        "Intro call",
+        starts_at=starts,
+        ends_at=starts + timedelta(minutes=30),
+        time_zone="Europe/Amsterdam",
+        kind="video",
+        location="https://meet.example.test/intro",
+    )
+    assert subject == "Booked: Intro call, Monday 2 November 2026"
+    assert "Hello Ada," in body
+    assert "Monday 2 November 2026, 09:00 to 09:30 (Europe/Amsterdam)" in body
+    assert "Video call: https://meet.example.test/intro" in body
+    assert "manage#" not in body
+    assert "/app/b/" not in body
+    _, unknown_zone = rules.confirmation(
+        "Ada",
+        "P",
+        starts_at=starts,
+        ends_at=starts,
+        time_zone="Mars/Base",
+        kind="phone",
+        location=None,
+    )
+    assert "08:00 to 08:00 (Mars/Base)" in unknown_zone
+    assert "\nPhone call\n" in unknown_zone

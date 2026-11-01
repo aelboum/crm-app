@@ -44,6 +44,7 @@ function page(extra: Record<string, unknown> = {}) {
     location: "https://meet.example.test/intro",
     notice_minutes: 240,
     horizon_days: 30,
+    confirmation_email: true,
     booking_count: 2,
     last_booked_at: stamp,
     created_at: stamp,
@@ -171,6 +172,10 @@ describe("booking pages in the calendar", () => {
     const dialog = await screen.findByRole("dialog", { name: "New booking page" });
     await user.type(within(dialog).getByLabelText("Name"), "  Intro call ");
     await user.selectOptions(within(dialog).getByLabelText("Length"), "45");
+    const confirmation = within(dialog).getByRole("checkbox", { name: "Email a confirmation to the visitor" });
+    expect(confirmation).toBeChecked();
+    expect(confirmation).toHaveAccessibleDescription(/never the private link/);
+    await user.click(confirmation);
     expect(await accessibilityViolations()).toEqual([]);
     await user.click(within(dialog).getByRole("button", { name: "Create" }));
     await waitFor(() => {
@@ -186,6 +191,7 @@ describe("booking pages in the calendar", () => {
       location: null,
       notice_minutes: 240,
       horizon_days: 30,
+      confirmation_email: false,
     });
     expect(headersSent.find((r) => r.method === "POST")?.headers["idempotency-key"]).toMatch(/^[0-9a-f]{32}$/);
   });
