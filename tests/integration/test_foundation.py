@@ -20,7 +20,7 @@ import pytest
 from tests.support import run_module, run_python
 
 SAAS_OS_MIGRATION_HEAD = "b3d5f7a9c2e4"
-PRODUCT_MIGRATION_HEAD = "0018_report_indexes"
+PRODUCT_MIGRATION_HEAD = "0019_email"
 
 _STARTUP_PROBE = (
     "import json\n"
@@ -97,9 +97,23 @@ def test_application_refuses_a_role_that_can_bypass_rls(
 def test_worker_starts_and_passes_its_health_probe(
     integration_env: dict[str, str], tmp_path: Path
 ) -> None:
+    """Uses its own, emptied Redis database: other tests enqueue jobs that no
+    worker runs while they run, and a worker that starts on that backlog
+    writes its health sentinel late (the cause of this test's timeouts)."""
+    env = {**integration_env, "REDIS_URL": integration_env["REDIS_URL"].rsplit("/", 1)[0] + "/14"}
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import os, redis; redis.Redis.from_url(os.environ['REDIS_URL']).flushdb()",
+        ],
+        env=env,
+        check=True,
+        timeout=30,
+    )
     worker = subprocess.Popen(
         [sys.executable, "-m", "crm_app.worker"],
-        env=integration_env,
+        env=env,
         cwd=tmp_path,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -108,7 +122,7 @@ def test_worker_starts_and_passes_its_health_probe(
     try:
         deadline = time.monotonic() + 60
         while True:
-            check = run_module("crm_app.worker", ["--check"], integration_env, tmp_path, timeout=30)
+            check = run_module("crm_app.worker", ["--check"], env, tmp_path, timeout=30)
             if check.returncode == 0:
                 break
             assert worker.poll() is None, "worker exited early"

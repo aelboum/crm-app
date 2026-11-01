@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0018_report_indexes` own the
+Migrations `0002_contacts_companies` to `0019_email` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -678,3 +678,57 @@ class Suppression(Base):
     note: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class EmailMessage(Base):
+    """One email the product sends to one address (migration 0019, decision
+    P6-E): its text, status and the provider's id for it."""
+
+    __tablename__ = "email_message"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    purpose: Mapped[str] = mapped_column(Text)
+    to_email: Mapped[str] = mapped_column(Text)
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    subject: Mapped[str] = mapped_column(Text)
+    text_body: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    provider: Mapped[str | None] = mapped_column(Text)
+    provider_message_id: Mapped[str | None] = mapped_column(Text)
+    attempts: Mapped[int] = mapped_column(Integer)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EmailEvent(Base):
+    """A delivery event a provider reported for an email (append-only)."""
+
+    __tablename__ = "email_event"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    email_message_id: Mapped[uuid.UUID] = mapped_column()
+    provider_event_id: Mapped[str] = mapped_column(Text)
+    type: Mapped[str] = mapped_column(Text)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class EmailIndex(Base):
+    """Which workspace an email belongs to, by its id and the provider's id,
+    and when an unsent one is due for another try (migration 0019). A global
+    table of ids and times; only a transaction without a workspace sees it."""
+
+    __tablename__ = "email_index"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    email_message_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column()
+    provider_message_id: Mapped[str | None] = mapped_column(Text)
+    retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

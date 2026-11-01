@@ -16,6 +16,9 @@ Jobs:
 - `crm_app_import_commit` (decision P3-F 5): commits a queued CSV import
   (`crm_app.import_commit.run`). The payload names the import and the
   member who committed it, who is the actor of the records it creates.
+- `crm_app_email_send` (decision P6-E): one try at a queued email
+  (`crm_app.emails.send`). The payload names the email; a try that may
+  pass later raises, so the queue retries it with backoff.
 
 Importing a module that registers jobs resolves `REDIS_URL`, so only the
 worker entrypoint imports this module, after validation.
@@ -40,5 +43,15 @@ async def crm_app_import_commit(context: TenantJobContext, payload: TenantJobPay
     await asyncio.to_thread(import_commit.run, scope, import_id)
 
 
+async def crm_app_email_send(context: TenantJobContext, payload: TenantJobPayload) -> None:
+    from crm_app import emails  # noqa: PLC0415
+
+    email_id = uuid.UUID(str(payload.data["email_id"]))
+    await asyncio.to_thread(emails.send, context.tenant_id, email_id)
+
+
 # arq `Function`s, as SaaS-OS's worker takes them.
-JOB_FUNCTIONS: tuple[Any, ...] = (register_tenant_job(crm_app_import_commit),)
+JOB_FUNCTIONS: tuple[Any, ...] = (
+    register_tenant_job(crm_app_import_commit),
+    register_tenant_job(crm_app_email_send),
+)

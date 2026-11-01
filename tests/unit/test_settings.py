@@ -13,6 +13,7 @@ from crm_app.settings import (
     ConfigurationError,
     Process,
     booking_limit,
+    email_sending_enabled,
     signup_enabled,
     signup_limit,
     validate_settings,
@@ -332,3 +333,30 @@ def test_booking_limits_must_be_positive_whole_numbers(value: str) -> None:
         assert _problems(Process.APP, {**PLACEHOLDER_SETTINGS, name: value}) == [
             f"{name} must be a whole number of at least 1."
         ]
+
+
+# --- Transactional email (decision P6-E) ------------------------------------------
+
+
+def test_email_sending_is_off_unless_switched_on_and_needs_a_sender() -> None:
+    assert email_sending_enabled(PLACEHOLDER_SETTINGS) is False
+    assert email_sending_enabled({"EMAIL_SENDING_ENABLED": "true"}) is True
+    _validate(Process.APP, PLACEHOLDER_SETTINGS)
+    on = {**PLACEHOLDER_SETTINGS, "EMAIL_SENDING_ENABLED": "true"}
+    assert _problems(Process.WORKER, on) == [
+        "EMAIL_SENDING_ENABLED=true needs EMAIL_DEFAULT_SENDER."
+    ]
+    _validate(Process.WORKER, {**on, "EMAIL_DEFAULT_SENDER": "hello@example.test"})
+    assert _problems(Process.APP, {**PLACEHOLDER_SETTINGS, "EMAIL_SENDING_ENABLED": "maybe"}) == [
+        "EMAIL_SENDING_ENABLED must be true or false."
+    ]
+
+
+def test_email_sending_is_refused_in_production_until_decided() -> None:
+    production = {
+        **PLACEHOLDER_SETTINGS,
+        "ENVIRONMENT": "production",
+        "EMAIL_SENDING_ENABLED": "true",
+        "EMAIL_DEFAULT_SENDER": "hello@example.test",
+    }
+    assert any("refused in production" in p for p in _problems(Process.WORKER, production))

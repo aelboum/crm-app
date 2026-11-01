@@ -261,6 +261,37 @@ def add(scope: Scope, emails: list[str], *, reason: str, note: str | None) -> di
     return _transaction(scope, apply)
 
 
+def suppress_from_provider(
+    session: Session, workspace: uuid.UUID, email: str, *, reason: str, actor: uuid.UUID | None
+) -> bool:
+    """Suppress an address the email provider reported as bounced or
+    complained (origin `provider`, decision P6-E), inside the caller's
+    workspace transaction; `False` when it was already suppressed or the
+    list is full. Audited as the member whose email it was, when known."""
+    try:
+        added = _suppress(
+            session,
+            Scope(workspace=workspace, actor=actor),  # type: ignore[arg-type]
+            [email],
+            reason=reason,
+            origin="provider",
+            note=None,
+        )
+    except SuppressionLimitError:
+        return False
+    if added and actor is not None:
+        _list_audit(
+            session,
+            Scope(workspace=workspace, actor=actor),
+            "added",
+            str(workspace),
+            count=added,
+            reason=reason,
+            origin="provider",
+        )
+    return bool(added)
+
+
 def remove(scope: Scope, suppression_id: uuid.UUID) -> None:
     """Lift one suppression: the address may be sent to again."""
 

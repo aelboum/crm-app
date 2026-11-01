@@ -14,7 +14,7 @@ from crm_app.domains.forms import message
 from crm_app.domains.records import InvalidValue
 
 REASONS = ("unsubscribed", "bounced", "complained", "manual")
-ORIGINS = ("manual", "consent_withdrawn")
+ORIGINS = ("manual", "consent_withdrawn", "provider")
 NOTE_MAX = 500
 ADD_MAX = 1000
 MAX_ROWS = 100_000

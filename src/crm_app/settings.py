@@ -137,6 +137,7 @@ def validate_settings(
     problems.extend(_check_http_url(values, "OIDC_ISSUER_URL", require_https=production))
     problems.extend(_check_origin(values, require_https=production))
     problems.extend(_check_role_names(env))
+    problems.extend(_check_email(env, production=production))
     if process is Process.APP:
         problems.extend(_check_invitation_delivery(env))
         problems.extend(_check_signup(env, production=production))
@@ -314,6 +315,32 @@ def _check_signup(env: Mapping[str, str], *, production: bool) -> list[str]:
         # Without it every visitor behind the edge shares one rate-limit key
         # (security finding L4), so per-client signup limits would not hold.
         problems.append("SIGNUP_ENABLED=true needs TRUST_PROXY_HEADERS=true behind the edge proxy.")
+    return problems
+
+
+def email_sending_enabled(env: Mapping[str, str] | None = None) -> bool:
+    """The transactional email switch (`EMAIL_SENDING_ENABLED`, decision
+    P6-E); off unless set to true. While off, emails are recorded as queued
+    and nothing is handed to a provider."""
+    return _flag(os.environ if env is None else env, "EMAIL_SENDING_ENABLED") is True
+
+
+def _check_email(env: Mapping[str, str], *, production: bool) -> list[str]:
+    enabled = _flag(env, "EMAIL_SENDING_ENABLED")
+    if enabled is None:
+        return ["EMAIL_SENDING_ENABLED must be true or false."]
+    if not enabled:
+        return []
+    problems: list[str] = []
+    if production:
+        # Lifted only by the decision that settles the sending domain and the
+        # sender identity policy (P6-E, open decisions).
+        problems.append(
+            "EMAIL_SENDING_ENABLED=true is refused in production until the sending"
+            " domain and sender policy are decided (DECISIONS.md P6-E)."
+        )
+    if not env.get("EMAIL_DEFAULT_SENDER", "").strip():
+        problems.append("EMAIL_SENDING_ENABLED=true needs EMAIL_DEFAULT_SENDER.")
     return problems
 
 

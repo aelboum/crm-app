@@ -25,7 +25,9 @@ from saas_os.api.errors import invalid_request
 _NOT_JSON = [{"loc": ("body",), "msg": "The body is not JSON.", "type": "json_invalid"}]
 
 
-async def json_body(request: Request, max_bytes: int) -> Any:
+async def raw_body(request: Request, max_bytes: int) -> bytes:
+    """The body's bytes, refused as `body_too_large` past `max_bytes`, by its
+    declared length or while streaming."""
     declared = request.headers.get("content-length", "")
     if declared.isdigit() and int(declared) > max_bytes:
         raise invalid_request("body_too_large")
@@ -36,10 +38,19 @@ async def json_body(request: Request, max_bytes: int) -> Any:
         if size > max_bytes:
             raise invalid_request("body_too_large")
         chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def parse_json(body: bytes) -> Any:
+    """JSON, or a 422 `json_invalid` (deep nesting included)."""
     try:
-        return json.loads(b"".join(chunks))
+        return json.loads(body)
     except (ValueError, RecursionError):
         raise RequestValidationError(_NOT_JSON) from None
+
+
+async def json_body(request: Request, max_bytes: int) -> Any:
+    return parse_json(await raw_body(request, max_bytes))
 
 
 _EARLIEST = datetime(1900, 1, 1, tzinfo=UTC)

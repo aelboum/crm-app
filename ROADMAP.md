@@ -597,7 +597,7 @@ Before implementing external calendar synchronization, evaluate its complexity a
 
 # 11. Phase 6 — Conversations and Communications
 
-**Status:** Not started.
+**Status:** In progress. Email provider: Resend (owner, 2026-11-01), through SaaS-OS. Slice 6E.1 (decision P6-E): transactional email records, sending behind `EMAIL_SENDING_ENABLED`, signed delivery webhook with bounce and complaint suppression. Open owner decisions: sending domain, domain model, sender policy, inbound email.
 
 ## Objectives
 

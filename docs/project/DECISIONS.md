@@ -1711,6 +1711,71 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      per-contact cap of upcoming bookings, leaving only the rate limits
      (no CAPTCHA or workspace contact cap yet).
 
+## P6-E — Transactional email on Resend through SaaS-OS (2026-11-01)
+
+- **Status:** The provider is the owner's decision of 2026-11-01: "LeadStack
+  will use Resend for email. SaaS-OS v0.6.0 already provides Resend
+  integration. Reuse the existing SaaS-OS implementation instead of building
+  a competing email provider integration." The design below is decided
+  under M1 within that authorisation; nothing sends in production until
+  the open decisions are made. Slice 6E.1 (infrastructure).
+- **What SaaS-OS v0.6.0 provides (ADR-0058, verified in the pinned
+  source):** `EMAIL_PROVIDER=resend` selects `ResendEmailProvider` with
+  `RESEND_API_KEY` from the secrets provider; `send_email(message)` posts
+  one email over the strict egress client and never retries itself; an
+  `EmailMessage.message_id` becomes Resend's `Idempotency-Key`, so a retry
+  within 24 hours is not a second email; `400`/`422` are permanent, the
+  rest (including `401`, `429` with a retry hint, `5xx`, timeouts)
+  transient; nothing about recipients or bodies is logged. It does **not**
+  consume Resend's delivery webhooks.
+- **Decisions:**
+  1. **One adapter, SaaS-OS's.** The product calls `send_email` only; it
+     builds no Resend client. The deployment chooses the provider
+     (`EMAIL_PROVIDER`), so tests and local use `mailpit` or an injected
+     provider, and the product's tables name the provider only as a label.
+  2. **Records:** `email_message` per email (purpose, recipient, subject,
+     plain text, status, provider id, attempts, last error code),
+     `email_event` per provider event (append-only, unique per provider
+     event id), and the global `email_index` (ids and retry times) for the
+     webhook's lookup and the sweeper. Migration `0019_email`.
+  3. **Sending** (`crm_app.emails.send`, job `crm_app_email_send`): only
+     while `EMAIL_SENDING_ENABLED=true` (off by default; refused in
+     production; needs `EMAIL_DEFAULT_SENDER`). The email is claimed under
+     a row lock, so two jobs never send it twice; every try has the
+     `Message-ID` `<email id@sender's domain>`. An address on the
+     workspace's suppression list is never sent to (also for
+     transactional mail). Permanent refusals fail the email; anything else
+     returns it to the queue, at most 5 tries. `python -m
+     crm_app.email_maintenance` re-enqueues emails whose job was lost and
+     drops index rows of emails that never committed.
+  4. **Delivery tracking:** `POST /v1/public/email/resend/events`, public,
+     404 until `RESEND_WEBHOOK_SECRET` is set, per-address limited, 64 KiB,
+     Svix signature checked in constant time with a 5-minute window before
+     the body is parsed. `sent`, `delivered`, `delivery_delayed`, `bounced`
+     and `complained` are recorded once each and only move the status
+     forward; a bounce or complaint suppresses the address with origin
+     `provider`. Opens and clicks are not tracked.
+  5. **Audit:** `crm_app.email.queued`, `.sent`, `.failed`,
+     `.suppressed`, `.bounced`, `.complained`, by email id with purpose
+     and codes only, acting as the member whose action queued the email
+     (SaaS-OS has no system caller for this); a provider suppression is
+     also a `crm_app.suppression.added` entry with `origin: provider`.
+  6. **Consumers:** none yet. The purposes are `booking_confirmation`
+     (next slice) and `test`. Campaign (marketing) mail also needs
+     consent (`may_send(..., marketing=True)`) and double opt-in (13-H1 2).
+- **Open decisions (the owner's; not invented here):**
+  1. The sending domain and its DNS (SPF, DKIM, DMARC, return path).
+  2. One platform-wide sending domain, workspace-specific domains, or
+     both, and who verifies a workspace's domain in Resend.
+  3. The production sender identity policy: the `From` name and address,
+     `Reply-To`, and whether a workspace may send as itself.
+  4. Incoming email (replies into conversations): Resend inbound or
+     another route.
+  5. The worker's outbound route to `api.resend.com` in production
+     (SaaS-OS ADR-0059 egress proxy) and the Resend account and plan.
+- **Tests:** `tests/unit/test_email_rules.py`,
+  `tests/integration/test_emails.py`, settings tests.
+
 ## P10-A — Reports over stored CRM data (2026-11-01, under M1)
 
 - **Status:** Decided under M1. The owner's mission of 2026-10-31 makes

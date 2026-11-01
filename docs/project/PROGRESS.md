@@ -37,6 +37,20 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 6 slice 6E.1, transactional email infrastructure (decision P6-E,
+  2026-11-01):** Resend through SaaS-OS `send_email`; migration
+  `0019_email` (`email_message`, `email_event`, global `email_index`,
+  suppression origin `provider`); job `crm_app_email_send`; sweeper
+  `python -m crm_app.email_maintenance`; signed webhook
+  `POST /v1/public/email/resend/events`. Sending stays off
+  (`EMAIL_SENDING_ENABLED`, refused in production); no real provider was
+  called. Verified: `test_emails.py` 10, unit 564, full integration suite
+  in four batches (193, 179, 162, 171; the two rollback tests that list
+  later tables were updated and passed again, 74). Local `crm_app` at
+  `0019_email` (68 contacts kept).
+  Also: the worker start-up test's timeouts came from jobs other tests
+  leave in the shared test Redis; it now uses its own emptied Redis
+  database and passed 3 of 3 runs.
 - **Phase 10 slice 10A, reports (decision P10-A, 2026-11-01):**
   `GET /reports/{contacts,deals,tasks,appointments}` for a period of
   whole days in the workspace's zone with a comparison period; Insights ›

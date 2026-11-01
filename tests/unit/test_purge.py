@@ -165,7 +165,7 @@ def test_global_tables_naming_a_workspace_are_removed_by_the_participant() -> No
     """`signup` (decision S-1) and `import_expiry` (decision P3-F) name a
     workspace without a key into `core.tenants`; the participant removes
     those rows."""
-    assert PURGE_GLOBAL_REFERENCES == ("signup", "import_expiry")
+    assert PURGE_GLOBAL_REFERENCES == ("signup", "import_expiry", "email_index")
     assert frozenset(PURGE_GLOBAL_REFERENCES) <= GLOBAL_TABLES
 
 

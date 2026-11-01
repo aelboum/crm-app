@@ -378,6 +378,8 @@ PUBLIC_FORMS = {
     "POST /v1/public/booking-pages/{workspace_id}/{key}",
     "POST /v1/public/bookings/{workspace_id}/view",
     "POST /v1/public/bookings/{workspace_id}/cancel",
+    # P6-E: the email provider's signed delivery events.
+    "POST /v1/public/email/resend/events",
 }
 
 

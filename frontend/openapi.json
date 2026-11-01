@@ -7433,6 +7433,28 @@
         ]
       }
     },
+    "/v1/public/email/resend/events": {
+      "post": {
+        "operationId": "resend_email_events_v1_public_email_resend_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Resend Email Events",
+        "tags": [
+          "email webhooks"
+        ]
+      }
+    },
     "/v1/public/forms/{workspace_id}/{key}": {
       "get": {
         "operationId": "public_form_v1_public_forms__workspace_id___key__get",
