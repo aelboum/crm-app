@@ -65,6 +65,8 @@ ORDER_KEYS: Mapping[str, Mapping[str, Sequence[str]]] = {
     "form_submission": {"created_at": ("datetime", "uuid")},
     # The suppression list, newest first (decision P7-B 10).
     "suppression": {"created_at": ("datetime", "uuid")},
+    # The Inbox, latest message first (decision P6-C1).
+    "conversation": {"last_message_at": ("datetime", "uuid")},
 }
 
 Value = str | datetime | date | Decimal | int | uuid.UUID | None

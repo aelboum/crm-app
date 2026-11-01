@@ -1414,6 +1414,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .inbox { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; min-height: 0; }
 .inbox-list, .inbox-thread { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-surface); min-width: 0; }
 .inbox-list { display: flex; flex-direction: column; overflow: hidden; }
+.inbox-search { display: flex; margin: 10px 10px 0; }
+.inbox-search input { flex: 1; min-width: 0; }
+.inbox-more { display: flex; justify-content: center; padding: 10px; }
 .inbox-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); }
 .inbox-assigned { width: auto; flex: 1; min-width: 0; }
 .inbox-items { list-style: none; margin: 0; padding: 0; overflow-y: auto; }

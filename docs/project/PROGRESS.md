@@ -37,6 +37,17 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 6 slice 6C.1, Inbox search and paging (decision P6-C1,
+  2026-11-01):** migration `0023_conversation_search` (generated
+  `search_vector` columns with GIN indexes and the inlined `crm_app.@@`
+  operator); `GET /conversations` takes `q`, `status=all`, `limit` and
+  `cursor` and returns `next_cursor`; the Inbox has a search box, an "All"
+  status and "Load more". `EXPLAIN` shows a bitmap index scan on the GIN
+  index. Verified: `test_conversation_search.py` 6 (cross-workspace,
+  closed threads, literal special characters, empty results, limits,
+  paging), unit `test_conversation_rules.py` 12, `inbox.test.tsx` 7; unit
+  suite plus conversation, foundation and rollback integration tests 693
+  passed; lint and build clean.
 - **Phase 6 slice 6C, conversations foundation (decision P6-C,
   2026-11-01):** migration `0022_conversations` (conversation,
   append-only conversation_message, conversation_read); the

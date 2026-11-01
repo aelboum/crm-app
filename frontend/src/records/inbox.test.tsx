@@ -12,13 +12,16 @@ import {
  * The inbox (decision P6-C): the list with unread state, opening a thread
  * marks it read, an email reply is sent with an Idempotency-Key and shown
  * as "Not sent yet" (never as sent) while queued, closing sends the
- * version, refusals say why, and Read-only members get no composer.
+ * version, refusals say why, Read-only members get no composer, search
+ * sends the words and says when nothing matches, and older threads load on
+ * request (decision P6-C1).
  */
 
 const WS = "11111111-2222-4333-8444-555555555555";
 const ME = "aaaaaaaa-0000-4000-8000-000000000001";
 const CONV = "c1000000-0000-4000-8000-000000000001";
 const CONTACT = "c0000000-0000-4000-8000-000000000001";
+const OLDER = "c1000000-0000-4000-8000-000000000002";
 const stamp = "2026-11-01T09:30:00+00:00";
 
 const SUMMARY = {
@@ -102,8 +105,20 @@ function workspace(
         },
       };
     }
-    if (path.startsWith(`${base}/conversations?`))
-      return { status: 200, body: { items: [SUMMARY] } };
+    if (path.startsWith(`${base}/conversations?`)) {
+      const query = new URLSearchParams(path.split("?")[1]);
+      if (query.get("q") === "zebra")
+        return { status: 200, body: { items: [], next_cursor: null } };
+      if (query.get("cursor") === "next")
+        return {
+          status: 200,
+          body: {
+            items: [{ ...SUMMARY, id: OLDER, subject: "Older thread" }],
+            next_cursor: null,
+          },
+        };
+      return { status: 200, body: { items: [SUMMARY], next_cursor: "next" } };
+    }
     if (path === `${base}/conversations/${CONV}`)
       return { status: 200, body: thread() };
     return undefined;
@@ -209,5 +224,36 @@ describe("inbox", () => {
     ).toBeNull();
     expect(within(pane).queryByRole("button", { name: "Close" })).toBeNull();
     expect(within(pane).queryByRole("textbox")).toBeNull();
+  });
+
+  it("searches across every status and says when nothing matches", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(`/w/${WS}/inbox`, workspace(true));
+    const list = await screen.findByRole("region", { name: "Conversations" });
+    await within(list).findByRole("button", { name: /Ada Lovelace/ });
+    await user.click(within(list).getByRole("button", { name: "All" }));
+    await user.type(
+      within(list).getByRole("searchbox", { name: "Search conversations" }),
+      "zebra",
+    );
+    expect(
+      await within(list).findByText("No conversations match"),
+    ).toBeInTheDocument();
+    const call = sent.find((r) => r.path.includes("q=zebra"));
+    expect(call?.path).toContain("status=all");
+  });
+
+  it("loads older conversations on request", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/inbox`, workspace(true));
+    const list = await screen.findByRole("region", { name: "Conversations" });
+    await within(list).findByRole("button", { name: /Ada Lovelace/ });
+    await user.click(within(list).getByRole("button", { name: "Load more" }));
+    expect(
+      await within(list).findByRole("button", { name: /Older thread/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(list).queryByRole("button", { name: "Load more" }),
+    ).toBeNull();
   });
 });

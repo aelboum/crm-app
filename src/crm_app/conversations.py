@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -37,6 +38,8 @@ from saas_os.infra.db import (
 )
 
 from crm_app import emails
+from crm_app.domains import conversations as rules
+from crm_app.domains import paging
 from crm_app.domains.records import InvalidValue, visible_text
 from crm_app.models import (
     Contact,
@@ -59,6 +62,11 @@ KINDS = ("inbound", "outbound", "note")
 SUBJECT_MAX = 200
 BODY_MAX = 20_000
 LIST_LIMIT = 100
+PAGE_DEFAULT = 50
+SEARCH_MAX = rules.SEARCH_MAX
+ORDER = "last_message_at"
+# `tsvector @@ varchar`, inlined to `@@ to_tsquery('simple', ...)` (migration 0023).
+_MATCHES = "OPERATOR(crm_app.@@)"
 THREAD_LIMIT = 500
 
 Item = dict[str, Any]
@@ -300,16 +308,65 @@ def _unread(
     return found
 
 
-def list_conversations(
-    scope: Scope,
-    *,
-    status: str = "open",
-    assigned: str = "all",
-    contact_id: uuid.UUID | None = None,
-) -> list[Item]:
-    """The latest `LIST_LIMIT` threads by last message, with unread state for
-    the caller. `assigned`: `all`, `mine` or `unassigned`. With `contact_id`,
-    that contact's threads of every status."""
+def _matching(scope: Scope, q: str) -> Any:
+    r"""Threads whose subject or any message has every word as a prefix, or
+    whose contact's first name, last name or email starts with the whole
+    search (taken literally: `%`, `_` and `\` match themselves)."""
+    lowered = q.lower()
+    contact = Conversation.contact_id.in_(
+        select(Contact.id).where(
+            Contact.tenant_id == scope.workspace,
+            Contact.first_name.istartswith(q, autoescape=True)
+            | Contact.last_name.istartswith(q, autoescape=True)
+            | Contact.email.startswith(lowered, autoescape=True),
+        )
+    )
+    terms = rules.search_terms(q)
+    if not terms:
+        return contact
+    query = rules.prefix_query(terms)
+    words = Conversation.search_vector.op(_MATCHES, is_comparison=True)(query)
+    messages = Conversation.id.in_(
+        select(ConversationMessage.conversation_id).where(
+            ConversationMessage.tenant_id == scope.workspace,
+            ConversationMessage.search_vector.op(_MATCHES, is_comparison=True)(query),
+        )
+    )
+    return words | messages | contact
+
+
+@dataclass(frozen=True)
+class InboxQuery:
+    """What the Inbox list asks for. `status`: `open`, `closed` or `all`;
+    `assigned`: `all`, `mine` or `unassigned`. With `contact_id`, that
+    contact's threads of every status. `q` searches subjects, message text
+    (notes included: every reader of a thread sees them) and contact names."""
+
+    status: str = "open"
+    assigned: str = "all"
+    contact_id: uuid.UUID | None = None
+    q: str = ""
+    limit: int = PAGE_DEFAULT
+    cursor: str | None = None
+
+
+def list_conversations(scope: Scope, inbox: InboxQuery | None = None) -> Item:
+    """One page of threads, latest message first, with unread state for the
+    caller and the cursor of the next page (or None). Raises
+    `paging.InvalidCursor` for a cursor issued for other filters."""
+    inbox = inbox or InboxQuery()
+    status, assigned, contact_id = inbox.status, inbox.assigned, inbox.contact_id
+    limit, cursor = inbox.limit, inbox.cursor
+    q = inbox.q.strip()
+    filters = paging.filter_hash(
+        {
+            "status": status,
+            "assigned": assigned,
+            "contact": str(contact_id or ""),
+            "q": q,
+        }
+    )
+    after = paging.decode(cursor, "conversation", ORDER, "desc", filters) if cursor else None
     with tenant_session_scope(scope.workspace) as session:
         query = (
             select(Conversation, ConversationRead.read_at)
@@ -323,17 +380,27 @@ def list_conversations(
         )
         if contact_id is not None:
             query = query.where(Conversation.contact_id == contact_id)
-        else:
+        elif status != "all":
             query = query.where(Conversation.status == status)
         if assigned == "mine":
             query = query.where(Conversation.assignee_user_id == scope.actor)
         elif assigned == "unassigned":
             query = query.where(Conversation.assignee_user_id.is_(None))
+        if q:
+            query = query.where(_matching(scope, q))
+        if after is not None:
+            at, last_id = after
+            query = query.where(
+                (Conversation.last_message_at < at)
+                | ((Conversation.last_message_at == at) & (Conversation.id < last_id))
+            )
         rows = session.execute(
             query.order_by(Conversation.last_message_at.desc(), Conversation.id.desc()).limit(
-                LIST_LIMIT
+                limit + 1
             )
         ).all()
+        more = len(rows) > limit
+        rows = rows[:limit]
         contact_ids = {row.contact_id for row, _ in rows if row.contact_id}
         names: dict[uuid.UUID, str | None] = {}
         if contact_ids:
@@ -344,10 +411,15 @@ def list_conversations(
             ).scalars():
                 names[contact.id] = _name(contact)
         unread = _unread(session, scope, {row.id: read_at for row, read_at in rows})
-        return [
+        items = [
             _summary(row, names.get(row.contact_id) if row.contact_id else None, row.id in unread)
             for row, _ in rows
         ]
+        last = (rows[-1][0].last_message_at, rows[-1][0].id) if rows else None
+    next_cursor = (
+        paging.encode("conversation", ORDER, "desc", filters, last) if more and last else None
+    )
+    return {"items": items, "next_cursor": next_cursor}
 
 
 def get(scope: Scope, conversation_id: uuid.UUID) -> Item:

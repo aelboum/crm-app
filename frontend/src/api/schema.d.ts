@@ -2665,6 +2665,8 @@ export interface components {
         ConversationList: {
             /** Items */
             items: components["schemas"]["ConversationSummary"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /** ConversationOut */
         ConversationOut: {
@@ -6786,9 +6788,12 @@ export interface operations {
     list_conversations_v1_workspaces__tenant_id__conversations_get: {
         parameters: {
             query?: {
-                status?: "open" | "closed";
+                status?: "open" | "closed" | "all";
                 assigned?: "all" | "mine" | "unassigned";
                 contact_id?: string | null;
+                q?: string;
+                limit?: number;
+                cursor?: string | null;
             };
             header?: {
                 authorization?: string | null;

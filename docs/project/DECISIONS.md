@@ -1816,9 +1816,46 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   assignee and close/reopen, a composer for an email reply, a logged
   message or an internal note, and a new-conversation dialog. Phones show
   the list or the thread.
-- **Not built:** text search across threads; SMS, WhatsApp and voice
+- **Not built:** text search across threads (since built: P6-C1); SMS, WhatsApp and voice
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
+
+## P6-C1 — Inbox search and paging (2026-11-01, under M1)
+
+- **Status:** Implemented under the owner's instruction of 2026-11-01
+  ("Conversation search: search message content and relevant conversation
+  metadata ... Handle pagination, indexing and query limits").
+- **What is searched:** a thread's subject and the text of every message in
+  it (inbound, outbound and internal notes: every member who can read the
+  thread already sees its notes), plus the contact's first name, last name
+  and email. A thread matches when its subject or one of its messages
+  contains every word of the search as the start of a word (case-insensitive,
+  any order), or when the contact's name or email starts with the whole
+  search. The status filter still applies; a new `all` status searches open
+  and closed threads together.
+- **Input:** at most 100 characters, no NUL. Words are runs of letters and
+  digits (`crm_app.domains.conversations.search_terms`), at most 8 of at
+  most 64 characters; everything else separates words. So `%`, `_`, quotes,
+  backslashes and full-text operators are never interpreted: a search with
+  no letters or digits matches only a contact whose name or email literally
+  starts with it.
+- **Index:** PostgreSQL built-in full-text search, `simple` configuration
+  (no stemming, no stop words, no extension). Migration
+  `0023_conversation_search` adds a stored generated `search_vector` to
+  `conversation` and `conversation_message`, each with a GIN index, and the
+  operator `crm_app.@@` (`tsvector @@ varchar`): product code reaches SQL
+  only through `saas_os.infra.db`, which binds text as `varchar` and exposes
+  no function constructor or cast. The operator's SQL function is inlined
+  by PostgreSQL into `vector @@ to_tsquery('simple', terms)`; `EXPLAIN`
+  shows a bitmap index scan on the GIN index.
+- **Paging:** the list is keyset-paged, latest message first, with a cursor
+  bound to the filters (`limit` 1 to 100, default 50). A cursor issued for
+  other filters, or a damaged one, is refused with 400 `invalid_cursor`.
+- **Isolation:** every subquery names the workspace and runs under its
+  Row-Level Security; members of other workspaces get 404, as before.
+- **Not built:** relevance ranking (results stay in time order); accent
+  folding (`cafe` does not find `café`); searching attachments, which do
+  not exist yet.
 
 ## P9-0 — AI: what SaaS-OS provides and the decisions it waits for (2026-11-01)
 

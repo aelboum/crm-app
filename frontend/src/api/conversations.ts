@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { api, ApiError, unwrap } from "./client";
 import { expectNoContent, ifMatch, unwrapWrite, where } from "./records";
@@ -19,9 +24,17 @@ export type MessageKind = "inbound" | "outbound" | "note";
 export type Channel = "email" | "other";
 export type Assigned = "all" | "mine" | "unassigned";
 
+export type ConversationPage = components["schemas"]["ConversationList"];
+export type InboxStatus = "open" | "closed" | "all";
+/** The API's limit on a search (decision P6-C1). */
+export const SEARCH_MAX = 100;
+const PAGE = 50;
+
 export interface InboxFilter {
-  status: "open" | "closed";
+  status: InboxStatus;
   assigned: Assigned;
+  /** Searched in subjects, message text and contact names; "" lists all. */
+  q: string;
 }
 
 export const conversationKeys = {
@@ -41,12 +54,23 @@ const one = (workspaceId: string, id: string) => ({
 });
 
 export function useConversations(workspaceId: string, filter: InboxFilter) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: conversationKeys.list(workspaceId, filter),
-    queryFn: async () =>
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last: ConversationPage) => last.next_cursor ?? undefined,
+    queryFn: async ({ pageParam }): Promise<ConversationPage> =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/conversations", {
-          params: { path: where(workspaceId), query: filter },
+          params: {
+            path: where(workspaceId),
+            query: {
+              status: filter.status,
+              assigned: filter.assigned,
+              limit: PAGE,
+              ...(filter.q ? { q: filter.q } : {}),
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
+          },
         }),
       ),
   });

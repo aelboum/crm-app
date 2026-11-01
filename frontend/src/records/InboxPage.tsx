@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Search } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 import { useIntl } from "react-intl";
 
@@ -9,6 +9,8 @@ import {
   type Conversation,
   type ConversationSummary,
   type InboxFilter,
+  type InboxStatus,
+  SEARCH_MAX,
   type MessageKind,
   useAddMessage,
   useConversation,
@@ -28,6 +30,7 @@ import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
 import { type Option, ownerLabel, ownerOptions } from "./parts";
+import { useDebounced } from "./useDebounced";
 
 /*
  * The inbox (decision P6-C): threads with contacts, by status and
@@ -92,15 +95,17 @@ export function InboxPage({
   );
   const people = ownerOptions(t, members.data?.items ?? [], meId);
   const canReply = access.data?.actions.reply_conversations === true;
-  const [filter, setFilter] = useState<InboxFilter>({
+  const [filter, setFilter] = useState<Omit<InboxFilter, "q">>({
     status: "open",
     assigned: "all",
   });
+  const [search, setSearch] = useState("");
+  const q = useDebounced(search.trim());
   const [selected, setSelected] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
-  const list = useConversations(workspaceId, filter);
+  const list = useConversations(workspaceId, { ...filter, q });
   const markRead = useMarkRead(workspaceId);
-  const items = list.data?.items ?? [];
+  const items = list.data?.pages.flatMap((page) => page.items) ?? [];
 
   const open = (item: ConversationSummary) => {
     setSelected(item.id);
@@ -130,13 +135,32 @@ export function InboxPage({
       </div>
       <div className="inbox">
         <section className="inbox-list" aria-label={t("inbox.listLabel")}>
+          <label className="search-box inbox-search">
+            <Search size={14} aria-hidden="true" />
+            <span className="sr-only">{t("inbox.search")}</span>
+            <input
+              type="search"
+              value={search}
+              placeholder={t("inbox.search")}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+              maxLength={SEARCH_MAX}
+            />
+          </label>
           <div className="inbox-filters">
             <div
               className="segmented"
               role="group"
               aria-label={t("inbox.statusLabel")}
             >
-              {(["open", "closed"] as const).map((status) => (
+              {(
+                [
+                  "open",
+                  "closed",
+                  "all",
+                ] as const satisfies readonly InboxStatus[]
+              ).map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -178,40 +202,65 @@ export function InboxPage({
           ) : list.isPending ? (
             <Loading />
           ) : items.length === 0 ? (
-            <EmptyState title={t("inbox.empty")} body={t("inbox.emptyBody")} />
+            q ? (
+              <EmptyState
+                title={t("inbox.noResults")}
+                body={t("inbox.noResultsBody")}
+              />
+            ) : (
+              <EmptyState
+                title={t("inbox.empty")}
+                body={t("inbox.emptyBody")}
+              />
+            )
           ) : (
-            <ul className="inbox-items">
-              {items.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={`inbox-item${item.id === selected ? " active" : ""}${item.unread ? " unread" : ""}`}
-                    aria-current={item.id === selected ? "true" : undefined}
-                    onClick={() => {
-                      open(item);
-                    }}
-                  >
-                    <span className="inbox-item-top">
-                      <span className="inbox-item-name">
-                        {item.contact_name ?? t("inbox.noContact")}
-                      </span>
-                      <ShortTime value={item.last_message_at} />
-                    </span>
-                    <span className="inbox-item-subject">{item.subject}</span>
-                    <span className="inbox-item-meta">
-                      <span className="muted">
-                        {t(`inbox.channel.${item.channel}`)}
-                      </span>
-                      {item.unread ? (
-                        <span className="inbox-unread">
-                          {t("inbox.unread")}
+            <>
+              <ul className="inbox-items">
+                {items.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={`inbox-item${item.id === selected ? " active" : ""}${item.unread ? " unread" : ""}`}
+                      aria-current={item.id === selected ? "true" : undefined}
+                      onClick={() => {
+                        open(item);
+                      }}
+                    >
+                      <span className="inbox-item-top">
+                        <span className="inbox-item-name">
+                          {item.contact_name ?? t("inbox.noContact")}
                         </span>
-                      ) : null}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                        <ShortTime value={item.last_message_at} />
+                      </span>
+                      <span className="inbox-item-subject">{item.subject}</span>
+                      <span className="inbox-item-meta">
+                        <span className="muted">
+                          {t(`inbox.channel.${item.channel}`)}
+                        </span>
+                        {item.unread ? (
+                          <span className="inbox-unread">
+                            {t("inbox.unread")}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {list.hasNextPage ? (
+                <div className="inbox-more">
+                  <Button
+                    size="sm"
+                    onPress={() => void list.fetchNextPage()}
+                    isDisabled={list.isFetchingNextPage}
+                  >
+                    {list.isFetchingNextPage
+                      ? t("state.loading")
+                      : t("records.loadMore")}
+                  </Button>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
         <section className="inbox-thread" aria-label={t("inbox.threadLabel")}>
@@ -240,6 +289,7 @@ export function InboxPage({
             setComposing(false);
             if (created) {
               setFilter({ status: "open", assigned: filter.assigned });
+              setSearch("");
               setSelected(created);
             }
           }}

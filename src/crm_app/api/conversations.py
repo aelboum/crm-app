@@ -29,6 +29,7 @@ from starlette.concurrency import run_in_threadpool
 
 from crm_app import conversations, emails
 from crm_app.api.records import IdempotencyKey, IfMatch, _http, _version
+from crm_app.domains import paging
 from crm_app.records import RecordError, Scope
 
 router = APIRouter(prefix="/v1/workspaces", tags=["conversations"])
@@ -68,9 +69,13 @@ class ConversationPatch(BaseModel):
 class ListParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["open", "closed"] = "open"
+    status: Literal["open", "closed", "all"] = "open"
     assigned: Literal["all", "mine", "unassigned"] = "all"
     contact_id: uuid.UUID | None = None
+    # Searched literally: no wildcard or query syntax (decision P6-C1).
+    q: str = Field(default="", max_length=conversations.SEARCH_MAX, pattern=r"^[^\x00]*$")
+    limit: int = Field(default=conversations.PAGE_DEFAULT, ge=1, le=conversations.LIST_LIMIT)
+    cursor: str | None = Field(default=None, max_length=paging.CURSOR_MAX)
 
 
 class ConversationSummary(BaseModel):
@@ -89,6 +94,7 @@ class ConversationSummary(BaseModel):
 
 class ConversationList(BaseModel):
     items: list[ConversationSummary]
+    next_cursor: str | None
 
 
 class MessageOut(BaseModel):
@@ -132,14 +138,12 @@ _ONE = f"{_LIST}/{{conversation_id}}"
 
 @router.get(_LIST, response_model=ConversationList, name="list_conversations")
 def list_conversations(context: Read, params: Annotated[ListParams, Query()]) -> Any:
-    return {
-        "items": conversations.list_conversations(
-            _scope(context),
-            status=params.status,
-            assigned=params.assigned,
-            contact_id=params.contact_id,
+    try:
+        return conversations.list_conversations(
+            _scope(context), conversations.InboxQuery(**params.model_dump())
         )
-    }
+    except paging.InvalidCursor:
+        raise HTTPException(400, detail={"code": "invalid_cursor"}) from None
 
 
 @router.post(_LIST, status_code=201, response_model=ConversationOut, name="create_conversation")
