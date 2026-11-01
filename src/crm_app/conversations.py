@@ -37,7 +37,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import emails
+from crm_app import emails, inbound
 from crm_app.domains import conversations as rules
 from crm_app.domains import paging
 from crm_app.domains.records import InvalidValue, visible_text
@@ -217,6 +217,8 @@ def _queue_reply(
     contact = _contact_of(session, scope, conversation.contact_id)
     if contact is None or not contact.email:
         raise NoEmailAddressError
+    # The address replies come back to (decision P6-I); used once inbound is on.
+    inbound.ensure_route(session, scope.workspace, conversation.id)
     try:
         return emails.queue(
             session,
@@ -452,6 +454,7 @@ def get(scope: Scope, conversation_id: uuid.UUID) -> Item:
                     "author_user_id": message.author_user_id,
                     "created_at": message.created_at,
                     "delivery": status,
+                    "attachments": message.attachments,
                 }
                 for message, status in messages
             ],

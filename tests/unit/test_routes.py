@@ -200,6 +200,14 @@ RECORDS |= {
     f"PATCH {_CONVERSATION}": "crm_app.conversation:reply",
     f"POST {_CONVERSATION}/messages": "crm_app.conversation:reply",
     f"POST {_CONVERSATION}/read": "crm_app.conversation:read",
+    # P6-I: quarantined inbound email, for members who may reply.
+    "GET /v1/workspaces/{tenant_id}/conversation-reviews": "crm_app.conversation:reply",
+    "POST /v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/accept": (
+        "crm_app.conversation:reply"
+    ),
+    "POST /v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/discard": (
+        "crm_app.conversation:reply"
+    ),
 }
 # The suppression list (decision P7-B 7): Owner, Admin and Member read;
 # Owner and Admin add and remove. A contact's email status is a contact
@@ -407,6 +415,8 @@ PUBLIC_FORMS = {
     "POST /v1/public/bookings/{workspace_id}/cancel",
     # P6-E: the email provider's signed delivery events.
     "POST /v1/public/email/resend/events",
+    # P6-I: the email provider's signed received-email events.
+    "POST /v1/public/email/resend/inbound",
 }
 
 

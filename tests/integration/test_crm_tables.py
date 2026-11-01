@@ -365,4 +365,8 @@ def test_the_migration_rolls_back_and_forward(
         "conversation",
         "conversation_message",
         "conversation_read",
+        "inbound_email",
+        "conversation_route",
+        "conversation_route_index",
+        "inbound_quarantine",
     }

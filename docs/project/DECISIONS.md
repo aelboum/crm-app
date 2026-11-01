@@ -1820,6 +1820,66 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
 
+## P6-I — Inbound email: recording, routing, quarantine (2026-11-01)
+
+- **Status:** Implemented under the owner's email mission of 2026-11-01
+  ("Incoming email: Yes ... Implement a provider adapter around Resend
+  inbound receiving ... Do not activate production inbound receiving").
+  Off by default, refused in production, and without a real receiving
+  client (below), so no real email is received or processed.
+- **Pipeline:**
+  1. `POST /v1/public/email/resend/inbound`: its own secret
+     (`RESEND_INBOUND_WEBHOOK_SECRET`), 404 unless that is set and
+     `EMAIL_INBOUND_ENABLED` is on outside production; per-address limit,
+     64 KiB, Svix signature checked before parsing. Each `email.received`
+     event is stored once in the global `inbound_email` (unique by event id
+     and by provider email id) before any processing; other event types
+     are acknowledged and ignored; a malformed received event is refused
+     (400) so it stays visible in Resend's delivery log.
+  2. The system job `crm_app_inbound_process` and the sweeper
+     (`crm_app.email_maintenance`) claim due rows with `FOR UPDATE SKIP
+     LOCKED`; a row left `processing` by a dead worker is taken again after
+     ten minutes. Transient fetch failures wait with backoff, jitter and
+     `Retry-After`; permanent ones and eight tries end as `failed`.
+  3. Routing uses server-side data only. Each conversation gets a random
+     128-bit routing token when its first email reply is queued
+     (`conversation_route`, tenant-owned); its SHA-256 is in the global
+     `conversation_route_index`. A received email is routed only when
+     exactly one recipient is `reply+<token>@inbound.<parent>` and the
+     workspace's own route row holds the same token; nothing else in the
+     email (headers, names, addresses) can choose a workspace.
+  4. Routed mail from the conversation's contact with a passing or absent
+     DMARC result becomes an inbound message (at most once per email: a
+     unique key on `conversation_message.inbound_email_id`) and reopens the
+     thread. Mail from anyone else, failing DMARC, without text, or on a
+     thread without a contact goes to the workspace's review list
+     (`inbound_quarantine`). Mail that names no workspace stays `unmatched`
+     with a reason and only the sender's domain, for an operator; it is
+     never deleted silently.
+  5. Text is preferred; HTML is reduced to its visible text (scripts,
+     styles and markup dropped; never rendered); 20,000 characters at most.
+     Attachments are listed by sanitised name, type and size and are not
+     downloaded (no approved malware scanner).
+- **Reply-To:** an email reply carries its conversation's routing address
+  only while inbound email is on and a parent domain is set.
+- **Review:** `GET /conversation-reviews` and `POST
+  /conversation-reviews/{id}/accept|discard` (`If-Match`), for members
+  with `crm_app.conversation:reply` (no new permission); accepting adds the
+  email to its conversation once; both are audited with ids and the reason
+  code. The Inbox shows a "Needs review" panel to those members.
+- **Gap and open decision:** SaaS-OS v0.6.0's egress client sends only
+  POST; Resend's receiving API (`GET /emails/receiving/{id}`) needs GET.
+  `crm_app.inbound.configured_client()` therefore returns none, and
+  received emails wait as `received` until one is approved. Options for
+  the owner: (a) a SaaS-OS release whose egress client supports GET (an
+  upstream request, then a pin move); (b) approve a product adapter on
+  SaaS-OS's `saas_os.infra.outbound_http` client (not yet on this
+  product's import surface); (c) another approved HTTP client.
+- **Retention:** unmatched and failed rows keep ids, codes and a domain;
+  a retention period for them is to be set with the production activation.
+- **Verified:** `tests/integration/test_inbound_email.py`,
+  `tests/unit/test_inbound_rules.py`, `frontend/src/records/inbox.test.tsx`.
+
 ## P6-S — Email streams, sender identities and retry timing (2026-11-01)
 
 - **Status:** Implemented under the owner's "Final Email Architecture and

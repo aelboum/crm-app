@@ -6,6 +6,15 @@
     PATCH  /v1/workspaces/{tenant_id}/conversations/{id}            crm_app.conversation:reply
     POST   /v1/workspaces/{tenant_id}/conversations/{id}/messages   crm_app.conversation:reply
     POST   /v1/workspaces/{tenant_id}/conversations/{id}/read       crm_app.conversation:read
+    GET    /v1/workspaces/{tenant_id}/conversation-reviews          crm_app.conversation:reply
+    POST   /v1/workspaces/{tenant_id}/conversation-reviews/{id}/accept   crm_app.conversation:reply
+    POST   /v1/workspaces/{tenant_id}/conversation-reviews/{id}/discard  crm_app.conversation:reply
+
+Reviews (decision P6-I) are received emails that reached a conversation but
+need a member's look first (the sender is not the contact, DMARC failed, no
+text). Accepting adds the email to its conversation once; discarding keeps
+the record. Both need `If-Match`. Only members who may reply see them:
+quarantined mail may come from someone posing as the contact.
 
 The path's `tenant_id` is only the request; handlers use `context.tenant_id`
 alone. `PATCH` needs `If-Match`. Creating a thread and adding a message
@@ -27,7 +36,7 @@ from saas_os.api.dependencies import require_permission
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
 from starlette.concurrency import run_in_threadpool
 
-from crm_app import conversations, emails
+from crm_app import conversations, emails, inbound
 from crm_app.api.records import IdempotencyKey, IfMatch, _http, _version
 from crm_app.domains import paging
 from crm_app.records import RecordError, Scope
@@ -97,6 +106,16 @@ class ConversationList(BaseModel):
     next_cursor: str | None
 
 
+class AttachmentOut(BaseModel):
+    """An attachment that was received but not fetched (no malware scanner
+    is approved): its name, type and size only."""
+
+    filename: str
+    content_type: str
+    size: int | None
+    stored: bool
+
+
 class MessageOut(BaseModel):
     id: uuid.UUID
     kind: Kind
@@ -104,6 +123,7 @@ class MessageOut(BaseModel):
     author_user_id: uuid.UUID | None
     created_at: datetime
     delivery: str | None
+    attachments: list[AttachmentOut] | None = None
 
 
 class ConversationOut(ConversationSummary):
@@ -244,3 +264,60 @@ def mark_read(conversation_id: uuid.UUID, context: Read) -> Response:
     except RecordError as exc:
         raise _refusal(exc) from None
     return Response(status_code=204)
+
+
+# --- Reviews (decision P6-I) ---------------------------------------------------------------
+
+
+class ReviewOut(BaseModel):
+    id: uuid.UUID
+    conversation_id: uuid.UUID | None
+    reason: str
+    sender: str
+    subject: str
+    body: str
+    truncated: bool
+    attachments: list[AttachmentOut]
+    status: Literal["pending", "accepted", "discarded"]
+    created_at: datetime
+    version: int
+
+
+class ReviewList(BaseModel):
+    items: list[ReviewOut]
+
+
+_REVIEWS = "/{tenant_id}/conversation-reviews"
+
+
+@router.get(_REVIEWS, response_model=ReviewList, name="list_conversation_reviews")
+def list_reviews(context: Reply) -> Any:
+    return {"items": inbound.list_reviews(_scope(context))}
+
+
+def _decide(
+    review_id: uuid.UUID, context: RequestContext, if_match: str | None, *, accept: bool
+) -> Any:
+    expected = _version(if_match)
+    try:
+        return inbound.decide_review(
+            _scope(context), review_id, accept=accept, expected_version=expected
+        )
+    except RecordError as exc:
+        raise _refusal(exc) from None
+
+
+@router.post(
+    f"{_REVIEWS}/{{review_id}}/accept", response_model=ReviewOut, name="accept_conversation_review"
+)
+def accept_review(review_id: uuid.UUID, context: Reply, if_match: IfMatch = None) -> Any:
+    return _decide(review_id, context, if_match, accept=True)
+
+
+@router.post(
+    f"{_REVIEWS}/{{review_id}}/discard",
+    response_model=ReviewOut,
+    name="discard_conversation_review",
+)
+def discard_review(review_id: uuid.UUID, context: Reply, if_match: IfMatch = None) -> Any:
+    return _decide(review_id, context, if_match, accept=False)

@@ -22,6 +22,10 @@ Jobs:
 - `crm_app_email_send` (decision P6-E): one try at a queued email
   (`crm_app.emails.send`). The payload names the email; a try that may
   pass later raises, so the queue retries it with backoff.
+- `crm_app_inbound_process` (decision P6-I): a system job (no tenant, no
+  payload) that processes the received emails that are due
+  (`crm_app.inbound.process_due`); rows are claimed with `SKIP LOCKED`, so
+  concurrent runs never take the same email.
 
 Importing a module that registers jobs resolves `REDIS_URL`, so only the
 worker entrypoint imports this module, after validation.
@@ -33,7 +37,13 @@ import asyncio
 import uuid
 from typing import Any
 
-from saas_os.infra.jobs import TenantJobContext, TenantJobPayload, register_tenant_job
+from saas_os.infra.jobs import (
+    SystemJobContext,
+    TenantJobContext,
+    TenantJobPayload,
+    register_system_job,
+    register_tenant_job,
+)
 
 
 async def crm_app_import_commit(context: TenantJobContext, payload: TenantJobPayload) -> None:
@@ -66,9 +76,16 @@ async def crm_app_automation_run(context: TenantJobContext, payload: TenantJobPa
         raise
 
 
+async def crm_app_inbound_process(context: SystemJobContext) -> None:
+    from crm_app import inbound  # noqa: PLC0415
+
+    await asyncio.to_thread(inbound.process_due)
+
+
 # arq `Function`s, as SaaS-OS's worker takes them.
 JOB_FUNCTIONS: tuple[Any, ...] = (
     register_tenant_job(crm_app_import_commit),
     register_tenant_job(crm_app_email_send),
     register_tenant_job(crm_app_automation_run),
+    register_system_job(crm_app_inbound_process),
 )

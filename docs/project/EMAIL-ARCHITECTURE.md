@@ -114,7 +114,9 @@ suppressed).
 Each item below is approved by the owner and will be built in this order;
 each one gets its own decision entry, tests and documentation.
 
-1. **Inbound email (6E.3).** A separate signed webhook
+1. **Inbound email (6E.3) — built (P6-I)** except the real receiving
+   client (SaaS-OS's egress client has no GET; decision P6-I lists the
+   options). A separate signed webhook
    (`RESEND_INBOUND_WEBHOOK_SECRET`, 404 until set and
    `EMAIL_INBOUND_ENABLED`) stores each `email.received` event once by
    `svix-id` in a global inbound table before anything else, then a durable
@@ -168,7 +170,7 @@ each one gets its own decision entry, tests and documentation.
 | `EMAIL_PROVIDER` | SaaS-OS | smtp | `resend` for Resend; `mailpit` locally. |
 | `RESEND_API_KEY` | secret | unset | Secrets provider only. |
 | `RESEND_WEBHOOK_SECRET` | secret | unset | Delivery events webhook; 404 until set. |
-| `RESEND_INBOUND_WEBHOOK_SECRET` | secret | unset | Inbound webhook (6E.3). |
+| `RESEND_INBOUND_WEBHOOK_SECRET` | secret | unset | Inbound webhook (P6-I); 404 until set and `EMAIL_INBOUND_ENABLED`. |
 
 Secrets are read only through SaaS-OS's secrets provider; none is ever in
 source, frontend configuration, logs or job payloads. Start-up validation
@@ -196,6 +198,8 @@ passed, approved by the owner:
    approved alternative), the unsubscribe flow, and the per-campaign
    approval workflow verified.
 8. For inbound attachments additionally: an approved malware scanner.
+9. For inbound at all: an approved receiving client (decision P6-I) and a
+   retention period for unmatched rows.
 
 ## 7. DNS readiness checklist (per domain, when a real domain exists)
 

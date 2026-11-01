@@ -11,7 +11,9 @@ transaction without a workspace; each is checked in its own workspace.
 An index row whose email never committed is removed. Every other one is
 postponed by `RETRY_DELAY` and its send job enqueued; the job itself
 decides whether to send (only while `EMAIL_SENDING_ENABLED` is on, never
-twice, at most `MAX_ATTEMPTS` tries). It prints counts only.
+twice, at most `MAX_ATTEMPTS` tries). Received emails that are due
+(decision P6-I) are processed in this run, which also recovers any whose
+worker died. It prints counts only.
 """
 
 from __future__ import annotations
@@ -48,7 +50,15 @@ def maintain() -> dict[str, int]:
         emails.postpone(email_id)
         pending.append((workspace, email_id))
     queued, unreachable = asyncio.run(_enqueue_all(pending))
-    return {"queued": queued, "unreachable": unreachable, "orphans": orphans}
+    from crm_app import inbound  # noqa: PLC0415
+
+    received = sum(inbound.process_due().values())
+    return {
+        "queued": queued,
+        "unreachable": unreachable,
+        "orphans": orphans,
+        "inbound": received,
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -59,7 +69,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = maintain()
     print(
         f"emails: queued {report['queued']}, queue unreachable {report['unreachable']},"
-        f" orphan entries removed {report['orphans']}"
+        f" orphan entries removed {report['orphans']}; inbound processed {report['inbound']}"
     )
     return 1 if report["unreachable"] else 0
 

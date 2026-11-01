@@ -106,6 +106,11 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "conversation",
         "conversation_message",
         "conversation_read",
+        # P6-I (inbound email).
+        "inbound_email",
+        "conversation_route",
+        "conversation_route_index",
+        "inbound_quarantine",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -127,6 +132,7 @@ APPEND_ONLY_TABLES: frozenset[str] = frozenset(
         "automation_version",
         "automation_step",
         "conversation_message",
+        "conversation_route",
     }
 )
 
@@ -136,7 +142,15 @@ APPEND_ONLY_TABLES: frozenset[str] = frozenset(
 # guards: each must carry SaaS-OS's tenant-context exclusion policy
 # (`tests/catalog_rules.py`, `global_policy_violations`).
 GLOBAL_TABLES: frozenset[str] = frozenset(
-    {"signup", "signup_attempt", "import_expiry", "email_index", "automation_due"}
+    {
+        "signup",
+        "signup_attempt",
+        "import_expiry",
+        "email_index",
+        "automation_due",
+        "inbound_email",
+        "conversation_route_index",
+    }
 )
 
 # Global tables whose rows are limited to one person (option A): they also

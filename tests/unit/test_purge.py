@@ -170,6 +170,8 @@ def test_global_tables_naming_a_workspace_are_removed_by_the_participant() -> No
         "import_expiry",
         "email_index",
         "automation_due",
+        "inbound_email",
+        "conversation_route_index",
     )
     assert frozenset(PURGE_GLOBAL_REFERENCES) <= GLOBAL_TABLES
 

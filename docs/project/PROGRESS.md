@@ -37,6 +37,25 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 6 slice 6E.3, inbound email (decision P6-I, 2026-11-01):**
+  migration `0025_inbound_email` (global `inbound_email` and
+  `conversation_route_index`; tenant `conversation_route` and
+  `inbound_quarantine`; `conversation_message.inbound_email_id` and
+  `attachments`); signed inbound webhook; system job
+  `crm_app_inbound_process` and sweeper; routing by routing token only;
+  review API and the Inbox "Needs review" panel; Reply-To on email replies
+  while inbound is on. Off by default and refused in production; no real
+  receiving client yet (SaaS-OS egress has no GET), so no real mail is
+  received. Verified: `test_inbound_email.py` (signatures, dedup, routing,
+  unknown, absent, several and forged routing addresses, quarantine,
+  malformed content, attachments listed only, retries and parallel workers
+  adding each email once, review access and versions, tenant isolation,
+  production refusal), `test_inbound_rules.py` 15, `inbox.test.tsx` 10;
+  unit suite plus the inbound, email, conversation, search, foundation,
+  rollback, purge and table-guard integration tests: 789 passed, and the
+  permission-registration guard failed only because campaign permissions
+  (next slice) had been registered in the local test database mid-run;
+  Vitest 283, lint and build clean.
 - **Phase 6 slice 6S, email streams (decision P6-S, 2026-11-01):** the
   owner's email architecture decisions recorded and the integration
   boundary documented (`EMAIL-ARCHITECTURE.md`); transactional,

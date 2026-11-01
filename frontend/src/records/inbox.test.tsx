@@ -23,6 +23,26 @@ const CONV = "c1000000-0000-4000-8000-000000000001";
 const CONTACT = "c0000000-0000-4000-8000-000000000001";
 const OLDER = "c1000000-0000-4000-8000-000000000002";
 const stamp = "2026-11-01T09:30:00+00:00";
+const REVIEW = {
+  id: "r1000000-0000-4000-8000-000000000001",
+  conversation_id: "c1000000-0000-4000-8000-000000000001",
+  reason: "sender_mismatch",
+  sender: "mallory@evil.test",
+  subject: "Re: Your quote",
+  body: "Please pay to this account.",
+  truncated: false,
+  attachments: [
+    {
+      filename: "invoice.pdf",
+      content_type: "application/pdf",
+      size: 2048,
+      stored: false,
+    },
+  ],
+  status: "pending",
+  created_at: "2026-11-01T09:31:00+00:00",
+  version: 1,
+};
 
 const SUMMARY = {
   id: CONV,
@@ -59,6 +79,22 @@ function thread(extra: Record<string, unknown> = {}) {
         author_user_id: ME,
         created_at: stamp,
         delivery: "queued",
+      },
+      {
+        id: "m3",
+        kind: "inbound",
+        body: "Photo attached.",
+        author_user_id: null,
+        created_at: stamp,
+        delivery: null,
+        attachments: [
+          {
+            filename: "photo.jpg",
+            content_type: "image/jpeg",
+            size: 1024,
+            stored: false,
+          },
+        ],
       },
     ],
     ...extra,
@@ -121,6 +157,8 @@ function workspace(
     }
     if (path === `${base}/conversations/${CONV}`)
       return { status: 200, body: thread() };
+    if (path === `${base}/conversation-reviews`)
+      return { status: 200, body: { items: reply ? [REVIEW] : [] } };
     return undefined;
   };
 }
@@ -255,5 +293,49 @@ describe("inbox", () => {
     expect(
       within(list).queryByRole("button", { name: "Load more" }),
     ).toBeNull();
+  });
+
+  it("lists received attachments as not stored", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/inbox`, workspace(true));
+    const pane = await openThread(user);
+    const messages = await within(pane).findByRole("list", {
+      name: "Messages",
+    });
+    expect(messages).toHaveTextContent("photo.jpg");
+    expect(messages).toHaveTextContent("Attachments (not stored)");
+  });
+
+  it("holds suspicious mail for review and decides it with the version", async () => {
+    const user = userEvent.setup();
+    const { headersSent } = renderApp(
+      `/w/${WS}/inbox`,
+      workspace(true, (method, path) =>
+        method === "POST" && path.endsWith("/accept")
+          ? { status: 200, body: { ...REVIEW, status: "accepted", version: 2 } }
+          : undefined,
+      ),
+    );
+    const panel = await screen.findByRole("region", { name: "Needs review" });
+    expect(panel).toHaveTextContent("Not sent by this conversation's contact");
+    expect(panel).toHaveTextContent("From mallory@evil.test");
+    expect(panel).toHaveTextContent("invoice.pdf");
+    await user.click(
+      within(panel).getByRole("button", { name: "Add to conversation" }),
+    );
+    await waitFor(() => {
+      const call = headersSent.find((r) => r.path.endsWith("/accept"));
+      expect(call?.headers["if-match"]).toBe('"1"');
+    });
+  });
+
+  it("shows no review panel to Read-only members", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(`/w/${WS}/inbox`, workspace(false));
+    await openThread(user);
+    expect(screen.queryByRole("region", { name: "Needs review" })).toBeNull();
+    expect(sent.some((r) => r.path.includes("conversation-reviews"))).toBe(
+      false,
+    );
   });
 });

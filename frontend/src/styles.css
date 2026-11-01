@@ -1415,6 +1415,16 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .inbox-list, .inbox-thread { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-surface); min-width: 0; }
 .inbox-list { display: flex; flex-direction: column; overflow: hidden; }
 .inbox-search { display: flex; margin: 10px 10px 0; }
+.inbox-reviews { margin: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2, var(--bg)); }
+.inbox-reviews-title { font-size: 0.95rem; margin: 0 0 4px; display: flex; gap: 6px; align-items: center; }
+.inbox-review-items { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.inbox-review { border-top: 1px solid var(--line); padding-top: 8px; overflow-wrap: anywhere; }
+.inbox-review-reason { font-weight: 600; margin: 0; }
+.inbox-review-from { margin: 2px 0; }
+.inbox-review-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.inbox-attachments { margin-top: 6px; overflow-wrap: anywhere; }
+.inbox-attachments ul { margin: 2px 0; padding-left: 18px; }
+.inbox-attachments-note { font-size: 0.8rem; }
 .inbox-search input { flex: 1; min-width: 0; }
 .inbox-more { display: flex; justify-content: center; padding: 10px; }
 .inbox-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); }

@@ -66,7 +66,13 @@ from crm_app.domains import email_streams as streams
 from crm_app.domains import emails as rules
 from crm_app.models import EmailEvent, EmailIndex, EmailMessage
 from crm_app.records import Scope
-from crm_app.settings import stream_enabled, stream_limits, stream_sender
+from crm_app.settings import (
+    email_parent_domain,
+    inbound_enabled,
+    stream_enabled,
+    stream_limits,
+    stream_sender,
+)
 
 RESOURCE = "crm_app.email"
 JOB_NAME = "crm_app_email_send"
@@ -171,6 +177,7 @@ class _Claim:
     stream: streams.Stream
     sender: str
     attempts: int
+    reply_to: str | None
 
 
 @dataclass(frozen=True)
@@ -263,6 +270,9 @@ def _claim(  # noqa: PLR0911 - one answer per state
             row.next_attempt_at, row.last_error, row.updated_at = until, "rate_limited", now
             return _Wait(until, "rate_limited")
         row.status, row.attempts, row.updated_at = "sending", row.attempts + 1, now
+        reply_to = (
+            _reply_to(session, workspace, row) if stream is streams.Stream.CONVERSATION else None
+        )
         return _Claim(
             to_email=row.to_email,
             subject=row.subject,
@@ -270,7 +280,21 @@ def _claim(  # noqa: PLR0911 - one answer per state
             stream=stream,
             sender=sender,
             attempts=row.attempts,
+            reply_to=reply_to,
         )
+
+
+def _reply_to(session: Session, workspace: uuid.UUID, row: EmailMessage) -> str | None:
+    """The conversation's routing address (decision P6-I), only while
+    inbound email is on and a parent domain is set: otherwise replies would
+    go to an address nothing receives."""
+    parent = email_parent_domain()
+    if parent is None or not inbound_enabled():
+        return None
+    from crm_app import inbound  # noqa: PLC0415 - inbound imports this module's peers
+
+    token = inbound.route_token_for_email(session, workspace, row.id)
+    return streams.reply_address(token, parent) if token else None
 
 
 def _finish(workspace: uuid.UUID, email_id: uuid.UUID, apply: Any) -> None:
@@ -308,6 +332,7 @@ def send(
         to=(claim.to_email,),
         subject=claim.subject,
         text_body=claim.text_body,
+        reply_to=claim.reply_to,
         message_id=rules.message_id(str(email_id), claim.sender),
     )
     failure: EmailProviderError | None = None

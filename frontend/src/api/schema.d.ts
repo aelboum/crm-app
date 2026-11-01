@@ -170,6 +170,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/email/resend/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Inbound Email */
+        post: operations["resend_inbound_email_v1_public_email_resend_inbound_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/forms/{workspace_id}/{key}": {
         parameters: {
             query?: never;
@@ -904,6 +921,57 @@ export interface paths {
         /** Set Contact Tags */
         put: operations["set_contact_tags_v1_workspaces__tenant_id__contacts__record_id__tags_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/conversation-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversation Reviews */
+        get: operations["list_conversation_reviews_v1_workspaces__tenant_id__conversation_reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Conversation Review */
+        post: operations["accept_conversation_review_v1_workspaces__tenant_id__conversation_reviews__review_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard Conversation Review */
+        post: operations["discard_conversation_review_v1_workspaces__tenant_id__conversation_reviews__review_id__discard_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2027,6 +2095,21 @@ export interface components {
             period: components["schemas"]["PeriodOut"];
             /** Statuses */
             statuses: components["schemas"]["StatusCount"][];
+        };
+        /**
+         * AttachmentOut
+         * @description An attachment that was received but not fetched (no malware scanner
+         *     is approved): its name, type and size only.
+         */
+        AttachmentOut: {
+            /** Content Type */
+            content_type: string;
+            /** Filename */
+            filename: string;
+            /** Size */
+            size: number | null;
+            /** Stored */
+            stored: boolean;
         };
         /** AutomationIn */
         AutomationIn: {
@@ -3408,6 +3491,8 @@ export interface components {
         };
         /** MessageOut */
         MessageOut: {
+            /** Attachments */
+            attachments?: components["schemas"]["AttachmentOut"][] | null;
             /** Author User Id */
             author_user_id: string | null;
             /** Body */
@@ -3674,6 +3759,45 @@ export interface components {
             stage_from: string | null;
             /** Stage To */
             stage_to: string | null;
+        };
+        /** ReviewList */
+        ReviewList: {
+            /** Items */
+            items: components["schemas"]["ReviewOut"][];
+        };
+        /** ReviewOut */
+        ReviewOut: {
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentOut"][];
+            /** Body */
+            body: string;
+            /** Conversation Id */
+            conversation_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason: string;
+            /** Sender */
+            sender: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted" | "discarded";
+            /** Subject */
+            subject: string;
+            /** Truncated */
+            truncated: boolean;
+            /** Version */
+            version: number;
         };
         /**
          * Role
@@ -4568,6 +4692,28 @@ export interface operations {
         };
     };
     resend_email_events_v1_public_email_resend_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resend_inbound_email_v1_public_email_resend_inbound_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -6772,6 +6918,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_conversation_reviews_v1_workspaces__tenant_id__conversation_reviews_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_conversation_review_v1_workspaces__tenant_id__conversation_reviews__review_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                review_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_conversation_review_v1_workspaces__tenant_id__conversation_reviews__review_id__discard_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                review_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewOut"];
                 };
             };
             /** @description Validation Error */

@@ -15,6 +15,9 @@ import {
   useAddMessage,
   useConversation,
   useConversations,
+  useDecideReview,
+  useReviews,
+  type Review,
   useCreateConversation,
   useMarkRead,
   useUpdateConversation,
@@ -59,6 +62,8 @@ const DELIVERY_TONE: Record<string, Tone> = {
   complained: "risk",
   failed: "risk",
   suppressed: "neutral",
+  delivery_delayed: "pending",
+  rejected: "risk",
 };
 
 function failure(error: unknown): MessageId {
@@ -135,6 +140,7 @@ export function InboxPage({
       </div>
       <div className="inbox">
         <section className="inbox-list" aria-label={t("inbox.listLabel")}>
+          {canReply ? <Reviews workspaceId={workspaceId} /> : null}
           <label className="search-box inbox-search">
             <Search size={14} aria-hidden="true" />
             <span className="sr-only">{t("inbox.search")}</span>
@@ -296,6 +302,80 @@ export function InboxPage({
         />
       ) : null}
     </div>
+  );
+}
+
+function Reviews({ workspaceId }: { workspaceId: string }) {
+  const t = useT();
+  const reviews = useReviews(workspaceId, true);
+  const decide = useDecideReview(workspaceId);
+  const items = reviews.data?.items ?? [];
+  if (items.length === 0) return null;
+  return (
+    <section className="inbox-reviews" aria-label={t("inbox.reviews.title")}>
+      <h2 className="inbox-reviews-title">
+        {t("inbox.reviews.title")}{" "}
+        <span className="inbox-unread">{items.length}</span>
+      </h2>
+      <p className="muted">{t("inbox.reviews.intro")}</p>
+      {decide.isError ? (
+        <p className="notice error" role="alert">
+          {t("inbox.reviews.error")}
+        </p>
+      ) : null}
+      <ul className="inbox-review-items">
+        {items.map((review: Review) => (
+          <li key={review.id} className="inbox-review">
+            <p className="inbox-review-reason">
+              {t(`inbox.reviews.reason.${review.reason}` as MessageId)}
+            </p>
+            <p className="inbox-review-from">
+              {t("inbox.reviews.from", { sender: review.sender })}
+            </p>
+            <p className="inbox-item-subject">{review.subject}</p>
+            <p className="inbox-message-text">{review.body}</p>
+            {review.truncated ? (
+              <p className="muted">{t("inbox.reviews.truncated")}</p>
+            ) : null}
+            {review.attachments.length ? (
+              <p className="muted">
+                {t("inbox.attachments")}:{" "}
+                {review.attachments.map((a) => a.filename).join(", ")}
+              </p>
+            ) : null}
+            <div className="inbox-review-actions">
+              <Button
+                size="sm"
+                variant="primary"
+                isDisabled={decide.isPending || review.conversation_id === null}
+                onPress={() => {
+                  decide.mutate({
+                    id: review.id,
+                    version: review.version,
+                    accept: true,
+                  });
+                }}
+              >
+                {t("inbox.reviews.accept")}
+              </Button>
+              <Button
+                size="sm"
+                isDisabled={decide.isPending}
+                onPress={() => {
+                  decide.mutate({
+                    id: review.id,
+                    version: review.version,
+                    accept: false,
+                  });
+                }}
+              >
+                {t("inbox.reviews.discard")}
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -467,6 +547,28 @@ function Thread({
               <ShortTime value={message.created_at} />
             </div>
             <p className="inbox-message-text">{message.body}</p>
+            {message.attachments?.length ? (
+              <div className="inbox-attachments">
+                <p className="muted">{t("inbox.attachments")}</p>
+                <ul>
+                  {message.attachments.map((attachment, index) => (
+                    <li key={index}>
+                      {attachment.filename}{" "}
+                      <span className="muted">
+                        ({attachment.content_type}
+                        {attachment.size === null
+                          ? ""
+                          : `, ${String(attachment.size)} B`}
+                        )
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="muted inbox-attachments-note">
+                  {t("inbox.attachmentsNote")}
+                </p>
+              </div>
+            ) : null}
             {message.delivery ? (
               <Badge tone={DELIVERY_TONE[message.delivery] ?? "neutral"}>
                 {t(`inbox.delivery.${message.delivery}` as MessageId)}

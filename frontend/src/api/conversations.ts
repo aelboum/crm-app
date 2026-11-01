@@ -20,6 +20,7 @@ import type { components } from "./schema";
 export type ConversationSummary = components["schemas"]["ConversationSummary"];
 export type Conversation = components["schemas"]["ConversationOut"];
 export type ConversationMessage = components["schemas"]["MessageOut"];
+export type Review = components["schemas"]["ReviewOut"];
 export type MessageKind = "inbound" | "outbound" | "note";
 export type Channel = "email" | "other";
 export type Assigned = "all" | "mine" | "unassigned";
@@ -46,6 +47,8 @@ export const conversationKeys = {
     [...conversationKeys.lists(workspaceId), filter] as const,
   one: (workspaceId: string, id: string) =>
     [...conversationKeys.all(workspaceId), "one", id] as const,
+  reviews: (workspaceId: string) =>
+    [...conversationKeys.all(workspaceId), "reviews"] as const,
 };
 
 const one = (workspaceId: string, id: string) => ({
@@ -194,5 +197,53 @@ export function useMarkRead(workspaceId: string) {
       client.invalidateQueries({
         queryKey: conversationKeys.lists(workspaceId),
       }),
+  });
+}
+
+/*
+ * Received emails held for review (decision P6-I): mail that reached a
+ * thread but did not come from its contact, failed DMARC or had no text.
+ * Only members who may reply see and decide them.
+ */
+export function useReviews(workspaceId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: conversationKeys.reviews(workspaceId),
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/conversation-reviews", {
+          params: { path: where(workspaceId) },
+        }),
+      ),
+  });
+}
+
+export function useDecideReview(workspaceId: string) {
+  const refresh = useRefresh(workspaceId);
+  return useMutation<
+    Review,
+    ApiError,
+    { id: string; version: number; accept: boolean }
+  >({
+    mutationFn: async ({ id, version, accept }) => {
+      const params = {
+        params: {
+          path: { tenant_id: workspaceId, review_id: id },
+          header: ifMatch(version),
+        },
+      };
+      return unwrapWrite(
+        accept
+          ? await api.POST(
+              "/v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/accept",
+              params,
+            )
+          : await api.POST(
+              "/v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/discard",
+              params,
+            ),
+      );
+    },
+    onSettled: () => refresh(),
   });
 }
