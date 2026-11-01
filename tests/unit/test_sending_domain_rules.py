@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from typing import Any
 
 import pytest
 
-from crm_app import sending_domains
 from crm_app.domains import sending_domains as rules
 from crm_app.domains.records import InvalidValue
 from crm_app.settings import ConfigurationError, Process, validate_settings
-from tests.support import PLACEHOLDER_SETTINGS
+from tests.support import PLACEHOLDER_SETTINGS, clean_environment, run_python
 
 RECORDS = [
     {"record": "SPF", "name": "send", "type": "MX", "value": "feedback-smtp.eu-west-1.example.org",
@@ -83,72 +81,92 @@ def test_domain_events_are_parsed_and_others_ignored() -> None:
         rules.domain_event({"type": "domain.updated", "data": {"id": "bad id"}})
 
 
+_ADAPTER_PROBE = """
+import json, os
+from dataclasses import dataclass
+import saas_os.infra.secrets as secrets_module
+from crm_app import sending_domains
+
+RECORDS = json.loads(os.environ["PROBE_RECORDS"])
+
 @dataclass
-class _Response:
+class Response:
     status_code: int
     body: bytes
 
+class Client:
+    def __init__(self, status, body):
+        self.calls, self.status, self.body = [], status, body
+    async def post(self, url, *, headers, content, deadline):
+        self.calls.append([url, json.loads(content)])
+        return Response(self.status, json.dumps(self.body).encode())
 
-class _Client:
-    def __init__(self, status: int, body: object) -> None:
-        self.calls: list[tuple[str, dict[str, Any]]] = []
-        self.status = status
-        self.body = body
-
-    async def post(
-        self, url: str, *, headers: dict[str, str], content: bytes, deadline: Any
-    ) -> Any:
-        self.calls.append((url, json.loads(content)))
-        return _Response(self.status, json.dumps(self.body).encode())
-
-
-class _Secrets:
-    def get(self, name: str) -> str | None:
+class Secrets:
+    def get(self, name):
         return "re_test_key" if name == "RESEND_API_KEY" else None  # pragma: allowlist secret
 
+secrets_module.get_secrets_provider = Secrets
+out = {}
+client = Client(200, {"id": "d_1", "name": "acme.nl", "status": "not_started", "records": RECORDS})
+created = sending_domains.ResendDomains(client=client).create("acme.nl")
+out["create"] = [client.calls, created.provider_id, len(created.records or [])]
+client = Client(200, {"object": "domain", "id": "d_1"})
+sending_domains.ResendDomains(client=client).verify("d_1")
+out["verify"] = client.calls[0][0]
+refusals = []
+for status in (429, 403, 500):
+    try:
+        sending_domains.ResendDomains(client=Client(status, {})).verify("d_1")
+    except sending_domains.ProviderError as error:
+        refusals.append(str(error))
+try:
+    sending_domains.ResendDomains(client=Client(200, {"id": "bad id"})).create("acme.nl")
+except sending_domains.ProviderError as error:
+    refusals.append(str(error))
+out["refusals"] = refusals
+os.environ.pop(sending_domains.FLAG, None)
+providers = [sending_domains.configured_provider()]
+os.environ[sending_domains.FLAG] = "true"
+os.environ["ENVIRONMENT"] = "production"
+providers.append(sending_domains.configured_provider())
+out["providers"] = providers
+print(json.dumps(out))
+"""
 
-def _adapter(monkeypatch: pytest.MonkeyPatch, client: _Client) -> sending_domains.ResendDomains:
-    monkeypatch.setattr("saas_os.infra.secrets.get_secrets_provider", _Secrets)
-    return sending_domains.ResendDomains(client=client)
+
+@pytest.fixture(scope="module")
+def adapter(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+    # SaaS-OS reads configuration at import, so the adapter runs in a fresh
+    # interpreter with placeholder settings; no service is contacted.
+    env = clean_environment({**PLACEHOLDER_SETTINGS, "PROBE_RECORDS": json.dumps(RECORDS)})
+    result = run_python(_ADAPTER_PROBE, env, tmp_path_factory.mktemp("adapter"))
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout.strip().splitlines()[-1])
 
 
 def test_the_adapter_creates_a_sending_only_domain_and_keeps_its_records(
-    monkeypatch: pytest.MonkeyPatch,
+    adapter: dict[str, Any],
 ) -> None:
-    client = _Client(
-        200, {"id": "d_1", "name": "acme.nl", "status": "not_started", "records": RECORDS}
-    )
-    created = _adapter(monkeypatch, client).create("acme.nl")
-    assert client.calls == [
-        (
+    calls, provider_id, kept = adapter["create"]
+    assert calls == [
+        [
             "https://api.resend.com/domains",
             {"name": "acme.nl", "capabilities": {"sending": "enabled", "receiving": "disabled"}},
-        )
+        ]
     ]
-    assert created.provider_id == "d_1"
-    assert created.records is not None
-    assert len(created.records) == 2
+    assert (provider_id, kept) == ("d_1", 2)
 
 
-def test_the_adapter_verifies_by_id_and_maps_refusals(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = _Client(200, {"object": "domain", "id": "d_1"})
-    _adapter(monkeypatch, client).verify("d_1")
-    assert client.calls[0][0] == "https://api.resend.com/domains/d_1/verify"
-    for status, code in ((429, "rate_limited"), (403, "refused"), (500, "refused")):
-        with pytest.raises(sending_domains.ProviderError, match=code):
-            _adapter(monkeypatch, _Client(status, {})).verify("d_1")
-    with pytest.raises(sending_domains.ProviderError, match="malformed_answer"):
-        _adapter(monkeypatch, _Client(200, {"id": "bad id"})).create("acme.nl")
+def test_the_adapter_verifies_by_id_and_maps_refusals(adapter: dict[str, Any]) -> None:
+    assert adapter["verify"] == "https://api.resend.com/domains/d_1/verify"
+    codes = ("rate_limited", "refused", "refused", "malformed_answer")
+    assert len(adapter["refusals"]) == len(codes)
+    for message, code in zip(adapter["refusals"], codes, strict=True):
+        assert code in message
 
 
-def test_no_provider_is_configured_by_default_or_in_production(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv(sending_domains.FLAG, raising=False)
-    assert sending_domains.configured_provider() is None
-    monkeypatch.setenv(sending_domains.FLAG, "true")
-    monkeypatch.setenv("ENVIRONMENT", "production")
-    assert sending_domains.configured_provider() is None
+def test_no_provider_is_configured_by_default_or_in_production(adapter: dict[str, Any]) -> None:
+    assert adapter["providers"] == [None, None]
 
 
 def test_the_customer_domain_switch_is_refused_in_production() -> None:
