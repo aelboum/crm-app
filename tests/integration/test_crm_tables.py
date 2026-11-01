@@ -357,4 +357,9 @@ def test_the_migration_rolls_back_and_forward(
         "email_message",
         "email_event",
         "email_index",
+        "automation",
+        "automation_version",
+        "automation_run",
+        "automation_step",
+        "automation_due",
     }

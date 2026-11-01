@@ -138,6 +138,39 @@ def _check_links(session: Session, scope: Scope, values: Mapping[str, Any]) -> N
             raise InvalidReferenceError("opportunity_not_found")
 
 
+def create_in(
+    session: Session, scope: Scope, values: Mapping[str, Any], **audit: object
+) -> uuid.UUID:
+    """Create a task inside the caller's transaction (an automation's step,
+    decision P8-A); the caller has checked the assignee and the contact."""
+    task_id = uuid.uuid4()
+    now = _now()
+    session.add(
+        Task(
+            id=task_id,
+            tenant_id=scope.workspace,
+            title=values["title"],
+            priority=values.get("priority") or rules.DEFAULT_PRIORITY,
+            due_at=values.get("due_at"),
+            assignee_user_id=values.get("assignee_user_id"),
+            contact_id=values.get("contact_id"),
+            company_id=None,
+            opportunity_id=None,
+            completed_at=None,
+            completed_by_user_id=None,
+            created_by_user_id=scope.actor,
+            updated_by_user_id=scope.actor,
+            created_at=now,
+            updated_at=now,
+            version=1,
+        )
+    )
+    session.flush()
+    given = sorted(name for name in FIELDS if values.get(name) is not None)
+    _audit(session, scope, "created", task_id, fields=given, **audit)
+    return task_id
+
+
 def _audit(session: Session, scope: Scope, verb: str, task_id: uuid.UUID, **metadata: Any) -> None:
     record_in_transaction(
         session,

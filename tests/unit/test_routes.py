@@ -175,6 +175,20 @@ CONFIGURATION |= {
     f"PATCH {_BOOKING_PAGES}/{{page_id}}": "crm_app.booking_page:manage",
     f"DELETE {_BOOKING_PAGES}/{{page_id}}": "crm_app.booking_page:manage",
 }
+# Automations (decision P8-A): every role reads them and their runs; Owner
+# and Admin manage them, through the new `automation:manage`.
+_AUTOMATIONS = "/v1/workspaces/{tenant_id}/automations"
+_AUTOMATION = f"{_AUTOMATIONS}/{{automation_id}}"
+CONFIGURATION |= {
+    f"GET {_AUTOMATIONS}": "crm_app.automation:read",
+    f"POST {_AUTOMATIONS}": "crm_app.automation:manage",
+    f"GET {_AUTOMATION}": "crm_app.automation:read",
+    f"PATCH {_AUTOMATION}": "crm_app.automation:manage",
+    f"DELETE {_AUTOMATION}": "crm_app.automation:manage",
+    f"POST {_AUTOMATION}/activate": "crm_app.automation:manage",
+    f"POST {_AUTOMATION}/pause": "crm_app.automation:manage",
+    f"GET {_AUTOMATION}/runs": "crm_app.automation:read",
+}
 # The suppression list (decision P7-B 7): Owner, Admin and Member read;
 # Owner and Admin add and remove. A contact's email status is a contact
 # read; recording and withdrawing its consent a contact update.

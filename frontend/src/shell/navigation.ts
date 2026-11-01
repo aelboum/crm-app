@@ -83,7 +83,7 @@ export const GROUPS: Group[] = [
     label: "nav.group.marketing",
     sections: [
       soon("campaigns", "nav.campaigns", Megaphone, "soon.later"),
-      soon("automations", "nav.automations", Workflow, "soon.later"),
+      built("automations", "nav.automations", Workflow),
       built("forms", "nav.forms", FileText),
       soon("reviews", "nav.reviews", Star, "soon.deferred"),
     ],

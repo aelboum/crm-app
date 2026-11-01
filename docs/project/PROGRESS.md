@@ -37,6 +37,23 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 8 slice 8A.1, automation engine (decision P8-A, 2026-11-01):**
+  migration `0021_automations` (automation, automation_version,
+  automation_run, automation_step, global automation_due); the
+  `/automations` API; trigger on contact creation; job
+  `crm_app_automation_run`; sweeper
+  `python -m crm_app.automation_maintenance`. Verified:
+  `test_automations.py` 8, unit `test_automation_rules.py` 20.
+  Slice 8A.2: Marketing › Automations screen (list, editor, activate,
+  pause, delete, run history); `automations.test.tsx` 5. Also verified:
+  unit 585, Vitest 273, full integration suite in four batches (201, 185,
+  169, 163 + the access-map test updated for the two new actions, 25).
+  Local `crm_app` at `0021_automations` (68 contacts kept). In Chrome, in
+  a workspace provisioned for the check ("E2E Automations 8A"): an
+  automation built in the editor, activated, then a contact created; the
+  real worker (`python -m crm_app.worker`) ran the job the sweeper
+  enqueued, completing the run and creating the task assigned as set;
+  run history shown; no overflow at 390 px, no console errors.
 - **Phase 6 slice 6E.2, booking confirmation emails (decision P6-E2,
   2026-11-01):** a booking queues a confirmation to the visitor when the
   page's new `confirmation_email` setting is on (migration

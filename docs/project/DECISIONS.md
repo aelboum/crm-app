@@ -1776,6 +1776,65 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Tests:** `tests/unit/test_email_rules.py`,
   `tests/integration/test_emails.py`, settings tests.
 
+## P8-A — Automation engine foundation (2026-11-01, under M1)
+
+- **Status:** Decided under M1. The owner's mission of 2026-10-31 makes
+  Phase 8 the third priority: triggers, conditions, actions, reliable
+  background execution, idempotency, retries, failure handling,
+  observability, tenant isolation, permissions, execution history and
+  limits, "never execute an automation twice merely because a worker
+  retries a job" and no arbitrary code or expression evaluation. Slice 8A
+  (8A.1 engine and API; 8A.2 the screen). Phase 8 is outside the K5 MVP
+  list; this mission is the owner's authorisation for it.
+- **Design audit:** `ScreenAutomation.dc.html` shows one workflow: a
+  trigger ("New lead created" with sources, "once" per contact), one
+  condition and two branches (yes, no) of actions from a catalogue
+  (assign owner, create task, send SMS, send email, wait, add tag, notify
+  team, hand to an AI assistant), saved as a draft and switched on.
+- **Decisions:**
+  1. **Shape:** exactly that: one trigger, an optional condition, two
+     branches of at most 10 actions. Definitions are JSON data checked by
+     `crm_app.domains.automations`; nothing is evaluated as code or as an
+     expression, and unknown fields are refused.
+  2. **Trigger:** `contact_created`, optionally limited to sources
+     (manual, form, booking, referral, other). It fires in the
+     transaction that creates the contact (`records.insert_record`), at
+     most once per automation and contact (a unique key).
+  3. **Imports never trigger**, so a 10,000-row import cannot start
+     10,000 runs. At most 20 automations per workspace.
+  4. **Conditions:** source or lifecycle stage in or not in a list, email
+     present or absent, holds or lacks one of listed tags; read when the
+     run starts.
+  5. **Actions in 8A:** add a tag, assign an owner, create a task (title,
+     priority, due in N minutes, assignee: the contact's owner, nobody or
+     a member), wait N minutes (at most 30 days). Not built: send email
+     (needs the email decisions of P6-E and consent for marketing), SMS
+     and AI (deferred by K5), notify team, round-robin assignment and
+     business-hours waits.
+  6. **Versions:** the editable draft is frozen as an immutable
+     `automation_version` on activation; a running automation's
+     definition cannot change (pause it first); runs keep the version
+     they began with.
+  7. **Execution:** job `crm_app_automation_run` advances a run under a
+     row lock, one step per transaction, writing the step's effect and
+     its `automation_step` row together, so a retried or parallel job
+     finds the step done and never acts twice. A wait parks the run
+     until its time in the global `automation_due`;
+     `python -m crm_app.automation_maintenance` (every minute) enqueues
+     due runs. A missing tag or departed member skips the step with a
+     code; a deleted contact cancels the run; unexpected errors are
+     counted and retried, failing the run after 5 tries.
+  8. **Who:** new permissions `crm_app.automation:read` (every role) and
+     `:manage` (Owner, Admin). Steps act as the member who activated the
+     automation (SaaS-OS has no system caller), so their history and
+     audit entries name that member; task audit entries carry
+     `automation_id`. Gate G7 applies: workspaces created before this
+     change do not hold the new permissions.
+  9. **History:** `GET .../automations/{id}/runs` lists the latest 50
+     runs with their steps, outcomes and error codes.
+- **Tests:** `tests/unit/test_automation_rules.py`,
+  `tests/integration/test_automations.py`.
+
 ## P6-E2 — Booking confirmation emails (2026-11-01, under M1)
 
 - **Status:** Decided under M1 as the first consumer of P6-E. Slice 6E.2.

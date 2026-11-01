@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0020_booking_confirmation` own the
+Migrations `0002_contacts_companies` to `0021_automations` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -733,3 +733,88 @@ class EmailIndex(Base):
     workspace_id: Mapped[uuid.UUID] = mapped_column()
     provider_message_id: Mapped[str | None] = mapped_column(Text)
     retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Automation(Base):
+    """A workflow: trigger, optional condition, two branches of actions
+    (migration 0021, decision P8-A). `definition` is the editable draft."""
+
+    __tablename__ = "automation"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    trigger_type: Mapped[str] = mapped_column(Text)
+    definition: Mapped[dict[str, Any]] = mapped_column(JSON)
+    active_version: Mapped[int | None] = mapped_column(Integer)
+    activated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class AutomationVersion(Base):
+    """An automation's definition as activated (immutable)."""
+
+    __tablename__ = "automation_version"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    automation_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    definition: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AutomationRun(Base):
+    """One run of one automation version for one contact."""
+
+    __tablename__ = "automation_run"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    automation_id: Mapped[uuid.UUID] = mapped_column()
+    version_number: Mapped[int] = mapped_column(Integer)
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    branch: Mapped[str | None] = mapped_column(Text)
+    next_step: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(Text)
+    resume_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AutomationStep(Base):
+    """One executed step of a run (append-only)."""
+
+    __tablename__ = "automation_step"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    run_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    branch: Mapped[str] = mapped_column(Text, primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    action: Mapped[str] = mapped_column(Text)
+    outcome: Mapped[str] = mapped_column(Text)
+    detail: Mapped[str | None] = mapped_column(Text)
+    executed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AutomationDue(Base):
+    """When a workspace's run is due (global, ids and times only)."""
+
+    __tablename__ = "automation_due"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    run_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column()
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

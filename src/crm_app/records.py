@@ -856,6 +856,12 @@ def insert_record(  # noqa: PLR0913 - the record, then how it came to be
     if booking_page_id is not None:
         metadata["booking_page_id"] = str(booking_page_id)
     _audit(session, kind, scope, _Event("created", record_id, metadata))
+    if kind is CONTACT:
+        # Active automations start in the same transaction (decision P8-A).
+        from crm_app import automations  # noqa: PLC0415 - automations imports this module
+
+        source = str(values.get("source") or "manual")  # the column's default
+        automations.on_contact_created(session, scope, record_id, source)
 
 
 def create(
@@ -1029,6 +1035,62 @@ def set_tags(
 
     _write(kind, scope, lambda: None, apply)
     return get(kind, scope, record_id)
+
+
+def assign_owner_in(
+    session: Session, scope: Scope, contact_id: uuid.UUID, owner: uuid.UUID
+) -> bool:
+    """Make `owner` the contact's owner inside the caller's transaction (an
+    automation's step, decision P8-A); `False` when it already is. Recorded
+    like a member's change: history and audit acting as `scope.actor`."""
+    row = _load(session, CONTACT, scope, contact_id, lock=True)
+    if row.owner_user_id == owner:
+        return False
+    before = {"owner_user_id": row.owner_user_id}
+    row.owner_user_id = owner
+    _touch(row, scope)
+    session.flush()
+    session.add_all(_change_history(CONTACT, scope, row, before))
+    _audit(session, CONTACT, scope, _Event("updated", contact_id, {"fields": ["owner_user_id"]}))
+    return True
+
+
+def add_tag_in(session: Session, scope: Scope, contact_id: uuid.UUID, tag_id: uuid.UUID) -> str:
+    """Add one tag to a contact inside the caller's transaction (an
+    automation's step, decision P8-A): `added`, `present`, `tag_gone` or
+    `too_many`."""
+    tagging, record = _TAGGING[CONTACT.name]
+    row = _load(session, CONTACT, scope, contact_id, lock=True)
+    known = session.execute(
+        select(Tag.id)
+        .where(Tag.tenant_id == scope.workspace, Tag.id == tag_id)
+        .with_for_update(key_share=True)
+    ).first()
+    if known is None:
+        return "tag_gone"
+    current = set(
+        session.execute(
+            select(tagging.tag_id).where(tagging.tenant_id == scope.workspace, record == contact_id)
+        ).scalars()
+    )
+    if tag_id in current:
+        return "present"
+    if len(current) >= MAX_RECORD_TAGS:
+        return "too_many"
+    session.add(
+        tagging(
+            tenant_id=scope.workspace,
+            tag_id=tag_id,
+            created_by_user_id=scope.actor,
+            created_at=_now(),
+            **{record.key: contact_id},
+        )
+    )
+    _touch(row, scope)
+    session.flush()
+    session.add(history_entry(CONTACT, scope, contact_id, "updated", fields=["tags"]))
+    _audit(session, CONTACT, scope, _Event("updated", contact_id, {"fields": ["tags"]}))
+    return "added"
 
 
 def set_archived(kind: Kind, scope: Scope, record_id: uuid.UUID, *, archived: bool) -> Record:

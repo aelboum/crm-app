@@ -54,6 +54,10 @@ SCHEMA = "crm_app"
 # `workspace_settings` and `invitation_intent` reference no
 # product table.
 PURGE_TABLES: tuple[str, ...] = (
+    "automation_step",
+    "automation_run",
+    "automation_version",
+    "automation",
     "email_event",
     "email_message",
     "consent_record",
@@ -94,7 +98,13 @@ _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 # rows; it holds no personal data, and its rows go with the workspace.
 # `email_index` (migration 0019) maps provider message ids to a workspace's
 # emails; ids and times only, and its rows go with the workspace.
-PURGE_GLOBAL_REFERENCES: tuple[str, ...] = ("signup", "import_expiry", "email_index")
+# `automation_due` (migration 0021) schedules a workspace's automation runs.
+PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
+    "signup",
+    "import_expiry",
+    "email_index",
+    "automation_due",
+)
 
 
 def _forget_signups(tenant_id: uuid.UUID) -> None:
@@ -133,6 +143,21 @@ def _forget_email_index(tenant_id: uuid.UUID) -> None:
         ).first()
     if left is not None:
         raise PurgeIncompleteError("Rows remain in: email_index")
+
+
+def _forget_automation_due(tenant_id: uuid.UUID) -> None:
+    from saas_os.infra.db import delete, select, session_scope  # noqa: PLC0415
+
+    from crm_app.models import AutomationDue  # noqa: PLC0415
+
+    with session_scope() as session:
+        session.execute(delete(AutomationDue).where(AutomationDue.workspace_id == tenant_id))
+    with session_scope() as session:
+        left = session.execute(
+            select(AutomationDue.run_id).where(AutomationDue.workspace_id == tenant_id).limit(1)
+        ).first()
+    if left is not None:
+        raise PurgeIncompleteError("Rows remain in: automation_due")
 
 
 class PurgeIncompleteError(RuntimeError):
@@ -202,6 +227,8 @@ class CrmDataPurgeParticipant:
             _forget_import_expiry(tenant_id)
         if "email_index" in self._global_references:
             _forget_email_index(tenant_id)
+        if "automation_due" in self._global_references:
+            _forget_automation_due(tenant_id)
 
     def _table(self, table: str) -> Any:  # a SQLAlchemy Table; typed loosely to keep SQLAlchemy out
         from saas_os.infra.db import Base  # noqa: PLC0415

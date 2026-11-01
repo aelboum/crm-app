@@ -172,6 +172,13 @@ PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
         "A published booking page lets anyone create contacts and appointments;"
         " rate-limited (P5-C).",
     ),
+    Permission(f"{PREFIX}automation", "read", Kind.READ),
+    Permission(
+        f"{PREFIX}automation",
+        "manage",
+        Kind.ADMINISTRATIVE,
+        "An active automation changes contacts and creates tasks without a member acting (P8-A).",
+    ),
     Permission(f"{PREFIX}suppression", "read", Kind.READ),
     Permission(
         f"{PREFIX}suppression",
@@ -207,6 +214,7 @@ _READ_ONLY = _keys(
     f"{PREFIX}activity:read",
     f"{PREFIX}form:read",
     f"{PREFIX}booking_page:read",
+    f"{PREFIX}automation:read",
 )
 
 _MEMBER = _READ_ONLY | _keys(
@@ -240,6 +248,7 @@ _ADMIN = _MEMBER | _keys(
     f"{PREFIX}form:manage",
     f"{PREFIX}booking_page:manage",
     f"{PREFIX}suppression:manage",
+    f"{PREFIX}automation:manage",
     "invitation:read",
     "invitation:create",
     "invitation:revoke",

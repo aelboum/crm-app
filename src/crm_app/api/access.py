@@ -83,6 +83,9 @@ ACTIONS: dict[str, tuple[str, str]] = {
     # Owner and Admin add and remove.
     "read_suppressions": ("crm_app.suppression", "read"),
     "manage_suppressions": ("crm_app.suppression", "manage"),
+    # Automations (decision P8-A): every role reads; Owner and Admin manage.
+    "read_automations": ("crm_app.automation", "read"),
+    "manage_automations": ("crm_app.automation", "manage"),
 }
 
 
