@@ -62,11 +62,12 @@ from saas_os.infra.ratelimit import (
     get_ratelimit_config,
 )
 
-from crm_app import forms
+from crm_app import forms, websites
 from crm_app.api.inputs import json_body
 from crm_app.api.records import DEFAULT_LIMIT, MAX_LIMIT, IdempotencyKey, IfMatch, _http, _version
 from crm_app.domains import forms as rules
 from crm_app.domains import paging
+from crm_app.domains import websites as site_rules
 from crm_app.records import RecordError, Scope
 
 router = APIRouter(prefix="/v1/workspaces", tags=["forms"])
@@ -180,6 +181,9 @@ class SubmissionOut(BaseModel):
     created_at: datetime
     contact_id: uuid.UUID | None
     contact: ContactRef | None
+    # The external site and its attribution (decision P12-W).
+    website_id: uuid.UUID | None = None
+    attribution: dict[str, str | None] | None = None
 
 
 class SubmissionPage(BaseModel):
@@ -358,6 +362,11 @@ class SubmissionIn(BaseModel):
     consent: StrictBool = False
     # The honeypot (P7-A 5): the hosted page leaves it empty and hidden.
     website: str = Field(default="", max_length=200)
+    # Where the visitor came from (decision P12-W); unknown keys are dropped.
+    attribution: (
+        dict[Annotated[str, Field(max_length=40)], Annotated[str, Field(max_length=2100)] | None]
+        | None
+    ) = Field(default=None, max_length=12)
 
 
 class Accepted(BaseModel):
@@ -411,6 +420,40 @@ _public = Depends(
 _PUBLIC = "/{workspace_id}/{key}"
 
 
+def _app_origin() -> str | None:
+    import os  # noqa: PLC0415
+
+    return site_rules.request_origin(os.environ.get("PUBLIC_APP_ORIGIN"))
+
+
+async def _cross_site(
+    workspace_id: uuid.UUID, request: Request
+) -> tuple[str | None, uuid.UUID | None]:
+    """The request's origin and website when it comes from an allowed
+    external site (decision P12-W); `(None, None)` for the hosted page or a
+    request without an `Origin` (a server); 403 `origin_not_allowed` for any
+    other site, before the body is read."""
+    origin = site_rules.request_origin(request.headers.get("origin"))
+    if origin is None or origin == _app_origin():
+        return None, None
+    website_id = await run_in_threadpool(websites.site_for_origin, workspace_id, origin)
+    if website_id is None:
+        raise HTTPException(403, detail={"code": "origin_not_allowed"})
+    return origin, website_id
+
+
+def _cors(origin: str) -> dict[str, str]:
+    """CORS headers for one allowed origin; never a wildcard, never
+    credentials."""
+    return {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "POST",
+        "Access-Control-Allow-Headers": "content-type, idempotency-key",
+        "Access-Control-Max-Age": "600",
+        "Vary": "Origin",
+    }
+
+
 @public_router.get(_PUBLIC, response_model=PublicForm, dependencies=[_public], name="public_form")
 async def read_public_form(workspace_id: uuid.UUID, key: str, request: Request) -> Any:
     _known_key(key)
@@ -442,18 +485,29 @@ async def read_public_form(workspace_id: uuid.UUID, key: str, request: Request) 
         },
     },
 )
-async def submit_public_form(workspace_id: uuid.UUID, key: str, request: Request) -> Any:
+async def submit_public_form(
+    workspace_id: uuid.UUID, key: str, request: Request, response: Response
+) -> Any:
     _known_key(key)
     await _address_limit(request)
     await _limited(f"form:submit:{workspace_id}:{key}")
+    origin, website_id = await _cross_site(workspace_id, request)
+    if origin is not None:
+        response.headers.update(_cors(origin))
     idempotency_key = _idempotency_key(request)
     body = await _submission(request)
+    attribution = site_rules.attribution(body.attribution, origin)
     try:
         if body.website.strip():
             # A bot filled the hidden field: the same answer, nothing stored.
             form = await run_in_threadpool(forms.public_form, workspace_id, key)
             return {"thank_you": form["thank_you"]}
-        submission = forms.Submission(answers=body.answers, consent=body.consent)
+        submission = forms.Submission(
+            answers=body.answers,
+            consent=body.consent,
+            website_id=website_id,
+            attribution=None if attribution.empty else attribution.as_dict(),
+        )
         thank_you = await run_in_threadpool(
             lambda: forms.submit(workspace_id, key, submission, idempotency_key=idempotency_key)
         )
@@ -466,3 +520,15 @@ async def submit_public_form(workspace_id: uuid.UUID, key: str, request: Request
     except IdempotencyInProgressError:
         raise HTTPException(409, detail={"code": "idempotency_in_progress"}) from None
     return {"thank_you": thank_you}
+
+
+@public_router.options(
+    _PUBLIC, status_code=204, dependencies=[_public], name="preflight_public_form"
+)
+async def preflight_public_form(workspace_id: uuid.UUID, key: str, request: Request) -> Response:
+    """A browser's CORS preflight from an external site (decision P12-W):
+    204 with headers for an allowed origin, 403 without them otherwise."""
+    _known_key(key)
+    await _address_limit(request)
+    origin, _ = await _cross_site(workspace_id, request)
+    return Response(status_code=204, headers=_cors(origin) if origin else {})

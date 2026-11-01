@@ -114,6 +114,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         # P7-C (campaigns).
         "campaign",
         "campaign_recipient",
+        # P12-W (websites).
+        "website",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",

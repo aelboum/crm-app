@@ -63,6 +63,7 @@ def create_app() -> FastAPI:
     from crm_app.api.suppression import router as suppression_router  # noqa: PLC0415
     from crm_app.api.tags import router as tags_router  # noqa: PLC0415
     from crm_app.api.tasks import router as tasks_router  # noqa: PLC0415
+    from crm_app.api.websites import router as websites_router  # noqa: PLC0415
     from crm_app.api.workspace_settings import router as settings_router  # noqa: PLC0415
     from crm_app.api.workspaces import router as workspaces_router  # noqa: PLC0415
     from crm_app.purge import register_purge_participants  # noqa: PLC0415
@@ -96,6 +97,7 @@ def create_app() -> FastAPI:
         appointments_router,
         booking_pages_router,
         forms_router,
+        websites_router,
         suppression_router,
         invitations_router,
     ):

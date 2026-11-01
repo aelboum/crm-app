@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0026_campaigns` own the
+Migrations `0002_contacts_companies` to `0027_websites` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -591,6 +591,11 @@ class FormSubmission(Base):
     outcome: Mapped[str] = mapped_column(Text)
     consent: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # The external site a cross-site submission came from, and its
+    # attribution (migration 0027, P12-W).
+    website_id: Mapped[uuid.UUID | None] = mapped_column()
+    # SQL NULL, not JSON null, when there is none (the column's check wants an object).
+    attribution: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
 
 
 class ConsentRecord(Base):
@@ -997,3 +1002,21 @@ class CampaignRecipient(Base):
     unsubscribe_hash: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Website(Base):
+    """An external site whose pages may submit the workspace's published
+    forms (migration 0027, P12-W)."""
+
+    __tablename__ = "website"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    origins: Mapped[list[str]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)

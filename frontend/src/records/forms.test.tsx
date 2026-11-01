@@ -2,7 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { accessibilityViolations, type Handler, renderApp } from "../test/render";
+import {
+  accessibilityViolations,
+  type Handler,
+  renderApp,
+} from "../test/render";
 
 /*
  * Forms (decision P7-A): the list, creating a form with the starter fields
@@ -19,9 +23,30 @@ const KEY = "l15C1NiaYj-muzjcZJlhjg";
 const stamp = "2026-10-28T09:30:00+00:00";
 
 const FIELDS = [
-  { key: "first_name", type: "text", label: "First name", required: true, target: "first_name", options: null },
-  { key: "email", type: "email", label: "Email", required: true, target: "email", options: null },
-  { key: "topic", type: "select", label: "Topic", required: false, target: null, options: ["Sales", "Support"] },
+  {
+    key: "first_name",
+    type: "text",
+    label: "First name",
+    required: true,
+    target: "first_name",
+    options: null,
+  },
+  {
+    key: "email",
+    type: "email",
+    label: "Email",
+    required: true,
+    target: "email",
+    options: null,
+  },
+  {
+    key: "topic",
+    type: "select",
+    label: "Topic",
+    required: false,
+    target: null,
+    options: ["Sales", "Support"],
+  },
 ];
 
 function form(extra: Record<string, unknown> = {}) {
@@ -64,6 +89,16 @@ const SUBMISSIONS = {
   total_capped: false,
 };
 
+const SITE = {
+  id: "w1000000-0000-4000-8000-000000000001",
+  name: "Acme shop",
+  origins: ["https://www.acme-shop.example"],
+  status: "active",
+  created_at: stamp,
+  updated_at: stamp,
+  version: 2,
+};
+
 type Reply = { status: number; body?: unknown } | undefined;
 
 function workspace(
@@ -73,24 +108,53 @@ function workspace(
   return (method, path, body) => {
     const base = `/v1/workspaces/${WS}`;
     if (path === "/auth/me") return { status: 200, body: { user_id: "u-me" } };
-    if (path === base) return { status: 200, body: { id: WS, name: "Acme", status: "active" } };
+    if (path === base)
+      return { status: 200, body: { id: WS, name: "Acme", status: "active" } };
     if (path === `${base}/access`) {
-      return { status: 200, body: { membership_id: "m1", roles: ["Owner"], actions } };
+      return {
+        status: 200,
+        body: { membership_id: "m1", roles: ["Owner"], actions },
+      };
     }
     if (path.startsWith(`${base}/members?`)) {
-      return { status: 200, body: { items: [], total: 0, limit: 50, offset: 0 } };
+      return {
+        status: 200,
+        body: { items: [], total: 0, limit: 50, offset: 0 },
+      };
     }
     if (path === `${base}/tags`) {
-      return { status: 200, body: { items: [{ id: "t1", name: "Web lead", version: 1 }] } };
+      return {
+        status: 200,
+        body: { items: [{ id: "t1", name: "Web lead", version: 1 }] },
+      };
     }
     if (method === "GET" && path === `${base}/forms`) {
-      return { status: 200, body: { items: [form({ status: "published" }), form({ id: "f2", name: "Newsletter" })] } };
+      return {
+        status: 200,
+        body: {
+          items: [
+            form({ status: "published" }),
+            form({ id: "f2", name: "Newsletter" }),
+          ],
+        },
+      };
     }
-    if (method === "GET" && path === `${base}/forms/${FORM_ID}`) return { status: 200, body: form() };
-    if (method === "GET" && path.startsWith(`${base}/forms/${FORM_ID}/submissions`)) {
+    if (method === "GET" && path === `${base}/forms/${FORM_ID}`)
+      return { status: 200, body: form() };
+    if (
+      method === "GET" &&
+      path.startsWith(`${base}/forms/${FORM_ID}/submissions`)
+    ) {
       return { status: 200, body: SUBMISSIONS };
     }
-    if (method !== "GET" && path.startsWith(`${base}/forms`)) return onWrite?.(method, path, body);
+    if (method === "GET" && path === `${base}/websites`) {
+      return { status: 200, body: { items: [SITE] } };
+    }
+    if (method !== "GET" && path.startsWith(`${base}/websites`)) {
+      return onWrite?.(method, path, body);
+    }
+    if (method !== "GET" && path.startsWith(`${base}/forms`))
+      return onWrite?.(method, path, body);
     return undefined;
   };
 }
@@ -103,9 +167,15 @@ describe("forms page", () => {
     renderApp(`/w/${WS}/forms`, workspace(MANAGER));
     const card = await screen.findByRole("button", { name: /Newsletter/ });
     expect(card).toHaveTextContent("Draft");
-    expect(screen.getByRole("button", { name: /Contact us/ })).toHaveTextContent("Published");
-    expect(screen.getByRole("button", { name: /Contact us/ })).toHaveTextContent("3 fields");
-    expect(screen.getByRole("button", { name: "New form" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Contact us/ }),
+    ).toHaveTextContent("Published");
+    expect(
+      screen.getByRole("button", { name: /Contact us/ }),
+    ).toHaveTextContent("3 fields");
+    expect(
+      screen.getByRole("button", { name: "New form" }),
+    ).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });
 
@@ -113,7 +183,9 @@ describe("forms page", () => {
     const user = userEvent.setup();
     const { sent, headersSent } = renderApp(
       `/w/${WS}/forms`,
-      workspace(MANAGER, (method) => (method === "POST" ? { status: 201, body: form() } : undefined)),
+      workspace(MANAGER, (method) =>
+        method === "POST" ? { status: 201, body: form() } : undefined,
+      ),
     );
     await user.click(await screen.findByRole("button", { name: "New form" }));
     await waitFor(() => {
@@ -128,15 +200,23 @@ describe("forms page", () => {
         { key: "phone", target: "phone", required: false },
       ],
     });
-    expect(headersSent.find((r) => r.method === "POST")?.headers["idempotency-key"]).toMatch(/^[0-9a-f]{32}$/);
-    expect(await screen.findByRole("heading", { name: "Preview" })).toBeInTheDocument();
+    expect(
+      headersSent.find((r) => r.method === "POST")?.headers["idempotency-key"],
+    ).toMatch(/^[0-9a-f]{32}$/);
+    expect(
+      await screen.findByRole("heading", { name: "Preview" }),
+    ).toBeInTheDocument();
   });
 
   it("saves only what changed and publishes with the form's version", async () => {
     const user = userEvent.setup();
     const { sent, headersSent } = renderApp(
       `/w/${WS}/forms?record=${FORM_ID}`,
-      workspace(MANAGER, (method) => (method === "PATCH" ? { status: 200, body: form({ version: 4 }) } : undefined)),
+      workspace(MANAGER, (method) =>
+        method === "PATCH"
+          ? { status: 200, body: form({ version: 4 }) }
+          : undefined,
+      ),
     );
     const name = await screen.findByLabelText("Form name");
     await user.clear(name);
@@ -146,11 +226,19 @@ describe("forms page", () => {
     await waitFor(() => {
       expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(1);
     });
-    const patch = sent.find((r) => r.method === "PATCH")?.body as { fields: { key: string }[] };
+    const patch = sent.find((r) => r.method === "PATCH")?.body as {
+      fields: { key: string }[];
+    };
     expect(patch).toMatchObject({ name: "Get a quote", status: "published" });
-    expect(patch.fields.map((field) => field.key)).toEqual(["first_name", "topic", "email"]);
+    expect(patch.fields.map((field) => field.key)).toEqual([
+      "first_name",
+      "topic",
+      "email",
+    ]);
     expect(Object.keys(patch).sort()).toEqual(["fields", "name", "status"]);
-    expect(headersSent.find((r) => r.method === "PATCH")?.headers["if-match"]).toBe('"3"');
+    expect(
+      headersSent.find((r) => r.method === "PATCH")?.headers["if-match"],
+    ).toBe('"3"');
     expect(await accessibilityViolations()).toEqual([]);
   });
 
@@ -158,32 +246,47 @@ describe("forms page", () => {
     const user = userEvent.setup();
     renderApp(
       `/w/${WS}/forms?record=${FORM_ID}`,
-      workspace(MANAGER, () => ({ status: 422, body: { detail: { code: "first_name_field_required" } } })),
+      workspace(MANAGER, () => ({
+        status: 422,
+        body: { detail: { code: "first_name_field_required" } },
+      })),
     );
     await user.click(await screen.findByRole("button", { name: "Publish" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("needs a required field that fills First name");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "needs a required field that fills First name",
+    );
   });
 
   it("adds a dropdown with two options and shows its settings", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/forms?record=${FORM_ID}`, workspace(MANAGER));
-    await user.click(await screen.findByRole("button", { name: "Add field: Dropdown" }));
-    const settings = screen.getByRole("group", { name: "Settings of Dropdown" });
-    expect(within(settings).getByLabelText("Options")).toHaveValue("Option 1\nOption 2");
+    await user.click(
+      await screen.findByRole("button", { name: "Add field: Dropdown" }),
+    );
+    const settings = screen.getByRole("group", {
+      name: "Settings of Dropdown",
+    });
+    expect(within(settings).getByLabelText("Options")).toHaveValue(
+      "Option 1\nOption 2",
+    );
     expect(screen.getByText("Unsaved changes.")).toBeInTheDocument();
   });
 
   it("shows submissions with their outcome and answers", async () => {
     renderApp(`/w/${WS}/forms?record=${FORM_ID}`, workspace(MANAGER));
     const table = await screen.findByRole("table");
-    expect(within(table).getByRole("button", { name: "Sam Jansen" })).toBeInTheDocument();
+    expect(
+      within(table).getByRole("button", { name: "Sam Jansen" }),
+    ).toBeInTheDocument();
     expect(within(table).getByText("Matched")).toBeInTheDocument();
     expect(within(table).getByText(/sam@example.test/)).toBeInTheDocument();
   });
 
   it("offers a Read-only member the form without changes", async () => {
     renderApp(`/w/${WS}/forms?record=${FORM_ID}`, workspace(READER));
-    expect(await screen.findByRole("heading", { level: 1, name: "Contact us" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Contact us" }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete form" })).toBeNull();
     expect(screen.getByLabelText("Thank-you message")).toBeDisabled();
@@ -200,7 +303,13 @@ function visitor(onSubmit: (body: unknown) => Reply, page?: Reply): Handler {
           status: 200,
           body: {
             name: "Contact us",
-            fields: FIELDS.map(({ key, type, label, required, options }) => ({ key, type, label, required, options })),
+            fields: FIELDS.map(({ key, type, label, required, options }) => ({
+              key,
+              type,
+              label,
+              required,
+              options,
+            })),
             consent_text: "Email me about my enquiry.",
             thank_you: "Thanks! We will be in touch soon.",
           },
@@ -217,22 +326,35 @@ describe("hosted form page", () => {
     const user = userEvent.setup();
     const { sent, headersSent } = renderApp(
       `/f/${WS}/${KEY}`,
-      visitor(() => ({ status: 201, body: { thank_you: "Thanks! We will be in touch soon." } })),
+      visitor(() => ({
+        status: 201,
+        body: { thank_you: "Thanks! We will be in touch soon." },
+      })),
     );
-    await user.type(await screen.findByRole("textbox", { name: "First name" }), "Sam");
-    await user.type(screen.getByRole("textbox", { name: "Email" }), "sam@example.test");
+    await user.type(
+      await screen.findByRole("textbox", { name: "First name" }),
+      "Sam",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Email" }),
+      "sam@example.test",
+    );
     await user.selectOptions(screen.getByLabelText("Topic"), "Sales");
     await user.click(screen.getByLabelText("Email me about my enquiry."));
     expect(await accessibilityViolations()).toEqual([]);
     await user.click(screen.getByRole("button", { name: "Submit" }));
-    expect(await screen.findByText("Thanks! We will be in touch soon.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Thanks! We will be in touch soon."),
+    ).toBeInTheDocument();
     const post = sent.find((r) => r.method === "POST");
     expect(post?.body).toEqual({
       answers: { first_name: "Sam", email: "sam@example.test", topic: "Sales" },
       consent: true,
       website: "",
     });
-    expect(headersSent.find((r) => r.method === "POST")?.headers["idempotency-key"]).toMatch(/^[0-9a-f]{32}$/);
+    expect(
+      headersSent.find((r) => r.method === "POST")?.headers["idempotency-key"],
+    ).toMatch(/^[0-9a-f]{32}$/);
     expect(sent.some((r) => r.path === "/auth/me")).toBe(false);
   });
 
@@ -242,21 +364,100 @@ describe("hosted form page", () => {
       `/f/${WS}/${KEY}`,
       visitor(() => ({
         status: 422,
-        body: { detail: { code: "invalid_answers", fields: { first_name: "required", email: "invalid" } } },
+        body: {
+          detail: {
+            code: "invalid_answers",
+            fields: { first_name: "required", email: "invalid" },
+          },
+        },
       })),
     );
     await user.click(await screen.findByRole("button", { name: "Submit" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Some answers need attention.");
-    expect(screen.getByRole("textbox", { name: "First name" })).toHaveAccessibleDescription("This field is required.");
-    expect(screen.getByRole("textbox", { name: "Email" })).toHaveAccessibleDescription("Check this answer.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Some answers need attention.",
+    );
+    expect(
+      screen.getByRole("textbox", { name: "First name" }),
+    ).toHaveAccessibleDescription("This field is required.");
+    expect(
+      screen.getByRole("textbox", { name: "Email" }),
+    ).toHaveAccessibleDescription("Check this answer.");
     // A corrected field no longer shows the old message; the others still do.
     await user.type(screen.getByRole("textbox", { name: "First name" }), "Sam");
-    expect(screen.getByRole("textbox", { name: "First name" })).not.toHaveAccessibleDescription();
-    expect(screen.getByRole("textbox", { name: "Email" })).toHaveAccessibleDescription("Check this answer.");
+    expect(
+      screen.getByRole("textbox", { name: "First name" }),
+    ).not.toHaveAccessibleDescription();
+    expect(
+      screen.getByRole("textbox", { name: "Email" }),
+    ).toHaveAccessibleDescription("Check this answer.");
   });
 
   it("says when a form is not available", async () => {
-    renderApp(`/f/${WS}/${KEY}`, visitor(() => undefined, { status: 404, body: { detail: "Not Found" } }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("This form is not available.");
+    renderApp(
+      `/f/${WS}/${KEY}`,
+      visitor(() => undefined, { status: 404, body: { detail: "Not Found" } }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This form is not available.",
+    );
+  });
+
+  it("lists websites and adds one with its addresses (P12-W)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/forms`,
+      workspace(MANAGER, (method, path) =>
+        method === "POST" && path.endsWith("/websites")
+          ? { status: 201, body: SITE }
+          : undefined,
+      ),
+    );
+    const panel = await screen.findByRole("region", { name: "Websites" });
+    expect(await within(panel).findByText("Acme shop")).toBeInTheDocument();
+    expect(panel).toHaveTextContent("https://www.acme-shop.example");
+    await user.type(within(panel).getByLabelText("Site name"), "Blog");
+    await user.type(
+      within(panel).getByLabelText(/Site addresses/),
+      "https://blog.example.com, https://www.example.com",
+    );
+    await user.click(
+      within(panel).getByRole("button", { name: "Add website" }),
+    );
+    await waitFor(() => {
+      const post = sent.find(
+        (r) => r.method === "POST" && r.path.endsWith("/websites"),
+      );
+      expect(post?.body).toEqual({
+        name: "Blog",
+        origins: ["https://blog.example.com", "https://www.example.com"],
+      });
+    });
+  });
+
+  it("disables a website with its version", async () => {
+    const user = userEvent.setup();
+    const { headersSent } = renderApp(
+      `/w/${WS}/forms`,
+      workspace(MANAGER, (method) =>
+        method === "PATCH"
+          ? { status: 200, body: { ...SITE, status: "disabled" } }
+          : undefined,
+      ),
+    );
+    const panel = await screen.findByRole("region", { name: "Websites" });
+    await user.click(
+      await within(panel).findByRole("button", { name: "Disable" }),
+    );
+    await waitFor(() => {
+      const call = headersSent.find((r) => r.method === "PATCH");
+      expect(call?.headers["if-match"]).toBe('"2"');
+    });
+  });
+
+  it("shows websites to readers without changing them", async () => {
+    renderApp(`/w/${WS}/forms`, workspace(READER));
+    const panel = await screen.findByRole("region", { name: "Websites" });
+    expect(await within(panel).findByText("Acme shop")).toBeInTheDocument();
+    expect(within(panel).queryByRole("button")).toBeNull();
   });
 });

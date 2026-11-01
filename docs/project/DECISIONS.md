@@ -1820,6 +1820,52 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
 
+## P12-W — Website integration: embeddable forms and allowed origins (2026-11-01)
+
+- **Status:** Implemented under the owner's requirement of 2026-11-01
+  ("Customer website integration: support websites hosted outside
+  LeadStack, including WordPress, Shopify, Webflow, Wix and custom
+  websites ... Do not require customers to move their websites to
+  LeadStack").
+- **Built on forms (P7-A):** an external site embeds a published form; the
+  lead capture is the existing public form API with its validation,
+  honeypot, per-address and per-form limits, `Idempotency-Key`, 16 KiB
+  bodies, contact matching and consent records. No second capture path.
+- **Websites:** a workspace lists its external sites, each a name and 1 to
+  20 allowed origins: `https://host[:port]`, no paths, wildcards or
+  credentials; `http://localhost` only in development and test. At most
+  50 per workspace. Managed with `crm_app.form:manage`, read with
+  `crm_app.form:read` (no new permission). Disabling or removing a site
+  stops it at once; removing keeps its submissions without the link.
+- **Origin enforcement:** a browser submission from another origin than
+  the app's own is accepted only when that origin belongs to an active
+  website of the form's own workspace; it is answered with CORS headers
+  naming that origin alone (no wildcard, no credentials) and a CORS
+  preflight (`OPTIONS`) is answered the same way; any other origin gets
+  403 `origin_not_allowed` before the body is read. Requests without an
+  `Origin` (servers, for instance a site's own backend) behave as before.
+  Listing an origin needs no proof of ownership: it only lets that site
+  put leads into this workspace, and only if the site embeds this
+  workspace's form.
+- **Attribution:** a submission may carry UTM parameters, the page address
+  and the referrer; values are cut to 300 characters, URLs must be http or
+  https, and a page address on another origin than the request's is
+  dropped. Stored on `form_submission.attribution` with the website
+  (`website_id`, migration `0027_websites`), and returned with the
+  submissions.
+- **Embed code:** the form editor offers "Embed on a website": a plain HTML
+  form and a short script (no external file) that posts with an
+  `Idempotency-Key`, the honeypot, consent and attribution; every label,
+  option and consent text is escaped.
+- **Not built:** a tracking script (no page-view tracking, so nothing to
+  consent to; it would need an owner decision on cookies and consent
+  banners); a JavaScript widget served from LeadStack; booking-page embed
+  code (the public booking link already works from any site); per-site
+  secret keys for server-side posting.
+- **Verified:** `tests/integration/test_websites.py`,
+  `tests/unit/test_website_rules.py`,
+  `frontend/src/records/embedSnippet.test.ts`, `forms.test.tsx`.
+
 ## P7-C — Campaign drafts, audiences and approval (2026-11-01)
 
 - **Status:** Implemented under the owner's email mission of 2026-11-01

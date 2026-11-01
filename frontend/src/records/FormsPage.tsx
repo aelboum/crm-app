@@ -1,4 +1,12 @@
-import { ArrowDown, ArrowLeft, ArrowUp, FileText, Link2, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  FileText,
+  Link2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
@@ -33,6 +41,7 @@ import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { EmbedButton, WebsitesPanel } from "./WebsitesPanel";
 import { FieldInput, TARGET_LABEL, TYPE_LABEL } from "./formParts";
 import { ownerOptions, When } from "./parts";
 
@@ -76,7 +85,8 @@ const CODES: Record<string, MessageId> = {
 function failure(error: unknown): { id: MessageId; field?: number } {
   if (error instanceof FormRefusal && error.code) {
     const fieldMessage = FIELD_ERRORS[error.code];
-    if (fieldMessage && error.field !== undefined && error.field >= 0) return { id: fieldMessage, field: error.field };
+    if (fieldMessage && error.field !== undefined && error.field >= 0)
+      return { id: fieldMessage, field: error.field };
     const message = CODES[error.code];
     if (message) return { id: message };
   }
@@ -113,7 +123,9 @@ export function FormsPage({
       />
     );
   }
-  return <FormList workspaceId={workspaceId} canManage={canManage} onOpen={onOpen} />;
+  return (
+    <FormList workspaceId={workspaceId} canManage={canManage} onOpen={onOpen} />
+  );
 }
 
 function FormList({
@@ -166,7 +178,11 @@ function FormList({
         </div>
         {canManage ? (
           <div className="records-actions">
-            <Button variant="primary" onPress={createForm} isDisabled={create.isPending}>
+            <Button
+              variant="primary"
+              onPress={createForm}
+              isDisabled={create.isPending}
+            >
               <Plus size={15} aria-hidden="true" />
               {t("forms.new")}
             </Button>
@@ -191,7 +207,9 @@ function FormList({
         <div className="records-card tasks-empty">
           <FileText size={28} aria-hidden="true" />
           <p className="tasks-empty-title">{t("forms.empty.title")}</p>
-          <p className="muted">{canManage ? t("forms.empty.body") : t("forms.empty.reader")}</p>
+          <p className="muted">
+            {canManage ? t("forms.empty.body") : t("forms.empty.reader")}
+          </p>
         </div>
       ) : (
         <ul className="form-cards">
@@ -212,16 +230,25 @@ function FormList({
                 <span className="form-card-body">
                   <span className="form-card-head">
                     <span className="form-card-name">{form.name}</span>
-                    <Badge tone={form.status === "published" ? "success" : "neutral"}>
-                      {t(form.status === "published" ? "forms.status.published" : "forms.status.draft")}
+                    <Badge
+                      tone={form.status === "published" ? "success" : "neutral"}
+                    >
+                      {t(
+                        form.status === "published"
+                          ? "forms.status.published"
+                          : "forms.status.draft",
+                      )}
                     </Badge>
                   </span>
                   <span className="form-card-sub">
-                    {t("forms.card.fields", { count: form.fields.length })} · {t("forms.card.updated")}{" "}
-                    <When value={form.updated_at} />
+                    {t("forms.card.fields", { count: form.fields.length })} ·{" "}
+                    {t("forms.card.updated")} <When value={form.updated_at} />
                   </span>
                   <span className="form-card-stats">
-                    <strong>{form.submission_count}</strong> {t("forms.card.submissions", { count: form.submission_count })}
+                    <strong>{form.submission_count}</strong>{" "}
+                    {t("forms.card.submissions", {
+                      count: form.submission_count,
+                    })}
                   </span>
                 </span>
               </AriaButton>
@@ -229,6 +256,7 @@ function FormList({
           ))}
         </ul>
       )}
+      <WebsitesPanel workspaceId={workspaceId} canManage={canManage} />
     </div>
   );
 }
@@ -304,29 +332,44 @@ function FormEditor({
   const toast = useToast();
   const access = useAccess(workspaceId);
   const me = useMe();
-  const members = useMembers(workspaceId, 0, access.data?.actions.read_members === true);
+  const members = useMembers(
+    workspaceId,
+    0,
+    access.data?.actions.read_members === true,
+  );
   const tags = useTags(workspaceId);
   const update = useUpdateForm(workspaceId);
   const remove = useDeleteForm(workspaceId);
   const [draft, setDraft] = useState<Draft>(() => draftOf(form));
   const [selected, setSelected] = useState(0);
-  const [error, setError] = useState<{ id: MessageId; field?: number } | null>(null);
+  const [error, setError] = useState<{ id: MessageId; field?: number } | null>(
+    null,
+  );
   const [confirming, setConfirming] = useState(false);
   const saved = draftOf(form);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const published = form.status === "published";
   const link = `${window.location.origin}${publicPath(workspaceId, form.public_key)}`;
   const owners = ownerOptions(t, members.data?.items ?? [], me.data?.user_id);
-  const ownerChoices = owners.some((owner) => owner.id === draft.contact_owner_user_id)
+  const ownerChoices = owners.some(
+    (owner) => owner.id === draft.contact_owner_user_id,
+  )
     ? owners
-    : [...owners, { id: draft.contact_owner_user_id, label: t("forms.owner.other") }];
+    : [
+        ...owners,
+        { id: draft.contact_owner_user_id, label: t("forms.owner.other") },
+      ];
   const current = draft.fields[selected];
 
   const change = (patch: Partial<Draft>) => {
     setDraft((before) => ({ ...before, ...patch }));
   };
   const changeField = (index: number, patch: Partial<FormField>) => {
-    change({ fields: draft.fields.map((field, i) => (i === index ? { ...field, ...patch } : field)) });
+    change({
+      fields: draft.fields.map((field, i) =>
+        i === index ? { ...field, ...patch } : field,
+      ),
+    });
   };
   const move = (index: number, by: number) => {
     const to = index + by;
@@ -352,7 +395,10 @@ function FormEditor({
       label: t(TYPE_LABEL[type]),
       required: false,
       target: null,
-      options: type === "select" ? [t("forms.option.first"), t("forms.option.second")] : null,
+      options:
+        type === "select"
+          ? [t("forms.option.first"), t("forms.option.second")]
+          : null,
     };
     change({ fields: [...draft.fields, field] });
     setSelected(draft.fields.length);
@@ -364,7 +410,12 @@ function FormEditor({
       ? {
           // Blank option lines are editing leftovers, not options.
           fields: draft.fields.map((field) =>
-            field.options ? { ...field, options: field.options.map((o) => o.trim()).filter(Boolean) } : field,
+            field.options
+              ? {
+                  ...field,
+                  options: field.options.map((o) => o.trim()).filter(Boolean),
+                }
+              : field,
           ),
         }
       : {}),
@@ -372,18 +423,32 @@ function FormEditor({
     ...(draft.contact_owner_user_id !== saved.contact_owner_user_id
       ? { contact_owner_user_id: draft.contact_owner_user_id }
       : {}),
-    ...(draft.thank_you !== saved.thank_you ? { thank_you: draft.thank_you } : {}),
-    ...(draft.consent_text !== saved.consent_text ? { consent_text: draft.consent_text.trim() || null } : {}),
+    ...(draft.thank_you !== saved.thank_you
+      ? { thank_you: draft.thank_you }
+      : {}),
+    ...(draft.consent_text !== saved.consent_text
+      ? { consent_text: draft.consent_text.trim() || null }
+      : {}),
   });
 
   const save = (status?: "published" | "draft") => {
     setError(null);
     update.mutate(
-      { id: form.id, version: form.version, changes: { ...changes(), ...(status ? { status } : {}) } },
+      {
+        id: form.id,
+        version: form.version,
+        changes: { ...changes(), ...(status ? { status } : {}) },
+      },
       {
         onSuccess: () => {
           toast(
-            t(status === "published" ? "forms.published" : status === "draft" ? "forms.unpublished" : "forms.saved"),
+            t(
+              status === "published"
+                ? "forms.published"
+                : status === "draft"
+                  ? "forms.unpublished"
+                  : "forms.saved",
+            ),
           );
         },
         onError: (failed) => {
@@ -438,13 +503,19 @@ function FormEditor({
         </Badge>
         {published ? (
           <>
-            <a className="form-link mono" href={link} target="_blank" rel="noreferrer">
+            <a
+              className="form-link mono"
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+            >
               {publicPath(workspaceId, form.public_key)}
             </a>
             <Button size="sm" onPress={copyLink}>
               <Link2 size={14} aria-hidden="true" />
               {t("forms.copy")}
             </Button>
+            <EmbedButton workspaceId={workspaceId} form={form} />
           </>
         ) : null}
         {canManage ? (
@@ -466,7 +537,13 @@ function FormEditor({
               }}
               isDisabled={update.isPending}
             >
-              {t(published ? "forms.unpublish" : dirty ? "forms.saveAndPublish" : "forms.publish")}
+              {t(
+                published
+                  ? "forms.unpublish"
+                  : dirty
+                    ? "forms.saveAndPublish"
+                    : "forms.publish",
+              )}
             </Button>
           </span>
         ) : null}
@@ -481,13 +558,23 @@ function FormEditor({
       {dirty ? <p className="form-editor-dirty">{t("forms.unsaved")}</p> : null}
 
       <div className="form-editor-columns">
-        <section className="form-panel form-fields-panel" aria-labelledby="form-fields-title">
+        <section
+          className="form-panel form-fields-panel"
+          aria-labelledby="form-fields-title"
+        >
           <h2 id="form-fields-title" className="form-panel-title">
             {t("forms.fields")}
           </h2>
           <ol className="form-field-list">
             {draft.fields.map((field, index) => (
-              <li key={field.key} className={index === selected ? "form-field-item selected" : "form-field-item"}>
+              <li
+                key={field.key}
+                className={
+                  index === selected
+                    ? "form-field-item selected"
+                    : "form-field-item"
+                }
+              >
                 <AriaButton
                   className="form-field-pick"
                   aria-pressed={index === selected}
@@ -496,7 +583,9 @@ function FormEditor({
                   }}
                 >
                   <span className="form-field-name">{field.label}</span>
-                  <span className="form-field-type">{t(TYPE_LABEL[field.type])}</span>
+                  <span className="form-field-type">
+                    {t(TYPE_LABEL[field.type])}
+                  </span>
                 </AriaButton>
                 {canManage ? (
                   <span className="form-field-tools">
@@ -522,7 +611,9 @@ function FormEditor({
                     </AriaButton>
                     <AriaButton
                       className="icon-button"
-                      aria-label={t("forms.removeField", { label: field.label })}
+                      aria-label={t("forms.removeField", {
+                        label: field.label,
+                      })}
                       isDisabled={draft.fields.length === 1}
                       onPress={() => {
                         removeField(index);
@@ -560,7 +651,9 @@ function FormEditor({
                     onPress={() => {
                       addField(type);
                     }}
-                    aria-label={t("forms.addType", { type: t(TYPE_LABEL[type]) })}
+                    aria-label={t("forms.addType", {
+                      type: t(TYPE_LABEL[type]),
+                    })}
                   >
                     <Plus size={12} aria-hidden="true" />
                     {t(TYPE_LABEL[type])}
@@ -571,7 +664,10 @@ function FormEditor({
           ) : null}
         </section>
 
-        <section className="form-panel form-preview-panel" aria-labelledby="form-preview-title">
+        <section
+          className="form-panel form-preview-panel"
+          aria-labelledby="form-preview-title"
+        >
           <h2 id="form-preview-title" className="form-panel-title">
             {t("forms.preview")}
           </h2>
@@ -590,14 +686,21 @@ function FormEditor({
             {draft.consent_text.trim() ? (
               <label className="public-check-label public-consent">
                 <input type="checkbox" disabled />
-                <span className="public-consent-text">{draft.consent_text}</span>
+                <span className="public-consent-text">
+                  {draft.consent_text}
+                </span>
               </label>
             ) : null}
-            <span className="btn btn-primary btn-lg public-submit">{t("publicForm.submit")}</span>
+            <span className="btn btn-primary btn-lg public-submit">
+              {t("publicForm.submit")}
+            </span>
           </div>
         </section>
 
-        <section className="form-panel form-settings-panel" aria-labelledby="form-after-title">
+        <section
+          className="form-panel form-settings-panel"
+          aria-labelledby="form-after-title"
+        >
           <h2 id="form-after-title" className="form-panel-title">
             {t("forms.after")}
           </h2>
@@ -686,7 +789,13 @@ function FormEditor({
             </div>
             <div>
               <dt>{t("forms.stats.last")}</dt>
-              <dd>{form.last_submission_at ? <When value={form.last_submission_at} /> : "—"}</dd>
+              <dd>
+                {form.last_submission_at ? (
+                  <When value={form.last_submission_at} />
+                ) : (
+                  "—"
+                )}
+              </dd>
             </div>
           </dl>
           {canManage ? (
@@ -704,7 +813,11 @@ function FormEditor({
         </section>
       </div>
 
-      <Submissions workspaceId={workspaceId} form={form} onOpenContact={onOpenContact} />
+      <Submissions
+        workspaceId={workspaceId}
+        form={form}
+        onOpenContact={onOpenContact}
+      />
 
       <ConfirmDialog
         isOpen={confirming}
@@ -746,9 +859,15 @@ function FieldSettings({
   onChange: (patch: Partial<FormField>) => void;
 }) {
   const t = useT();
-  const targets = TARGETS[field.type].filter((target) => target === field.target || !takenTargets.includes(target));
+  const targets = TARGETS[field.type].filter(
+    (target) => target === field.target || !takenTargets.includes(target),
+  );
   return (
-    <div className="form-field-settings" aria-label={t("forms.fieldSettings", { label: field.label })} role="group">
+    <div
+      className="form-field-settings"
+      aria-label={t("forms.fieldSettings", { label: field.label })}
+      role="group"
+    >
       <div className="form-field">
         <label className="form-label" htmlFor="field-label">
           {t("forms.field.label")}
@@ -787,7 +906,9 @@ function FieldSettings({
             value={field.target ?? ""}
             disabled={disabled}
             onChange={(event) => {
-              onChange({ target: (event.target.value || null) as Target | null });
+              onChange({
+                target: (event.target.value || null) as Target | null,
+              });
             }}
           >
             <option value="">{t("forms.target.none")}</option>
@@ -839,12 +960,23 @@ function Submissions({
   const labels = new Map(form.fields.map((field) => [field.key, field.label]));
   // In the form's field order; answers to fields since removed come last.
   const ordered = (answers: Record<string, string | boolean>) => {
-    const keys = [...form.fields.map((field) => field.key), ...Object.keys(answers)];
-    return [...new Set(keys)].flatMap((key) => (key in answers ? [[key, answers[key]] as const] : []));
+    const keys = [
+      ...form.fields.map((field) => field.key),
+      ...Object.keys(answers),
+    ];
+    return [...new Set(keys)].flatMap((key) =>
+      key in answers ? [[key, answers[key]] as const] : [],
+    );
   };
   return (
-    <section className="records-card form-submissions" aria-labelledby="form-submissions-title">
-      <h2 id="form-submissions-title" className="form-panel-title form-submissions-title">
+    <section
+      className="records-card form-submissions"
+      aria-labelledby="form-submissions-title"
+    >
+      <h2
+        id="form-submissions-title"
+        className="form-panel-title form-submissions-title"
+      >
         {t("forms.submissions")}
         <span className="tab-count">{list.data?.pages[0]?.total ?? ""}</span>
       </h2>
@@ -853,7 +985,9 @@ function Submissions({
       ) : list.isError ? (
         <LoadError error={list.error} onRetry={() => void list.refetch()} />
       ) : items.length === 0 ? (
-        <p className="muted form-submissions-empty">{t("forms.submissions.empty")}</p>
+        <p className="muted form-submissions-empty">
+          {t("forms.submissions.empty")}
+        </p>
       ) : (
         <div className="table-scroll">
           <table className="records-table">
@@ -883,20 +1017,34 @@ function Submissions({
                         {item.contact.name}
                       </AriaButton>
                     ) : (
-                      <span className="muted">{t("forms.submissions.noContact")}</span>
+                      <span className="muted">
+                        {t("forms.submissions.noContact")}
+                      </span>
                     )}
                   </td>
                   <td>
-                    <Badge tone={item.outcome === "created" ? "accent" : "neutral"}>
-                      {t(item.outcome === "created" ? "forms.outcome.created" : "forms.outcome.matched")}
+                    <Badge
+                      tone={item.outcome === "created" ? "accent" : "neutral"}
+                    >
+                      {t(
+                        item.outcome === "created"
+                          ? "forms.outcome.created"
+                          : "forms.outcome.matched",
+                      )}
                     </Badge>
                   </td>
-                  <td>{t(item.consent ? "forms.consent.yes" : "forms.consent.no")}</td>
+                  <td>
+                    {t(item.consent ? "forms.consent.yes" : "forms.consent.no")}
+                  </td>
                   <td className="form-answers">
                     {ordered(item.answers).map(([key, value]) => (
                       <span key={key} className="form-answer">
-                        <span className="form-answer-label">{labels.get(key) ?? key}:</span>{" "}
-                        {typeof value === "boolean" ? t(value ? "forms.consent.yes" : "forms.consent.no") : value}
+                        <span className="form-answer-label">
+                          {labels.get(key) ?? key}:
+                        </span>{" "}
+                        {typeof value === "boolean"
+                          ? t(value ? "forms.consent.yes" : "forms.consent.no")
+                          : value}
                       </span>
                     ))}
                   </td>
@@ -908,7 +1056,11 @@ function Submissions({
       )}
       {list.hasNextPage ? (
         <div className="records-footer">
-          <Button size="sm" onPress={() => void list.fetchNextPage()} isDisabled={list.isFetchingNextPage}>
+          <Button
+            size="sm"
+            onPress={() => void list.fetchNextPage()}
+            isDisabled={list.isFetchingNextPage}
+          >
             {t("records.loadMore")}
           </Button>
         </div>

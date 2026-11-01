@@ -37,6 +37,17 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 12 slice 12W, website integration (decision P12-W, 2026-11-01):**
+  migration `0027_websites` (website; `form_submission.website_id` and
+  `attribution`); `/websites` API under the form permissions; the public
+  form routes enforce allowed origins with CORS and a preflight, and keep
+  attribution; the Forms screen has a Websites panel and embed code.
+  Verified: `test_websites.py` (allowed and unlisted origins, other
+  workspaces, preflights, hosted page and server callers, attribution,
+  disable and remove), unit `test_website_rules.py` 20,
+  `embedSnippet.test.ts` 4, `forms.test.tsx` 13; unit suite plus the
+  website, form, foundation, rollback, table-guard and purge integration
+  tests 820 passed; Vitest 296, lint and build clean.
 - **Phase 7 slice 7C, campaign preparation (decision P7-C, 2026-11-01):**
   migration `0026_campaigns` (campaign, campaign_recipient; email purpose
   `campaign`; consent method `unsubscribe_link`); the `/campaigns` API with

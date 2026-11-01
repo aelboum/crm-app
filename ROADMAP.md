@@ -969,7 +969,7 @@ Do not grant paid entitlements solely because a checkout flow was initiated.
 
 # 17. Phase 12 — Integrations and API Platform
 
-**Status:** Not started.
+**Status:** In progress. Slice 12W (decision P12-W): external websites (allowed origins) may embed the workspace's published forms through the public form API with CORS, lead attribution and embed code. Not yet: a tracking script, API keys for integrations, webhooks for customers.
 
 ## Objectives
 

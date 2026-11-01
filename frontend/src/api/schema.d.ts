@@ -200,7 +200,12 @@ export interface paths {
         /** Submit Public Form */
         post: operations["submit_public_form_v1_public_forms__workspace_id___key__post"];
         delete?: never;
-        options?: never;
+        /**
+         * Preflight Public Form
+         * @description A browser's CORS preflight from an external site (decision P12-W):
+         *     204 with headers for an allowed origin, 403 without them otherwise.
+         */
+        options: operations["preflight_public_form_v1_public_forms__workspace_id___key__options"];
         head?: never;
         patch?: never;
         trace?: never;
@@ -1984,6 +1989,42 @@ export interface paths {
         head?: never;
         /** Update Task */
         patch: operations["update_task_v1_workspaces__tenant_id__tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/websites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Websites */
+        get: operations["list_websites_v1_workspaces__tenant_id__websites_get"];
+        put?: never;
+        /** Create Website */
+        post: operations["create_website_v1_workspaces__tenant_id__websites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/websites/{website_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Website */
+        delete: operations["delete_website_v1_workspaces__tenant_id__websites__website_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Website */
+        patch: operations["update_website_v1_workspaces__tenant_id__websites__website_id__patch"];
         trace?: never;
     };
 }
@@ -4318,6 +4359,10 @@ export interface components {
             answers: {
                 [key: string]: string | boolean;
             };
+            /** Attribution */
+            attribution?: {
+                [key: string]: string | null;
+            } | null;
             /** Consent */
             consent: boolean;
             contact: components["schemas"]["ContactRef"] | null;
@@ -4338,6 +4383,8 @@ export interface components {
              * @enum {string}
              */
             outcome: "created" | "matched";
+            /** Website Id */
+            website_id?: string | null;
         };
         /** SubmissionPage */
         SubmissionPage: {
@@ -4624,6 +4671,56 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WebsiteIn */
+        WebsiteIn: {
+            /** Name */
+            name: string;
+            /** Origins */
+            origins: string[];
+        };
+        /** WebsiteList */
+        WebsiteList: {
+            /** Items */
+            items: components["schemas"]["WebsiteOut"][];
+        };
+        /** WebsiteOut */
+        WebsiteOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Origins */
+            origins: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "disabled";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** WebsitePatch */
+        WebsitePatch: {
+            /** Name */
+            name?: string | null;
+            /** Origins */
+            origins?: string[] | null;
+            /** Status */
+            status?: ("active" | "disabled") | null;
         };
         /** WithdrawIn */
         WithdrawIn: {
@@ -5060,6 +5157,10 @@ export interface operations {
                     answers: {
                         [key: string]: string | boolean | null;
                     };
+                    /** Attribution */
+                    attribution?: {
+                        [key: string]: string | null;
+                    } | null;
                     /**
                      * Consent
                      * @default false
@@ -5082,6 +5183,36 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Accepted"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preflight_public_form_v1_public_forms__workspace_id___key__options: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -10179,6 +10310,147 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_websites_v1_workspaces__tenant_id__websites_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_website_v1_workspaces__tenant_id__websites_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_website_v1_workspaces__tenant_id__websites__website_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                website_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_website_v1_workspaces__tenant_id__websites__website_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                website_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsitePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteOut"];
                 };
             };
             /** @description Validation Error */

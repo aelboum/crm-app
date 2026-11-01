@@ -367,6 +367,8 @@ def submissions(scope: Scope, form_id: uuid.UUID, query: SubmissionQuery) -> Pag
                 "created_at": row.created_at,
                 "contact_id": row.contact_id,
                 "contact": names.get(row.contact_id) if row.contact_id else None,
+                "website_id": row.website_id,
+                "attribution": row.attribution,
             }
             for row in rows
         ]
@@ -600,6 +602,9 @@ def public_form(workspace: uuid.UUID, key: str) -> Item:
 class Submission:
     answers: Mapping[str, object]
     consent: bool
+    # The external site it came from and its attribution (decision P12-W).
+    website_id: uuid.UUID | None = None
+    attribution: dict[str, object] | None = None
 
 
 def _match(session: Session, workspace: uuid.UUID, email: str | None) -> Contact | None:
@@ -664,6 +669,8 @@ class _Accepted:
     answers: dict[str, Any]
     consent: bool
     owned: bool
+    website_id: uuid.UUID | None = None
+    attribution: dict[str, object] | None = None
 
 
 def _create_contact(session: Session, accepted: _Accepted, form: Form) -> uuid.UUID:
@@ -734,6 +741,8 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             outcome=outcome,
             consent=consent,
             created_at=now,
+            website_id=accepted.website_id,
+            attribution=accepted.attribution,
         )
     )
     session.flush()
@@ -776,6 +785,8 @@ def submit(workspace: uuid.UUID, key: str, submission: Submission, *, idempotenc
         answers=given,
         consent=submission.consent,
         owned=_active_member(workspace, owner),
+        website_id=submission.website_id,
+        attribution=submission.attribution,
     )
     fingerprint = {"answers": str(sorted(given.items())), "consent": str(submission.consent)}
     # Two first submissions with one new email can race; the loser's unique

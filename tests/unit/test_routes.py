@@ -200,6 +200,11 @@ RECORDS |= {
     f"PATCH {_CONVERSATION}": "crm_app.conversation:reply",
     f"POST {_CONVERSATION}/messages": "crm_app.conversation:reply",
     f"POST {_CONVERSATION}/read": "crm_app.conversation:read",
+    # P12-W: external websites belong to forms and use their permissions.
+    "GET /v1/workspaces/{tenant_id}/websites": "crm_app.form:read",
+    "POST /v1/workspaces/{tenant_id}/websites": "crm_app.form:manage",
+    "PATCH /v1/workspaces/{tenant_id}/websites/{website_id}": "crm_app.form:manage",
+    "DELETE /v1/workspaces/{tenant_id}/websites/{website_id}": "crm_app.form:manage",
     # P7-C: campaigns; approval and queuing need `campaign:approve`.
     "GET /v1/workspaces/{tenant_id}/campaigns": "crm_app.campaign:read",
     "POST /v1/workspaces/{tenant_id}/campaigns": "crm_app.campaign:manage",
@@ -381,7 +386,9 @@ def test_record_routes_follow_the_role_matrix() -> None:
             "create": EDITORS,
             "update": EDITORS,
             "reply": EDITORS,
-            "manage": EDITORS,
+            # Members draft campaigns; forms and their websites are for
+            # Owners and Admins (P7-A, P12-W).
+            "manage": EDITORS if resource == "crm_app.campaign" else {Role.OWNER, Role.ADMIN},
             "approve": {Role.OWNER, Role.ADMIN},
             # Q6: Members may delete tasks, not other records.
             "delete": EDITORS if resource == "crm_app.task" else {Role.OWNER, Role.ADMIN},
@@ -421,6 +428,8 @@ def test_signup_routes_need_only_a_signed_in_person(tmp_path: Path) -> None:
 PUBLIC_FORMS = {
     "GET /v1/public/forms/{workspace_id}/{key}",
     "POST /v1/public/forms/{workspace_id}/{key}",
+    # P12-W: the CORS preflight of an external site's submission.
+    "OPTIONS /v1/public/forms/{workspace_id}/{key}",
     "GET /v1/public/booking-pages/{workspace_id}/{key}",
     "GET /v1/public/booking-pages/{workspace_id}/{key}/times",
     "POST /v1/public/booking-pages/{workspace_id}/{key}",

@@ -69,6 +69,7 @@ PURGE_TABLES: tuple[str, ...] = (
     "email_message",
     "consent_record",
     "form_submission",
+    "website",
     "form",
     "booking",
     "booking_page",

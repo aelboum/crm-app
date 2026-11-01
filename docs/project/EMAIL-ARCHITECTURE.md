@@ -146,7 +146,7 @@ each one gets its own decision entry, tests and documentation.
    on that domain. A workspace can only send from a domain it registered
    and that is verified; removal or a failed re-verification stops its
    use; one domain belongs to at most one workspace.
-4. **Website integration.** Embeddable forms and a lead-capture API for
+4. **Website integration — built (P12-W)** except the tracking script. Embeddable forms and a lead-capture API for
    external sites with per-workspace site keys, allowed origins,
    attribution, consent capture and abuse limits; an optional tracking
    script, off by default.

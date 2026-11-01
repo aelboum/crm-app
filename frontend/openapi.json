@@ -7174,6 +7174,27 @@
             "title": "Answers",
             "type": "object"
           },
+          "attribution": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution"
+          },
           "consent": {
             "title": "Consent",
             "type": "boolean"
@@ -7217,6 +7238,18 @@
             ],
             "title": "Outcome",
             "type": "string"
+          },
+          "website_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website Id"
           }
         },
         "required": [
@@ -8127,6 +8160,150 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WebsiteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 480,
+            "title": "Name",
+            "type": "string"
+          },
+          "origins": {
+            "items": {
+              "maxLength": 300,
+              "type": "string"
+            },
+            "maxItems": 40,
+            "title": "Origins",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "origins"
+        ],
+        "title": "WebsiteIn",
+        "type": "object"
+      },
+      "WebsiteList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WebsiteOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WebsiteList",
+        "type": "object"
+      },
+      "WebsiteOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "origins": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Origins",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "origins",
+          "status",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "title": "WebsiteOut",
+        "type": "object"
+      },
+      "WebsitePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 480,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "origins": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 300,
+                  "type": "string"
+                },
+                "maxItems": 40,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origins"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "disabled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "WebsitePatch",
+        "type": "object"
+      },
       "WithdrawIn": {
         "additionalProperties": false,
         "properties": {
@@ -8837,6 +9014,50 @@
           "public forms"
         ]
       },
+      "options": {
+        "description": "A browser's CORS preflight from an external site (decision P12-W):\n204 with headers for an allowed origin, 403 without them otherwise.",
+        "operationId": "preflight_public_form_v1_public_forms__workspace_id___key__options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preflight Public Form",
+        "tags": [
+          "public forms"
+        ]
+      },
       "post": {
         "operationId": "submit_public_form_v1_public_forms__workspace_id___key__post",
         "parameters": [
@@ -8896,6 +9117,32 @@
                     },
                     "title": "Answers",
                     "type": "object"
+                  },
+                  "attribution": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "maxLength": 2100,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "maxProperties": 12,
+                        "propertyNames": {
+                          "maxLength": 40
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Attribution"
                   },
                   "consent": {
                     "default": false,
@@ -20618,6 +20865,287 @@
         "summary": "Update Task",
         "tags": [
           "tasks"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/websites": {
+      "get": {
+        "operationId": "list_websites_v1_workspaces__tenant_id__websites_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Websites",
+        "tags": [
+          "websites"
+        ]
+      },
+      "post": {
+        "operationId": "create_website_v1_workspaces__tenant_id__websites_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Website",
+        "tags": [
+          "websites"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/websites/{website_id}": {
+      "delete": {
+        "operationId": "delete_website_v1_workspaces__tenant_id__websites__website_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "website_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Website Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Website",
+        "tags": [
+          "websites"
+        ]
+      },
+      "patch": {
+        "operationId": "update_website_v1_workspaces__tenant_id__websites__website_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "website_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Website Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsitePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Website",
+        "tags": [
+          "websites"
         ]
       }
     }
