@@ -74,6 +74,11 @@ def test_a_transient_failure_is_retried_and_a_permanent_one_fails(probe: Probe) 
         "rate_limit_exceeded",
     )
     assert index["retry_at"] is True
+    # Not sooner than the backoff (30 s, up to 25% jitter); nothing sent meanwhile.
+    waiting, seconds, sent = probe["backoff"]
+    assert waiting == "waiting"
+    assert 25 <= seconds <= 40
+    assert sent == 2
     assert probe["after_transient"] == ["sent", 2]
     assert probe["permanent"] == [
         "failed",
@@ -110,7 +115,7 @@ def test_delivery_events_are_recorded_once_and_move_forward_only(probe: Probe) -
 
 
 def test_another_workspace_sees_none_of_it(probe: Probe) -> None:
-    assert probe["own_rows"] == 6
+    assert probe["own_rows"] == 8
     assert probe["other_workspace_rows"] == 0
     assert probe["other_workspace_events"] == 0
 
@@ -129,3 +134,33 @@ def test_audit_entries_name_the_email_never_the_address(
         "crm_app.email.bounced",
     ]
     assert "example.test" not in json.dumps([meta for _, meta in rows])
+
+
+# --- Streams, limits and production (decision P6-S) -------------------------------------
+
+
+def test_a_retry_waits_at_least_as_long_as_the_provider_asks(probe: Probe) -> None:
+    outcome, seconds = probe["retry_after"]
+    assert outcome == "deferred:rate_limit_exceeded"
+    assert 590 <= seconds <= 610
+
+
+def test_each_workspace_is_held_to_its_stream_rate(probe: Probe) -> None:
+    assert probe["rate_limited"] == [["sent", "sent", "rate_limited"], "queued"]
+    assert probe["rate_wait"] is True
+
+
+def test_conversation_mail_needs_its_switch_and_its_own_sender(probe: Probe) -> None:
+    streams = probe["streams"]
+    assert streams["outcomes"] == ["disabled", "no_sender", "sent"]
+    assert streams["from"] == "team@mail.example.test"
+    assert streams["message_id_domain"] == "mail.example.test>"
+    assert probe["transactional_from"] == "no-reply@notify.example.test"
+
+
+def test_production_never_hands_email_to_a_provider(probe: Probe) -> None:
+    assert probe["production"] == ["disabled", 0]
+
+
+def test_a_provider_rejection_after_acceptance_is_final(probe: Probe) -> None:
+    assert probe["provider_failed"] == [204, "rejected", 204, "rejected"]

@@ -37,6 +37,19 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 6 slice 6S, email streams (decision P6-S, 2026-11-01):** the
+  owner's email architecture decisions recorded and the integration
+  boundary documented (`EMAIL-ARCHITECTURE.md`); transactional,
+  conversation and campaign streams on `notify.`, `mail.` and `campaigns.`
+  of `EMAIL_PARENT_DOMAIN`, with their own switches, senders and rate
+  limits; migration `0024_email_streams` (`next_attempt_at`, status
+  `rejected`); backoff with jitter and `Retry-After`; every email switch
+  refused in production, and the send path refuses production on its own.
+  Verified: unit 635 (`test_email_streams.py`, stream settings, backoff
+  and rejection rules); `test_emails.py` 15; the unit suite with the
+  email, booking-email, conversation, foundation and rollback integration
+  tests, 743 passed before the count fix, then `test_emails.py` 15 passed.
+  Not built yet: inbound email, campaigns, customer domains.
 - **Gate G7, existing workspaces' roles (decision P2-G7, 2026-11-01):**
   operator command `python -m crm_app.role_upgrade` grants each product
   role what its template gained since the workspace was provisioned.

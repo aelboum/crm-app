@@ -30,12 +30,30 @@ MAX_ATTEMPTS = 5
 SIGNATURE_TOLERANCE_SECONDS = 300
 WEBHOOK_BODY_MAX = 64 * 1024
 
-# Final statuses: nothing is sent again.
-FINAL = ("sent", "delivery_delayed", "delivered", "bounced", "complained", "failed", "suppressed")
+# Final statuses: nothing is sent again. `failed`: never accepted by the
+# provider; `rejected`: accepted, then reported as not sent (P6-S).
+FINAL = (
+    "sent",
+    "delivery_delayed",
+    "delivered",
+    "bounced",
+    "complained",
+    "failed",
+    "suppressed",
+    "rejected",
+)
 
-# A provider's event moves a sent email forward, never back; a bounce or a
-# complaint is final. `delivery_delayed` after `delivered` is ignored.
-_RANK = {"sent": 1, "delivery_delayed": 2, "delivered": 3, "bounced": 4, "complained": 5}
+# A provider's event moves a sent email forward, never back; a bounce, a
+# rejection or a complaint is final. `delivery_delayed` after `delivered`
+# is ignored. Acceptance (`sent`) is never delivery.
+_RANK = {
+    "sent": 1,
+    "delivery_delayed": 2,
+    "delivered": 3,
+    "bounced": 4,
+    "rejected": 4,
+    "complained": 5,
+}
 
 EVENT_TYPES = {
     "email.sent": "sent",
@@ -43,7 +61,19 @@ EVENT_TYPES = {
     "email.delivered": "delivered",
     "email.bounced": "bounced",
     "email.complained": "complained",
+    "email.failed": "failed",
+    "email.suppressed": "suppressed",
 }
+# The status an event leads to, where it is not the event's own name.
+_EVENT_STATUS = {"failed": "rejected", "suppressed": "rejected"}
+
+# Retry timing after a transient failure (P6-S): exponential from
+# `BACKOFF_BASE_SECONDS`, at most `BACKOFF_MAX_SECONDS`, stretched by up to
+# `BACKOFF_JITTER` so retries of many emails spread out, and never sooner
+# than the provider's own `Retry-After`.
+BACKOFF_BASE_SECONDS = 30.0
+BACKOFF_MAX_SECONDS = 3600.0
+BACKOFF_JITTER = 0.25
 
 _SUBJECT_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 _BODY_CONTROL = re.compile(r"[\x00-\x09\x0b-\x1f\x7f]")
@@ -84,7 +114,19 @@ def after_event(status: str, event: str) -> str:
     """The status after a provider's `event` for an email in `status`."""
     if status not in _RANK:
         return status  # never sent by us as far as we know: leave it
-    return event if _RANK[event] > _RANK[status] else status
+    target = _EVENT_STATUS.get(event, event)
+    return target if _RANK[target] > _RANK[status] else status
+
+
+def retry_delay(attempts: int, retry_after: float | None, jitter: float) -> float:
+    """Seconds until the next try after `attempts` tries, for `jitter` in
+    [0, 1): exponential backoff with jitter, at least `retry_after` (an
+    unstated reset, `math.inf`, counts as the maximum)."""
+    delay = min(BACKOFF_BASE_SECONDS * 2 ** max(attempts - 1, 0), BACKOFF_MAX_SECONDS)
+    delay *= 1 + BACKOFF_JITTER * min(max(jitter, 0.0), 1.0)
+    if retry_after is not None and retry_after > 0:
+        delay = max(delay, min(retry_after, BACKOFF_MAX_SECONDS))
+    return min(delay, BACKOFF_MAX_SECONDS * (1 + BACKOFF_JITTER))
 
 
 @dataclass(frozen=True)

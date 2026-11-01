@@ -404,6 +404,9 @@ Implementation report after each phase.
 Project records live in `docs/project/`: `DECISIONS.md` (decision log),
 `PROGRESS.md` (verified current state), `PHASE0-DISCOVERY.md` (baseline
 findings), and `PHASE1-PLAN.md` (repository and scaffold plan).
+Email (Resend through SaaS-OS, streams, activation gates, DNS readiness,
+runbook) is in `docs/project/EMAIL-ARCHITECTURE.md`; production email
+sending and inbound receiving are not authorized (owner, 2026-11-01).
 
 Reports must separate code written from behavior actually tested and
 verified. Include failing checks, untested paths, external-service

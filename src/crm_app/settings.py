@@ -25,6 +25,9 @@ from collections.abc import Callable, Mapping
 from enum import StrEnum
 from urllib.parse import SplitResult, urlsplit
 
+from crm_app.domains import email_streams as streams
+from crm_app.domains.records import InvalidValue
+
 ENVIRONMENTS = frozenset({"development", "test", "production"})
 
 # A plain SQL identifier, as SaaS-OS's own migrations require for role names.
@@ -326,22 +329,137 @@ def email_sending_enabled(env: Mapping[str, str] | None = None) -> bool:
 
 
 def _check_email(env: Mapping[str, str], *, production: bool) -> list[str]:
+    problems = _check_email_streams(env, production=production)
     enabled = _flag(env, "EMAIL_SENDING_ENABLED")
     if enabled is None:
-        return ["EMAIL_SENDING_ENABLED must be true or false."]
+        return [*problems, "EMAIL_SENDING_ENABLED must be true or false."]
     if not enabled:
-        return []
-    problems: list[str] = []
+        return problems
     if production:
-        # Lifted only by the decision that settles the sending domain and the
-        # sender identity policy (P6-E, open decisions).
+        # Production sending is not authorized (owner, 2026-11-01): lifted
+        # only by the change that records the activation gates as passed
+        # (docs/project/EMAIL-ARCHITECTURE.md, "Activation gates").
         problems.append(
-            "EMAIL_SENDING_ENABLED=true is refused in production until the sending"
-            " domain and sender policy are decided (DECISIONS.md P6-E)."
+            "EMAIL_SENDING_ENABLED=true is refused in production until the email"
+            " activation gates pass (docs/project/EMAIL-ARCHITECTURE.md)."
         )
-    if not env.get("EMAIL_DEFAULT_SENDER", "").strip():
-        problems.append("EMAIL_SENDING_ENABLED=true needs EMAIL_DEFAULT_SENDER.")
+    if (
+        not env.get("EMAIL_DEFAULT_SENDER", "").strip()
+        and not env.get("EMAIL_PARENT_DOMAIN", "").strip()
+    ):
+        problems.append(
+            "EMAIL_SENDING_ENABLED=true needs EMAIL_DEFAULT_SENDER or EMAIL_PARENT_DOMAIN."
+        )
     return problems
+
+
+# Per-stream switches (decision P6-S). Each needs EMAIL_SENDING_ENABLED too.
+STREAM_FLAGS: Mapping[streams.Stream, str] = {
+    streams.Stream.CONVERSATION: "EMAIL_CONVERSATION_SENDING_ENABLED",
+    streams.Stream.CAMPAIGN: "EMAIL_CAMPAIGN_SENDING_ENABLED",
+}
+INBOUND_FLAG = "EMAIL_INBOUND_ENABLED"
+
+
+def _stream_setting(stream: streams.Stream, what: str) -> str:
+    return f"EMAIL_{stream.value.upper()}_{what}"
+
+
+def email_parent_domain(env: Mapping[str, str] | None = None) -> str | None:
+    """The configured parent domain (`EMAIL_PARENT_DOMAIN`), or None. Start-up
+    validation refuses an invalid one, so a value here is well formed."""
+    raw = (os.environ if env is None else env).get("EMAIL_PARENT_DOMAIN", "").strip()
+    return streams.parent_domain(raw) if raw else None
+
+
+def stream_enabled(stream: streams.Stream, env: Mapping[str, str] | None = None) -> bool:
+    """Whether a stream may hand email to the provider: the global switch and,
+    for conversation and campaign mail, the stream's own switch."""
+    values = os.environ if env is None else env
+    if _flag(values, "EMAIL_SENDING_ENABLED") is not True:
+        return False
+    flag = STREAM_FLAGS.get(stream)
+    return flag is None or _flag(values, flag) is True
+
+
+def inbound_enabled(env: Mapping[str, str] | None = None) -> bool:
+    """The inbound email switch (`EMAIL_INBOUND_ENABLED`); off unless true."""
+    return _flag(os.environ if env is None else env, INBOUND_FLAG) is True
+
+
+def stream_sender(stream: streams.Stream, env: Mapping[str, str] | None = None) -> str | None:
+    """The `From` of a stream: from `EMAIL_PARENT_DOMAIN` when set, with an
+    optional `EMAIL_<STREAM>_LOCAL_PART`. Without a
+    parent domain only transactional mail has a sender
+    (`EMAIL_DEFAULT_SENDER`); conversation and campaign mail have none, so
+    they are never sent from the transactional identity."""
+    values = os.environ if env is None else env
+    parent = email_parent_domain(values)
+    if parent is None:
+        fallback = values.get("EMAIL_DEFAULT_SENDER", "").strip()
+        return fallback or None if stream is streams.Stream.TRANSACTIONAL else None
+    local = values.get(_stream_setting(stream, "LOCAL_PART"), "").strip() or None
+    return streams.sender(stream, parent, local=local)
+
+
+def stream_limits(stream: streams.Stream, env: Mapping[str, str] | None = None) -> tuple[int, int]:
+    """Sends per minute for one workspace and for all workspaces together
+    (`EMAIL_<STREAM>_WORKSPACE_PER_MINUTE`, `EMAIL_<STREAM>_GLOBAL_PER_MINUTE`)."""
+    values = os.environ if env is None else env
+
+    def read(what: str, default: int) -> int:
+        raw = values.get(_stream_setting(stream, what), "").strip()
+        return int(raw) if raw.isascii() and raw.isdigit() and int(raw) >= 1 else default
+
+    return (
+        read("WORKSPACE_PER_MINUTE", streams.DEFAULT_WORKSPACE_PER_MINUTE[stream]),
+        read("GLOBAL_PER_MINUTE", streams.DEFAULT_GLOBAL_PER_MINUTE[stream]),
+    )
+
+
+def _check_email_streams(env: Mapping[str, str], *, production: bool) -> list[str]:
+    problems, parent_ok = _check_email_identity(env)
+    for flag in (*STREAM_FLAGS.values(), INBOUND_FLAG):
+        value = _flag(env, flag)
+        if value is None:
+            problems.append(f"{flag} must be true or false.")
+        elif value and production:
+            problems.append(
+                f"{flag}=true is refused in production: production email is not authorized"
+                " (docs/project/EMAIL-ARCHITECTURE.md, activation gates)."
+            )
+        elif value and not parent_ok:
+            problems.append(f"{flag}=true needs a valid EMAIL_PARENT_DOMAIN.")
+    return problems
+
+
+def _check_email_identity(env: Mapping[str, str]) -> tuple[list[str], bool]:
+    """Problems with the parent domain, local parts and limits,
+    and whether a valid parent domain is set."""
+    problems: list[str] = []
+    parent_ok = False
+    parent_raw = env.get("EMAIL_PARENT_DOMAIN", "").strip()
+    if parent_raw:
+        try:
+            streams.parent_domain(parent_raw)
+            parent_ok = True
+        except InvalidValue:
+            problems.append("EMAIL_PARENT_DOMAIN must be a domain name such as example.com.")
+    for stream in streams.Stream:
+        name = _stream_setting(stream, "LOCAL_PART")
+        local = env.get(name, "").strip()
+        if local:
+            try:
+                streams.local_part(local)
+            except InvalidValue:
+                problems.append(f"{name} is not a valid local part.")
+        for what in ("WORKSPACE_PER_MINUTE", "GLOBAL_PER_MINUTE"):
+            raw = env.get(_stream_setting(stream, what), "").strip()
+            if raw and not (raw.isascii() and raw.isdigit() and int(raw) >= 1):
+                problems.append(
+                    f"{_stream_setting(stream, what)} must be a whole number of at least 1."
+                )
+    return problems, parent_ok
 
 
 def _check_role_names(env: Mapping[str, str]) -> list[str]:

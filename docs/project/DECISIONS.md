@@ -1820,6 +1820,52 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
 
+## P6-S — Email streams, sender identities and retry timing (2026-11-01)
+
+- **Status:** Implemented under the owner's "Final Email Architecture and
+  Resend Implementation Mission" (2026-11-01): "Sending-domain
+  architecture: Separate subdomains ... notify.<PARENT_DOMAIN> —
+  transactional messages; mail.<PARENT_DOMAIN> — one-to-one CRM
+  conversations; campaigns.<PARENT_DOMAIN> — marketing campaigns;
+  inbound.<PARENT_DOMAIN> — inbound email receiving ... Keep
+  transactional, conversation and campaign sending streams logically
+  isolated". Production sending and inbound are not authorized.
+- **Supersedes** the open items of P6-E (sending domain, domain model,
+  sender policy, inbound email): decided as above, except the domain
+  itself, which the owner has not supplied.
+- **Decisions:**
+  1. Three streams (`crm_app.domains.email_streams`); every email purpose
+     maps to exactly one. Senders are bare addresses on the stream's
+     subdomain of `EMAIL_PARENT_DOMAIN` (SaaS-OS v0.6.0 refuses display
+     names), with configurable local parts; without a parent domain only
+     transactional mail may use `EMAIL_DEFAULT_SENDER`.
+  2. Switches: `EMAIL_SENDING_ENABLED` plus
+     `EMAIL_CONVERSATION_SENDING_ENABLED` and
+     `EMAIL_CAMPAIGN_SENDING_ENABLED`; `EMAIL_INBOUND_ENABLED` for
+     receiving. All off by default; each is refused in production at
+     start-up, and the send path refuses production on its own.
+  3. Rate limits per stream, per workspace and globally (Redis, one-minute
+     windows, configurable). A limit reached or a limiter outage makes the
+     email wait; nothing is sent past a limit.
+  4. Retry timing: `email_message.next_attempt_at` (migration
+     `0024_email_streams`), exponential backoff from 30 s to one hour with
+     up to 25 % jitter, never sooner than the provider's `Retry-After`.
+     Early jobs only record the wait; the sweeper enqueues when due.
+  5. Provider events `email.failed` and `email.suppressed` after
+     acceptance set the new final status `rejected`; `failed` keeps its
+     meaning (never accepted).
+- **Gaps recorded** (`EMAIL-ARCHITECTURE.md` §1): no display names, no
+  custom headers (so no `List-Unsubscribe`, no `In-Reply-To`), no
+  attachments, no Domains or inbound API in SaaS-OS v0.6.0. The pin does
+  not change; the product builds its own adapters over SaaS-OS's public
+  egress client where approved (inbound, domains).
+- **Verified:** `tests/unit/test_email_streams.py`,
+  `tests/unit/test_settings.py` (stream switches, senders, limits,
+  validation, production refusals), `tests/unit/test_email_rules.py`
+  (rejections, backoff), `tests/integration/test_emails.py` (backoff
+  wait, `Retry-After`, per-workspace rate limit, conversation stream
+  switch and sender, production lock, provider rejection).
+
 ## P2-G7 — Upgrading existing workspaces' roles (2026-11-01, under M1)
 
 - **Status:** Implemented under the owner's instruction of 2026-11-01

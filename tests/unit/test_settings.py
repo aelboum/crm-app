@@ -8,14 +8,20 @@ from pathlib import Path
 import pytest
 from saas_os.infra.secrets import get_secrets_provider
 
+from crm_app.domains.email_streams import Stream
 from crm_app.settings import (
     BOOKING_LIMITS,
     ConfigurationError,
     Process,
     booking_limit,
+    email_parent_domain,
     email_sending_enabled,
+    inbound_enabled,
     signup_enabled,
     signup_limit,
+    stream_enabled,
+    stream_limits,
+    stream_sender,
     validate_settings,
 )
 from tests.support import CONFIG_NAMES, PLACEHOLDER_SETTINGS
@@ -344,7 +350,7 @@ def test_email_sending_is_off_unless_switched_on_and_needs_a_sender() -> None:
     _validate(Process.APP, PLACEHOLDER_SETTINGS)
     on = {**PLACEHOLDER_SETTINGS, "EMAIL_SENDING_ENABLED": "true"}
     assert _problems(Process.WORKER, on) == [
-        "EMAIL_SENDING_ENABLED=true needs EMAIL_DEFAULT_SENDER."
+        "EMAIL_SENDING_ENABLED=true needs EMAIL_DEFAULT_SENDER or EMAIL_PARENT_DOMAIN."
     ]
     _validate(Process.WORKER, {**on, "EMAIL_DEFAULT_SENDER": "hello@example.test"})
     assert _problems(Process.APP, {**PLACEHOLDER_SETTINGS, "EMAIL_SENDING_ENABLED": "maybe"}) == [
@@ -360,3 +366,92 @@ def test_email_sending_is_refused_in_production_until_decided() -> None:
         "EMAIL_DEFAULT_SENDER": "hello@example.test",
     }
     assert any("refused in production" in p for p in _problems(Process.WORKER, production))
+
+
+# --- Email streams (decision P6-S) ------------------------------------------------------
+
+
+def test_each_stream_has_its_own_switch_and_all_are_off_by_default() -> None:
+    for stream in Stream:
+        assert stream_enabled(stream, PLACEHOLDER_SETTINGS) is False
+    assert inbound_enabled(PLACEHOLDER_SETTINGS) is False
+    only_global = {"EMAIL_SENDING_ENABLED": "true"}
+    assert stream_enabled(Stream.TRANSACTIONAL, only_global) is True
+    assert stream_enabled(Stream.CONVERSATION, only_global) is False
+    assert stream_enabled(Stream.CAMPAIGN, only_global) is False
+    stream_only = {"EMAIL_CONVERSATION_SENDING_ENABLED": "true"}
+    assert stream_enabled(Stream.CONVERSATION, stream_only) is False
+    both = {**only_global, **stream_only}
+    assert stream_enabled(Stream.CONVERSATION, both) is True
+    assert stream_enabled(Stream.CAMPAIGN, both) is False
+
+
+def test_each_stream_sends_from_its_own_subdomain() -> None:
+    env = {"EMAIL_PARENT_DOMAIN": " Example.COM "}
+    assert email_parent_domain(env) == "example.com"
+    assert stream_sender(Stream.TRANSACTIONAL, env) == "no-reply@notify.example.com"
+    assert stream_sender(Stream.CONVERSATION, env) == "team@mail.example.com"
+    assert stream_sender(Stream.CAMPAIGN, env) == "news@campaigns.example.com"
+    custom = {**env, "EMAIL_CONVERSATION_LOCAL_PART": "support"}
+    assert stream_sender(Stream.CONVERSATION, custom) == "support@mail.example.com"
+
+
+def test_without_a_parent_domain_only_transactional_mail_has_a_sender() -> None:
+    env = {"EMAIL_DEFAULT_SENDER": "hello@example.test"}
+    assert stream_sender(Stream.TRANSACTIONAL, env) == "hello@example.test"
+    assert stream_sender(Stream.CONVERSATION, env) is None
+    assert stream_sender(Stream.CAMPAIGN, env) is None
+    assert stream_sender(Stream.TRANSACTIONAL, {}) is None
+
+
+def test_stream_limits_have_defaults_and_overrides() -> None:
+    assert stream_limits(Stream.CAMPAIGN, {}) == (20, 60)
+    env = {"EMAIL_CAMPAIGN_WORKSPACE_PER_MINUTE": "5", "EMAIL_CAMPAIGN_GLOBAL_PER_MINUTE": "9"}
+    assert stream_limits(Stream.CAMPAIGN, env) == (5, 9)
+
+
+def test_stream_settings_are_validated() -> None:
+    bad = {
+        **PLACEHOLDER_SETTINGS,
+        "EMAIL_PARENT_DOMAIN": "not a domain",
+        "EMAIL_CAMPAIGN_LOCAL_PART": "a+b",
+        "EMAIL_TRANSACTIONAL_GLOBAL_PER_MINUTE": "0",
+        "EMAIL_INBOUND_ENABLED": "maybe",
+        "EMAIL_CONVERSATION_SENDING_ENABLED": "true",
+    }
+    assert _problems(Process.APP, bad) == [
+        "EMAIL_PARENT_DOMAIN must be a domain name such as example.com.",
+        "EMAIL_TRANSACTIONAL_GLOBAL_PER_MINUTE must be a whole number of at least 1.",
+        "EMAIL_CAMPAIGN_LOCAL_PART is not a valid local part.",
+        "EMAIL_CONVERSATION_SENDING_ENABLED=true needs a valid EMAIL_PARENT_DOMAIN.",
+        "EMAIL_INBOUND_ENABLED must be true or false.",
+    ]
+    _validate(
+        Process.APP,
+        {
+            **PLACEHOLDER_SETTINGS,
+            "EMAIL_PARENT_DOMAIN": "example.com",
+            "EMAIL_CONVERSATION_SENDING_ENABLED": "true",
+            "EMAIL_INBOUND_ENABLED": "true",
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    "flag",
+    [
+        "EMAIL_SENDING_ENABLED",
+        "EMAIL_CONVERSATION_SENDING_ENABLED",
+        "EMAIL_CAMPAIGN_SENDING_ENABLED",
+        "EMAIL_INBOUND_ENABLED",
+    ],
+)
+def test_every_email_switch_is_refused_in_production(flag: str) -> None:
+    production = {
+        **PLACEHOLDER_SETTINGS,
+        "ENVIRONMENT": "production",
+        "EMAIL_PARENT_DOMAIN": "example.com",
+        flag: "true",
+    }
+    problems = _problems(Process.WORKER, production)
+    assert any(p.startswith(f"{flag}=true is refused in production") for p in problems)

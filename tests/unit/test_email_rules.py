@@ -53,6 +53,26 @@ def test_events_move_a_status_forward_only() -> None:
     # Not sent by us as far as we know: an event never invents a status.
     assert rules.after_event("queued", "delivered") == "queued"
     assert rules.after_event("failed", "delivered") == "failed"
+    # A provider's own failure or suppression after acceptance is a rejection.
+    assert rules.after_event("sent", "failed") == "rejected"
+    assert rules.after_event("sent", "suppressed") == "rejected"
+    assert rules.after_event("rejected", "delivered") == "rejected"
+    assert "rejected" in rules.FINAL
+
+
+def test_retries_back_off_exponentially_with_bounded_jitter() -> None:
+    assert rules.retry_delay(1, None, 0.0) == 30
+    assert rules.retry_delay(2, None, 0.0) == 60
+    assert rules.retry_delay(3, None, 0.5) == 120 * 1.125
+    assert rules.retry_delay(50, None, 0.0) == rules.BACKOFF_MAX_SECONDS
+    assert rules.retry_delay(1, None, 0.99) < 30 * 1.25
+
+
+def test_a_retry_is_never_sooner_than_the_providers_retry_after() -> None:
+    assert rules.retry_delay(1, 600, 0.0) == 600
+    assert rules.retry_delay(1, 5, 0.0) == 30
+    assert rules.retry_delay(1, float("inf"), 0.0) == rules.BACKOFF_MAX_SECONDS
+    assert rules.retry_delay(1, 10**9, 0.0) == rules.BACKOFF_MAX_SECONDS
 
 
 def test_a_valid_recent_signature_is_accepted() -> None:

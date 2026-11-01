@@ -52,6 +52,10 @@ class Recorder:
             time.sleep(0.5)
         if self.mode == "transient":
             raise EmailProviderError("send", "rate_limit_exceeded", reply_code=429)
+        if self.mode == "retry_after":
+            raise EmailProviderError(
+                "send", "rate_limit_exceeded", reply_code=429, retry_after_seconds=600
+            )
         if self.mode == "permanent":
             raise EmailProviderError("send", "validation_error", permanent=True, reply_code=422)
         with self.lock:
@@ -85,6 +89,29 @@ def _index(email_id: uuid.UUID) -> dict[str, Any] | None:
             "provider_message_id": row.provider_message_id,
             "retry_at": row.retry_at is not None,
         }
+
+
+def _wait_seconds(workspace: uuid.UUID, email_id: uuid.UUID) -> int | None:
+    with tenant_session_scope(workspace) as session:
+        at = session.execute(
+            text(
+                "SELECT next_attempt_at FROM crm_app.email_message"
+                " WHERE tenant_id = :t AND id = :id"
+            ),
+            {"t": workspace, "id": email_id},
+        ).scalar_one()
+    return None if at is None else round((at - datetime.now(UTC)).total_seconds())
+
+
+def _due_now(workspace: uuid.UUID, email_id: uuid.UUID) -> None:
+    with tenant_session_scope(workspace) as session:
+        session.execute(
+            text(
+                "UPDATE crm_app.email_message SET next_attempt_at = now() - interval '1 second'"
+                " WHERE tenant_id = :t AND id = :id"
+            ),
+            {"t": workspace, "id": email_id},
+        )
 
 
 def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
@@ -140,6 +167,9 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
     provider.mode = "transient"
     result["transient"] = [send(flaky), _row(a.id, flaky), _index(flaky)]
     provider.mode = "ok"
+    # Not before its backoff: the next job only waits, then it is due.
+    result["backoff"] = [send(flaky), _wait_seconds(a.id, flaky), len(provider.sent)]
+    _due_now(a.id, flaky)
     result["after_transient"] = [send(flaky), _row(a.id, flaky)["attempts"]]
     refused = queue()
     provider.mode = "permanent"
@@ -158,6 +188,64 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             {"t": a.id, "id": tired},
         )
     result["exhausted"] = [send(tired), _row(a.id, tired)["last_error"]]
+
+    # --- Retry-After: never sooner than the provider asks (decision P6-S) ----------------
+    patient = queue()
+    provider.mode = "retry_after"
+    result["retry_after"] = [send(patient), _wait_seconds(a.id, patient)]
+    provider.mode = "ok"
+
+    # --- Rate limits per stream and workspace (decision P6-S) ----------------------------
+    c = _new_workspace("email-c")
+    scope_b = Scope(workspace=c.id, actor=c.owner_id)
+
+    def queue_b(purpose: str = "test") -> uuid.UUID:
+        with tenant_session_scope(c.id) as session:
+            return emails.queue(
+                session,
+                scope_b,
+                purpose=purpose,
+                to_email="bob@example.test",
+                subject="Hi",
+                text_body="Hello.",
+            )
+
+    os.environ["EMAIL_TRANSACTIONAL_WORKSPACE_PER_MINUTE"] = "2"
+    limited = [queue_b() for _ in range(3)]
+    outcomes = [emails.send(c.id, e, provider=provider) for e in limited]
+    result["rate_limited"] = [outcomes, _row(c.id, limited[2])["status"]]
+    result["rate_wait"] = (_wait_seconds(c.id, limited[2]) or 0) > 0
+    os.environ.pop("EMAIL_TRANSACTIONAL_WORKSPACE_PER_MINUTE")
+
+    # --- Streams: a conversation reply needs its own switch and sender -------------------
+    reply = queue_b("conversation_reply")
+    stream_off = emails.send(c.id, reply, provider=provider)
+    os.environ["EMAIL_CONVERSATION_SENDING_ENABLED"] = "true"
+    no_parent = emails.send(c.id, reply, provider=provider)
+    os.environ["EMAIL_PARENT_DOMAIN"] = "example.test"
+    before = len(provider.sent)
+    sent_reply = emails.send(c.id, reply, provider=provider)
+    result["streams"] = {
+        "outcomes": [stream_off, no_parent, sent_reply],
+        "from": provider.sent[before].sender if len(provider.sent) > before else None,
+        "message_id_domain": (provider.sent[before].message_id or "").rsplit("@", 1)[-1]
+        if len(provider.sent) > before
+        else None,
+    }
+    transactional = queue_b()
+    emails.send(c.id, transactional, provider=provider)
+    result["transactional_from"] = provider.sent[-1].sender
+    for name in ("EMAIL_CONVERSATION_SENDING_ENABLED", "EMAIL_PARENT_DOMAIN"):
+        os.environ.pop(name)
+
+    # --- Production: the send path refuses even if a switch is on ------------------------
+    guarded = queue()
+    os.environ["ENVIRONMENT"] = "production"
+    try:
+        before = len(provider.sent)
+        result["production"] = [send(guarded), len(provider.sent) - before]
+    finally:
+        os.environ["ENVIRONMENT"] = "test"
 
     # --- Another workspace sees none of it ---------------------------------------------------
     result["other_workspace_rows"] = _count(b.id, "SELECT count(*) FROM crm_app.email_message")
@@ -246,6 +334,13 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         result["ignored_type"] = [
             post("msg_opened", event("email.opened")),
             _count(a.id, events_sql),
+        ]
+        racing_id = _row(a.id, racing)["provider_message_id"]
+        result["provider_failed"] = [
+            post("msg_failed", event("email.failed", racing_id)),
+            _row(a.id, racing)["status"],
+            post("msg_failed_late", event("email.delivered", racing_id)),
+            _row(a.id, racing)["status"],
         ]
         result["too_large"] = client.post(
             WEBHOOK, content=b"x" * (70 * 1024), headers={"content-type": "application/json"}

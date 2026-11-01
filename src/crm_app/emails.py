@@ -26,9 +26,13 @@ and events as its record.
 
 from __future__ import annotations
 
+import asyncio
+import os
 import re
+import secrets
 import uuid
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -41,7 +45,6 @@ from saas_os.core.email import (
     EmailProvider,
     EmailProviderError,
     InvalidEmailAddressError,
-    get_email_default_sender,
     get_email_provider_name,
     send_email,
 )
@@ -52,16 +55,23 @@ from saas_os.infra.db import (
     session_scope,
     tenant_session_scope,
 )
+from saas_os.infra.ratelimit import (
+    RateLimitBackendError,
+    check_rate_limit,
+    get_ratelimit_config,
+)
 
 from crm_app import suppression
+from crm_app.domains import email_streams as streams
 from crm_app.domains import emails as rules
 from crm_app.models import EmailEvent, EmailIndex, EmailMessage
 from crm_app.records import Scope
-from crm_app.settings import email_sending_enabled
+from crm_app.settings import stream_enabled, stream_limits, stream_sender
 
 RESOURCE = "crm_app.email"
 JOB_NAME = "crm_app_email_send"
 RETRY_DELAY = timedelta(minutes=10)
+RATE_WINDOW_SECONDS = 60
 _ERROR_CODE = re.compile(r"[^a-z0-9_]+")
 
 
@@ -158,11 +168,61 @@ class _Claim:
     to_email: str
     subject: str
     text_body: str
+    stream: streams.Stream
+    sender: str
+    attempts: int
 
 
-def _claim(workspace: uuid.UUID, email_id: uuid.UUID) -> _Claim | str:  # noqa: PLR0911 - one answer per state
+@dataclass(frozen=True)
+class _Wait:
+    """Not yet: another try is due at `until`."""
+
+    until: datetime
+    code: str = "waiting"
+
+
+def _production_blocked() -> bool:
+    """Production sending is not authorized (owner, 2026-11-01). Start-up
+    validation already refuses every email switch in production; this is
+    the second lock, in the only code path that hands email to a provider."""
+    return os.environ.get("ENVIRONMENT", "").strip().lower() == "production"
+
+
+def _run(coroutine: Any) -> Any:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="email-limit") as pool:
+        return pool.submit(asyncio.run, coroutine).result()
+
+
+def _rate_wait(workspace: uuid.UUID, stream: streams.Stream) -> float | None:
+    """Seconds to wait when the stream's per-workspace or global send rate
+    is used up, else None (one send is then counted against both). When the
+    limiter cannot answer, wait: sending fails closed."""
+    per_workspace, per_all = stream_limits(stream)
+    base = get_ratelimit_config()
+    checks = (
+        (f"crm_app:email:{stream.value}:workspace:{workspace}", per_workspace),
+        (f"crm_app:email:{stream.value}:all", per_all),
+    )
+    for key, limit in checks:
+        config = replace(base, requests_per_window=limit, window_seconds=RATE_WINDOW_SECONDS)
+        try:
+            result = _run(check_rate_limit(key, config=config))
+        except RateLimitBackendError:
+            return float(RATE_WINDOW_SECONDS)
+        if not result.allowed:
+            return float(max(result.retry_after_seconds or 1, 1))
+    return None
+
+
+def _claim(  # noqa: PLR0911 - one answer per state
+    workspace: uuid.UUID, email_id: uuid.UUID
+) -> _Claim | _Wait | str:
     """Take an email for one try, or say why not (a final status, `disabled`,
-    `suppressed`, `failed`)."""
+    `suppressed`, `failed`, `no_sender`, or a `_Wait`)."""
     with tenant_session_scope(workspace) as session:
         row = session.execute(
             select(EmailMessage)
@@ -178,8 +238,11 @@ def _claim(workspace: uuid.UUID, email_id: uuid.UUID) -> _Claim | str:  # noqa: 
             # Another try is under way; a stale one (its process died) is
             # taken over by the sweeper's job after `RETRY_DELAY`.
             return "sending"
-        if not email_sending_enabled():
+        stream = streams.stream_of(row.purpose)
+        if _production_blocked() or not stream_enabled(stream):
             return "disabled"
+        if row.next_attempt_at is not None and row.next_attempt_at > now:
+            return _Wait(row.next_attempt_at)
         if not suppression.may_send(
             session, workspace, row.to_email, row.contact_id, marketing=False
         ):
@@ -191,8 +254,23 @@ def _claim(workspace: uuid.UUID, email_id: uuid.UUID) -> _Claim | str:  # noqa: 
             row.last_error = row.last_error or "attempts_exhausted"
             _audit(session, row, "failed", error=row.last_error)
             return "failed"
+        sender = stream_sender(stream)
+        if not sender:
+            return "no_sender"
+        wait = _rate_wait(workspace, stream)
+        if wait is not None:
+            until = now + timedelta(seconds=wait)
+            row.next_attempt_at, row.last_error, row.updated_at = until, "rate_limited", now
+            return _Wait(until, "rate_limited")
         row.status, row.attempts, row.updated_at = "sending", row.attempts + 1, now
-        return _Claim(to_email=row.to_email, subject=row.subject, text_body=row.text_body)
+        return _Claim(
+            to_email=row.to_email,
+            subject=row.subject,
+            text_body=row.text_body,
+            stream=stream,
+            sender=sender,
+            attempts=row.attempts,
+        )
 
 
 def _finish(workspace: uuid.UUID, email_id: uuid.UUID, apply: Any) -> None:
@@ -208,29 +286,29 @@ def _finish(workspace: uuid.UUID, email_id: uuid.UUID, apply: Any) -> None:
 def send(
     workspace: uuid.UUID, email_id: uuid.UUID, *, provider: EmailProvider | None = None
 ) -> str:
-    """One try at an email; returns its status afterwards. Raises
+    """One try at an email; returns its status afterwards (or `waiting` /
+    `rate_limited` when a try is not yet due). Raises
     `EmailSendDeferredError` when a later try may succeed."""
     claim = _claim(workspace, email_id)
+    if isinstance(claim, _Wait):
+        # The sweeper's job comes back when it is due; no busy retries.
+        _index(email_id, retry_at=claim.until)
+        return claim.code
     if isinstance(claim, str):
         if claim in rules.FINAL or claim == "missing":
             _index(email_id, retry_at=None)
-        elif claim == "disabled":  # looked at again later, never sent meanwhile
+        elif claim in ("disabled", "no_sender"):  # looked at again later, never sent meanwhile
             postpone(email_id)
         return claim
     # Claimed: if this process dies mid-send, the sweeper tries again later
     # with the same Message-ID.
     postpone(email_id)
-    sender = get_email_default_sender()
-    if not sender:
-        # Start-up validation requires it while sending is on; refuse safely.
-        _release(workspace, email_id, "no_sender")
-        raise EmailSendDeferredError("no_sender")
     outgoing = OutgoingEmail(
-        sender=sender,
+        sender=claim.sender,
         to=(claim.to_email,),
         subject=claim.subject,
         text_body=claim.text_body,
-        message_id=rules.message_id(str(email_id), sender),
+        message_id=rules.message_id(str(email_id), claim.sender),
     )
     failure: EmailProviderError | None = None
     provider_id: str | None = None
@@ -247,7 +325,8 @@ def send(
             _fail(workspace, email_id, code)
             _index(email_id, retry_at=None)
             return "failed"
-        _release(workspace, email_id, code)
+        delay = rules.retry_delay(claim.attempts, failure.retry_after_seconds, _jitter())
+        _release(workspace, email_id, code, delay)
         raise EmailSendDeferredError(code)
     name = "fake" if provider is not None else (get_email_provider_name() or "smtp")
 
@@ -255,12 +334,16 @@ def send(
         now = _now()
         row.status, row.provider, row.sent_at, row.updated_at = "sent", name, now, now
         row.provider_message_id = provider_id
-        row.last_error = None
-        _audit(session, row, "sent", provider=name)
+        row.last_error, row.next_attempt_at = None, None
+        _audit(session, row, "sent", provider=name, stream=claim.stream.value)
 
     _finish(workspace, email_id, sent)
     _index(email_id, provider_message_id=provider_id, retry_at=None)
     return "sent"
+
+
+def _jitter() -> float:
+    return secrets.randbelow(10_000) / 10_000
 
 
 def _fail(workspace: uuid.UUID, email_id: uuid.UUID, code: str) -> None:
@@ -271,14 +354,16 @@ def _fail(workspace: uuid.UUID, email_id: uuid.UUID, code: str) -> None:
     _finish(workspace, email_id, failed)
 
 
-def _release(workspace: uuid.UUID, email_id: uuid.UUID, code: str) -> None:
-    """Back to `queued` for another try, due in `RETRY_DELAY`."""
+def _release(workspace: uuid.UUID, email_id: uuid.UUID, code: str, delay: float) -> None:
+    """Back to `queued` for another try, not before `delay` seconds."""
+    until = _now() + timedelta(seconds=delay)
 
     def back(session: Session, row: EmailMessage) -> None:
         row.status, row.last_error, row.updated_at = "queued", code, _now()
+        row.next_attempt_at = until
 
     _finish(workspace, email_id, back)
-    _index(email_id, retry_at=_now() + RETRY_DELAY)
+    _index(email_id, retry_at=until)
 
 
 # --- Sweep --------------------------------------------------------------------------------
