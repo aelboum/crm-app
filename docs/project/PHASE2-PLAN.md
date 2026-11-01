@@ -1144,7 +1144,7 @@ under concurrency (G-LOCK).
 | G4 | Invitation implementation (S9) | **Decided 2026-10-22** (Q4 manual link, Q5 two-step role); S9 still needs G1 for `invitation_intent` |
 | G5 | Directory index table (S5, S8) | Security review of §6.4 |
 | G6 | Any frontend work | P-6 **approved 2026-10-22** (P-6.1); each screen still needs its missing design states |
-| G7 | Permissions for existing workspaces in Phases 3+ | Decision on Q2 |
+| G7 | Permissions for existing workspaces in Phases 3+ | **Mechanism built 2026-11-01** (decision P2-G7): `python -m crm_app.role_upgrade`, report by default, administrative grants only with an explicit flag. Running it on a real workspace needs owner authorization |
 | G8 | Phase 2 completion | Security review and CI evidence (S11) |
 
 ## 15. Open decisions for the owner

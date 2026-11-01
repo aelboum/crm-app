@@ -130,6 +130,19 @@ not signup is on:
 uv run python -m crm_app.signup_maintenance
 ```
 
+**Bringing existing workspaces up to the role templates** (decision
+P2-G7). A workspace keeps the permissions it was provisioned with; when a
+release adds a permission to a role template, older workspaces get it only
+from this operator command. It reports by default, changes only with
+`--apply`, never revokes or grants anything outside a role's template, and
+holds administrative permissions back unless `--include-administrative` is
+given:
+
+```bash
+uv run python -m crm_app.role_upgrade --all               # report only
+uv run python -m crm_app.role_upgrade --workspace <id> --apply
+```
+
 **Testing ZITADEL's own registration locally** (Stage A4; local development
 only, off unless you opt in). This is ZITADEL's registration and email
 verification, not LeadStack's signup: `SIGNUP_ENABLED` stays off. Uncomment

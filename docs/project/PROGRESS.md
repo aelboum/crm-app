@@ -37,6 +37,14 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Gate G7, existing workspaces' roles (decision P2-G7, 2026-11-01):**
+  operator command `python -m crm_app.role_upgrade` grants each product
+  role what its template gained since the workspace was provisioned.
+  Verified: `test_role_upgrade.py` 6 against disposable workspaces (dry run
+  changes nothing; exact per-role grants; administrative grants only with
+  the flag; custom grants kept; re-run changes nothing; untouched other
+  workspaces; skips and refusals). Not run against the local development
+  workspaces or any real one.
 - **Phase 6 slice 6C.1, Inbox search and paging (decision P6-C1,
   2026-11-01):** migration `0023_conversation_search` (generated
   `search_vector` columns with GIN indexes and the inlined `crm_app.@@`

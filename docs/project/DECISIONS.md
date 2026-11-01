@@ -1820,6 +1820,51 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (deferred, K5); inbound email; attachments; the design's suggested
   reply (Phase 9, blocked by P9-0); bulk actions.
 
+## P2-G7 — Upgrading existing workspaces' roles (2026-11-01, under M1)
+
+- **Status:** Implemented under the owner's instruction of 2026-11-01
+  ("Existing workspace permissions: investigate why existing workspaces do
+  not automatically receive conversation permissions. Design and implement
+  a safe, idempotent migration or permission-provisioning mechanism.
+  Preserve existing custom permissions ... Do not silently grant excessive
+  privileges").
+- **Why it happened:** a role template (`crm_app.roles.ROLE_TEMPLATES`) is
+  applied once, by `crm_app.provision` while no member holds authority.
+  SaaS-OS `grant_permission` lets a member grant only what they already
+  hold (anti-amplification), so no Owner can grant a permission introduced
+  later, and SaaS-OS v0.6.0 documents no upgrade operation (saas-os #88,
+  still open). Every slice that added a permission (import, booking
+  pages, suppressions, automations, conversations, …) left older
+  workspaces without it.
+- **Mechanism:** the operator command `python -m crm_app.role_upgrade`
+  (`--workspace <id>` repeatable, or `--all`). It reports by default and
+  changes only with `--apply`. Per workspace it compares the four product
+  roles, found by exact name, with their templates and grants only what is
+  missing: never a revoke, never a new or renamed role, never a membership
+  change, never a permission outside the role's own template. Grants
+  outside the template are kept and counted in the report.
+- **Safeguards:** administrative and safeguarded permissions (the matrix's
+  `ADMINISTRATIVE` kind or a named safeguard: import, export, audit,
+  owner, security, pipeline, form, booking-page, suppression and
+  automation management, membership and invitation control) are held back
+  and listed unless `--include-administrative` is given. A workspace that
+  is not active, or lacks one of the four product roles, is skipped.
+  `ENVIRONMENT=production` needs `--confirm-production`. Each grant is
+  SaaS-OS's own audited `role_permission.grant`, one transaction each; a
+  duplicate is skipped, so an interrupted or repeated run is safe.
+- **Caller:** `SystemCaller(PROVISIONING)`, the only caller
+  `grant_permission` accepts for a permission no member holds. SaaS-OS
+  documents that caller for "a tenant's initial authority structure ... a
+  consumer's own provisioning/seed code"; bringing a workspace up to the
+  approved template extends that use, and is recorded here as the
+  product's interpretation until saas-os #88 provides a sanctioned
+  operation. No SaaS-OS code or pin changes.
+- **New workspaces:** unchanged; `crm_app.provision` still applies the
+  whole template, and the command reports nothing missing for them.
+- **Running it on a real workspace** is an operator action like
+  provisioning: it needs the owner's authorization for that environment.
+  It was run only against disposable test workspaces.
+
 ## P6-C1 — Inbox search and paging (2026-11-01, under M1)
 
 - **Status:** Implemented under the owner's instruction of 2026-11-01
