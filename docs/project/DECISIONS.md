@@ -1711,6 +1711,68 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      per-contact cap of upcoming bookings, leaving only the rate limits
      (no CAPTCHA or workspace contact cap yet).
 
+## P10-A — Reports over stored CRM data (2026-11-01, under M1)
+
+- **Status:** Decided under M1. The owner's mission of 2026-10-31 makes
+  "Phase 10 — Reports" the second priority: deals, tasks, date ranges,
+  permissions, states and tests, and "do not invent metrics that cannot
+  be derived reliably from stored data". Roadmap 10 asks that each metric
+  be defined before it is shown. Slice 10A.
+- **Design audit:** `ScreenReports.dc.html` shows a 7/30/90-day switch,
+  KPI tiles with a comparison, leads by source with cost per lead, a
+  conversion funnel, appointment utilisation with a no-show rate, and
+  team performance with conversations, first reply, won and revenue; the
+  agency view compares clients. Cost per lead, first reply,
+  conversations, AI and reviews have no stored data; the funnel needs
+  lead-to-deal attribution the data does not hold; the agency view waits
+  for Phase 11.
+- **Decisions:**
+  1. **Period:** whole calendar days in the workspace's time zone, both
+     ends included, at most 366 days, between the years 1900 and 2999.
+     Each figure is compared with the same number of days immediately
+     before. Presets: the last 7, 30 and 90 days ending today in the
+     workspace's zone, and a custom period.
+  2. **Definitions** (shown next to each figure):
+     - *New contacts:* contacts created in the period, archived ones
+       included, by source.
+     - *Deals created:* by creation time. *Won* and *lost:* deals whose
+       current outcome is won or lost and whose close time is in the
+       period; a reopened deal counts as neither. *Win rate:* won out of
+       won and lost, rounded; none when nothing closed. Values are summed
+       per currency, exactly, never converted.
+     - *Tasks created* and *completed* by their times; a completed task
+       is *on time* when completed by its due time, *late* after it, or
+       has no due time. *Overdue now:* open tasks past their due time at
+       the moment of reading, whatever the period.
+     - *Appointments:* those starting in the period, by status; *held*
+       means not cancelled. *No-show rate:* no-shows out of appointments
+       marked completed or no-show.
+     - *Team:* deals won by owner, tasks completed by who completed them,
+       appointments held by host.
+     Deleted records are gone and not counted.
+  3. **API:** `GET /v1/workspaces/{id}/reports/{contacts,deals,tasks,
+     appointments}?start=&end=`, each guarded by the read permission of
+     the records it counts (`crm_app.contact`, `.opportunity`, `.task`,
+     `.appointment`), so no new permission and gate G7 does not apply;
+     a card the member may not read fails alone. Read-only, no audit.
+  4. **Bounded work:** SaaS-OS's public database surface has no `count`
+     or `group by`, so rows are read and counted in Python: at most
+     20,000 rows per read, with `capped: true` and a notice when that
+     limit is reached, under a 5-second statement timeout (`503
+     report_timeout`). Migration `0018_report_indexes` adds indexes on
+     deals' creation and close times and tasks' creation time.
+  5. **Screen:** Insights › Reports: the period switch and custom dates,
+     five headline figures with their comparison, cards for contacts by
+     source, deal outcomes, tasks, appointments and the team, each with
+     its definition, loading, empty and error states.
+  6. **Not built:** export (roadmap "export controls"; a later slice),
+     the funnel, lead-source costs, conversation and review figures,
+     charts over time, and the agency comparison.
+- **Tests:** `tests/integration/test_reports.py` (a known dataset: the
+  period's edges in Amsterdam, comparisons, per-currency values, every
+  definition, another workspace, roles and outsiders, refused periods),
+  `frontend/src/records/reports.test.tsx`.
+
 ## 13-H2 — Public booking limits and link expiry (2026-11-01, under M1)
 
 - **Status:** Decided under M1. The owner's mission of 2026-10-31 puts

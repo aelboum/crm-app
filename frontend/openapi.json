@@ -296,6 +296,24 @@
         "title": "Added",
         "type": "object"
       },
+      "Amount": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "amount"
+        ],
+        "title": "Amount",
+        "type": "object"
+      },
       "AppointmentIn": {
         "additionalProperties": false,
         "properties": {
@@ -744,6 +762,61 @@
           "truncated"
         ],
         "title": "AppointmentRange",
+        "type": "object"
+      },
+      "AppointmentReport": {
+        "properties": {
+          "capped": {
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "held": {
+            "title": "Held",
+            "type": "integer"
+          },
+          "held_before": {
+            "title": "Held Before",
+            "type": "integer"
+          },
+          "hosts": {
+            "items": {
+              "$ref": "#/components/schemas/Count"
+            },
+            "title": "Hosts",
+            "type": "array"
+          },
+          "no_show_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Show Rate"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodOut"
+          },
+          "statuses": {
+            "items": {
+              "$ref": "#/components/schemas/StatusCount"
+            },
+            "title": "Statuses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "capped",
+          "held",
+          "held_before",
+          "statuses",
+          "no_show_rate",
+          "hosts"
+        ],
+        "title": "AppointmentReport",
         "type": "object"
       },
       "Availability": {
@@ -2357,6 +2430,41 @@
         "title": "ContactRef",
         "type": "object"
       },
+      "ContactReport": {
+        "properties": {
+          "capped": {
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "created_before": {
+            "title": "Created Before",
+            "type": "integer"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodOut"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceCount"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "capped",
+          "created",
+          "created_before",
+          "sources"
+        ],
+        "title": "ContactReport",
+        "type": "object"
+      },
       "ContactUpdate": {
         "additionalProperties": false,
         "description": "Fields left out are unchanged; `null` clears an optional field.",
@@ -2510,6 +2618,32 @@
           }
         },
         "title": "ContactUpdate",
+        "type": "object"
+      },
+      "Count": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "user_id",
+          "count"
+        ],
+        "title": "Count",
         "type": "object"
       },
       "CreatedInvitation": {
@@ -3204,6 +3338,101 @@
           }
         },
         "title": "DealPatch",
+        "type": "object"
+      },
+      "DealReport": {
+        "properties": {
+          "capped": {
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "created_before": {
+            "title": "Created Before",
+            "type": "integer"
+          },
+          "lost": {
+            "title": "Lost",
+            "type": "integer"
+          },
+          "lost_before": {
+            "title": "Lost Before",
+            "type": "integer"
+          },
+          "lost_value": {
+            "items": {
+              "$ref": "#/components/schemas/Amount"
+            },
+            "title": "Lost Value",
+            "type": "array"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerWins"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodOut"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          },
+          "win_rate_before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate Before"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          },
+          "won_before": {
+            "title": "Won Before",
+            "type": "integer"
+          },
+          "won_value": {
+            "items": {
+              "$ref": "#/components/schemas/Amount"
+            },
+            "title": "Won Value",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "capped",
+          "created",
+          "created_before",
+          "won",
+          "won_before",
+          "lost",
+          "lost_before",
+          "win_rate",
+          "win_rate_before",
+          "won_value",
+          "lost_value",
+          "owners"
+        ],
+        "title": "DealReport",
         "type": "object"
       },
       "DealSummary": {
@@ -4610,6 +4839,65 @@
         "title": "OutcomeIn",
         "type": "object"
       },
+      "OwnerWins": {
+        "properties": {
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          },
+          "won_value": {
+            "items": {
+              "$ref": "#/components/schemas/Amount"
+            },
+            "title": "Won Value",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_id",
+          "won",
+          "won_value"
+        ],
+        "title": "OwnerWins",
+        "type": "object"
+      },
+      "PeriodOut": {
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "days"
+        ],
+        "title": "PeriodOut",
+        "type": "object"
+      },
       "PipelineIn": {
         "additionalProperties": false,
         "properties": {
@@ -5333,6 +5621,24 @@
         "title": "SignupStatus",
         "type": "object"
       },
+      "SourceCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "count"
+        ],
+        "title": "SourceCount",
+        "type": "object"
+      },
       "StageIn": {
         "additionalProperties": false,
         "properties": {
@@ -5524,6 +5830,24 @@
           }
         },
         "title": "StatusChange",
+        "type": "object"
+      },
+      "StatusCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ],
+        "title": "StatusCount",
         "type": "object"
       },
       "SubmissionOut": {
@@ -6387,6 +6711,71 @@
           }
         },
         "title": "TaskPatch",
+        "type": "object"
+      },
+      "TaskReport": {
+        "properties": {
+          "capped": {
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "completed_before": {
+            "title": "Completed Before",
+            "type": "integer"
+          },
+          "completed_by": {
+            "items": {
+              "$ref": "#/components/schemas/Count"
+            },
+            "title": "Completed By",
+            "type": "array"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "created_before": {
+            "title": "Created Before",
+            "type": "integer"
+          },
+          "late": {
+            "title": "Late",
+            "type": "integer"
+          },
+          "no_due": {
+            "title": "No Due",
+            "type": "integer"
+          },
+          "on_time": {
+            "title": "On Time",
+            "type": "integer"
+          },
+          "overdue_now": {
+            "title": "Overdue Now",
+            "type": "integer"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodOut"
+          }
+        },
+        "required": [
+          "period",
+          "capped",
+          "created",
+          "created_before",
+          "completed",
+          "completed_before",
+          "on_time",
+          "late",
+          "no_due",
+          "overdue_now",
+          "completed_by"
+        ],
+        "title": "TaskReport",
         "type": "object"
       },
       "ValidationError": {
@@ -15076,6 +15465,322 @@
         "summary": "Update Stage",
         "tags": [
           "pipelines"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/reports/appointments": {
+      "get": {
+        "operationId": "report_appointments_v1_workspaces__tenant_id__reports_appointments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppointmentReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Appointments",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/reports/contacts": {
+      "get": {
+        "operationId": "report_contacts_v1_workspaces__tenant_id__reports_contacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Contacts",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/reports/deals": {
+      "get": {
+        "operationId": "report_deals_v1_workspaces__tenant_id__reports_deals_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Deals",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/reports/tasks": {
+      "get": {
+        "operationId": "report_tasks_v1_workspaces__tenant_id__reports_tasks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Tasks",
+        "tags": [
+          "reports"
         ]
       }
     },

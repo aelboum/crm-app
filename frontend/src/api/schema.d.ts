@@ -1377,6 +1377,74 @@ export interface paths {
         patch: operations["update_stage_v1_workspaces__tenant_id__pipelines__pipeline_id__stages__stage_id__patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/reports/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Appointments */
+        get: operations["report_appointments_v1_workspaces__tenant_id__reports_appointments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/reports/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Contacts */
+        get: operations["report_contacts_v1_workspaces__tenant_id__reports_contacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/reports/deals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Deals */
+        get: operations["report_deals_v1_workspaces__tenant_id__reports_deals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/reports/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Tasks */
+        get: operations["report_tasks_v1_workspaces__tenant_id__reports_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/settings": {
         parameters: {
             query?: never;
@@ -1615,6 +1683,13 @@ export interface components {
             /** Already Suppressed */
             already_suppressed: number;
         };
+        /** Amount */
+        Amount: {
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+        };
         /** AppointmentIn */
         AppointmentIn: {
             /**
@@ -1761,6 +1836,22 @@ export interface components {
             items: components["schemas"]["AppointmentOut"][];
             /** Truncated */
             truncated: boolean;
+        };
+        /** AppointmentReport */
+        AppointmentReport: {
+            /** Capped */
+            capped: boolean;
+            /** Held */
+            held: number;
+            /** Held Before */
+            held_before: number;
+            /** Hosts */
+            hosts: components["schemas"]["Count"][];
+            /** No Show Rate */
+            no_show_rate: number | null;
+            period: components["schemas"]["PeriodOut"];
+            /** Statuses */
+            statuses: components["schemas"]["StatusCount"][];
         };
         /** Availability */
         Availability: {
@@ -2261,6 +2352,18 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** ContactReport */
+        ContactReport: {
+            /** Capped */
+            capped: boolean;
+            /** Created */
+            created: number;
+            /** Created Before */
+            created_before: number;
+            period: components["schemas"]["PeriodOut"];
+            /** Sources */
+            sources: components["schemas"]["SourceCount"][];
+        };
         /**
          * ContactUpdate
          * @description Fields left out are unchanged; `null` clears an optional field.
@@ -2290,6 +2393,13 @@ export interface components {
             phone?: string | null;
             /** Source */
             source?: string | null;
+        };
+        /** Count */
+        Count: {
+            /** Count */
+            count: number;
+            /** User Id */
+            user_id: string | null;
         };
         /** CreatedInvitation */
         CreatedInvitation: {
@@ -2473,6 +2583,34 @@ export interface components {
             stage_id?: string | null;
             /** Title */
             title?: string | null;
+        };
+        /** DealReport */
+        DealReport: {
+            /** Capped */
+            capped: boolean;
+            /** Created */
+            created: number;
+            /** Created Before */
+            created_before: number;
+            /** Lost */
+            lost: number;
+            /** Lost Before */
+            lost_before: number;
+            /** Lost Value */
+            lost_value: components["schemas"]["Amount"][];
+            /** Owners */
+            owners: components["schemas"]["OwnerWins"][];
+            period: components["schemas"]["PeriodOut"];
+            /** Win Rate */
+            win_rate: number | null;
+            /** Win Rate Before */
+            win_rate_before: number | null;
+            /** Won */
+            won: number;
+            /** Won Before */
+            won_before: number;
+            /** Won Value */
+            won_value: components["schemas"]["Amount"][];
         };
         /** DealSummary */
         DealSummary: {
@@ -2972,6 +3110,30 @@ export interface components {
              */
             outcome: "open" | "won" | "lost";
         };
+        /** OwnerWins */
+        OwnerWins: {
+            /** User Id */
+            user_id: string | null;
+            /** Won */
+            won: number;
+            /** Won Value */
+            won_value: components["schemas"]["Amount"][];
+        };
+        /** PeriodOut */
+        PeriodOut: {
+            /** Days */
+            days: number;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
         /** PipelineIn */
         PipelineIn: {
             /** Name */
@@ -3197,6 +3359,13 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
+        /** SourceCount */
+        SourceCount: {
+            /** Count */
+            count: number;
+            /** Source */
+            source: string;
+        };
         /** StageIn */
         StageIn: {
             /** Name */
@@ -3272,6 +3441,13 @@ export interface components {
              * @default false
              */
             confirm_owner_change: boolean;
+        };
+        /** StatusCount */
+        StatusCount: {
+            /** Count */
+            count: number;
+            /** Status */
+            status: string;
         };
         /** SubmissionOut */
         SubmissionOut: {
@@ -3548,6 +3724,30 @@ export interface components {
             priority?: ("high" | "medium" | "low") | null;
             /** Title */
             title?: string | null;
+        };
+        /** TaskReport */
+        TaskReport: {
+            /** Capped */
+            capped: boolean;
+            /** Completed */
+            completed: number;
+            /** Completed Before */
+            completed_before: number;
+            /** Completed By */
+            completed_by: components["schemas"]["Count"][];
+            /** Created */
+            created: number;
+            /** Created Before */
+            created_before: number;
+            /** Late */
+            late: number;
+            /** No Due */
+            no_due: number;
+            /** On Time */
+            on_time: number;
+            /** Overdue Now */
+            overdue_now: number;
+            period: components["schemas"]["PeriodOut"];
         };
         /** ValidationError */
         ValidationError: {
@@ -7395,6 +7595,150 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_appointments_v1_workspaces__tenant_id__reports_appointments_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_contacts_v1_workspaces__tenant_id__reports_contacts_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_deals_v1_workspaces__tenant_id__reports_deals_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_tasks_v1_workspaces__tenant_id__reports_tasks_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskReport"];
                 };
             };
             /** @description Validation Error */

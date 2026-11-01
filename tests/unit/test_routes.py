@@ -67,6 +67,10 @@ RECORDS |= {
     f"DELETE {_NOTE}": "crm_app.activity:create",
     # The Home page's feed across contacts and companies (P4-D 4).
     "GET /v1/workspaces/{tenant_id}/activity": "crm_app.activity:read",
+    "GET /v1/workspaces/{tenant_id}/reports/contacts": "crm_app.contact:read",
+    "GET /v1/workspaces/{tenant_id}/reports/deals": "crm_app.opportunity:read",
+    "GET /v1/workspaces/{tenant_id}/reports/tasks": "crm_app.task:read",
+    "GET /v1/workspaces/{tenant_id}/reports/appointments": "crm_app.appointment:read",
 }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 

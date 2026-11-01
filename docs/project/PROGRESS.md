@@ -37,6 +37,18 @@ decisions P2-A to P2-E approved)
 - **Phase 3:** slices 3A, 3B, 3C (tags), 3D (custom fields), 3E1, 3E2
   and 3F (CSV import) done. Work continues under the owner's
   autonomous-development mandate (decision M1); next is Phase 4.
+- **Phase 10 slice 10A, reports (decision P10-A, 2026-11-01):**
+  `GET /reports/{contacts,deals,tasks,appointments}` for a period of
+  whole days in the workspace's zone with a comparison period; Insights ›
+  Reports with definitions next to every figure. Migration
+  `0018_report_indexes`. Verified: `test_reports.py` 7 passed, unit 549,
+  Vitest 268; full integration suite in four batches 194, 169, 162 and
+  178 passed (the worker start-up test timed out once under load in
+  batch 2 and passed in batch 4). Local `crm_app` migrated to
+  `0018_report_indexes` (68 contacts kept). Checked in Chrome in "Local
+  test workspace": the figures match its data, the appointments card
+  fails alone (that workspace has no appointment grant), no overflow at
+  390 px.
 - **13-H2, public booking limits and link expiry (2026-11-01):** visitor
   links expire 7 days after their appointment ends; bookings and link
   lookups count against each visitor's own hourly budget instead of one

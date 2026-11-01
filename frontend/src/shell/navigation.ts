@@ -100,7 +100,7 @@ export const GROUPS: Group[] = [
   {
     key: "ins",
     label: "nav.group.insights",
-    sections: [soon("reports", "nav.reports", ChartColumn, "soon.later")],
+    sections: [built("reports", "nav.reports", ChartColumn)],
   },
 ];
 

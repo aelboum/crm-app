@@ -23,6 +23,7 @@ import { CompaniesPage } from "./records/CompaniesPage";
 import { ContactsPage } from "./records/ContactsPage";
 import { CalendarPage } from "./records/CalendarPage";
 import { DashboardPage } from "./records/DashboardPage";
+import { ReportsPage } from "./records/ReportsPage";
 import { FormsPage } from "./records/FormsPage";
 import { OpportunitiesPage } from "./records/OpportunitiesPage";
 import { TasksPage } from "./records/TasksPage";
@@ -175,6 +176,9 @@ function SectionPage() {
   const openRecord = (next: string | null) => {
     void navigate({ search: next ? { record: next } : {} });
   };
+  if (slug === "reports") {
+    return <ReportsPage workspaceId={workspaceId} />;
+  }
   if (slug === "home") {
     return (
       <DashboardPage
