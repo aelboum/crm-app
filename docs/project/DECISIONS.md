@@ -2682,6 +2682,65 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 13-H5 — Security review of reminders, automation triggers, templates, booking and the worker (2026-11-02, under the hardening mandate)
+
+- **Status:** Done under the owner's instruction of 2026-11-02 (focused
+  review of 5D, 8B, 7T, public booking pages, and background worker
+  execution and retries: authorization, tenant isolation, RLS, input
+  validation, concurrency, idempotency, rate limiting, secrets, audit
+  logging and abuse). Read-only review of the code, then fixes. No critical
+  or high findings; the booking controls of 13-H1 and 13-H2 still hold
+  with the new automation hook inside the booking transaction.
+- **Fixed:**
+  1. **Late timely mail (medium):** booking confirmations and reminders
+     queued while sending is off would all go out once it is switched on,
+     even for past or cancelled appointments. Now, at send time, such mail
+     older than a day fails `expired`, and a reminder whose appointment was
+     cancelled, closed or has started fails `no_longer_due`
+     (`emails.TIMELY_FOR`, `_no_longer_due`).
+  2. **Reminder starvation (medium):** the per-run limit of 200 was applied
+     before leaving out appointments already reminded, so more than 200 in
+     the window could stop later ones being reminded. Already-reminded
+     appointments are now left out in SQL before the limit.
+  3. **One workspace stopping all email maintenance (medium):** any
+     unexpected error in one workspace's reminders ended the maintenance
+     run for every workspace. Each workspace is now isolated (logged by id
+     and error type only), and the reminder step can never stop delivery.
+  4. **Automations acting for a departed member (low-medium):** a run kept
+     acting, and being recorded, in the name of the member who activated it
+     after they left or were suspended. It is now cancelled `not_active`.
+  5. **Failure count (low):** a run's failed tries now reset after every
+     successful step, so unrelated transient errors over a long run do not
+     fail it.
+  6. **A stored definition that no longer parses (low):** it now matches
+     nothing instead of failing the contact create, form submission or
+     booking that raised the event.
+  7. **Limits (low):** template creation takes the workspace's advisory
+     lock, so concurrent creations cannot pass 100; a contact is not sent an
+     automatic reminder within an hour of the previous one (an appointment
+     rescheduled again and again).
+- **Accepted and documented (low, by design):** a visitor who submits a
+  public form or booking with an existing contact's email starts that
+  contact's `form_submitted`, `appointment_booked` or form-tag automations
+  (at most once per automation and contact, and still bounded by the
+  booking limits). Owners should not build automations that demote or
+  reassign a contact on these public triggers; a per-automation opt-in for
+  matched contacts is a possible later refinement.
+- **Checked and sound:** every query names the workspace inside its RLS
+  session; global tables hold ids and times only; ids named in definitions
+  are re-checked at activation and at run time; one run per automation and
+  contact (unique key, savepoint) so no loops; no email action in
+  automations; steps commit with their effect under a row lock; reminders
+  are unique per appointment and start time; the reminder text excludes
+  the note; template placeholders are a closed list replaced literally;
+  booking limits fail closed, tokens are hashed and expire; claims use
+  `SKIP LOCKED`, a `sending` state and capped attempts; suppression is
+  checked at send time; production sending is locked twice.
+- **Tests:** `tests/integration/test_reminders.py` (no repeat within the
+  hour; late and no-longer-due mail never sent),
+  `tests/integration/test_automation_triggers.py` (a departed activator's
+  run is cancelled), and the existing suites.
+
 ## 13-H4 — Accessibility and responsive audit of the new screens (2026-11-02, under the hardening mandate)
 
 - **Status:** Done under the owner's instruction of 2026-11-02 ("Audit all

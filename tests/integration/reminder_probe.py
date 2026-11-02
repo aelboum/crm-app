@@ -15,11 +15,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
+from saas_os.core.email import EmailSendResult
 from saas_os.core.identity import issue_session
 from saas_os.infra.db import session_scope, tenant_session_scope
 from sqlalchemy import text
 
-from crm_app import reminders
+from crm_app import emails, reminders
 from crm_app.app import create_app
 from crm_app.roles import Role
 from tests.integration.opportunity_route_probe import _member
@@ -197,7 +198,67 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             },
             headers=auth("owner", due["version"]),
         )
-        result["rescheduled"] = reminders.run_due()["queued"]
+        # Within an hour of the last email the contact is not reminded again
+        # (13-H5); once that hour has passed, the new time gets its reminder.
+        within_hour = reminders.run_due()["queued"]
+        hour_later = reminders.run_due(now=datetime.now(UTC) + timedelta(minutes=61))["queued"]
+        result["rescheduled"] = [within_hour, hour_later]
+
+        # 13-H5: timely mail queued while sending was off is never sent late:
+        # once older than a day it expires, and a reminder for a cancelled
+        # appointment is no longer due.
+        with tenant_session_scope(a.id) as session:
+            due_emails = list(
+                session.execute(
+                    text(
+                        "SELECT email_message_id FROM crm_app.appointment_reminder"
+                        " WHERE tenant_id = :t AND appointment_id = :i AND outcome = 'queued'"
+                        " ORDER BY created_at"
+                    ),
+                    {"t": a.id, "i": due["id"]},
+                ).scalars()
+            )
+            session.execute(
+                text(
+                    "UPDATE crm_app.email_message SET created_at = now() - interval '2 days'"
+                    " WHERE tenant_id = :t AND id = :e"
+                ),
+                {"t": a.id, "e": due_emails[-1]},
+            )
+
+        class Recorder:
+            def __init__(self) -> None:
+                self.sent = 0
+
+            def send(self, message: Any) -> EmailSendResult:
+                self.sent += 1
+                return EmailSendResult(accepted=True, provider_message_id="re_probe")
+
+        recorder = Recorder()
+        os.environ["EMAIL_SENDING_ENABLED"] = "true"
+        expired = emails.send(a.id, due_emails[-1], provider=recorder)
+        current = client.get(
+            f"/v1/workspaces/{a.id}/appointments/{due['id']}", headers=auth()
+        ).json()
+        client.patch(
+            f"/v1/workspaces/{a.id}/appointments/{due['id']}",
+            json={"status": "cancelled"},
+            headers=auth("owner", current["version"]),
+        )
+        not_due = emails.send(a.id, due_emails[0], provider=recorder)
+        os.environ.pop("EMAIL_SENDING_ENABLED")
+        with tenant_session_scope(a.id) as session:
+            errors = [
+                session.execute(
+                    text(
+                        "SELECT last_error FROM crm_app.email_message"
+                        " WHERE tenant_id = :t AND id = :e"
+                    ),
+                    {"t": a.id, "e": email_id},
+                ).scalar_one()
+                for email_id in (due_emails[-1], due_emails[0])
+            ]
+        result["late_mail"] = [len(due_emails), expired, not_due, errors, recorder.sent]
 
         status_path = f"/v1/workspaces/{a.id}/appointments/{{}}/reminders"
         due_status = client.get(status_path.format(due["id"]), headers=auth("reader")).json()

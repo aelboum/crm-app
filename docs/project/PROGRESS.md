@@ -202,6 +202,15 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **13-H5, security review of 5D, 8B, 7T, booking and the worker
+  (2026-11-02):** no critical or high findings; fixed late timely mail
+  (expired or no longer due), reminder starvation, one workspace stopping
+  email maintenance, runs acting for a departed activator, the run failure
+  count, unparseable stored definitions, the template limit race and
+  repeated reminders on rescheduling; the public-trigger behaviour is
+  documented. Verified: unit 727 (without configuration, as CI); full
+  integration suite 809 passed (58 files, eight foreground groups); lint,
+  types and import contracts clean; no frontend change.
 - **13-H4, accessibility and responsive audit (2026-11-02):** the new
   screens checked in Chrome at 390 px and 1280 px (overflow, labels,
   accessible names, AA contrast); fixed the template panel and badge

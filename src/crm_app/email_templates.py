@@ -24,6 +24,7 @@ from saas_os.infra.db import (
     IntegrityError,
     OperationalError,
     Session,
+    acquire_tenant_advisory_lock,
     is_transaction_conflict,
     select,
     tenant_session_scope,
@@ -149,6 +150,8 @@ def create(scope: Scope, values: Mapping[str, Any]) -> Item:
         raise TemplateRuleError("name, subject and body are required")
 
     def apply(session: Session) -> Item:
+        # Creations take turns, so concurrent ones never pass the limit.
+        acquire_tenant_advisory_lock(session, scope.workspace, f"{RESOURCE}.create")
         count = len(
             session.execute(
                 select(EmailTemplate.id).where(EmailTemplate.tenant_id == scope.workspace)

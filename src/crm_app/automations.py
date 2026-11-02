@@ -138,6 +138,16 @@ def _definition(raw: object) -> rules.Definition:
         raise AutomationRuleError(str(exc)) from None
 
 
+def _stored(raw: object) -> rules.Definition | None:
+    """A stored active definition, or None when it no longer passes the
+    rules: it then simply matches nothing, and never breaks the request that
+    raised the event (a contact create, a public form or booking; 13-H5)."""
+    try:
+        return rules.definition(raw)
+    except InvalidValue:
+        return None
+
+
 def _item(row: Automation) -> Item:
     return {
         "id": row.id,
@@ -417,7 +427,9 @@ def on_event(
     wanted = [
         (automation_id, version)
         for automation_id, version, definition in rows
-        if version is not None and rules.matches(_definition(definition), trigger, subject)
+        if version is not None
+        and (parsed := _stored(definition)) is not None
+        and rules.matches(parsed, trigger, subject)
     ]
     if not wanted:
         return 0
@@ -494,7 +506,8 @@ def on_contact_created(session: Session, scope: Scope, contact_id: uuid.UUID, so
     started: list[uuid.UUID] = []
     now = _now()
     for automation_id, version, definition in _active(session, scope.workspace, "contact_created"):
-        if version is None or not rules.triggered_by(_definition(definition), source):
+        parsed = _stored(definition)
+        if version is None or parsed is None or not rules.triggered_by(parsed, source):
             continue
         run_id = uuid.uuid4()
         session.add(_new_run(scope.workspace, automation_id, version, contact_id, run_id, now))
@@ -623,7 +636,9 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
             contact = session.execute(
                 select(Contact).where(Contact.tenant_id == workspace, Contact.id == run.contact_id)
             ).scalar_one_or_none()
-        if contact is None or actor is None:
+        if contact is None or actor is None or not _active_member(workspace, actor):
+            # The member who activated it left or was suspended: it stops
+            # acting in their name (13-H5).
             _finish(run, "cancelled", now, "contact_gone" if contact is None else "not_active")
             _forget([run_id])
             return run.status, False
@@ -659,7 +674,10 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
                     executed_at=now,
                 )
             )
+        # A step that succeeded resets the failure count: five unrelated
+        # transient errors over a long run do not fail it (13-H5).
         run.next_step, run.updated_at, run.last_error = position + 1, now, None
+        run.attempts = 0
         if action.type == "wait":
             run.status = "waiting"
             resume_at = now + timedelta(minutes=action.args["minutes"])

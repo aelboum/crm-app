@@ -43,7 +43,10 @@ def maintain() -> dict[str, int]:
     from crm_app import emails, reminders  # noqa: PLC0415
 
     # First, so the reminders it queues are handed over in this same run.
-    reminded = reminders.run_due()
+    try:
+        reminded = reminders.run_due()
+    except Exception:  # noqa: BLE001 - reminders never stop email delivery (13-H5)
+        reminded = {"queued": 0, "skipped": 0}
     orphans = 0
     pending: list[tuple[uuid.UUID, uuid.UUID]] = []
     for workspace, email_id in emails.due():

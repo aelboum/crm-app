@@ -64,7 +64,13 @@ from saas_os.infra.ratelimit import (
 from crm_app import sending_domains, suppression
 from crm_app.domains import email_streams as streams
 from crm_app.domains import emails as rules
-from crm_app.models import EmailEvent, EmailIndex, EmailMessage
+from crm_app.models import (
+    Appointment,
+    AppointmentReminder,
+    EmailEvent,
+    EmailIndex,
+    EmailMessage,
+)
 from crm_app.records import Scope
 from crm_app.settings import (
     email_parent_domain,
@@ -79,6 +85,11 @@ JOB_NAME = "crm_app_email_send"
 RETRY_DELAY = timedelta(minutes=10)
 RATE_WINDOW_SECONDS = 60
 SENDER_WAIT_SECONDS = 3600
+# Mail that is useless when late: never sent once older than this (13-H5).
+TIMELY_FOR = {
+    "booking_confirmation": timedelta(days=1),
+    "appointment_reminder": timedelta(days=1),
+}
 _ERROR_CODE = re.compile(r"[^a-z0-9_]+")
 
 
@@ -231,7 +242,7 @@ def _rate_wait(workspace: uuid.UUID, stream: streams.Stream) -> float | None:
     return None
 
 
-def _claim(  # noqa: PLR0911 - one answer per state
+def _claim(  # noqa: PLR0911, PLR0912 - one answer per state
     workspace: uuid.UUID, email_id: uuid.UUID
 ) -> _Claim | _Wait | str:
     """Take an email for one try, or say why not (a final status, `disabled`,
@@ -251,6 +262,13 @@ def _claim(  # noqa: PLR0911 - one answer per state
             # Another try is under way; a stale one (its process died) is
             # taken over by the sweeper's job after `RETRY_DELAY`.
             return "sending"
+        # Timely mail that can no longer be useful is never sent late, even
+        # if sending is switched on long after it was queued (13-H5).
+        late = _no_longer_due(session, workspace, row, now)
+        if late is not None:
+            row.status, row.last_error, row.updated_at = "failed", late, now
+            _audit(session, row, "failed", error=late)
+            return "failed"
         stream = streams.stream_of(row.purpose)
         if _production_blocked() or not stream_enabled(stream):
             return "disabled"
@@ -306,6 +324,41 @@ def _claim(  # noqa: PLR0911 - one answer per state
             attempts=row.attempts,
             reply_to=reply_to,
         )
+
+
+def _no_longer_due(
+    session: Session, workspace: uuid.UUID, row: EmailMessage, now: datetime
+) -> str | None:
+    """Why a timely email must not go out any more, or None: a booking
+    confirmation or reminder older than `TIMELY_FOR`, or a reminder whose
+    appointment was cancelled, closed or has started."""
+    limit = TIMELY_FOR.get(row.purpose)
+    if limit is None:
+        return None
+    if row.created_at < now - limit:
+        return "expired"
+    if row.purpose != "appointment_reminder":
+        return None
+    appointment = session.execute(
+        select(Appointment)
+        .join(
+            AppointmentReminder,
+            (AppointmentReminder.tenant_id == Appointment.tenant_id)
+            & (AppointmentReminder.appointment_id == Appointment.id),
+        )
+        .where(
+            AppointmentReminder.tenant_id == workspace,
+            AppointmentReminder.email_message_id == row.id,
+        )
+    ).scalar_one_or_none()
+    if (
+        appointment is None
+        or appointment.cancelled_at is not None
+        or appointment.status not in ("pending", "confirmed")
+        or appointment.starts_at <= now
+    ):
+        return "no_longer_due"
+    return None
 
 
 def _reply_to(session: Session, workspace: uuid.UUID, row: EmailMessage) -> str | None:

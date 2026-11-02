@@ -15,13 +15,16 @@ import uuid
 from typing import Any
 
 from fastapi.testclient import TestClient
-from saas_os.core.identity import issue_session
+from saas_os.core.authority import UserCaller
+from saas_os.core.identity import issue_session, suspend_membership
 from saas_os.infra.db import tenant_session_scope
 from sqlalchemy import text
 
 from crm_app import automations
 from crm_app.app import create_app
 from crm_app.records import Scope
+from crm_app.roles import Role
+from tests.integration.opportunity_route_probe import _member
 from tests.integration.workspace_route_probe import _new_workspace
 
 
@@ -272,6 +275,41 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
                 " AND contact_id = :c",
                 c=w["id"],
             )[0]["n"],
+        ]
+
+        # --- 13-H5: an automation stops acting for a member who left ----------------------
+        admin_id, admin_token = _member(a, Role.ADMIN)
+        tokens["admin"] = admin_token
+        gone_tag = tag("Gone")
+        made = create(
+            "Activated by a departing admin",
+            {
+                "trigger": {"type": "tag_added", "tag_id": gone_tag},
+                "yes": [{"type": "set_lifecycle_stage", "stage": "inactive"}],
+            },
+            caller="admin",
+        )
+        activate(made, caller="admin")
+        membership = next(
+            m
+            for m in client.get(f"{base}/members?limit=50", headers=auth()).json()["items"]
+            if m["user_id"] == str(admin_id)
+        )
+        suspend_membership(
+            a.id, uuid.UUID(membership["membership_id"]), caller=UserCaller(a.owner_id)
+        )
+        v = contact()
+        set_tags(v, [gone_tag])
+        run = next(r for r in _runs(a.id, v["id"]) if r["name"] == "Activated by a departing admin")
+        result["departed"] = [
+            automations.advance(a.id, run["id"]),
+            _q(
+                a.id,
+                "SELECT status, last_error FROM crm_app.automation_run"
+                " WHERE tenant_id = :t AND id = :r",
+                r=run["id"],
+            )[0],
+            state(v)[0],
         ]
     print("RESULT " + json.dumps(result, default=str))
 

@@ -23,6 +23,7 @@ The email acts as the appointment's host, as booking confirmations do
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -60,6 +61,7 @@ from crm_app.records import (
 )
 
 Item = dict[str, Any]
+logger = logging.getLogger(__name__)
 HISTORY_MAX = 10
 # Appointments looked at per workspace per run; the rest wait for the next.
 PER_WORKSPACE = 200
@@ -213,14 +215,24 @@ def _remind_workspace(workspace: uuid.UUID, now: datetime) -> dict[str, int]:
             register_workspace(workspace, None)
             return counts
         window_end = now + timedelta(minutes=settings.lead)
+        # Appointments already reminded for this start time are left out
+        # before the limit, so they never crowd out the rest (13-H5).
+        reminded = (
+            (AppointmentReminder.tenant_id == Appointment.tenant_id)
+            & (AppointmentReminder.appointment_id == Appointment.id)
+            & (AppointmentReminder.starts_at == Appointment.starts_at)
+            & (AppointmentReminder.kind == "automatic")
+        )
         candidates = session.execute(
             select(Appointment)
+            .outerjoin(AppointmentReminder, reminded)
             .where(
                 Appointment.tenant_id == workspace,
                 Appointment.cancelled_at.is_(None),
                 Appointment.status.in_(rules.REMINDED_STATUSES),
                 Appointment.starts_at > now,
                 Appointment.starts_at <= window_end,
+                AppointmentReminder.id.is_(None),
             )
             .order_by(Appointment.starts_at, Appointment.id)
             .limit(PER_WORKSPACE)
@@ -239,18 +251,20 @@ def _remind_workspace(workspace: uuid.UUID, now: datetime) -> dict[str, int]:
         ]
         if not due:
             return counts
-        done = {
-            (found.appointment_id, found.starts_at)
-            for found in session.execute(
-                select(AppointmentReminder).where(
+        # A contact emailed within `MANUAL_GAP` (an appointment rescheduled
+        # again and again) is not reminded once more (13-H5).
+        recent = set(
+            session.execute(
+                select(AppointmentReminder.appointment_id).where(
                     AppointmentReminder.tenant_id == workspace,
-                    AppointmentReminder.kind == "automatic",
+                    AppointmentReminder.outcome == "queued",
+                    AppointmentReminder.created_at > now - rules.MANUAL_GAP,
                     AppointmentReminder.appointment_id.in_([row.id for row in due]),
                 )
             ).scalars()
-        }
+        )
         for appointment in due:
-            if (appointment.id, appointment.starts_at) in done:
+            if appointment.id in recent:
                 continue
             made = _make(
                 session,
@@ -282,6 +296,11 @@ def run_due(now: datetime | None = None, *, limit: int = 500) -> dict[str, int]:
         try:
             counts = _remind_workspace(workspace, now)
         except (TenantClosedError, TenantNotFoundError, IntegrityError, OperationalError):
+            totals["failed"] += 1
+            continue
+        except Exception as exc:  # noqa: BLE001 - one workspace never stops the run (13-H5)
+            # The workspace id and the error's type only: never its data.
+            logger.warning("reminders: workspace %s failed (%s)", workspace, type(exc).__name__)
             totals["failed"] += 1
             continue
         totals["workspaces"] += 1

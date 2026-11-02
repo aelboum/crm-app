@@ -68,5 +68,13 @@ def test_form_and_booking_events_start_only_their_trigger(probe: Probe) -> None:
     assert probe["events"] == [1, 0, 0]
 
 
+def test_an_automation_stops_acting_for_a_member_who_left(probe: Probe) -> None:
+    outcome, run, stage = probe["departed"]
+    assert outcome == "cancelled"
+    assert run == {"status": "cancelled", "last_error": "not_active"}
+    # the step never ran: the contact keeps its stage
+    assert stage == "lead"
+
+
 def test_other_workspaces_never_run_for_this_one(probe: Probe) -> None:
     assert probe["isolation"] == [1, 0]

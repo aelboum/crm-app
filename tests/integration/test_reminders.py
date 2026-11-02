@@ -75,7 +75,8 @@ def test_the_email_is_transactional_and_holds_no_internal_note(probe: Probe) -> 
 
 
 def test_a_rescheduled_appointment_is_reminded_again(probe: Probe) -> None:
-    assert probe["rescheduled"] == 1
+    # not within an hour of the last email (13-H5), then once more
+    assert probe["rescheduled"] == [0, 1]
     lead, items, next_at, later_has_next, problem = probe["status"]
     assert (lead, items, next_at, later_has_next, problem) == (1440, 2, None, True, "no_email")
 
@@ -91,6 +92,14 @@ def test_a_member_may_send_one_now_at_most_once_an_hour(probe: Probe) -> None:
         404,
         404,
     ]
+
+
+def test_late_or_no_longer_due_reminders_are_never_sent(probe: Probe) -> None:
+    count, expired, not_due, errors, sent = probe["late_mail"]
+    assert count == 2
+    assert (expired, not_due) == ("failed", "failed")
+    assert errors == ["expired", "no_longer_due"]
+    assert sent == 0
 
 
 def test_turning_reminders_off_removes_the_workspace_from_the_run(probe: Probe) -> None:
