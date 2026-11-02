@@ -2526,9 +2526,9 @@ export interface components {
             status: "draft" | "active" | "paused";
             /**
              * Trigger Type
-             * @constant
+             * @enum {string}
              */
-            trigger_type: "contact_created";
+            trigger_type: "contact_created" | "tag_added" | "form_submitted" | "appointment_booked" | "deal_stage_changed";
             /**
              * Updated At
              * Format: date-time
@@ -4725,7 +4725,7 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "add_tag" | "assign_owner" | "create_task" | "wait";
+            action: "add_tag" | "remove_tag" | "assign_owner" | "set_lifecycle_stage" | "create_task" | "wait";
             /**
              * Branch
              * @enum {string}

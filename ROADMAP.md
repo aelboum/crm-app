@@ -728,7 +728,7 @@ A limited initial form or landing-page experience may be more appropriate than r
 
 # 13. Phase 8 — Marketing Automation
 
-**Status:** In progress. Slice 8A (decision P8-A, 2026-11-01): definitions with versions, activation and pausing, the contact-created trigger, conditions, add tag, assign owner, create task and wait actions, a durable step-by-step execution that never acts twice, run history. Not yet: email, SMS, AI and notify actions, further triggers.
+**Status:** In progress. Slice 8A (decision P8-A, 2026-11-01): definitions with versions, activation and pausing, the contact-created trigger, conditions, add tag, assign owner, create task and wait actions, a durable step-by-step execution that never acts twice, run history. Slice 8B (decision P8-B, 2026-11-02): triggers for a tag added, a form submitted, an online booking and a deal moved into a stage; remove tag and set lifecycle stage actions; each automation still runs at most once per contact. Not yet: email, SMS, AI and notify actions.
 
 ## Objectives
 

@@ -747,9 +747,20 @@ def update(
             session.add(entry)
             session.flush()
         _audit(session, scope, "updated", row.id, fields=changed)
+        _moved(session, scope, row, moved="stage_id" in changed)
 
     _transaction(scope, apply)
     return get(scope, deal_id)
+
+
+def _moved(session: Session, scope: Scope, row: Opportunity, *, moved: bool) -> None:
+    """A member's move starts the deal's contact's automations in the same
+    transaction (decision P8-B); a stage removal's move does not."""
+    if not moved or row.contact_id is None:
+        return
+    from crm_app import automations  # noqa: PLC0415 - automations imports records
+
+    automations.on_event(session, scope, "deal_stage_changed", row.contact_id, row.stage_id)
 
 
 def set_outcome(

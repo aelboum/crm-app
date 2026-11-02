@@ -26,7 +26,9 @@ export const MAX_ACTIONS = 10;
 
 export type Action =
   | { type: "add_tag"; tag_id: string }
+  | { type: "remove_tag"; tag_id: string }
   | { type: "assign_owner"; user_id: string }
+  | { type: "set_lifecycle_stage"; stage: string }
   | {
       type: "create_task";
       title: string;
@@ -45,8 +47,28 @@ export type Condition =
   | { field: "email"; op: "present" | "absent" }
   | { field: "tag"; op: "has" | "has_not"; values: string[] };
 
+/*
+ * Triggers (decision P8-B adds all but the first). The tag and stage
+ * triggers need their record; the form and booking-page ones run for any
+ * when theirs is null. Each automation runs at most once per contact.
+ */
+export type Trigger =
+  | { type: "contact_created"; sources: Source[] }
+  | { type: "tag_added"; tag_id: string }
+  | { type: "form_submitted"; form_id: string | null }
+  | { type: "appointment_booked"; booking_page_id: string | null }
+  | { type: "deal_stage_changed"; stage_id: string };
+export type TriggerType = Trigger["type"];
+export const TRIGGER_TYPES: TriggerType[] = [
+  "contact_created",
+  "tag_added",
+  "form_submitted",
+  "appointment_booked",
+  "deal_stage_changed",
+];
+
 export interface Definition {
-  trigger: { type: "contact_created"; sources: Source[] };
+  trigger: Trigger;
   condition: Condition | null;
   yes: Action[];
   no: Action[];

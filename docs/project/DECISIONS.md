@@ -2287,6 +2287,38 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not decided here:** assistants with tools, knowledge ingestion and
   retrieval, conversation summaries (they wait for 6.1).
 
+## P8-B — More automation triggers and actions (2026-11-02, under M1)
+
+- **Status:** Decided and built under M1 (owner, 2026-11-01: "proceed" with
+  the recommended order, automation triggers and actions third). Slice 8B.
+- **Decisions:**
+  1. **Triggers added:** a tag added to a contact (one tag, required); a
+     form submitted (one form, or any); an appointment booked on a booking
+     page (one page, or any); a deal moved into a stage (one stage,
+     required; the deal's contact). They fire in the transaction of the
+     event: setting a contact's tags, a form submission (its tag too), an
+     online booking, a member's deal move. Not triggered: a deal created in
+     a stage, deals moved by removing a stage, tags or deals changed by an
+     import.
+  2. **Once per contact:** every automation still runs at most once per
+     contact, whatever the trigger (the unique run key of P8-A), so
+     automations that start one another always stop. A second event for
+     the same contact starts nothing; a concurrent one is absorbed by a
+     savepoint and never fails the member's change.
+  3. **Actions added:** remove a tag; set the lifecycle stage. Both are
+     recorded like a member's change (history and audit, acting as the
+     member who activated the automation). A tag added by an automation
+     can start another automation (bounded by 2).
+  4. **Checks:** the definition names its tag or stage; activation checks
+     that the named tag, form, booking page or stage still exists.
+     Migration `0032_automation_triggers` widens the trigger and action
+     checks.
+  5. **Still not built:** send email or SMS, notify team, AI actions
+     (unchanged from P8-A 5), round-robin and business-hours waits.
+- **Tests:** `tests/integration/test_automation_triggers.py`,
+  `tests/unit/test_automation_rules.py`,
+  `frontend/src/records/automations.test.tsx`.
+
 ## P8-A — Automation engine foundation (2026-11-01, under M1)
 
 - **Status:** Decided under M1. The owner's mission of 2026-10-31 makes

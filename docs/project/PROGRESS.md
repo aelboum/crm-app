@@ -202,6 +202,14 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **Phase 8 slice 8B, automation triggers and actions (decision P8-B,
+  2026-11-02):** migration `0032_automation_triggers`; `on_event` starts
+  automations for a tag added, a form submitted, an online booking and a
+  deal moved into a stage, once per contact; remove tag and set lifecycle
+  stage actions; the editor's trigger picker. Verified: unit 725 (without
+  configuration, as CI); full integration suite 799 passed (57 files, in
+  eight foreground groups); Vitest 305; lint, types, import contracts and
+  build clean.
 - **Phase 5 slice 5D, appointment reminders (decision P5-D, 2026-11-02):**
   migration `0031_appointment_reminders` (`workspace_settings.reminder_lead_minutes`,
   `appointment_reminder`, global `reminder_workspace`); reminders queued by

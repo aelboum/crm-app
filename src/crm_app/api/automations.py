@@ -57,7 +57,13 @@ class AutomationOut(BaseModel):
     id: uuid.UUID
     name: str
     status: Status
-    trigger_type: Literal["contact_created"]
+    trigger_type: Literal[
+        "contact_created",
+        "tag_added",
+        "form_submitted",
+        "appointment_booked",
+        "deal_stage_changed",
+    ]
     definition: dict[str, Any]
     active_version: int | None
     created_at: datetime
@@ -72,7 +78,9 @@ class AutomationList(BaseModel):
 class StepOut(BaseModel):
     branch: Literal["yes", "no"]
     position: int
-    action: Literal["add_tag", "assign_owner", "create_task", "wait"]
+    action: Literal[
+        "add_tag", "remove_tag", "assign_owner", "set_lifecycle_stage", "create_task", "wait"
+    ]
     outcome: Literal["done", "skipped"]
     detail: str | None
     executed_at: datetime

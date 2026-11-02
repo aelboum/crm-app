@@ -200,7 +200,14 @@ describe("automations", () => {
     )
       .getAllByRole("option")
       .map((o) => o.textContent);
-    expect(kinds).toEqual(["Create task", "Add tag", "Assign owner", "Wait"]);
+    expect(kinds).toEqual([
+      "Create task",
+      "Add tag",
+      "Remove tag",
+      "Assign owner",
+      "Set lifecycle stage",
+      "Wait",
+    ]);
     expect(await accessibilityViolations()).toEqual([]);
     await user.click(
       within(dialog).getByRole("button", { name: "Create draft" }),
@@ -221,6 +228,52 @@ describe("automations", () => {
             },
           ],
           no: [{ type: "add_tag", tag_id: TAG }],
+        },
+      });
+    });
+  });
+
+  it("starts an automation from a tag and sets the lifecycle stage", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "VIP to customer");
+    await user.selectOptions(
+      within(dialog).getByLabelText("When this happens"),
+      "tag_added",
+    );
+    expect(within(dialog).queryByRole("checkbox", { name: "Form" })).toBeNull();
+    expect(within(dialog).getByLabelText("Tag")).toHaveValue(TAG);
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "set_lifecycle_stage",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toEqual({
+        name: "VIP to customer",
+        definition: {
+          trigger: { type: "tag_added", tag_id: TAG },
+          condition: null,
+          yes: [{ type: "set_lifecycle_stage", stage: "customer" }],
+          no: [],
         },
       });
     });

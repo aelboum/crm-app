@@ -934,7 +934,13 @@
             "type": "string"
           },
           "trigger_type": {
-            "const": "contact_created",
+            "enum": [
+              "contact_created",
+              "tag_added",
+              "form_submitted",
+              "appointment_booked",
+              "deal_stage_changed"
+            ],
             "title": "Trigger Type",
             "type": "string"
           },
@@ -7715,7 +7721,9 @@
           "action": {
             "enum": [
               "add_tag",
+              "remove_tag",
               "assign_owner",
+              "set_lifecycle_stage",
               "create_task",
               "wait"
             ],

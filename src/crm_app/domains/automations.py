@@ -13,10 +13,18 @@ listed values.
       "no": [action, ...]        # only with a condition
     }
 
-Actions: `add_tag` (`tag_id`), `assign_owner` (`user_id`), `create_task`
-(`title`, `priority`, `due_minutes` or null, `assignee`: `contact_owner`,
-`none` or a member's id) and `wait` (`minutes`). Contacts created by an
-import never start an automation.
+Triggers (decision P8-B adds all but the first): `contact_created`
+(optional `sources`), `tag_added` (`tag_id`), `form_submitted` (optional
+`form_id`), `appointment_booked` on a booking page (optional
+`booking_page_id`) and `deal_stage_changed` into a stage (`stage_id`, the
+deal's contact). Each automation runs at most once per contact, whatever
+the trigger, so automations that trigger one another always stop.
+
+Actions: `add_tag` and `remove_tag` (`tag_id`), `assign_owner`
+(`user_id`), `set_lifecycle_stage` (`stage`), `create_task` (`title`,
+`priority`, `due_minutes` or null, `assignee`: `contact_owner`, `none` or a
+member's id) and `wait` (`minutes`). Contacts created by an import never
+start an automation.
 """
 
 from __future__ import annotations
@@ -28,10 +36,30 @@ from typing import Any
 
 from crm_app.domains.records import SOURCES, STAGES, InvalidValue, visible_text
 
-TRIGGERS = ("contact_created",)
+TRIGGERS = (
+    "contact_created",
+    "tag_added",
+    "form_submitted",
+    "appointment_booked",
+    "deal_stage_changed",
+)
+# The record a trigger may be limited to, and whether it must be.
+TRIGGER_SUBJECTS: dict[str, tuple[str, bool]] = {
+    "tag_added": ("tag_id", True),
+    "form_submitted": ("form_id", False),
+    "appointment_booked": ("booking_page_id", False),
+    "deal_stage_changed": ("stage_id", True),
+}
 # An import can create thousands of contacts at once (P8-A 3).
 TRIGGER_SOURCES = tuple(source for source in SOURCES if source != "import")
-ACTIONS = ("add_tag", "assign_owner", "create_task", "wait")
+ACTIONS = (
+    "add_tag",
+    "remove_tag",
+    "assign_owner",
+    "set_lifecycle_stage",
+    "create_task",
+    "wait",
+)
 PRIORITIES = ("high", "medium", "low")
 MAX_ACTIONS = 10
 MAX_AUTOMATIONS = 20
@@ -53,13 +81,22 @@ class Definition:
     condition: dict[str, Any] | None
     yes: tuple[Action, ...]
     no: tuple[Action, ...]
+    trigger: str = "contact_created"
+    # The tag, form, booking page or stage the trigger is limited to.
+    subject_id: str | None = None
 
     def branch(self, name: str) -> tuple[Action, ...]:
         return self.yes if name == "yes" else self.no
 
+    def _trigger_json(self) -> dict[str, Any]:
+        if self.trigger == "contact_created":
+            return {"type": self.trigger, "sources": list(self.sources)}
+        key, _ = TRIGGER_SUBJECTS[self.trigger]
+        return {"type": self.trigger, key: self.subject_id}
+
     def as_json(self) -> dict[str, Any]:
         return {
-            "trigger": {"type": "contact_created", "sources": list(self.sources)},
+            "trigger": self._trigger_json(),
             "condition": self.condition,
             "yes": [{"type": a.type, **a.args} for a in self.yes],
             "no": [{"type": a.type, **a.args} for a in self.no],
@@ -113,9 +150,15 @@ def _action(raw: object, where: str) -> Action:
     if not isinstance(raw, Mapping):
         raise InvalidValue(f"{where}: an object")
     kind = raw.get("type")
-    if kind == "add_tag":
+    if kind in ("add_tag", "remove_tag"):
         _keys(raw, {"type", "tag_id"}, where)
         return Action(kind, {"tag_id": _uuid(raw.get("tag_id"), f"{where}.tag_id")})
+    if kind == "set_lifecycle_stage":
+        _keys(raw, {"type", "stage"}, where)
+        stage = raw.get("stage")
+        if stage not in STAGES:
+            raise InvalidValue(f"{where}.stage: one of {', '.join(STAGES)}")
+        return Action(kind, {"stage": stage})
     if kind == "assign_owner":
         _keys(raw, {"type", "user_id"}, where)
         return Action(kind, {"user_id": _uuid(raw.get("user_id"), f"{where}.user_id")})
@@ -168,10 +211,22 @@ def definition(raw: object) -> Definition:
     _keys(raw, {"trigger", "condition", "yes", "no"}, "definition")
     trigger = raw.get("trigger")
     if not isinstance(trigger, Mapping) or trigger.get("type") not in TRIGGERS:
-        raise InvalidValue("trigger.type: contact_created")
-    _keys(trigger, {"type", "sources"}, "trigger")
-    raw_sources = trigger.get("sources") or []
-    sources = tuple(_values(raw_sources, TRIGGER_SOURCES, "trigger.sources")) if raw_sources else ()
+        raise InvalidValue(f"trigger.type: one of {', '.join(TRIGGERS)}")
+    kind = str(trigger["type"])
+    sources: tuple[str, ...] = ()
+    subject: str | None = None
+    if kind == "contact_created":
+        _keys(trigger, {"type", "sources"}, "trigger")
+        raw_sources = trigger.get("sources") or []
+        if raw_sources:
+            sources = tuple(_values(raw_sources, TRIGGER_SOURCES, "trigger.sources"))
+    else:
+        key, required = TRIGGER_SUBJECTS[kind]
+        _keys(trigger, {"type", key}, "trigger")
+        given = trigger.get(key)
+        if given is None and required:
+            raise InvalidValue(f"trigger.{key}: required")
+        subject = None if given is None else _uuid(given, f"trigger.{key}")
     condition = _condition(raw.get("condition"))
     branches: dict[str, tuple[Action, ...]] = {}
     for branch in ("yes", "no"):
@@ -181,7 +236,7 @@ def definition(raw: object) -> Definition:
         branches[branch] = tuple(_action(step, f"{branch}[{i}]") for i, step in enumerate(steps))
     if condition is None and branches["no"]:
         raise InvalidValue("no: only with a condition")
-    return Definition(sources, condition, branches["yes"], branches["no"])
+    return Definition(sources, condition, branches["yes"], branches["no"], kind, subject)
 
 
 def activatable(given: Definition) -> None:
@@ -190,9 +245,17 @@ def activatable(given: Definition) -> None:
         raise InvalidValue("yes: at least one action")
 
 
+def matches(given: Definition, trigger: str, subject_id: str | None) -> bool:
+    """Whether an event (`trigger` about the tag, form, booking page or
+    stage `subject_id`) starts the automation."""
+    if given.trigger != trigger or trigger == "contact_created":
+        return False
+    return given.subject_id is None or given.subject_id == subject_id
+
+
 def triggered_by(given: Definition, source: str) -> bool:
     """Whether a contact created with `source` starts the automation."""
-    if source not in TRIGGER_SOURCES:
+    if given.trigger != "contact_created" or source not in TRIGGER_SOURCES:
         return False
     return not given.sources or source in given.sources
 
@@ -230,8 +293,10 @@ def referenced(given: Definition) -> tuple[set[str], set[str]]:
     users: set[str] = set()
     if given.condition and given.condition["field"] == "tag":
         tags.update(given.condition["values"])
+    if given.trigger == "tag_added" and given.subject_id:
+        tags.add(given.subject_id)
     for step in (*given.yes, *given.no):
-        if step.type == "add_tag":
+        if step.type in ("add_tag", "remove_tag"):
             tags.add(step.args["tag_id"])
         elif step.type == "assign_owner":
             users.add(step.args["user_id"])

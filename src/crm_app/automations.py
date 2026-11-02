@@ -32,6 +32,7 @@ from saas_os.core.authority import UserCaller
 from saas_os.core.identity import get_membership
 from saas_os.core.tenancy import lock_open_tenant
 from saas_os.infra.db import (
+    IntegrityError,
     OperationalError,
     Session,
     acquire_tenant_advisory_lock,
@@ -51,8 +52,11 @@ from crm_app.models import (
     AutomationRun,
     AutomationStep,
     AutomationVersion,
+    BookingPage,
     Contact,
     ContactTag,
+    Form,
+    PipelineStage,
     Tag,
 )
 from crm_app.records import (
@@ -63,6 +67,12 @@ from crm_app.records import (
     TransactionConflictError,
 )
 
+# The record a trigger may be limited to (P8-B), by trigger.
+_SUBJECT_MODELS: dict[str, Any] = {
+    "form_submitted": Form,
+    "appointment_booked": BookingPage,
+    "deal_stage_changed": PipelineStage,
+}
 RESOURCE = "crm_app.automation"
 JOB_NAME = "crm_app_automation_run"
 MAX_ATTEMPTS = 5
@@ -195,7 +205,7 @@ def create(scope: Scope, name: str, definition: object) -> Item:
             tenant_id=scope.workspace,
             name=clean_name,
             status="draft",
-            trigger_type="contact_created",
+            trigger_type=given.trigger,
             definition=given.as_json(),
             active_version=None,
             activated_by_user_id=None,
@@ -241,6 +251,9 @@ def update(
         if changed:
             for name in changed:
                 setattr(row, name, values[name])
+            if "definition" in changed:
+                # Kept with the row so an event looks up only its automations.
+                row.trigger_type = values["definition"]["trigger"]["type"]
             row.updated_by_user_id, row.updated_at = scope.actor, _now()
             row.version += 1
             session.flush()
@@ -269,6 +282,15 @@ def _check_references(session: Session, scope: Scope, given: rules.Definition) -
     for user in users:
         if not _active_member(scope.workspace, uuid.UUID(user)):
             raise AutomationRuleError("a member it names is not an active member")
+    model = _SUBJECT_MODELS.get(given.trigger)
+    if model is not None and given.subject_id is not None:
+        found_subject = session.execute(
+            select(model.id).where(
+                model.tenant_id == scope.workspace, model.id == uuid.UUID(given.subject_id)
+            )
+        ).first()
+        if found_subject is None:
+            raise AutomationRuleError("the form, booking page or stage it names no longer exists")
 
 
 def activate(scope: Scope, automation_id: uuid.UUID, *, expected_version: int) -> Item:
@@ -357,57 +379,129 @@ def remove(scope: Scope, automation_id: uuid.UUID) -> None:
 # --- Trigger -------------------------------------------------------------------------------
 
 
+def _active(session: Session, workspace: uuid.UUID, trigger: str) -> list[Any]:
+    return list(
+        session.execute(
+            select(Automation.id, Automation.active_version, AutomationVersion.definition)
+            .join(
+                AutomationVersion,
+                (AutomationVersion.tenant_id == Automation.tenant_id)
+                & (AutomationVersion.automation_id == Automation.id)
+                & (AutomationVersion.number == Automation.active_version),
+            )
+            .where(
+                Automation.tenant_id == workspace,
+                Automation.status == "active",
+                Automation.trigger_type == trigger,
+            )
+        ).all()
+    )
+
+
+def on_event(
+    session: Session,
+    scope: Scope,
+    trigger: str,
+    contact_id: uuid.UUID,
+    subject_id: uuid.UUID | None = None,
+) -> int:
+    """Start the active automations an event about a contact matches (a tag
+    added, a form submitted, an appointment booked, a deal moved into a
+    stage; decision P8-B), in the event's transaction. An automation that
+    already ran for this contact is not started again, so automations that
+    trigger one another always stop. Returns how many runs started."""
+    rows = _active(session, scope.workspace, trigger)
+    if not rows:
+        return 0
+    subject = None if subject_id is None else str(subject_id)
+    wanted = [
+        (automation_id, version)
+        for automation_id, version, definition in rows
+        if version is not None and rules.matches(_definition(definition), trigger, subject)
+    ]
+    if not wanted:
+        return 0
+    ran = set(
+        session.execute(
+            select(AutomationRun.automation_id).where(
+                AutomationRun.tenant_id == scope.workspace,
+                AutomationRun.contact_id == contact_id,
+                AutomationRun.automation_id.in_([automation_id for automation_id, _ in wanted]),
+            )
+        ).scalars()
+    )
+    started: list[uuid.UUID] = []
+    now = _now()
+    for automation_id, version in wanted:
+        if automation_id in ran:
+            continue
+        run_id = uuid.uuid4()
+        try:
+            # A concurrent event for the same contact may start it first:
+            # then this one simply does not, and the caller's change stands.
+            with session.begin_nested():
+                session.add(
+                    _new_run(scope.workspace, automation_id, version, contact_id, run_id, now)
+                )
+                session.flush()
+        except IntegrityError:
+            continue
+        started.append(run_id)
+    _index_runs(scope.workspace, started, now)
+    return len(started)
+
+
+def _new_run(  # noqa: PLR0913, PLR0917 - one run's identity
+    workspace: uuid.UUID,
+    automation_id: uuid.UUID,
+    version: int,
+    contact_id: uuid.UUID,
+    run_id: uuid.UUID,
+    now: datetime,
+) -> AutomationRun:
+    return AutomationRun(
+        id=run_id,
+        tenant_id=workspace,
+        automation_id=automation_id,
+        version_number=version,
+        contact_id=contact_id,
+        branch=None,
+        next_step=0,
+        status="running",
+        resume_at=None,
+        attempts=0,
+        last_error=None,
+        created_at=now,
+        updated_at=now,
+        finished_at=None,
+    )
+
+
+def _index_runs(workspace: uuid.UUID, started: list[uuid.UUID], now: datetime) -> None:
+    if not started:
+        return
+    # Indexed in its own transaction: if the event's rolls back, the
+    # sweeper finds no run and drops the entry.
+    with session_scope() as global_session:
+        global_session.add_all(
+            AutomationDue(run_id=run_id, workspace_id=workspace, due_at=now) for run_id in started
+        )
+
+
 def on_contact_created(session: Session, scope: Scope, contact_id: uuid.UUID, source: str) -> int:
     """Start the active automations a new contact matches, in the creating
     transaction; returns how many runs started."""
-    rows = session.execute(
-        select(Automation.id, Automation.active_version, AutomationVersion.definition)
-        .join(
-            AutomationVersion,
-            (AutomationVersion.tenant_id == Automation.tenant_id)
-            & (AutomationVersion.automation_id == Automation.id)
-            & (AutomationVersion.number == Automation.active_version),
-        )
-        .where(
-            Automation.tenant_id == scope.workspace,
-            Automation.status == "active",
-            Automation.trigger_type == "contact_created",
-        )
-    ).all()
     started: list[uuid.UUID] = []
     now = _now()
-    for automation_id, version, definition in rows:
+    for automation_id, version, definition in _active(session, scope.workspace, "contact_created"):
         if version is None or not rules.triggered_by(_definition(definition), source):
             continue
         run_id = uuid.uuid4()
-        session.add(
-            AutomationRun(
-                id=run_id,
-                tenant_id=scope.workspace,
-                automation_id=automation_id,
-                version_number=version,
-                contact_id=contact_id,
-                branch=None,
-                next_step=0,
-                status="running",
-                resume_at=None,
-                attempts=0,
-                last_error=None,
-                created_at=now,
-                updated_at=now,
-                finished_at=None,
-            )
-        )
+        session.add(_new_run(scope.workspace, automation_id, version, contact_id, run_id, now))
         started.append(run_id)
     if started:
         session.flush()
-        # Indexed in its own transaction: if the contact's rolls back, the
-        # sweeper finds no run and drops the entry.
-        with session_scope() as global_session:
-            global_session.add_all(
-                AutomationDue(run_id=run_id, workspace_id=scope.workspace, due_at=now)
-                for run_id in started
-            )
+    _index_runs(scope.workspace, started, now)
     return len(started)
 
 
@@ -431,7 +525,7 @@ def _facts(session: Session, workspace: uuid.UUID, contact: Contact) -> rules.Fa
     )
 
 
-def _act(
+def _act(  # noqa: PLR0911 - one answer per action
     session: Session, scope: Scope, contact: Contact, action: rules.Action, run: AutomationRun
 ) -> tuple[str, str | None]:
     """One action's effect in the run's transaction: (outcome, detail)."""
@@ -439,6 +533,12 @@ def _act(
     if action.type == "add_tag":
         result = records.add_tag_in(session, scope, contact.id, uuid.UUID(args["tag_id"]))
         return ("done", None) if result in ("added", "present") else ("skipped", result)
+    if action.type == "remove_tag":
+        records.remove_tag_in(session, scope, contact.id, uuid.UUID(args["tag_id"]))
+        return "done", None
+    if action.type == "set_lifecycle_stage":
+        records.set_stage_in(session, scope, contact.id, args["stage"])
+        return "done", None
     if action.type == "assign_owner":
         owner = uuid.UUID(args["user_id"])
         if not _active_member(scope.workspace, owner):

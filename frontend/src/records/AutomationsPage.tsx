@@ -11,7 +11,10 @@ import {
   EMPTY_DEFINITION,
   MAX_ACTIONS,
   type Source,
+  type Trigger,
   TRIGGER_SOURCES,
+  TRIGGER_TYPES,
+  type TriggerType,
   useAutomationRuns,
   useAutomations,
   useCreateAutomation,
@@ -19,7 +22,10 @@ import {
   useSwitchAutomation,
   useUpdateAutomation,
 } from "../api/automations";
+import { useBookingPages } from "../api/bookingPages";
 import { ApiError } from "../api/client";
+import { useForms } from "../api/forms";
+import { usePipelines } from "../api/pipelines";
 import { useAccess, useMe, useMembers } from "../api/queries";
 import { useTags } from "../api/tags";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -166,14 +172,19 @@ export function AutomationsPage({
 }
 
 function summary(t: T, definition: Definition): string {
-  const sources = definition.trigger.sources;
+  const trigger = definition.trigger;
+  const count = definition.yes.length + definition.no.length;
+  if (trigger.type !== "contact_created") {
+    return t("automations.summaryEvent", {
+      trigger: t(`automations.triggerType.${trigger.type}` as MessageId),
+      count,
+    });
+  }
+  const sources = trigger.sources;
   const from = sources.length
     ? sources.map((s) => t(`source.${s}` as MessageId)).join(", ")
     : t("automations.anySource");
-  return t("automations.summary", {
-    from,
-    count: definition.yes.length + definition.no.length,
-  });
+  return t("automations.summary", { from, count });
 }
 
 function AutomationCard({
@@ -412,7 +423,9 @@ function newAction(
   tags: Option[],
   members: Option[],
 ): Action {
-  if (type === "add_tag") return { type, tag_id: tags[0]?.id ?? "" };
+  if (type === "add_tag" || type === "remove_tag")
+    return { type, tag_id: tags[0]?.id ?? "" };
+  if (type === "set_lifecycle_stage") return { type, stage: "customer" };
   if (type === "assign_owner") return { type, user_id: members[0]?.id ?? "" };
   if (type === "wait") return { type, minutes: 60 };
   return {
@@ -422,6 +435,158 @@ function newAction(
     due_minutes: 60,
     assignee: "contact_owner",
   };
+}
+
+function newTrigger(
+  type: TriggerType,
+  tags: Option[],
+  stages: Option[],
+): Trigger {
+  if (type === "tag_added") return { type, tag_id: tags[0]?.id ?? "" };
+  if (type === "form_submitted") return { type, form_id: null };
+  if (type === "appointment_booked") return { type, booking_page_id: null };
+  if (type === "deal_stage_changed")
+    return { type, stage_id: stages[0]?.id ?? "" };
+  return { type: "contact_created", sources: [] };
+}
+
+/** The trigger (P8-B): its type, then what it is limited to. */
+function TriggerFields({
+  workspaceId,
+  trigger,
+  tags,
+  onChange,
+}: {
+  workspaceId: string;
+  trigger: Trigger;
+  tags: Option[];
+  onChange: (trigger: Trigger) => void;
+}) {
+  const t = useT();
+  const forms = useForms(workspaceId, trigger.type === "form_submitted");
+  const pages = useBookingPages(
+    workspaceId,
+    trigger.type === "appointment_booked",
+  );
+  const pipelines = usePipelines(workspaceId);
+  const stages: Option[] = (pipelines.data?.items[0]?.stages ?? []).map(
+    (stage) => ({
+      id: stage.id,
+      label: stage.name,
+    }),
+  );
+  const pick = (
+    label: MessageId,
+    value: string,
+    options: Option[],
+    any: boolean,
+    apply: (id: string) => void,
+  ) => (
+    <select
+      className="form-input"
+      aria-label={t(label)}
+      value={value}
+      onChange={(event) => {
+        apply(event.target.value);
+      }}
+    >
+      {any ? <option value="">{t("automations.triggerAny")}</option> : null}
+      {options.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+  return (
+    <fieldset className="form-field wide automation-block">
+      <legend className="form-label">{t("automations.trigger")}</legend>
+      <select
+        className="form-input"
+        aria-label={t("automations.triggerKind")}
+        value={trigger.type}
+        onChange={(event) => {
+          onChange(newTrigger(event.target.value as TriggerType, tags, stages));
+        }}
+      >
+        {TRIGGER_TYPES.map((type) => (
+          <option key={type} value={type}>
+            {t(`automations.triggerType.${type}` as MessageId)}
+          </option>
+        ))}
+      </select>
+      <p className="form-hint">{t("automations.triggerOnce")}</p>
+      {trigger.type === "contact_created" ? (
+        <>
+          <p className="form-hint">{t("automations.triggerHint")}</p>
+          <div className="automation-checks">
+            {TRIGGER_SOURCES.map((source: Source) => (
+              <label key={source} className="public-check-label">
+                <input
+                  type="checkbox"
+                  checked={trigger.sources.includes(source)}
+                  onChange={(event) => {
+                    const sources = event.target.checked
+                      ? [...trigger.sources, source]
+                      : trigger.sources.filter((s) => s !== source);
+                    onChange({ type: "contact_created", sources });
+                  }}
+                />
+                <span>{t(`source.${source}` as MessageId)}</span>
+              </label>
+            ))}
+          </div>
+        </>
+      ) : null}
+      {trigger.type === "tag_added"
+        ? pick("automations.triggerTag", trigger.tag_id, tags, false, (id) => {
+            onChange({ type: "tag_added", tag_id: id });
+          })
+        : null}
+      {trigger.type === "form_submitted"
+        ? pick(
+            "automations.triggerForm",
+            trigger.form_id ?? "",
+            (forms.data?.items ?? []).map((form) => ({
+              id: form.id,
+              label: form.name,
+            })),
+            true,
+            (id) => {
+              onChange({ type: "form_submitted", form_id: id || null });
+            },
+          )
+        : null}
+      {trigger.type === "appointment_booked"
+        ? pick(
+            "automations.triggerPage",
+            trigger.booking_page_id ?? "",
+            (pages.data?.items ?? []).map((page) => ({
+              id: page.id,
+              label: page.name,
+            })),
+            true,
+            (id) => {
+              onChange({
+                type: "appointment_booked",
+                booking_page_id: id || null,
+              });
+            },
+          )
+        : null}
+      {trigger.type === "deal_stage_changed"
+        ? pick(
+            "automations.triggerStage",
+            trigger.stage_id,
+            stages,
+            false,
+            (id) => {
+              onChange({ type: "deal_stage_changed", stage_id: id });
+            },
+          )
+        : null}
+    </fieldset>
+  );
 }
 
 function startingCondition(
@@ -543,27 +708,14 @@ function AutomationEditor({
             }}
           />
         </div>
-        <fieldset className="form-field wide automation-block">
-          <legend className="form-label">{t("automations.trigger")}</legend>
-          <p className="form-hint">{t("automations.triggerHint")}</p>
-          <div className="automation-checks">
-            {TRIGGER_SOURCES.map((source: Source) => (
-              <label key={source} className="public-check-label">
-                <input
-                  type="checkbox"
-                  checked={definition.trigger.sources.includes(source)}
-                  onChange={(event) => {
-                    const sources = event.target.checked
-                      ? [...definition.trigger.sources, source]
-                      : definition.trigger.sources.filter((s) => s !== source);
-                    set({ trigger: { type: "contact_created", sources } });
-                  }}
-                />
-                <span>{t(`source.${source}` as MessageId)}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <TriggerFields
+          workspaceId={workspaceId}
+          trigger={definition.trigger}
+          tags={tags}
+          onChange={(trigger) => {
+            set({ trigger });
+          }}
+        />
         <fieldset className="form-field wide automation-block">
           <legend className="form-label">{t("automations.condition")}</legend>
           <select
@@ -773,8 +925,14 @@ function Branch({
               {t("automations.action.create_task")}
             </option>
             <option value="add_tag">{t("automations.action.add_tag")}</option>
+            <option value="remove_tag">
+              {t("automations.action.remove_tag")}
+            </option>
             <option value="assign_owner">
               {t("automations.action.assign_owner")}
+            </option>
+            <option value="set_lifecycle_stage">
+              {t("automations.action.set_lifecycle_stage")}
             </option>
             <option value="wait">{t("automations.action.wait")}</option>
           </select>
@@ -813,7 +971,28 @@ function ActionEditor({
   const kind = t(`automations.action.${action.type}` as MessageId);
   const label = (field: MessageId) =>
     t("automations.fieldOf", { field: t(field), branch, number: index + 1 });
-  if (action.type === "add_tag") {
+  if (action.type === "set_lifecycle_stage") {
+    return (
+      <div className="automation-step-body">
+        <span className="automation-step-kind">{kind}</span>
+        <select
+          className="form-input"
+          aria-label={label("automations.field.stage")}
+          value={action.stage}
+          onChange={(event) => {
+            onChange({ ...action, stage: event.target.value });
+          }}
+        >
+          {STAGES.map((stage) => (
+            <option key={stage} value={stage}>
+              {t(`stage.${stage}` as MessageId)}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+  if (action.type === "add_tag" || action.type === "remove_tag") {
     return (
       <div className="automation-step-body">
         <span className="automation-step-kind">{kind}</span>

@@ -1032,6 +1032,8 @@ def set_tags(
         session.flush()
         session.add(history_entry(kind, scope, record_id, "updated", fields=["tags"]))
         _audit(session, kind, scope, _Event("updated", record_id, {"fields": ["tags"]}))
+        if kind is CONTACT:
+            _tags_added(session, scope, record_id, wanted - current)
 
     _write(kind, scope, lambda: None, apply)
     return get(kind, scope, record_id)
@@ -1090,7 +1092,55 @@ def add_tag_in(session: Session, scope: Scope, contact_id: uuid.UUID, tag_id: uu
     session.flush()
     session.add(history_entry(CONTACT, scope, contact_id, "updated", fields=["tags"]))
     _audit(session, CONTACT, scope, _Event("updated", contact_id, {"fields": ["tags"]}))
+    _tags_added(session, scope, contact_id, {tag_id})
     return "added"
+
+
+def _tags_added(
+    session: Session, scope: Scope, contact_id: uuid.UUID, tag_ids: set[uuid.UUID]
+) -> None:
+    """Start the automations a tag added to a contact triggers (P8-B), in
+    the same transaction."""
+    from crm_app import automations  # noqa: PLC0415 - automations imports this module
+
+    for tag_id in sorted(tag_ids, key=str):
+        automations.on_event(session, scope, "tag_added", contact_id, tag_id)
+
+
+def remove_tag_in(session: Session, scope: Scope, contact_id: uuid.UUID, tag_id: uuid.UUID) -> str:
+    """Take one tag off a contact inside the caller's transaction (an
+    automation's step, decision P8-B): `removed` or `absent`."""
+    tagging, record = _TAGGING[CONTACT.name]
+    row = _load(session, CONTACT, scope, contact_id, lock=True)
+    gone = session.execute(
+        delete(tagging).where(
+            tagging.tenant_id == scope.workspace, record == contact_id, tagging.tag_id == tag_id
+        )
+    )
+    if not getattr(gone, "rowcount", 0):
+        return "absent"
+    _touch(row, scope)
+    session.flush()
+    session.add(history_entry(CONTACT, scope, contact_id, "updated", fields=["tags"]))
+    _audit(session, CONTACT, scope, _Event("updated", contact_id, {"fields": ["tags"]}))
+    return "removed"
+
+
+def set_stage_in(session: Session, scope: Scope, contact_id: uuid.UUID, stage: str) -> bool:
+    """Set the contact's lifecycle stage inside the caller's transaction (an
+    automation's step, decision P8-B); `False` when it already is."""
+    row = _load(session, CONTACT, scope, contact_id, lock=True)
+    if not isinstance(row, Contact):  # a contact's kind loads a contact
+        raise RecordNotFoundError
+    if row.lifecycle_stage == stage:
+        return False
+    before = {"lifecycle_stage": row.lifecycle_stage}
+    row.lifecycle_stage = stage
+    _touch(row, scope)
+    session.flush()
+    session.add_all(_change_history(CONTACT, scope, row, before))
+    _audit(session, CONTACT, scope, _Event("updated", contact_id, {"fields": ["lifecycle_stage"]}))
+    return True
 
 
 def set_archived(kind: Kind, scope: Scope, record_id: uuid.UUID, *, archived: bool) -> Record:

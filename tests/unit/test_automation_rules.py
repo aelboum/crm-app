@@ -70,11 +70,51 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
         {"condition": {"field": "source", "op": "matches", "values": [".*"]}},
         {"condition": {"field": "source", "op": "in", "values": []}},
         {"script": "x"},
+        # P8-B
+        {"trigger": {"type": "tag_added"}},
+        {"trigger": {"type": "tag_added", "tag_id": "nope"}},
+        {"trigger": {"type": "deal_stage_changed"}},
+        {"trigger": {"type": "form_submitted", "sources": ["form"]}},
+        {"trigger": {"type": "appointment_booked", "booking_page_id": TAG, "x": 1}},
+        {"yes": [{"type": "set_lifecycle_stage", "stage": "royalty"}]},
+        {"yes": [{"type": "remove_tag"}]},
     ],
 )
 def test_anything_outside_the_rules_is_refused(changes: dict[str, Any]) -> None:
     with pytest.raises(InvalidValue):
         rules.definition(_base(**changes))
+
+
+def test_event_triggers_match_their_type_and_their_record() -> None:
+    other = str(uuid.uuid4())
+    tagged = rules.definition(_base(trigger={"type": "tag_added", "tag_id": TAG.upper()}))
+    assert tagged.as_json()["trigger"] == {"type": "tag_added", "tag_id": TAG}
+    assert rules.matches(tagged, "tag_added", TAG)
+    assert not rules.matches(tagged, "tag_added", other)
+    assert not rules.matches(tagged, "form_submitted", TAG)
+    assert not rules.triggered_by(tagged, "manual")
+    any_form = rules.definition(_base(trigger={"type": "form_submitted"}))
+    assert any_form.as_json()["trigger"] == {"type": "form_submitted", "form_id": None}
+    assert rules.matches(any_form, "form_submitted", other)
+    created = rules.definition(_base())
+    assert not rules.matches(created, "contact_created", None)
+    assert rules.referenced(tagged)[0] == {TAG}
+
+
+def test_the_new_actions_are_plain_data() -> None:
+    given = rules.definition(
+        _base(
+            yes=[
+                {"type": "remove_tag", "tag_id": TAG},
+                {"type": "set_lifecycle_stage", "stage": "customer"},
+            ]
+        )
+    )
+    assert given.as_json()["yes"] == [
+        {"type": "remove_tag", "tag_id": TAG},
+        {"type": "set_lifecycle_stage", "stage": "customer"},
+    ]
+    assert rules.referenced(given)[0] == {TAG}
 
 
 def test_imports_never_trigger_and_an_empty_source_list_means_any_other() -> None:

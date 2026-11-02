@@ -702,15 +702,17 @@ def _create_contact(session: Session, accepted: _Accepted, form: Form) -> uuid.U
     return contact_id
 
 
-def _tag_matched(session: Session, scope: Scope, contact: Contact, form: Form) -> None:
-    """The only change a submission makes to a matched contact (P7-A 6)."""
+def _tag_matched(session: Session, scope: Scope, contact: Contact, form: Form) -> bool:
+    """The only change a submission makes to a matched contact (P7-A 6);
+    whether the form's tag was added."""
     if form.tag_id is None or not _add_tag(session, scope, contact, form.tag_id):
-        return
+        return False
     _touch(contact, scope)
     session.flush()
     session.add(history_entry(CONTACT, scope, contact.id, "updated", fields=["tags"]))
     metadata = {"fields": ["tags"], "form_id": str(form.id)}
     _audit(session, CONTACT, scope, _Event("updated", contact.id, metadata))
+    return True
 
 
 def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
@@ -725,8 +727,9 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     contact = _match(session, workspace, email)
     if contact is None:
         contact_id, outcome = _create_contact(session, accepted, form), "created"
+        tagged = form.tag_id is not None
     else:
-        _tag_matched(session, accepted.scope, contact, form)
+        tagged = _tag_matched(session, accepted.scope, contact, form)
         contact_id, outcome = contact.id, "matched"
     consent = accepted.consent and email is not None and form.consent_text is not None
     now = _now()
@@ -763,6 +766,12 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
         )
     form.submission_count += 1
     form.last_submission_at = now
+    # Automations start in the same transaction (decision P8-B).
+    from crm_app import automations  # noqa: PLC0415 - automations imports records
+
+    if tagged and form.tag_id is not None:
+        automations.on_event(session, accepted.scope, "tag_added", contact_id, form.tag_id)
+    automations.on_event(session, accepted.scope, "form_submitted", contact_id, form.id)
     return {"id": str(submission_id)}
 
 

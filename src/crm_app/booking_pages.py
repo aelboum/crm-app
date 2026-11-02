@@ -778,6 +778,10 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             text_body=body,
             contact_id=contact_id,
         )
+    # Automations start in the same transaction (decision P8-B).
+    from crm_app import automations  # noqa: PLC0415 - automations imports records
+
+    automations.on_event(session, scope, "appointment_booked", contact_id, page.id)
     return {
         "appointment_id": str(appointment_id),
         "email_id": str(email_id) if email_id else None,
