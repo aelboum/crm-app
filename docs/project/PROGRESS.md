@@ -202,6 +202,11 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **13-D1, decision briefs and screen-reader checklist (2026-11-02):**
+  `docs/project/DECISION-BRIEFS.md` (eight briefs, prioritised register),
+  `docs/project/SCREEN-READER-CHECKLIST.md`; the public-submission matching
+  finding (brief 8) awaits the owner; the minimatch exception re-checked,
+  unchanged, expiry kept. Documentation only.
 - **12D.2, custom-domain DNS lookups and the edge TLS check (2026-11-02):**
   a DNS-over-HTTPS TXT resolver through the egress client (off unless
   `CUSTOM_DOMAIN_DOH_URL` is set) and `GET /v1/public/domains/allowed` for

@@ -2682,6 +2682,23 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 13-D1 — Decision briefs, the decision register and the screen-reader checklist (2026-11-02)
+
+- **Status:** Prepared under the owner's instruction of 2026-11-02
+  (decision briefs with "the exact decision, available alternatives,
+  recommendation, cost implications, security implications and
+  reversibility"; a screen-reader checklist; a review of public
+  submissions that match an existing contact).
+- **Records:** `docs/project/DECISION-BRIEFS.md` (eight briefs and the
+  prioritised register), `docs/project/SCREEN-READER-CHECKLIST.md`.
+- **Finding:** a public form or booking that matches an existing contact by
+  the email typed can tag the contact, record marketing consent for them
+  and start their public-trigger automations, all without proof that the
+  visitor owns the address. It is bounded today: campaigns cannot send and
+  need double opt-in (13-H1 2), and each automation runs once per contact.
+  Recommended: treat matched submissions as unverified claims (brief 8);
+  it changes accepted behaviour, so it awaits the owner.
+
 ## 12D.2 — Custom-domain DNS lookups and the edge's TLS check, built and off (2026-11-02, under the hardening mandate)
 
 - **Status:** Built under the owner's instruction of 2026-11-02 ("Custom
@@ -2791,6 +2808,9 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      lock, so concurrent creations cannot pass 100; a contact is not sent an
      automatic reminder within an hour of the previous one (an appointment
      rescheduled again and again).
+- **Superseded by brief 8 of 13-D1:** the review below understated it. A
+  matched submission can also record marketing consent for the contact, so
+  the recommended fix (`DECISION-BRIEFS.md`, brief 8) awaits the owner.
 - **Accepted and documented (low, by design):** a visitor who submits a
   public form or booking with an existing contact's email starts that
   contact's `form_submitted`, `appointment_booked` or form-tag automations
@@ -2851,6 +2871,8 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   measuring artefact of its translucent background and reads 4.5:1 or
   better on screen); dialogs and drawers keep focus through the shared
   react-aria `Dialog` and `Drawer` components; a skip link leads to `main`.
+- **Human check:** `docs/project/SCREEN-READER-CHECKLIST.md` (NVDA and
+  VoiceOver, every main workflow, 390 px on iOS), prepared under 13-D1.
 - **Not covered:** a full screen-reader session (VoiceOver or NVDA), which
   needs a person; the public booking and form pages were audited in 13-H1.
 
@@ -2881,6 +2903,10 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   (`frontend/scripts/audit.mjs`) now fails any exception missing its
   decision, owner, reason, plan or a dated expiry, besides failing on
   expiry, on any new advisory and on a stale entry.
+- **Re-checked 2026-11-02 (later, 13-D1):** unchanged. jsx-a11y 6.10.2 is
+  still the latest (October 2024), openapi-typescript 7.13.0 still needs
+  `@redocly/openapi-core` 1.x (now 1.34.23, minimatch 5), and eslint 10.14.0
+  still uses minimatch ^10.2.6. The expiry stays 2026-12-31.
 
 ## P7-B — Consent and suppression (2026-10-28, under M1)
 
