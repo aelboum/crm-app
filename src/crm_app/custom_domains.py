@@ -26,9 +26,12 @@ and nothing is verified; tests use a test double.
 
 from __future__ import annotations
 
+import asyncio
 import os
+import secrets
 import uuid
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
@@ -53,6 +56,7 @@ from saas_os.infra.db import (
 )
 
 from crm_app.domains import custom_domains as rules
+from crm_app.domains import dns_wire
 from crm_app.domains import websites as site_rules
 from crm_app.domains.records import InvalidValue
 from crm_app.models import CustomDomain, CustomDomainIndex
@@ -88,9 +92,81 @@ class TxtResolver(Protocol):
         ...
 
 
+DOH_URL_SETTING = "CUSTOM_DOMAIN_DOH_URL"
+
+
+class DohTxtResolver:
+    """TXT lookups over DNS-over-HTTPS (RFC 8484 POST) through SaaS-OS's
+    egress client (decision 12D.2). The resolver's URL is the deployment's
+    choice; nothing is looked up unless it is set."""
+
+    def __init__(self, url: str, client: Any = None) -> None:
+        self._url = url
+        if client is None:
+            from saas_os.infra.egress import (  # noqa: PLC0415
+                StrictEgressClient,
+                StrictEgressPolicy,
+                default_resolver,
+                get_egress_proxy,
+            )
+
+            policy = StrictEgressPolicy(
+                connect_timeout_seconds=3.0,
+                read_timeout_seconds=3.0,
+                max_response_bytes=16 * 1024,
+            )
+            proxy = get_egress_proxy()
+            client = (
+                StrictEgressClient(policy, resolver=default_resolver, proxy=proxy)
+                if proxy is not None
+                else StrictEgressClient(policy, resolver=default_resolver)
+            )
+        self._client = client
+
+    def txt(self, name: str) -> list[str]:
+        from saas_os.infra.egress import Deadline, EgressError  # noqa: PLC0415
+
+        query_id = secrets.randbits(16)
+        try:
+            query = dns_wire.txt_query(name, query_id)
+        except dns_wire.DnsAnswerError:
+            raise ResolverError("bad_name") from None
+        headers = {
+            "Content-Type": "application/dns-message",
+            "Accept": "application/dns-message",
+        }
+
+        async def call() -> Any:
+            return await self._client.post(
+                self._url, headers=headers, content=query, deadline=Deadline.after(5)
+            )
+
+        try:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                response = asyncio.run(call())
+            else:
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    response = pool.submit(asyncio.run, call()).result()
+        except EgressError:
+            raise ResolverError("lookup_failed") from None
+        if not 200 <= response.status_code < 300:
+            raise ResolverError("resolver_refused")
+        try:
+            return dns_wire.txt_answer(response.body or b"", query_id, name)
+        except dns_wire.DnsAnswerError:
+            raise ResolverError("bad_answer") from None
+
+
 def configured_resolver() -> TxtResolver | None:
-    """The deployment's DNS resolver: none yet (see the module note)."""
-    return None
+    """The deployment's DNS-over-HTTPS resolver when `CUSTOM_DOMAIN_DOH_URL`
+    names an https URL (the owner chooses the resolver); otherwise none, and
+    a check records `resolver_unavailable`."""
+    url = os.environ.get(DOH_URL_SETTING, "").strip()
+    if not url.startswith("https://") or len(url) > 300:
+        return None
+    return DohTxtResolver(url)
 
 
 class DomainRuleError(RecordError):

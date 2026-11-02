@@ -202,6 +202,14 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **12D.2, custom-domain DNS lookups and the edge TLS check (2026-11-02):**
+  a DNS-over-HTTPS TXT resolver through the egress client (off unless
+  `CUSTOM_DOMAIN_DOH_URL` is set) and `GET /v1/public/domains/allowed` for
+  Caddy's on-demand TLS. No DNS changed, no certificate issued. Verified:
+  unit 740 (without configuration, as CI); integration custom domains,
+  websites, workspace routes, foundation and table guard (56; no schema
+  change, full suite in CI); Vitest 309; lint, types, import contracts and
+  build clean.
 - **13-P1, preparation of blocked work (2026-11-02):**
   `docs/project/BLOCKED-WORK-PREPARATION.md` (AI, agency and billing,
   inbound email client, custom-domain DNS and TLS, tracking consent, role

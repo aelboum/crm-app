@@ -470,6 +470,8 @@ PUBLIC_FORMS = {
     "OPTIONS /v1/public/forms/{workspace_id}/{key}",
     # P12-D: which workspace a verified custom domain belongs to.
     "GET /v1/public/domains/resolve",
+    # 12D.2: the edge's on-demand TLS check (yes or no only).
+    "GET /v1/public/domains/allowed",
     "GET /v1/public/booking-pages/{workspace_id}/{key}",
     "GET /v1/public/booking-pages/{workspace_id}/{key}/times",
     "POST /v1/public/booking-pages/{workspace_id}/{key}",

@@ -5,6 +5,7 @@
     POST   /v1/workspaces/{tenant_id}/domains/{id}/check    crm_app.workspace:update
     DELETE /v1/workspaces/{tenant_id}/domains/{id}          crm_app.workspace:update
     GET    /v1/public/domains/resolve                       public
+    GET    /v1/public/domains/allowed?domain=<host>         public (edge TLS check)
 
 `check` needs `If-Match`. The public route answers which workspace the
 request's `Host` belongs to, for verified hostnames only (404 otherwise);
@@ -137,3 +138,23 @@ async def resolve_domain(request: Request) -> Any:
     if workspace is None:
         raise route_not_found()
     return {"workspace_id": workspace}
+
+
+_ask = Depends(
+    public_route(
+        "the edge's on-demand TLS check: may a certificate be issued for this host;"
+        " answers only yes or no, never which workspace"
+    )
+)
+
+
+@public_router.get("/allowed", status_code=204, dependencies=[_ask], name="domain_allowed")
+async def domain_allowed(request: Request, domain: str = "") -> Response:
+    """204 for a verified host of an open workspace, 404 otherwise
+    (decision 12D.2): the edge asks before it requests a certificate, so
+    nobody can make it issue certificates for arbitrary names."""
+    await _address_limit(request)
+    workspace = await run_in_threadpool(custom_domains.workspace_for_host, domain[:300])
+    if workspace is None:
+        raise route_not_found()
+    return Response(status_code=204)

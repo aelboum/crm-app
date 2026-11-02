@@ -153,6 +153,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/domains/allowed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Domain Allowed
+         * @description 204 for a verified host of an open workspace, 404 otherwise
+         *     (decision 12D.2): the edge asks before it requests a certificate, so
+         *     nobody can make it issue certificates for arbitrary names.
+         */
+        get: operations["domain_allowed_v1_public_domains_allowed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/domains/resolve": {
         parameters: {
             query?: never;
@@ -5641,6 +5663,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BookingView"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    domain_allowed_v1_public_domains_allowed_get: {
+        parameters: {
+            query?: {
+                domain?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

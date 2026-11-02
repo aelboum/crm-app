@@ -9734,6 +9734,43 @@
         ]
       }
     },
+    "/v1/public/domains/allowed": {
+      "get": {
+        "description": "204 for a verified host of an open workspace, 404 otherwise\n(decision 12D.2): the edge asks before it requests a certificate, so\nnobody can make it issue certificates for arbitrary names.",
+        "operationId": "domain_allowed_v1_public_domains_allowed_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "domain",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Domain Allowed",
+        "tags": [
+          "domains"
+        ]
+      }
+    },
     "/v1/public/domains/resolve": {
       "get": {
         "operationId": "resolve_domain_v1_public_domains_resolve_get",

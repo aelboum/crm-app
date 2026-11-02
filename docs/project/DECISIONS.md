@@ -2682,6 +2682,29 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 12D.2 — Custom-domain DNS lookups and the edge's TLS check, built and off (2026-11-02, under the hardening mandate)
+
+- **Status:** Built under the owner's instruction of 2026-11-02 ("Custom
+  domains: prepare DNS ownership verification and edge TLS architecture. Do
+  not perform DNS changes or issue production certificates."). Nothing
+  external is contacted unless the owner sets the resolver; no DNS record is
+  changed and no certificate is issued.
+- **Decisions:**
+  1. TXT ownership lookups use DNS-over-HTTPS (RFC 8484 POST) through
+     SaaS-OS's egress client, which already supports POST: no new dependency
+     and no pin move. `crm_app.domains.dns_wire` builds the query and reads
+     the reply defensively; `custom_domains.DohTxtResolver` sends it.
+  2. `configured_resolver()` uses it only when `CUSTOM_DOMAIN_DOH_URL` is an
+     https URL; otherwise there is no resolver, as before.
+  3. `GET /v1/public/domains/allowed?domain=<host>` is the edge's on-demand
+     TLS check: 204 only for a verified host of an open workspace, 404
+     otherwise, limited per client address, never naming the workspace.
+  4. The edge configuration (Caddy on-demand TLS) and certificate storage
+     stay owner decisions (`BLOCKED-WORK-PREPARATION.md` §4).
+- **Tests:** `tests/unit/test_dns_txt.py` (query, answer parsing, refusals,
+  the resolver against a test egress client, off unless configured),
+  `tests/integration/test_custom_domains.py` (the TLS check).
+
 ## 13-P1 — Preparation of the blocked work (2026-11-02, under the hardening mandate)
 
 - **Status:** Prepared, nothing built or switched on, under the owner's

@@ -196,8 +196,22 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             )
         transition_tenant_status(b.id, TenantStatus.SUSPENDED, caller=UserCaller(operator_user))
         result["resolve_suspended"] = resolve(host)
+
+        def allowed(hostname: str) -> int:
+            return client.get("/v1/public/domains/allowed", params={"domain": hostname}).status_code
+
+        result["allowed_suspended"] = allowed(host)
         transition_tenant_status(b.id, TenantStatus.ACTIVE, caller=UserCaller(operator_user))
         result["resolve_reactivated"] = resolve(host) == str(b.id)
+        allowed_response = client.get("/v1/public/domains/allowed", params={"domain": host})
+        result["allowed"] = [
+            allowed_response.status_code,
+            allowed_response.text,
+            allowed(host.upper()),
+            allowed("nobody.acme-shop.nl"),
+            allowed(""),
+            allowed("x" * 400),
+        ]
 
         # Removing frees the host at once.
         result["removed"] = [

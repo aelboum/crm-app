@@ -147,14 +147,16 @@ owner, a daily re-check that lapses a domain whose record is gone, and
 `GET /v1/public/domains/resolve` (Host → workspace, verified and open
 workspaces only, 13-H3). Missing: the DNS resolver and TLS at the edge.
 
-**DNS resolver (proposed):** DNS-over-HTTPS with RFC 8484 POST
-(`application/dns-message`) to one approved resolver, through the existing
-egress client (POST is available). This needs no new dependency and no
-pin move: a `TxtResolver` adapter encodes the TXT query, posts it and
-parses the answer. It needs DNSSEC-validating resolvers (the AD bit
-checked), a 3-second deadline, and failures that never lapse a verified
-domain (already the rule). Alternative: `dnspython` over UDP from the
-worker (a new dependency, outside egress controls; not recommended).
+**DNS resolver (built and off, decision 12D.2):** DNS-over-HTTPS with
+RFC 8484 POST (`application/dns-message`) through the existing egress
+client: no new dependency and no pin move. `crm_app.domains.dns_wire`
+encodes the TXT query and reads the answer defensively (bounds, pointer
+loops, CNAME, NXDOMAIN); `custom_domains.DohTxtResolver` posts it with a
+5-second deadline. It is used only when `CUSTOM_DOMAIN_DOH_URL` names an
+https resolver the owner has chosen; otherwise a check records
+`resolver_unavailable`, as before. A lookup failure never lapses a
+verified domain (already the rule). The AD (DNSSEC) bit is not required,
+since most domains are unsigned; choose a validating resolver.
 
 **Edge TLS (proposed):** the edge (Caddy, as in `deploy/local/Caddyfile`)
 issues certificates on demand for verified hosts only:
@@ -169,9 +171,10 @@ issues certificates on demand for verified hosts only:
         reverse_proxy app:8000
     }
 
-`ask` must answer 200 only for a verified, open workspace's host. That is
-a small variant of `resolve` taking `?domain=`, rate-limited and returning
-no workspace id. ACME issuance (Let's Encrypt) is rate-limited per
+The `ask` endpoint is built (12D.2): `GET /v1/public/domains/allowed?domain=`
+answers 204 only for a verified host of an open workspace and 404
+otherwise, rate-limited per client address, with no body and no workspace
+id (Caddy treats any 2xx as yes). ACME issuance (Let's Encrypt) is rate-limited per
 registered domain; certificate storage must be shared by all edge nodes.
 Hosted pages served on a custom host must keep the app's security headers
 and never serve the signed-in app or its session cookie there (cookies

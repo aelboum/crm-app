@@ -73,6 +73,13 @@ def test_one_workspace_holds_a_hostname_and_a_handover_needs_the_record(probe: P
     assert probe["resolve_reactivated"] is True
 
 
+def test_the_edge_may_ask_only_about_verified_open_hosts(probe: Probe) -> None:
+    # 12D.2: yes (204, no body, no workspace id) only for a verified host of
+    # an open workspace; otherwise 404.
+    assert probe["allowed"] == [204, "", 204, 404, 404, 404]
+    assert probe["allowed_suspended"] == 404
+
+
 def test_removal_and_expiry_free_the_hostname(probe: Probe) -> None:
     assert probe["removed"] == [204, 404]
     assert probe["expired_check"] == {"code": "claim_expired"}
