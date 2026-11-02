@@ -501,6 +501,28 @@ export interface paths {
         patch: operations["update_appointment_v1_workspaces__tenant_id__appointments__appointment_id__patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/appointments/{appointment_id}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Appointment Reminders */
+        get: operations["appointment_reminders_v1_workspaces__tenant_id__appointments__appointment_id__reminders_get"];
+        put?: never;
+        /**
+         * Send Appointment Reminder
+         * @description Email the appointment's contact a reminder now (at most once an hour);
+         *     nothing reaches a provider while sending is off.
+         */
+        post: operations["send_appointment_reminder_v1_workspaces__tenant_id__appointments__appointment_id__reminders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/automations": {
         parameters: {
             query?: never;
@@ -4323,6 +4345,49 @@ export interface components {
             /** Note */
             note: string;
         };
+        /** ReminderOut */
+        ReminderOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "automatic" | "manual";
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "queued" | "skipped";
+            /** Skip Reason */
+            skip_reason: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+        };
+        /** ReminderStatus */
+        ReminderStatus: {
+            /** Items */
+            items: components["schemas"]["ReminderOut"][];
+            /** Lead Minutes */
+            lead_minutes: number | null;
+            /** Next At */
+            next_at: string | null;
+            /** Recipient Problem */
+            recipient_problem: string | null;
+        };
         /** Resolved */
         Resolved: {
             /**
@@ -4508,6 +4573,8 @@ export interface components {
             currency: string;
             /** Locale */
             locale: string;
+            /** Reminder Lead Minutes */
+            reminder_lead_minutes: number | null;
             /** Time Zone */
             time_zone: string;
             /** Updated At */
@@ -4525,6 +4592,8 @@ export interface components {
             currency?: string | null;
             /** Locale */
             locale?: string | null;
+            /** Reminder Lead Minutes */
+            reminder_lead_minutes?: number | null;
             /** Time Zone */
             time_zone?: string | null;
         };
@@ -6186,6 +6255,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppointmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    appointment_reminders_v1_workspaces__tenant_id__appointments__appointment_id__reminders_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                appointment_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_appointment_reminder_v1_workspaces__tenant_id__appointments__appointment_id__reminders_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                appointment_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderOut"];
                 };
             };
             /** @description Validation Error */

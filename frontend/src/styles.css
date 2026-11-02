@@ -1527,3 +1527,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .sending-identity { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .sending-identity-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .sending-identity-form .field { flex: 1 1 200px; }
+
+/* Appointment reminders (P5-D) */
+.reminder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.reminder-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

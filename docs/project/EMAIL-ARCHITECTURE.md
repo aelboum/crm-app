@@ -60,7 +60,7 @@ the existing one.
 
 | Stream | Sender domain | Purposes | Switches | Default rate (per workspace / all, per minute) |
 | --- | --- | --- | --- | --- |
-| Transactional | `notify.<EMAIL_PARENT_DOMAIN>` | `booking_confirmation`, `test` (later: verification, security, billing notices) | `EMAIL_SENDING_ENABLED` | 60 / 120 |
+| Transactional | `notify.<EMAIL_PARENT_DOMAIN>` | `booking_confirmation`, `appointment_reminder`, `test` (later: verification, security, billing notices) | `EMAIL_SENDING_ENABLED` | 60 / 120 |
 | Conversation | `mail.<EMAIL_PARENT_DOMAIN>` | `conversation_reply` | `EMAIL_SENDING_ENABLED` and `EMAIL_CONVERSATION_SENDING_ENABLED` | 30 / 60 |
 | Campaign | `campaigns.<EMAIL_PARENT_DOMAIN>` | none yet (campaigns are not sendable) | `EMAIL_SENDING_ENABLED` and `EMAIL_CAMPAIGN_SENDING_ENABLED` | 20 / 60 |
 | Inbound | `inbound.<EMAIL_PARENT_DOMAIN>` | receiving only | `EMAIL_INBOUND_ENABLED` | n/a |

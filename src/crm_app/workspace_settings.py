@@ -44,7 +44,7 @@ from crm_app.records import (
     TransactionConflictError,
 )
 
-FIELDS = ("locale", "time_zone", "currency", "business_hours")
+FIELDS = ("locale", "time_zone", "currency", "business_hours", "reminder_lead_minutes")
 RESOURCE = "crm_app.workspace_settings"
 _PRIMARY_KEY = "workspace_settings_pkey"
 
@@ -55,6 +55,7 @@ def _defaults() -> dict[str, Any]:
         "time_zone": values.DEFAULT_TIME_ZONE,
         "currency": values.DEFAULT_CURRENCY,
         "business_hours": None,
+        "reminder_lead_minutes": None,
         "version": 0,
         "updated_at": None,
         "updated_by_user_id": None,
@@ -67,6 +68,7 @@ def _out(row: WorkspaceSettings) -> dict[str, Any]:
         "time_zone": row.time_zone,
         "currency": row.currency,
         "business_hours": row.business_hours,
+        "reminder_lead_minutes": row.reminder_lead_minutes,
         "version": row.version,
         "updated_at": row.updated_at,
         "updated_by_user_id": row.updated_by_user_id,
@@ -127,7 +129,7 @@ def update(scope: Scope, changes: Mapping[str, Any], *, expected_version: int) -
                 resource_id=str(scope.workspace),
                 metadata={"fields": changed},
             )
-            return _out(row)
+            result = _out(row)
     except (TenantClosedError, TenantNotFoundError):
         raise RecordNotFoundError from None
     except IntegrityError as exc:
@@ -140,3 +142,10 @@ def update(scope: Scope, changes: Mapping[str, Any], *, expected_version: int) -
         if is_transaction_conflict(exc):
             raise TransactionConflictError from None
         raise
+    if "reminder_lead_minutes" in changed:
+        # After the commit: the maintenance run finds the workspace by this
+        # row, and re-reads the setting itself (P5-D).
+        from crm_app import reminders  # noqa: PLC0415
+
+        reminders.register_workspace(scope.workspace, result["reminder_lead_minutes"])
+    return result

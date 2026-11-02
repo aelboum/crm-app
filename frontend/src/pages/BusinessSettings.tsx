@@ -2,10 +2,15 @@ import { type SyntheticEvent, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { ApiError } from "../api/client";
-import { useSaveWorkspaceSettings, useWorkspaceSettings, type WorkspaceSettings } from "../api/queries";
+import {
+  useSaveWorkspaceSettings,
+  useWorkspaceSettings,
+  type WorkspaceSettings,
+} from "../api/queries";
 import { Loading, LoadError } from "../components/StateNotice";
 import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
+import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 
 /*
@@ -20,8 +25,37 @@ import { useT } from "../i18n/useT";
  * changed (SaaS-OS offers no rename).
  */
 
-const LOCALES = ["en", "en-GB", "en-US", "nl-NL", "de-DE", "fr-FR", "es-ES", "it-IT", "pt-PT", "pl-PL", "sv-SE", "da-DK"];
-const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON", "BGN", "CAD", "AUD", "JPY"];
+const LOCALES = [
+  "en",
+  "en-GB",
+  "en-US",
+  "nl-NL",
+  "de-DE",
+  "fr-FR",
+  "es-ES",
+  "it-IT",
+  "pt-PT",
+  "pl-PL",
+  "sv-SE",
+  "da-DK",
+];
+const CURRENCIES = [
+  "EUR",
+  "USD",
+  "GBP",
+  "CHF",
+  "SEK",
+  "NOK",
+  "DKK",
+  "PLN",
+  "CZK",
+  "HUF",
+  "RON",
+  "BGN",
+  "CAD",
+  "AUD",
+  "JPY",
+];
 
 /** The options, always including the saved value even when it is not in the short list. */
 function withCurrent(options: readonly string[], current: string): string[] {
@@ -29,7 +63,10 @@ function withCurrent(options: readonly string[], current: string): string[] {
 }
 
 function timeZones(current: string): string[] {
-  const known = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
+  const known =
+    typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("timeZone")
+      : [];
   return withCurrent(known, current);
 }
 
@@ -45,27 +82,51 @@ function label(type: "language" | "currency", code: string): string {
 /** How a date and an amount will look with these settings. */
 function preview(locale: string, timeZone: string, currency: string): string {
   try {
-    const when = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone }).format(
-      new Date(),
-    );
-    const amount = new Intl.NumberFormat(locale, { style: "currency", currency }).format(1234.5);
+    const when = new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone,
+    }).format(new Date());
+    const amount = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+    }).format(1234.5);
     return `${when} · ${amount}`;
   } catch {
     return "";
   }
 }
 
-type Draft = Pick<WorkspaceSettings, "locale" | "time_zone" | "currency" | "business_hours">;
+type Draft = Pick<
+  WorkspaceSettings,
+  | "locale"
+  | "time_zone"
+  | "currency"
+  | "business_hours"
+  | "reminder_lead_minutes"
+>;
+const REMINDER_LEADS = [60, 120, 1440, 2880] as const;
 type Week = NonNullable<WorkspaceSettings["business_hours"]>;
 type Day = Week[number];
 
 const WORKDAY = { opens: "09:00", closes: "17:00" };
-const SUGGESTED: Week = [WORKDAY, WORKDAY, WORKDAY, WORKDAY, WORKDAY, null, null];
+const SUGGESTED: Week = [
+  WORKDAY,
+  WORKDAY,
+  WORKDAY,
+  WORKDAY,
+  WORKDAY,
+  null,
+  null,
+];
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const same = (a: unknown, b: unknown) =>
+  JSON.stringify(a) === JSON.stringify(b);
 /** A day the server accepts: closed, or HH:MM times with the opening first. */
 const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
-const validDay = (day: Day) => day === null || (CLOCK.test(day.opens) && CLOCK.test(day.closes) && day.opens < day.closes);
+const validDay = (day: Day) =>
+  day === null ||
+  (CLOCK.test(day.opens) && CLOCK.test(day.closes) && day.opens < day.closes);
 
 export function BusinessSettings({
   workspaceId,
@@ -78,7 +139,13 @@ export function BusinessSettings({
 }) {
   const settings = useWorkspaceSettings(workspaceId);
   if (settings.isPending) return <Loading />;
-  if (settings.isError) return <LoadError error={settings.error} onRetry={() => void settings.refetch()} />;
+  if (settings.isError)
+    return (
+      <LoadError
+        error={settings.error}
+        onRetry={() => void settings.refetch()}
+      />
+    );
   // Keyed by version: after a save or reload the form starts from what is stored.
   return (
     <SettingsForm
@@ -113,8 +180,11 @@ function SettingsForm({
     time_zone: saved.time_zone,
     currency: saved.currency,
     business_hours: saved.business_hours,
+    reminder_lead_minutes: saved.reminder_lead_minutes,
   });
-  const [error, setError] = useState<"stale" | "invalid" | "denied" | "generic" | null>(null);
+  const [error, setError] = useState<
+    "stale" | "invalid" | "denied" | "generic" | null
+  >(null);
   const changes = Object.fromEntries(
     (Object.keys(draft) as (keyof Draft)[])
       .filter((name) => !same(draft[name], saved[name]))
@@ -141,7 +211,13 @@ function SettingsForm({
           const status = failure instanceof ApiError ? failure.status : 0;
           const code = failure instanceof ApiError ? failure.code : undefined;
           setError(
-            code === "stale_version" ? "stale" : status === 422 ? "invalid" : status === 403 ? "denied" : "generic",
+            code === "stale_version"
+              ? "stale"
+              : status === 422
+                ? "invalid"
+                : status === 403
+                  ? "denied"
+                  : "generic",
           );
         },
       },
@@ -156,7 +232,11 @@ function SettingsForm({
   };
 
   return (
-    <form className="business-card" onSubmit={submit} aria-label={t("settings.business")}>
+    <form
+      className="business-card"
+      onSubmit={submit}
+      aria-label={t("settings.business")}
+    >
       <div className="business-fields">
         <div className="field-stack">
           <label htmlFor="business-name" className="field-label">
@@ -235,7 +315,9 @@ function SettingsForm({
         </div>
       </div>
       <p className="profile-note">
-        {t("business.preview", { example: preview(draft.locale, draft.time_zone, draft.currency) })}
+        {t("business.preview", {
+          example: preview(draft.locale, draft.time_zone, draft.currency),
+        })}
       </p>
       <BusinessHours
         week={draft.business_hours}
@@ -245,8 +327,39 @@ function SettingsForm({
           set("business_hours", week);
         }}
       />
+      <div className="field-stack">
+        <label htmlFor="business-reminders" className="field-label">
+          {t("business.reminders")}
+        </label>
+        <select
+          id="business-reminders"
+          className="field-input"
+          value={
+            draft.reminder_lead_minutes === null
+              ? ""
+              : String(draft.reminder_lead_minutes)
+          }
+          disabled={!canEdit}
+          onChange={(event) => {
+            set(
+              "reminder_lead_minutes",
+              event.target.value === "" ? null : Number(event.target.value),
+            );
+          }}
+        >
+          <option value="">{t("business.remindersOff")}</option>
+          {REMINDER_LEADS.map((lead) => (
+            <option key={lead} value={String(lead)}>
+              {t(`reminders.lead.${String(lead)}` as MessageId)}
+            </option>
+          ))}
+        </select>
+        <p className="profile-note">{t("business.remindersHint")}</p>
+      </div>
       <p className="profile-note">{t("business.notBuilt")}</p>
-      {canEdit ? null : <p className="profile-note">{t("business.readOnly")}</p>}
+      {canEdit ? null : (
+        <p className="profile-note">{t("business.readOnly")}</p>
+      )}
       {error ? (
         <div className="notice error row" role="alert">
           <p>{message[error]}</p>
@@ -259,7 +372,11 @@ function SettingsForm({
       ) : null}
       {canEdit ? (
         <div className="business-footer">
-          <Button type="submit" variant="primary" isDisabled={!dirty || !hoursValid || save.isPending}>
+          <Button
+            type="submit"
+            variant="primary"
+            isDisabled={!dirty || !hoursValid || save.isPending}
+          >
             {t("business.save")}
           </Button>
         </div>
@@ -283,7 +400,8 @@ function BusinessHours({
   const t = useT();
   const intl = useIntl();
   // 5 January 2026 is a Monday.
-  const weekday = (index: number) => intl.formatDate(new Date(2026, 0, 5 + index), { weekday: "long" });
+  const weekday = (index: number) =>
+    intl.formatDate(new Date(2026, 0, 5 + index), { weekday: "long" });
   const setDay = (index: number, day: Day) => {
     if (week) onChange(week.map((current, i) => (i === index ? day : current)));
   };
@@ -352,7 +470,9 @@ function BusinessHours({
                     />
                   </span>
                 ) : (
-                  <span className="hours-closed">{t("business.closedDay")}</span>
+                  <span className="hours-closed">
+                    {t("business.closedDay")}
+                  </span>
                 )}
               </li>
             );
@@ -378,7 +498,9 @@ function BusinessHours({
           {t("business.hoursInvalid")}
         </p>
       ) : null}
-      <p className="profile-note">{t("business.hoursZone", { zone: zone.replaceAll("_", " ") })}</p>
+      <p className="profile-note">
+        {t("business.hoursZone", { zone: zone.replaceAll("_", " ") })}
+      </p>
     </section>
   );
 }

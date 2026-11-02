@@ -46,6 +46,7 @@ INBOUND_SUBDOMAIN = "inbound"
 # Which stream each email purpose (`crm_app.domains.emails.PURPOSES`) uses.
 PURPOSE_STREAMS: Mapping[str, Stream] = {
     "booking_confirmation": Stream.TRANSACTIONAL,
+    "appointment_reminder": Stream.TRANSACTIONAL,
     "test": Stream.TRANSACTIONAL,
     "conversation_reply": Stream.CONVERSATION,
     "campaign": Stream.CAMPAIGN,

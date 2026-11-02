@@ -123,6 +123,9 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "sending_domain",
         "sending_domain_index",
         "sender_identity",
+        # P5-D (appointment reminders).
+        "appointment_reminder",
+        "reminder_workspace",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -145,6 +148,8 @@ APPEND_ONLY_TABLES: frozenset[str] = frozenset(
         "automation_step",
         "conversation_message",
         "conversation_route",
+        # P5-D: a reminder made is a record, never edited.
+        "appointment_reminder",
     }
 )
 
@@ -164,6 +169,7 @@ GLOBAL_TABLES: frozenset[str] = frozenset(
         "conversation_route_index",
         "custom_domain_index",
         "sending_domain_index",
+        "reminder_workspace",
     }
 )
 

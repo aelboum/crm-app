@@ -40,8 +40,10 @@ async def _enqueue_all(pairs: list[tuple[uuid.UUID, uuid.UUID]]) -> tuple[int, i
 
 
 def maintain() -> dict[str, int]:
-    from crm_app import emails  # noqa: PLC0415
+    from crm_app import emails, reminders  # noqa: PLC0415
 
+    # First, so the reminders it queues are handed over in this same run.
+    reminded = reminders.run_due()
     orphans = 0
     pending: list[tuple[uuid.UUID, uuid.UUID]] = []
     for workspace, email_id in emails.due():
@@ -62,6 +64,8 @@ def maintain() -> dict[str, int]:
     released = sending_domains.release_unverified()
     return {
         "sending_claims_released": released,
+        "reminders_queued": reminded["queued"],
+        "reminders_skipped": reminded["skipped"],
         "domains_lapsed": domains["lapsed"],
         "domain_claims_expired": domains["expired"],
         "queued": queued,

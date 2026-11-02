@@ -38,7 +38,7 @@ from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
 
-from crm_app import appointments
+from crm_app import appointments, reminders
 from crm_app.api.inputs import Instant
 from crm_app.api.records import IdempotencyKey, IfMatch, _http, _owners, _version
 from crm_app.domains import appointments as rules
@@ -375,6 +375,59 @@ def update_appointment(
     except RecordError as exc:
         raise _refused(exc) from None
     return _etag(response, item)
+
+
+class ReminderOut(BaseModel):
+    id: uuid.UUID
+    kind: Literal["automatic", "manual"]
+    outcome: Literal["queued", "skipped"]
+    # Why nobody was emailed: no_contact, contact_archived, no_email,
+    # invalid_email.
+    skip_reason: str | None
+    starts_at: datetime
+    created_at: datetime
+    created_by_user_id: uuid.UUID | None
+
+
+class ReminderStatus(BaseModel):
+    # The workspace's setting: minutes before; `null` is off (P5-D).
+    lead_minutes: int | None
+    # When this appointment's automatic reminder is due, if it will be.
+    next_at: datetime | None
+    # Why its contact cannot be reminded, if they cannot.
+    recipient_problem: str | None
+    items: list[ReminderOut]
+
+
+def _reminder_refused(exc: RecordError) -> HTTPException:
+    if isinstance(exc, reminders.ReminderUnavailableError):
+        return HTTPException(exc.status, detail={"code": exc.code, "reason": exc.reason})
+    return _refused(exc)
+
+
+@router.get(
+    f"{_APPOINTMENT}/reminders", response_model=ReminderStatus, name="appointment_reminders"
+)
+def appointment_reminders(appointment_id: uuid.UUID, context: Read) -> Any:
+    try:
+        return reminders.status(_scope(context), appointment_id)
+    except RecordError as exc:
+        raise _reminder_refused(exc) from None
+
+
+@router.post(
+    f"{_APPOINTMENT}/reminders",
+    status_code=201,
+    response_model=ReminderOut,
+    name="send_appointment_reminder",
+)
+def send_appointment_reminder(appointment_id: uuid.UUID, context: Change) -> Any:
+    """Email the appointment's contact a reminder now (at most once an hour);
+    nothing reaches a provider while sending is off."""
+    try:
+        return reminders.send_now(_scope(context), appointment_id)
+    except RecordError as exc:
+        raise _reminder_refused(exc) from None
 
 
 @router.delete(_APPOINTMENT, status_code=204, name="delete_appointment")

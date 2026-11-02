@@ -174,6 +174,9 @@ RECORDS |= {
     f"GET {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:read",
     f"PATCH {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:update",
     f"DELETE {_APPOINTMENTS}/{{appointment_id}}": "crm_app.appointment:delete",
+    # Reminders (P5-D): status for readers, send for members who may update.
+    f"GET {_APPOINTMENTS}/{{appointment_id}}/reminders": "crm_app.appointment:read",
+    f"POST {_APPOINTMENTS}/{{appointment_id}}/reminders": "crm_app.appointment:update",
 }
 
 # Forms (decision P7-A 4): every role reads forms and their submissions;

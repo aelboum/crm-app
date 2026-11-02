@@ -202,6 +202,15 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **Phase 5 slice 5D, appointment reminders (decision P5-D, 2026-11-02):**
+  migration `0031_appointment_reminders` (`workspace_settings.reminder_lead_minutes`,
+  `appointment_reminder`, global `reminder_workspace`); reminders queued by
+  the email maintenance run, once per appointment and start time;
+  `GET`/`POST /appointments/{id}/reminders`; Settings › Business profile
+  lead time; Reminders section in the appointment drawer. Verified: unit 716
+  (without configuration, as CI); full integration suite 793 passed (56
+  files, eight groups; the table guard rerun after declaring the new table
+  append-only); Vitest 304, lint and build clean.
 - **13-H3, security review of the email, domain and website surface
   (2026-11-01):** no critical or high findings; fixed inbound mail without
   a DMARC pass (now reviewed), sending-domain squatting (unverified claims

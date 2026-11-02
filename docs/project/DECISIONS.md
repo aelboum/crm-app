@@ -1477,6 +1477,48 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      until …", "Outside business hours"). The design's "Away" is not
      shown: there is no presence data.
 
+## P5-D — Appointment reminder emails (2026-11-02, under M1)
+
+- **Status:** Decided and built under M1 (owner, 2026-11-01: "proceed" with
+  the recommended order, reminders second). Slice 5D. Uses the email
+  channel of P6-E; nothing reaches a provider while sending is off, and
+  production sending stays unauthorized.
+- **Decisions:**
+  1. **Setting:** Settings › Business profile › "Appointment reminders":
+     off (default), 1 hour, 2 hours, 1 day or 2 days before
+     (`workspace_settings.reminder_lead_minutes`, migration
+     `0031_appointment_reminders`). Owners and Admins change it, as every
+     workspace setting.
+  2. **Who and when:** the appointment's contact, by email, once per
+     start time, while the appointment is pending or confirmed and has not
+     started, and only if it was made before the reminder time (an
+     appointment booked inside the window already had its confirmation).
+     A rescheduled appointment is reminded again for its new time.
+  3. **Run:** the email maintenance run (`crm_app.email_maintenance`)
+     finds the workspaces with reminders on through the global
+     `reminder_workspace`, re-reads each one's setting under its own
+     Row-Level Security, and queues the due reminders before handing
+     queued email to the worker. The unique automatic row (appointment and
+     start time) means a retried or concurrent run never reminds twice.
+  4. **Skipped, with the reason:** no contact, an archived contact, no
+     email address, an address the email rules refuse. Suppressed
+     addresses are queued but never sent (P7-B).
+  5. **Content:** transactional stream (`appointment_reminder`); subject
+     "Reminder: title, day"; the contact's first name, the title, the
+     time in the workspace's time zone (named), and the kind and location.
+     No link and never the appointment's internal note. It acts as the
+     host, as a booking confirmation does (P5-C 9).
+  6. **"Send reminder":** members who may update appointments
+     (`crm_app.appointment:update`) send one now, at most once an hour per
+     appointment; refused for a cancelled, completed or started
+     appointment and for a contact without a usable address. Every role
+     sees the reminder status and the latest ten reminders in the drawer.
+  7. **Not in 5D:** reminders for team members (needs a notification
+     channel), SMS, several reminders per appointment, per-page settings.
+- **Tests:** `tests/integration/test_reminders.py`,
+  `tests/unit/test_reminder_rules.py`, `frontend/src/records/calendar.test.tsx`,
+  `frontend/src/pages/BusinessSettings.test.tsx`.
+
 ## P5-C — Public booking pages (2026-10-28, under M1)
 
 - **Status:** Decided under M1, inside the scope the owner approved with

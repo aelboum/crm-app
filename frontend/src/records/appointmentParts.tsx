@@ -1,4 +1,13 @@
-import { CalendarClock, Clock, MapPin, Pencil, Phone, Trash2, TriangleAlert, Video } from "lucide-react";
+import {
+  CalendarClock,
+  Clock,
+  MapPin,
+  Pencil,
+  Phone,
+  Trash2,
+  TriangleAlert,
+  Video,
+} from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { useIntl } from "react-intl";
@@ -30,6 +39,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { AppointmentReminders } from "./AppointmentReminders";
 import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
 import { Drawer, FieldRow, type Option, ownerLabel } from "./parts";
 
@@ -69,7 +79,16 @@ export const STATUS_TONE: Record<Status, Tone> = {
 const KIND_ICON = { in_person: MapPin, video: Video, phone: Phone } as const;
 
 /** The design's host colours, chosen by the member's ID so each keeps one. */
-const HOST_COLOURS = ["#3B6FD9", "#1F8A4C", "#B7791F", "#8A4FD1", "#C2410C", "#0E7490", "#BE185D", "#4D7C0F"];
+const HOST_COLOURS = [
+  "#3B6FD9",
+  "#1F8A4C",
+  "#B7791F",
+  "#8A4FD1",
+  "#C2410C",
+  "#0E7490",
+  "#BE185D",
+  "#4D7C0F",
+];
 
 export function hostColour(userId: string): string {
   let hash = 0;
@@ -97,13 +116,27 @@ export function appointmentRefusal(error: unknown): MessageId {
 }
 
 /** "Wed, Oct 28 · 9:00 – 9:30 AM", in the viewer's locale and time zone. */
-export function TimeRange({ start, end, withDate = true }: { start: string; end: string; withDate?: boolean }) {
+export function TimeRange({
+  start,
+  end,
+  withDate = true,
+}: {
+  start: string;
+  end: string;
+  withDate?: boolean;
+}) {
   const intl = useIntl();
   const from = new Date(start);
   const to = new Date(end);
-  const time = (d: Date) => intl.formatTime(d, { hour: "numeric", minute: "2-digit" });
-  const date = withDate ? `${intl.formatDate(from, { weekday: "short", month: "short", day: "numeric" })} · ` : "";
-  const other = from.toDateString() === to.toDateString() ? "" : `${intl.formatDate(to, { month: "short", day: "numeric" })} `;
+  const time = (d: Date) =>
+    intl.formatTime(d, { hour: "numeric", minute: "2-digit" });
+  const date = withDate
+    ? `${intl.formatDate(from, { weekday: "short", month: "short", day: "numeric" })} · `
+    : "";
+  const other =
+    from.toDateString() === to.toDateString()
+      ? ""
+      : `${intl.formatDate(to, { month: "short", day: "numeric" })} `;
   return (
     <time dateTime={start}>
       {date}
@@ -123,7 +156,8 @@ function ConflictList({ conflicts }: { conflicts: Conflict[] }) {
         <ul>
           {conflicts.map((c) => (
             <li key={c.id}>
-              {c.title} · <TimeRange start={c.starts_at} end={c.ends_at} withDate={false} />
+              {c.title} ·{" "}
+              <TimeRange start={c.starts_at} end={c.ends_at} withDate={false} />
             </li>
           ))}
         </ul>
@@ -164,33 +198,51 @@ export function AppointmentDialog({
   const toast = useToast();
   const create = useCreateAppointment(workspaceId);
   const update = useUpdateAppointment(workspaceId);
-  const startAt = appointment ? new Date(appointment.starts_at) : (draft?.start ?? new Date());
+  const startAt = appointment
+    ? new Date(appointment.starts_at)
+    : (draft?.start ?? new Date());
   const initialLength = appointment
-    ? Math.round((new Date(appointment.ends_at).getTime() - startAt.getTime()) / 60_000)
+    ? Math.round(
+        (new Date(appointment.ends_at).getTime() - startAt.getTime()) / 60_000,
+      )
     : 30;
   const [title, setTitle] = useState(appointment?.title ?? "");
   const [start, setStart] = useState(localInput(startAt));
   const [length, setLength] = useState(initialLength);
-  const [host, setHost] = useState(appointment?.host_user_id ?? draft?.host ?? meId ?? hosts[0]?.id ?? "");
-  const [contact, setContact] = useState<PickedCompany | null>(appointment?.contact ?? draft?.contact ?? null);
+  const [host, setHost] = useState(
+    appointment?.host_user_id ?? draft?.host ?? meId ?? hosts[0]?.id ?? "",
+  );
+  const [contact, setContact] = useState<PickedCompany | null>(
+    appointment?.contact ?? draft?.contact ?? null,
+  );
   const [kind, setKind] = useState<Kind>(appointment?.kind ?? "in_person");
   const [location, setLocation] = useState(appointment?.location ?? "");
   const [note, setNote] = useState(appointment?.note ?? "");
   const [refusal, setRefusal] = useState<MessageId | null>(null);
   const [refused, setRefused] = useState<Conflict[] | null>(null);
   const [key] = useState(newIdempotencyKey);
-  const lengths = LENGTHS.includes(length) ? LENGTHS : [...LENGTHS, length].sort((a, b) => a - b);
+  const lengths = LENGTHS.includes(length)
+    ? LENGTHS
+    : [...LENGTHS, length].sort((a, b) => a - b);
   const hostChoices = hosts.some((option) => option.id === host)
     ? hosts
     : [...hosts, { id: host, label: ownerLabel(t, host, meId) }];
 
   const startDate = start ? new Date(start) : null;
-  const valid = startDate !== null && !Number.isNaN(startDate.getTime()) && host !== "";
-  const endDate = valid ? new Date(startDate.getTime() + length * 60_000) : null;
+  const valid =
+    startDate !== null && !Number.isNaN(startDate.getTime()) && host !== "";
+  const endDate = valid
+    ? new Date(startDate.getTime() + length * 60_000)
+    : null;
   const check = useConflicts(
     workspaceId,
     valid && endDate
-      ? { host, start: startDate.toISOString(), end: endDate.toISOString(), exclude: appointment?.id ?? null }
+      ? {
+          host,
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+          exclude: appointment?.id ?? null,
+        }
       : null,
   );
   const conflicts = refused ?? check.data?.conflicts ?? [];
@@ -235,28 +287,46 @@ export function AppointmentDialog({
     };
     if (!appointment) {
       create.mutate(
-        { body: { ...values, status: "confirmed", allow_conflict: allow }, key },
+        {
+          body: { ...values, status: "confirmed", allow_conflict: allow },
+          key,
+        },
         { onSuccess: done, onError: failed },
       );
       return;
     }
     const changes: AppointmentChanges = {};
     if (values.title !== appointment.title) changes.title = values.title;
-    if (new Date(values.starts_at).getTime() !== new Date(appointment.starts_at).getTime()) {
+    if (
+      new Date(values.starts_at).getTime() !==
+      new Date(appointment.starts_at).getTime()
+    ) {
       changes.starts_at = values.starts_at;
     }
-    if (new Date(values.ends_at).getTime() !== new Date(appointment.ends_at).getTime()) changes.ends_at = values.ends_at;
+    if (
+      new Date(values.ends_at).getTime() !==
+      new Date(appointment.ends_at).getTime()
+    )
+      changes.ends_at = values.ends_at;
     if (values.kind !== appointment.kind) changes.kind = values.kind;
-    if (values.location !== appointment.location) changes.location = values.location;
+    if (values.location !== appointment.location)
+      changes.location = values.location;
     if (values.note !== appointment.note) changes.note = values.note;
-    if (values.host_user_id !== appointment.host_user_id) changes.host_user_id = values.host_user_id;
-    if (values.contact_id !== appointment.contact_id) changes.contact_id = values.contact_id;
+    if (values.host_user_id !== appointment.host_user_id)
+      changes.host_user_id = values.host_user_id;
+    if (values.contact_id !== appointment.contact_id)
+      changes.contact_id = values.contact_id;
     if (Object.keys(changes).length === 0) {
       onClose();
       return;
     }
     update.mutate(
-      { id: appointment.id, version: appointment.version, changes, allowConflict: allow },
+      {
+        id: appointment.id,
+        version: appointment.version,
+        changes,
+        allowConflict: allow,
+      },
       { onSuccess: done, onError: failed },
     );
   };
@@ -276,18 +346,30 @@ export function AppointmentDialog({
   return (
     <Dialog
       isOpen
-      title={t(appointment ? "appointments.editTitle" : "appointments.newTitle")}
+      title={t(
+        appointment ? "appointments.editTitle" : "appointments.newTitle",
+      )}
       onClose={onClose}
       actions={
         <>
           <Button onPress={onClose}>{t("confirm.cancel")}</Button>
-          <Button variant="primary" type="submit" form="appointment-form" isDisabled={busy}>
+          <Button
+            variant="primary"
+            type="submit"
+            form="appointment-form"
+            isDisabled={busy}
+          >
             {t(submitLabel)}
           </Button>
         </>
       }
     >
-      <form id="appointment-form" className="record-form" onSubmit={submit} noValidate>
+      <form
+        id="appointment-form"
+        className="record-form"
+        onSubmit={submit}
+        noValidate
+      >
         <div className="form-field wide">
           <label htmlFor="appointment-title" className="form-label">
             {t("appointments.field.title")}
@@ -372,7 +454,12 @@ export function AppointmentDialog({
             {KINDS.map((value) => {
               const Icon = KIND_ICON[value];
               return (
-                <label key={value} className={kind === value ? "kind-choice active" : "kind-choice"}>
+                <label
+                  key={value}
+                  className={
+                    kind === value ? "kind-choice active" : "kind-choice"
+                  }
+                >
                   <input
                     type="radio"
                     name="appointment-kind"
@@ -467,7 +554,9 @@ export function AppointmentDrawer({
   const update = useUpdateAppointment(workspaceId);
   const remove = useDeleteAppointment(workspaceId);
   const [refusal, setRefusal] = useState<MessageId | null>(null);
-  const [confirming, setConfirming] = useState<"cancel" | "delete" | null>(null);
+  const [confirming, setConfirming] = useState<"cancel" | "delete" | null>(
+    null,
+  );
   const appointment = query.data;
   const busy = update.isPending || remove.isPending;
   const open = appointment !== undefined && appointment.status !== "cancelled";
@@ -513,15 +602,25 @@ export function AppointmentDrawer({
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
-        <LoadError error={query.error} onRetry={() => void query.refetch()} notFound={t("appointments.notFound")} />
+        <LoadError
+          error={query.error}
+          onRetry={() => void query.refetch()}
+          notFound={t("appointments.notFound")}
+        />
       ) : (
         <>
           <div className="appointment-identity">
-            <span className="appointment-strip" style={{ background: hostColour(query.data.host_user_id) }} />
+            <span
+              className="appointment-strip"
+              style={{ background: hostColour(query.data.host_user_id) }}
+            />
             <div>
               <p className="drawer-name">{query.data.title}</p>
               <p className="drawer-headline">
-                <TimeRange start={query.data.starts_at} end={query.data.ends_at} />
+                <TimeRange
+                  start={query.data.starts_at}
+                  end={query.data.ends_at}
+                />
               </p>
             </div>
           </div>
@@ -531,16 +630,27 @@ export function AppointmentDrawer({
             </p>
           ) : null}
 
-          <section className="drawer-section" aria-labelledby="appointment-status-title">
+          <section
+            className="drawer-section"
+            aria-labelledby="appointment-status-title"
+          >
             <h2 id="appointment-status-title" className="drawer-section-title">
               {t("appointments.field.status")}
             </h2>
             {open ? (
-              <div className="status-choices" role="group" aria-labelledby="appointment-status-title">
+              <div
+                className="status-choices"
+                role="group"
+                aria-labelledby="appointment-status-title"
+              >
                 {STATUSES.map((status) => (
                   <AriaButton
                     key={status}
-                    className={query.data.status === status ? `status-choice ${status} active` : "status-choice"}
+                    className={
+                      query.data.status === status
+                        ? `status-choice ${status} active`
+                        : "status-choice"
+                    }
                     aria-pressed={query.data.status === status}
                     isDisabled={!canUpdate || busy}
                     onPress={() => {
@@ -553,9 +663,13 @@ export function AppointmentDrawer({
               </div>
             ) : (
               <p>
-                <Badge tone="neutral">{t("appointments.status.cancelled")}</Badge>{" "}
+                <Badge tone="neutral">
+                  {t("appointments.status.cancelled")}
+                </Badge>{" "}
                 <span className="muted">
-                  {query.data.booking?.cancelled_by_visitor ? `${t("appointments.cancelledByVisitor")} ` : null}
+                  {query.data.booking?.cancelled_by_visitor
+                    ? `${t("appointments.cancelledByVisitor")} `
+                    : null}
                   {t("appointments.cancelledHint")}
                 </span>
               </p>
@@ -563,17 +677,25 @@ export function AppointmentDrawer({
           </section>
 
           <dl className="field-list">
-            <FieldRow label={t("appointments.field.host")}>{ownerLabel(t, query.data.host_user_id, meId)}</FieldRow>
+            <FieldRow label={t("appointments.field.host")}>
+              {ownerLabel(t, query.data.host_user_id, meId)}
+            </FieldRow>
             <FieldRow label={t("appointments.field.kind")}>
               {t(KIND_LABEL[query.data.kind])}
-              {query.data.location ? <span className="appointment-note"> · {query.data.location}</span> : null}
+              {query.data.location ? (
+                <span className="appointment-note">
+                  {" "}
+                  · {query.data.location}
+                </span>
+              ) : null}
             </FieldRow>
             <FieldRow label={t("appointments.field.contact")}>
               {query.data.contact ? (
                 <AriaButton
                   className="record-link"
                   onPress={() => {
-                    if (query.data.contact) onOpenContact(query.data.contact.id);
+                    if (query.data.contact)
+                      onOpenContact(query.data.contact.id);
                   }}
                 >
                   {query.data.contact.name}
@@ -581,16 +703,26 @@ export function AppointmentDrawer({
               ) : null}
             </FieldRow>
             <FieldRow label={t("appointments.field.note")}>
-              {query.data.note ? <span className="appointment-note">{query.data.note}</span> : null}
+              {query.data.note ? (
+                <span className="appointment-note">{query.data.note}</span>
+              ) : null}
             </FieldRow>
             <FieldRow label={t("appointments.field.source")}>
               {query.data.booking
                 ? query.data.booking.page_name
-                  ? t("appointments.source.onlinePage", { page: query.data.booking.page_name })
+                  ? t("appointments.source.onlinePage", {
+                      page: query.data.booking.page_name,
+                    })
                   : t("appointments.source.online")
                 : t("appointments.source.calendar")}
             </FieldRow>
           </dl>
+
+          <AppointmentReminders
+            workspaceId={workspaceId}
+            id={query.data.id}
+            canSend={open && canUpdate}
+          />
 
           {open && canUpdate ? (
             <div className="drawer-actions">
@@ -629,11 +761,24 @@ export function AppointmentDrawer({
           ) : null}
           <ConfirmDialog
             isOpen={confirming !== null}
-            title={t(confirming === "delete" ? "appointments.deleteTitle" : "appointments.cancelTitle")}
-            message={t(confirming === "delete" ? "appointments.deleteMessage" : "appointments.cancelMessage", {
-              title: query.data.title,
-            })}
-            confirmLabel={t(confirming === "delete" ? "appointments.deleteConfirm" : "appointments.cancelConfirm")}
+            title={t(
+              confirming === "delete"
+                ? "appointments.deleteTitle"
+                : "appointments.cancelTitle",
+            )}
+            message={t(
+              confirming === "delete"
+                ? "appointments.deleteMessage"
+                : "appointments.cancelMessage",
+              {
+                title: query.data.title,
+              },
+            )}
+            confirmLabel={t(
+              confirming === "delete"
+                ? "appointments.deleteConfirm"
+                : "appointments.cancelConfirm",
+            )}
             onCancel={() => {
               setConfirming(null);
             }}

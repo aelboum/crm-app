@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0030_domain_claims` own the
+Migrations `0002_contacts_companies` to `0031_appointment_reminders` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -328,6 +328,9 @@ class WorkspaceSettings(Base):
     business_hours: Mapped[list[dict[str, str] | None] | None] = mapped_column(
         JSON(none_as_null=True)
     )
+    # Minutes before an appointment its contact is reminded; None is off
+    # (migration 0031, P5-D).
+    reminder_lead_minutes: Mapped[int | None] = mapped_column(Integer)
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
@@ -547,6 +550,36 @@ class Appointment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
+
+
+class AppointmentReminder(Base):
+    """A reminder made for an appointment (migration 0031, P5-D): automatic
+    (at most one per start time) or sent by a member; queued or skipped."""
+
+    __tablename__ = "appointment_reminder"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    appointment_id: Mapped[uuid.UUID] = mapped_column()
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    kind: Mapped[str] = mapped_column(Text)
+    outcome: Mapped[str] = mapped_column(Text)
+    skip_reason: Mapped[str | None] = mapped_column(Text)
+    email_message_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ReminderWorkspace(Base):
+    """A workspace with reminders on (global, for the maintenance run)."""
+
+    __tablename__ = "reminder_workspace"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    lead_minutes: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Form(Base):

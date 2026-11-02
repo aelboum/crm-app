@@ -1,4 +1,9 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { api, ApiError, unwrap } from "./client";
 import { expectNoContent, ifMatch, unwrapWrite, where } from "./records";
@@ -15,14 +20,22 @@ import type { components } from "./schema";
 export type Appointment = components["schemas"]["AppointmentOut"];
 export type AppointmentCreate = components["schemas"]["AppointmentIn"];
 /** The fields a change may send; whether to allow a conflict is passed beside them. */
-export type AppointmentChanges = Omit<components["schemas"]["AppointmentPatch"], "allow_conflict">;
+export type AppointmentChanges = Omit<
+  components["schemas"]["AppointmentPatch"],
+  "allow_conflict"
+>;
 export type Conflict = components["schemas"]["Conflict"];
 export type Availability = components["schemas"]["Availability"];
 export type Kind = Appointment["kind"];
 export type Status = Appointment["status"];
 export const KINDS: readonly Kind[] = ["in_person", "video", "phone"];
 /** The design's four statuses, in its order; cancelling is its own action. */
-export const STATUSES: readonly Exclude<Status, "cancelled">[] = ["confirmed", "pending", "completed", "no_show"];
+export const STATUSES: readonly Exclude<Status, "cancelled">[] = [
+  "confirmed",
+  "pending",
+  "completed",
+  "no_show",
+];
 /** The booking lengths offered, in minutes. */
 export const LENGTHS: readonly number[] = [15, 30, 45, 60, 90, 120];
 
@@ -38,13 +51,21 @@ export class ConflictRefusal extends ApiError {
 }
 
 function conflictsOf(error: unknown): Conflict[] | undefined {
-  if (typeof error !== "object" || error === null || !("detail" in error)) return undefined;
+  if (typeof error !== "object" || error === null || !("detail" in error))
+    return undefined;
   const detail = error.detail;
-  if (typeof detail !== "object" || detail === null || !("conflicts" in detail)) return undefined;
-  return Array.isArray(detail.conflicts) ? (detail.conflicts as Conflict[]) : undefined;
+  if (typeof detail !== "object" || detail === null || !("conflicts" in detail))
+    return undefined;
+  return Array.isArray(detail.conflicts)
+    ? (detail.conflicts as Conflict[])
+    : undefined;
 }
 
-function written<T>(result: { data?: T; error?: unknown; response: Response }): T {
+function written<T>(result: {
+  data?: T;
+  error?: unknown;
+  response: Response;
+}): T {
   if (!result.response.ok && result.response.status === 409) {
     const conflicts = conflictsOf(result.error);
     if (conflicts) throw new ConflictRefusal(conflicts);
@@ -60,7 +81,8 @@ export interface ConflictCheck {
 }
 
 export const appointmentKeys = {
-  all: (workspaceId: string) => ["workspace", workspaceId, "appointments"] as const,
+  all: (workspaceId: string) =>
+    ["workspace", workspaceId, "appointments"] as const,
   range: (workspaceId: string, start: string, end: string) =>
     [...appointmentKeys.all(workspaceId), "range", start, end] as const,
   upcoming: (workspaceId: string, contactId: string | null) =>
@@ -93,21 +115,31 @@ export function useAppointment(workspaceId: string, id: string | null) {
     enabled: id !== null,
     queryFn: async () =>
       unwrap(
-        await api.GET("/v1/workspaces/{tenant_id}/appointments/{appointment_id}", {
-          params: { path: one(workspaceId, id ?? "") },
-        }),
+        await api.GET(
+          "/v1/workspaces/{tenant_id}/appointments/{appointment_id}",
+          {
+            params: { path: one(workspaceId, id ?? "") },
+          },
+        ),
       ),
   });
 }
 
 /** What has not ended yet, soonest first: "Up next", or one contact's. */
-export function useUpcoming(workspaceId: string, contactId: string | null = null, limit = 5) {
+export function useUpcoming(
+  workspaceId: string,
+  contactId: string | null = null,
+  limit = 5,
+) {
   return useQuery({
     queryKey: appointmentKeys.upcoming(workspaceId, contactId),
     queryFn: async () =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/appointments/upcoming", {
-          params: { path: where(workspaceId), query: { limit, ...(contactId ? { contact_id: [contactId] } : {}) } },
+          params: {
+            path: where(workspaceId),
+            query: { limit, ...(contactId ? { contact_id: [contactId] } : {}) },
+          },
         }),
       ).items,
   });
@@ -157,18 +189,29 @@ export function useConflicts(workspaceId: string, check: ConflictCheck | null) {
 
 function useRefresh(workspaceId: string) {
   const client = useQueryClient();
-  return () => client.invalidateQueries({ queryKey: appointmentKeys.all(workspaceId) });
+  return () =>
+    client.invalidateQueries({ queryKey: appointmentKeys.all(workspaceId) });
 }
 
-const one = (workspaceId: string, id: string) => ({ tenant_id: workspaceId, appointment_id: id });
+const one = (workspaceId: string, id: string) => ({
+  tenant_id: workspaceId,
+  appointment_id: id,
+});
 
 export function useCreateAppointment(workspaceId: string) {
   const refresh = useRefresh(workspaceId);
-  return useMutation<Appointment, ApiError, { body: AppointmentCreate; key: string }>({
+  return useMutation<
+    Appointment,
+    ApiError,
+    { body: AppointmentCreate; key: string }
+  >({
     mutationFn: async ({ body, key }) =>
       written(
         await api.POST("/v1/workspaces/{tenant_id}/appointments", {
-          params: { path: where(workspaceId), header: { "Idempotency-Key": key } },
+          params: {
+            path: where(workspaceId),
+            header: { "Idempotency-Key": key },
+          },
           body,
         }),
       ),
@@ -181,14 +224,22 @@ export function useUpdateAppointment(workspaceId: string) {
   return useMutation<
     Appointment,
     ApiError,
-    { id: string; version: number; changes: AppointmentChanges; allowConflict?: boolean }
+    {
+      id: string;
+      version: number;
+      changes: AppointmentChanges;
+      allowConflict?: boolean;
+    }
   >({
     mutationFn: async ({ id, version, changes, allowConflict = false }) =>
       written(
-        await api.PATCH("/v1/workspaces/{tenant_id}/appointments/{appointment_id}", {
-          params: { path: one(workspaceId, id), header: ifMatch(version) },
-          body: { ...changes, allow_conflict: allowConflict },
-        }),
+        await api.PATCH(
+          "/v1/workspaces/{tenant_id}/appointments/{appointment_id}",
+          {
+            params: { path: one(workspaceId, id), header: ifMatch(version) },
+            body: { ...changes, allow_conflict: allowConflict },
+          },
+        ),
       ),
     onSettled: () => refresh(),
   });
@@ -200,9 +251,12 @@ export function useDeleteAppointment(workspaceId: string) {
     mutationFn: async ({ id }) =>
       expectNoContent(
         (
-          await api.DELETE("/v1/workspaces/{tenant_id}/appointments/{appointment_id}", {
-            params: { path: one(workspaceId, id) },
-          })
+          await api.DELETE(
+            "/v1/workspaces/{tenant_id}/appointments/{appointment_id}",
+            {
+              params: { path: one(workspaceId, id) },
+            },
+          )
         ).response,
       ),
     onSettled: () => refresh(),
@@ -210,6 +264,45 @@ export function useDeleteAppointment(workspaceId: string) {
 }
 
 // --- Days, weeks and months in the viewer's time zone -------------------------------
+
+/*
+ * Reminders (decision P5-D): every role sees an appointment's reminder
+ * status; members who may update appointments send one now (at most once
+ * an hour). Kept under the appointment keys, so a change refreshes it.
+ */
+export type ReminderStatus = components["schemas"]["ReminderStatus"];
+export type Reminder = components["schemas"]["ReminderOut"];
+
+export function useReminders(workspaceId: string, id: string) {
+  return useQuery({
+    queryKey: [...appointmentKeys.all(workspaceId), "reminders", id] as const,
+    queryFn: async () =>
+      unwrap(
+        await api.GET(
+          "/v1/workspaces/{tenant_id}/appointments/{appointment_id}/reminders",
+          {
+            params: { path: one(workspaceId, id) },
+          },
+        ),
+      ),
+  });
+}
+
+export function useSendReminder(workspaceId: string) {
+  const refresh = useRefresh(workspaceId);
+  return useMutation<Reminder, ApiError, { id: string }>({
+    mutationFn: async ({ id }) =>
+      unwrapWrite(
+        await api.POST(
+          "/v1/workspaces/{tenant_id}/appointments/{appointment_id}/reminders",
+          {
+            params: { path: one(workspaceId, id) },
+          },
+        ),
+      ),
+    onSettled: () => refresh(),
+  });
+}
 
 export type View = "day" | "week" | "month";
 
@@ -239,10 +332,14 @@ export function viewDays(view: View, anchor: Date): Date[] {
     const monday = startOfWeek(anchor);
     return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   }
-  const start = startOfWeek(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+  const start = startOfWeek(
+    new Date(anchor.getFullYear(), anchor.getMonth(), 1),
+  );
   const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
   const days = Math.round((last.getTime() - start.getTime()) / 86_400_000) + 1;
-  return Array.from({ length: Math.ceil(days / 7) * 7 }, (_, i) => addDays(start, i));
+  return Array.from({ length: Math.ceil(days / 7) * 7 }, (_, i) =>
+    addDays(start, i),
+  );
 }
 
 /** The previous or next day, week or month. */
@@ -266,10 +363,19 @@ export function minutesInto(day: Date, moment: Date): number {
  * The closed stretches of `day` as minutes from its start, given the open
  * intervals (P5-B 8). Nothing is closed while no hours are set.
  */
-export function closedSpans(day: Date, availability: Availability | undefined): [number, number][] {
+export function closedSpans(
+  day: Date,
+  availability: Availability | undefined,
+): [number, number][] {
   if (!availability?.hours_set) return [];
   const open = availability.open
-    .map((i) => [minutesInto(day, new Date(i.starts_at)), minutesInto(day, new Date(i.ends_at))] as const)
+    .map(
+      (i) =>
+        [
+          minutesInto(day, new Date(i.starts_at)),
+          minutesInto(day, new Date(i.ends_at)),
+        ] as const,
+    )
     .filter(([from, to]) => to > from)
     .sort((a, b) => a[0] - b[0]);
   const closed: [number, number][] = [];
@@ -283,16 +389,25 @@ export function closedSpans(day: Date, availability: Availability | undefined): 
 }
 
 /** Whether `moment` falls inside an open interval; true while no hours are set. */
-export function isOpen(availability: Availability | undefined, moment: Date): boolean {
+export function isOpen(
+  availability: Availability | undefined,
+  moment: Date,
+): boolean {
   if (!availability?.hours_set) return true;
   const at = moment.getTime();
-  return availability.open.some((i) => new Date(i.starts_at).getTime() <= at && at < new Date(i.ends_at).getTime());
+  return availability.open.some(
+    (i) =>
+      new Date(i.starts_at).getTime() <= at &&
+      at < new Date(i.ends_at).getTime(),
+  );
 }
 
 /** The appointments that touch `day`. */
 export function onDay(items: Appointment[], day: Date): Appointment[] {
   const end = addDays(day, 1);
-  return items.filter((a) => new Date(a.starts_at) < end && new Date(a.ends_at) > day);
+  return items.filter(
+    (a) => new Date(a.starts_at) < end && new Date(a.ends_at) > day,
+  );
 }
 
 export interface Placed {
@@ -303,8 +418,11 @@ export interface Placed {
 
 /** Side-by-side lanes for overlapping appointments (the design's layout). */
 export function lanes(items: Appointment[]): Placed[] {
-  const times = (a: Appointment) => [new Date(a.starts_at).getTime(), new Date(a.ends_at).getTime()] as const;
-  const sorted = [...items].sort((a, b) => times(a)[0] - times(b)[0] || a.id.localeCompare(b.id));
+  const times = (a: Appointment) =>
+    [new Date(a.starts_at).getTime(), new Date(a.ends_at).getTime()] as const;
+  const sorted = [...items].sort(
+    (a, b) => times(a)[0] - times(b)[0] || a.id.localeCompare(b.id),
+  );
   const ends: number[] = [];
   const placed = sorted.map((appointment) => {
     const [start, end] = times(appointment);
@@ -318,7 +436,9 @@ export function lanes(items: Appointment[]): Placed[] {
   });
   return placed.map((p) => {
     const [start, end] = times(p.appointment);
-    const overlapping = placed.filter((o) => times(o.appointment)[0] < end && times(o.appointment)[1] > start);
+    const overlapping = placed.filter(
+      (o) => times(o.appointment)[0] < end && times(o.appointment)[1] > start,
+    );
     return { ...p, lanes: Math.max(...overlapping.map((o) => o.lane + 1)) };
   });
 }

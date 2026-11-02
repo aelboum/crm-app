@@ -25,6 +25,7 @@ from saas_os.api.dependencies import require_permission
 
 from crm_app import workspace_settings
 from crm_app.api.records import IfMatch, _http, _version
+from crm_app.domains import reminders as reminder_rules
 from crm_app.domains import settings as values
 from crm_app.records import RecordError, Scope
 
@@ -55,6 +56,9 @@ class SettingsOut(BaseModel):
     currency: str
     # `null` until the hours are first saved (P5-B 3).
     business_hours: Week | None
+    # Minutes before an appointment its contact is emailed a reminder;
+    # `null` is off (P5-D).
+    reminder_lead_minutes: int | None
     # 0 until the first save: the product defaults.
     version: int
     updated_at: datetime | None
@@ -68,6 +72,13 @@ class SettingsUpdate(BaseModel):
     time_zone: str | None = Field(default=None, max_length=64)
     currency: str | None = Field(default=None, max_length=64)
     business_hours: Week | None = None
+    # One of 60, 120, 1440, 2880; `null` turns reminders off.
+    reminder_lead_minutes: int | None = None
+
+    @field_validator("reminder_lead_minutes")
+    @classmethod
+    def _reminder(cls, value: int | None) -> int | None:
+        return reminder_rules.lead_minutes(value)
 
     @field_validator("locale")
     @classmethod
@@ -119,7 +130,7 @@ def update_settings(
     changes = {
         name: value
         for name, value in body.model_dump(exclude_unset=True).items()
-        if value is not None or name == "business_hours"
+        if value is not None or name in ("business_hours", "reminder_lead_minutes")
     }
     try:
         settings = workspace_settings.update(_scope(context), changes, expected_version=expected)

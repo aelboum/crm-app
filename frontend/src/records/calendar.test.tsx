@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { addDays, lanes, startOfDay, viewDays } from "../api/appointments";
-import { accessibilityViolations, type Handler, renderApp } from "../test/render";
+import {
+  accessibilityViolations,
+  type Handler,
+  renderApp,
+} from "../test/render";
 
 /*
  * Calendar (decision P5-A): the week grid with today's appointments, booking
@@ -63,15 +67,26 @@ function workspace(
   return (method, path, body) => {
     const base = `/v1/workspaces/${WS}`;
     if (path === "/auth/me") return { status: 200, body: { user_id: ME } };
-    if (path === base) return { status: 200, body: { id: WS, name: "Acme", status: "active" } };
+    if (path === base)
+      return { status: 200, body: { id: WS, name: "Acme", status: "active" } };
     if (path === `${base}/access`) {
-      return { status: 200, body: { membership_id: "m1", roles: ["Owner"], actions } };
+      return {
+        status: 200,
+        body: { membership_id: "m1", roles: ["Owner"], actions },
+      };
     }
     if (path.startsWith(`${base}/members?`)) {
       return {
         status: 200,
         body: {
-          items: [{ user_id: ME, status: "active", roles: ["Owner"], membership_id: "m1" }],
+          items: [
+            {
+              user_id: ME,
+              status: "active",
+              roles: ["Owner"],
+              membership_id: "m1",
+            },
+          ],
           total: 1,
           limit: 50,
           offset: 0,
@@ -83,19 +98,55 @@ function workspace(
       return { status: 200, body: { items: options.items ?? [appointment()] } };
     }
     if (method === "GET" && path.startsWith(`${appointments}/conflicts`)) {
-      return { status: 200, body: { conflicts: options.conflicts ?? [], outside_hours: options.outsideHours ?? false } };
+      return {
+        status: 200,
+        body: {
+          conflicts: options.conflicts ?? [],
+          outside_hours: options.outsideHours ?? false,
+        },
+      };
     }
     if (method === "GET" && path.startsWith(`${appointments}/availability`)) {
       return {
         status: 200,
-        body: { hours_set: options.open !== undefined, time_zone: "Europe/Amsterdam", open: options.open ?? [] },
+        body: {
+          hours_set: options.open !== undefined,
+          time_zone: "Europe/Amsterdam",
+          open: options.open ?? [],
+        },
       };
     }
-    if (method === "GET" && path === `${appointments}/${APPT}`) return { status: 200, body: appointment() };
-    if (method === "GET" && path.startsWith(`${appointments}?`)) {
-      return { status: 200, body: { items: options.items ?? [appointment()], truncated: false } };
+    if (method === "GET" && path === `${appointments}/${APPT}`)
+      return { status: 200, body: appointment() };
+    if (method === "GET" && path === `${appointments}/${APPT}/reminders`) {
+      return {
+        status: 200,
+        body: {
+          lead_minutes: 1440,
+          next_at: at(10, 0, -1),
+          recipient_problem: null,
+          items: [
+            {
+              id: "r1",
+              kind: "automatic",
+              outcome: "skipped",
+              skip_reason: "no_email",
+              starts_at: at(10),
+              created_at: at(9),
+              created_by_user_id: null,
+            },
+          ],
+        },
+      };
     }
-    if (method !== "GET" && path.startsWith(appointments)) return options.onWrite?.(method, path, body);
+    if (method === "GET" && path.startsWith(`${appointments}?`)) {
+      return {
+        status: 200,
+        body: { items: options.items ?? [appointment()], truncated: false },
+      };
+    }
+    if (method !== "GET" && path.startsWith(appointments))
+      return options.onWrite?.(method, path, body);
     return undefined;
   };
 }
@@ -106,38 +157,69 @@ const MANAGER = {
   update_appointment: true,
   delete_appointment: true,
 };
-const READER = { read_members: true, create_appointment: false, update_appointment: false, delete_appointment: false };
+const READER = {
+  read_members: true,
+  create_appointment: false,
+  update_appointment: false,
+  delete_appointment: false,
+};
 
 describe("calendar", () => {
   it("shows the week with today's appointments in the viewer's time zone", async () => {
     renderApp(`/w/${WS}/calendar`, workspace(MANAGER));
-    const events = await screen.findAllByRole("button", { name: /Intro call with Sam.*Sam Jansen/ });
+    const events = await screen.findAllByRole("button", {
+      name: /Intro call with Sam.*Sam Jansen/,
+    });
     // The grid's event, and the same appointment under "Up next".
-    expect(events.filter((e) => e.classList.contains("calendar-event"))).toHaveLength(1);
-    expect(events.find((e) => e.classList.contains("calendar-event"))).toHaveClass("confirmed");
+    expect(
+      events.filter((e) => e.classList.contains("calendar-event")),
+    ).toHaveLength(1);
+    expect(
+      events.find((e) => e.classList.contains("calendar-event")),
+    ).toHaveClass("confirmed");
     expect(screen.getByText(/^Times in /)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Week", pressed: true })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "New appointment" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Week", pressed: true }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "New appointment" }),
+    ).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });
 
   it("books over a conflict only when asked to, with an idempotency key", async () => {
     const user = userEvent.setup();
-    const conflict = { id: APPT, title: "Intro call with Sam", starts_at: at(10), ends_at: at(10, 30) };
+    const conflict = {
+      id: APPT,
+      title: "Intro call with Sam",
+      starts_at: at(10),
+      ends_at: at(10, 30),
+    };
     const { sent, headersSent } = renderApp(
       `/w/${WS}/calendar`,
       workspace(MANAGER, {
         conflicts: [conflict],
-        onWrite: (method) => (method === "POST" ? { status: 201, body: appointment({ id: "new" }) } : undefined),
+        onWrite: (method) =>
+          method === "POST"
+            ? { status: 201, body: appointment({ id: "new" }) }
+            : undefined,
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "New appointment" }));
-    const dialog = await screen.findByRole("dialog", { name: "New appointment" });
+    await user.click(
+      await screen.findByRole("button", { name: "New appointment" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New appointment",
+    });
     await user.type(within(dialog).getByLabelText("Title"), "Quote review");
-    expect(await within(dialog).findByText(/already has an appointment/)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(/already has an appointment/),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(/Intro call with Sam/)).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
-    await user.click(within(dialog).getByRole("button", { name: "Book anyway" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Book anyway" }),
+    );
     await waitFor(() => {
       expect(sent.filter((r) => r.method === "POST")).toHaveLength(1);
     });
@@ -148,7 +230,9 @@ describe("calendar", () => {
       status: "confirmed",
       allow_conflict: true,
     });
-    expect(headersSent.find((r) => r.method === "POST")?.headers["idempotency-key"]).toMatch(/^[0-9a-f]{32}$/);
+    expect(
+      headersSent.find((r) => r.method === "POST")?.headers["idempotency-key"],
+    ).toMatch(/^[0-9a-f]{32}$/);
   });
 
   it("books without overriding when the host is free", async () => {
@@ -156,19 +240,33 @@ describe("calendar", () => {
     const { sent } = renderApp(
       `/w/${WS}/calendar`,
       workspace(MANAGER, {
-        onWrite: (method) => (method === "POST" ? { status: 201, body: appointment({ id: "new" }) } : undefined),
+        onWrite: (method) =>
+          method === "POST"
+            ? { status: 201, body: appointment({ id: "new" }) }
+            : undefined,
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "New appointment" }));
-    const dialog = await screen.findByRole("dialog", { name: "New appointment" });
+    await user.click(
+      await screen.findByRole("button", { name: "New appointment" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New appointment",
+    });
     await user.type(within(dialog).getByLabelText("Title"), "Demo");
     await user.click(within(dialog).getByRole("radio", { name: "Phone" }));
-    expect(await within(dialog).findByText("The host is free at this time.")).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Book appointment" }));
+    expect(
+      await within(dialog).findByText("The host is free at this time."),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Book appointment" }),
+    );
     await waitFor(() => {
       expect(sent.filter((r) => r.method === "POST")).toHaveLength(1);
     });
-    expect(sent.find((r) => r.method === "POST")?.body).toMatchObject({ kind: "phone", allow_conflict: false });
+    expect(sent.find((r) => r.method === "POST")?.body).toMatchObject({
+      kind: "phone",
+      allow_conflict: false,
+    });
   });
 
   it("changes the status with the version and cancels only after confirming", async () => {
@@ -176,41 +274,123 @@ describe("calendar", () => {
     const { sent, headersSent } = renderApp(
       `/w/${WS}/calendar?record=${APPT}`,
       workspace(MANAGER, {
-        onWrite: (method) => (method === "PATCH" ? { status: 200, body: appointment({ version: 3 }) } : undefined),
+        onWrite: (method) =>
+          method === "PATCH"
+            ? { status: 200, body: appointment({ version: 3 }) }
+            : undefined,
       }),
     );
     const drawer = await screen.findByRole("dialog", { name: "Appointment" });
-    expect(await within(drawer).findByText("Intro call with Sam")).toBeInTheDocument();
+    expect(
+      await within(drawer).findByText("Intro call with Sam"),
+    ).toBeInTheDocument();
     await user.click(within(drawer).getByRole("button", { name: "Completed" }));
     await waitFor(() => {
       expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(1);
     });
-    expect(sent.find((r) => r.method === "PATCH")?.body).toEqual({ status: "completed", allow_conflict: false });
-    expect(headersSent.find((r) => r.method === "PATCH")?.headers["if-match"]).toBe('"2"');
+    expect(sent.find((r) => r.method === "PATCH")?.body).toEqual({
+      status: "completed",
+      allow_conflict: false,
+    });
+    expect(
+      headersSent.find((r) => r.method === "PATCH")?.headers["if-match"],
+    ).toBe('"2"');
 
-    await user.click(within(drawer).getByRole("button", { name: "Cancel appointment" }));
-    const confirm = await screen.findByRole("alertdialog", { name: "Cancel this appointment?" });
+    await user.click(
+      within(drawer).getByRole("button", { name: "Cancel appointment" }),
+    );
+    const confirm = await screen.findByRole("alertdialog", {
+      name: "Cancel this appointment?",
+    });
     expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(1);
-    await user.click(within(confirm).getByRole("button", { name: "Cancel appointment" }));
+    await user.click(
+      within(confirm).getByRole("button", { name: "Cancel appointment" }),
+    );
     await waitFor(() => {
       expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2);
     });
-    expect(sent.filter((r) => r.method === "PATCH")[1]?.body).toEqual({ status: "cancelled", allow_conflict: false });
+    expect(sent.filter((r) => r.method === "PATCH")[1]?.body).toEqual({
+      status: "cancelled",
+      allow_conflict: false,
+    });
+  });
+
+  it("shows the appointment's reminders and sends one now", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/calendar?record=${APPT}`,
+      workspace(MANAGER, {
+        onWrite: (method, path) =>
+          method === "POST" && path.endsWith("/reminders")
+            ? {
+                status: 201,
+                body: {
+                  id: "r2",
+                  kind: "manual",
+                  outcome: "queued",
+                  skip_reason: null,
+                  starts_at: at(10),
+                  created_at: at(9),
+                  created_by_user_id: ME,
+                },
+              }
+            : undefined,
+      }),
+    );
+    const drawer = await screen.findByRole("dialog", { name: "Appointment" });
+    const section = await within(drawer).findByRole("region", {
+      name: "Reminders",
+    });
+    expect(
+      await within(section).findByText("The contact is emailed 1 day before.", {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
+    expect(section).toHaveTextContent("Skipped: no email address");
+    await user.click(
+      within(section).getByRole("button", { name: "Send reminder" }),
+    );
+    await waitFor(() => {
+      expect(
+        sent.filter(
+          (r) => r.method === "POST" && r.path.endsWith(`/${APPT}/reminders`),
+        ),
+      ).toHaveLength(1);
+    });
+    expect(await accessibilityViolations()).toEqual([]);
   });
 
   it("offers a Read-only member the calendar without changes", async () => {
     renderApp(`/w/${WS}/calendar?record=${APPT}`, workspace(READER));
     const drawer = await screen.findByRole("dialog", { name: "Appointment" });
-    expect(await within(drawer).findByRole("button", { name: "Confirmed" })).toBeDisabled();
-    expect(within(drawer).queryByRole("button", { name: "Cancel appointment" })).toBeNull();
+    expect(
+      await within(drawer).findByRole("button", { name: "Confirmed" }),
+    ).toBeDisabled();
+    expect(
+      within(drawer).queryByRole("button", { name: "Cancel appointment" }),
+    ).toBeNull();
     expect(within(drawer).queryByRole("button", { name: "Delete" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "New appointment" })).toBeNull();
+    const reminders = await within(drawer).findByRole("region", {
+      name: "Reminders",
+    });
+    await within(reminders).findByText("Skipped: no email address");
+    expect(
+      within(reminders).queryByRole("button", { name: "Send reminder" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "New appointment" }),
+    ).toBeNull();
   });
 
   it("shows at most three appointments a day in the month view", async () => {
     const user = userEvent.setup();
     const items = [9, 11, 13, 15].map((hour, i) =>
-      appointment({ id: `a${String(i)}`, title: `Call ${String(i)}`, starts_at: at(hour), ends_at: at(hour, 30) }),
+      appointment({
+        id: `a${String(i)}`,
+        title: `Call ${String(i)}`,
+        starts_at: at(hour),
+        ends_at: at(hour, 30),
+      }),
     );
     renderApp(`/w/${WS}/calendar`, workspace(MANAGER, { items }));
     await user.click(await screen.findByRole("button", { name: "Month" }));
@@ -226,11 +406,16 @@ describe("calendar", () => {
 
 describe("business hours on the calendar", () => {
   // Open 09:00-17:00 every day of this week, in the viewer's own zone.
-  const open = Array.from({ length: 14 }, (_, i) => ({ starts_at: at(9, 0, i - 7), ends_at: at(17, 0, i - 7) }));
+  const open = Array.from({ length: 14 }, (_, i) => ({
+    starts_at: at(9, 0, i - 7),
+    ends_at: at(17, 0, i - 7),
+  }));
 
   it("hatches closed time, names it in the legend and gives each member a status line", async () => {
     renderApp(`/w/${WS}/calendar`, workspace(MANAGER, { open }));
-    expect(await screen.findByText("Outside business hours", { selector: "li" })).toBeInTheDocument();
+    expect(
+      await screen.findByText("Outside business hours", { selector: "li" }),
+    ).toBeInTheDocument();
     // Seven day columns, each closed before 09:00 and after 17:00.
     await waitFor(() => {
       expect(document.querySelectorAll(".calendar-closed")).toHaveLength(14);
@@ -240,7 +425,11 @@ describe("business hours on the calendar", () => {
     const busy = hour === 10 && new Date().getMinutes() < 30;
     // `toEqual`, so the asymmetric matcher applies between 10:00 and 10:30.
     expect(presence?.textContent).toEqual(
-      busy ? expect.stringContaining("In an appointment until") : hour >= 9 && hour < 17 ? "Free now" : "Outside business hours",
+      busy
+        ? expect.stringContaining("In an appointment until")
+        : hour >= 9 && hour < 17
+          ? "Free now"
+          : "Outside business hours",
     );
     expect(await accessibilityViolations()).toEqual([]);
   });
@@ -249,7 +438,9 @@ describe("business hours on the calendar", () => {
     renderApp(`/w/${WS}/calendar`, workspace(MANAGER));
     await screen.findAllByRole("button", { name: /Intro call with Sam/ });
     expect(document.querySelectorAll(".calendar-closed")).toHaveLength(0);
-    expect(screen.queryByText("Outside business hours", { selector: "li" })).toBeNull();
+    expect(
+      screen.queryByText("Outside business hours", { selector: "li" }),
+    ).toBeNull();
   });
 
   it("warns before booking outside business hours and still books", async () => {
@@ -259,18 +450,31 @@ describe("business hours on the calendar", () => {
       workspace(MANAGER, {
         open,
         outsideHours: true,
-        onWrite: (method) => (method === "POST" ? { status: 201, body: appointment({ id: "new" }) } : undefined),
+        onWrite: (method) =>
+          method === "POST"
+            ? { status: 201, body: appointment({ id: "new" }) }
+            : undefined,
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "New appointment" }));
-    const dialog = await screen.findByRole("dialog", { name: "New appointment" });
+    await user.click(
+      await screen.findByRole("button", { name: "New appointment" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New appointment",
+    });
     await user.type(within(dialog).getByLabelText("Title"), "Late call");
-    expect(await within(dialog).findByText(/outside the business hours/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Book appointment" }));
+    expect(
+      await within(dialog).findByText(/outside the business hours/),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Book appointment" }),
+    );
     await waitFor(() => {
       expect(sent.filter((r) => r.method === "POST")).toHaveLength(1);
     });
-    expect(sent.find((r) => r.method === "POST")?.body).toMatchObject({ allow_conflict: false });
+    expect(sent.find((r) => r.method === "POST")?.body).toMatchObject({
+      allow_conflict: false,
+    });
   });
 });
 
@@ -295,6 +499,8 @@ describe("calendar arithmetic", () => {
     const month = viewDays("month", new Date(2026, 9, 15));
     expect(month[0]?.getDay()).toBe(1);
     expect(month.length % 7).toBe(0);
-    expect(month.some((d) => d.getMonth() === 9 && d.getDate() === 31)).toBe(true);
+    expect(month.some((d) => d.getMonth() === 9 && d.getDate() === 31)).toBe(
+      true,
+    );
   });
 });

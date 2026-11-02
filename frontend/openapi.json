@@ -6588,6 +6588,128 @@
         "title": "RejectIn",
         "type": "object"
       },
+      "ReminderOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "automatic",
+              "manual"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "queued",
+              "skipped"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "skip_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "outcome",
+          "skip_reason",
+          "starts_at",
+          "created_at",
+          "created_by_user_id"
+        ],
+        "title": "ReminderOut",
+        "type": "object"
+      },
+      "ReminderStatus": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "lead_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Minutes"
+          },
+          "next_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next At"
+          },
+          "recipient_problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Problem"
+          }
+        },
+        "required": [
+          "lead_minutes",
+          "next_at",
+          "recipient_problem",
+          "items"
+        ],
+        "title": "ReminderStatus",
+        "type": "object"
+      },
       "Resolved": {
         "properties": {
           "workspace_id": {
@@ -7136,6 +7258,17 @@
             "title": "Locale",
             "type": "string"
           },
+          "reminder_lead_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Lead Minutes"
+          },
           "time_zone": {
             "title": "Time Zone",
             "type": "string"
@@ -7174,6 +7307,7 @@
           "time_zone",
           "currency",
           "business_hours",
+          "reminder_lead_minutes",
           "version",
           "updated_at",
           "updated_by_user_id"
@@ -7229,6 +7363,17 @@
               }
             ],
             "title": "Locale"
+          },
+          "reminder_lead_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Lead Minutes"
           },
           "time_zone": {
             "anyOf": [
@@ -10957,6 +11102,143 @@
           }
         },
         "summary": "Update Appointment",
+        "tags": [
+          "appointments"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/appointments/{appointment_id}/reminders": {
+      "get": {
+        "operationId": "appointment_reminders_v1_workspaces__tenant_id__appointments__appointment_id__reminders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "appointment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Appointment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Appointment Reminders",
+        "tags": [
+          "appointments"
+        ]
+      },
+      "post": {
+        "description": "Email the appointment's contact a reminder now (at most once an hour);\nnothing reaches a provider while sending is off.",
+        "operationId": "send_appointment_reminder_v1_workspaces__tenant_id__appointments__appointment_id__reminders_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "appointment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Appointment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Appointment Reminder",
         "tags": [
           "appointments"
         ]
