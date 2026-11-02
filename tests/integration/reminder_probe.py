@@ -100,7 +100,7 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         due = book(a, "owner", 23, ada, note="Internal: discount up to 10%")
         no_email = book(a, "owner", 20, bob)
         archived = book(a, "owner", 21, old)
-        _archive(a.id, uuid.UUID(old))
+        _archive(a.id, old)
         nobody = book(a, "owner", 22, None)
         just_booked = book(a, "owner", 23.5, ada)
         later = book(a, "owner", 30, ada)
