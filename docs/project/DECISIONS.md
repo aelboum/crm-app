@@ -2682,6 +2682,33 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 13-P1 — Preparation of the blocked work (2026-11-02, under the hardening mandate)
+
+- **Status:** Prepared, nothing built or switched on, under the owner's
+  instruction of 2026-11-02 ("Prepare blocked roadmap work … Do not connect
+  paid providers or send CRM data externally … Do not activate billing or
+  change production Stripe configuration … Do not change the SaaS-OS pin …
+  Do not perform DNS changes or issue production certificates … Do not
+  activate tracking before the consent decision is approved.").
+- **Record:** `docs/project/BLOCKED-WORK-PREPARATION.md`, with what
+  SaaS-OS v0.6.0 provides (read from the installed package), the proposed
+  architecture, and the owner's decisions for each item:
+  1. AI (Phase 9): a provider-neutral `crm_app.ai` on SaaS-OS's governed
+     inference, a per-use-case data allowlist, an off switch, an
+     entitlement, a token quota, and an audit without prompt text.
+  2. Agency, white label and billing (Phase 11): options A, B or C;
+     recommended B (an agency parent tenant with client child tenants on
+     SaaS-OS's hierarchy and hierarchy-aware billing, with access only by
+     explicit membership), billing wholly in SaaS-OS.
+  3. Inbound email: SaaS-OS adds `get` to `StrictEgressClient`, the
+     smallest safe change; no product-owned HTTP client.
+  4. Custom domains: a DNS-over-HTTPS TXT resolver through the existing
+     egress POST (no pin move) and Caddy on-demand TLS gated by an `ask`
+     endpoint for verified hosts.
+  5. Website tracking: off by default, nothing without consent, consent in
+     the existing consent records, GPC and DNT respected, short retention.
+  6. Role upgrades: 13-R1.
+
 ## 13-R1 — An auditable, bound role upgrade (2026-11-02, under the hardening mandate)
 
 - **Status:** Prepared under the owner's instruction of 2026-11-02 ("Prepare
