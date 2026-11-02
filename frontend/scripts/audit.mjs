@@ -36,6 +36,19 @@ const exceptions = JSON.parse(readFileSync(new URL("../audit-exceptions.json", i
 const today = new Date().toISOString().slice(0, 10);
 const problems = [];
 
+// Every exception names its decision, owner, reason and remediation plan,
+// and expires on a real date (decision 13-A3): none is open-ended.
+const REQUIRED = ["id", "package", "expires", "decision", "owner", "reason", "plan"];
+for (const exception of exceptions) {
+  const missing = REQUIRED.filter((field) => typeof exception[field] !== "string" || !exception[field].trim());
+  if (missing.length) {
+    problems.push(`${exception.id ?? "an exception"}: missing ${missing.join(", ")}`);
+  }
+  if (typeof exception.expires === "string" && !/^\d{4}-\d{2}-\d{2}$/.test(exception.expires)) {
+    problems.push(`${exception.id}: expires must be a date (YYYY-MM-DD)`);
+  }
+}
+
 const production = audit(["--omit=dev"]);
 for (const [id, advisory] of production) {
   problems.push(`${id} (${advisory.package}, ${advisory.severity}) is in a production dependency: ${advisory.title}`);

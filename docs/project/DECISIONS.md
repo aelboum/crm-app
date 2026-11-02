@@ -2682,6 +2682,34 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 13-A3 — Dependency audit review (2026-11-02, under the hardening mandate)
+
+- **Status:** Reviewed under the owner's instruction of 2026-11-02 ("Review
+  every exception. Verify current vulnerability status. Upgrade or
+  remediate safely where possible. Remove resolved exceptions. Document
+  any remaining exception with justification, owner, expiry and
+  remediation plan. Do not silently extend exceptions.").
+- **Python:** `pip-audit --strict` over the locked tree (as CI runs it, all
+  groups, SaaS-OS excluded by K3): no known vulnerabilities; no exceptions
+  exist.
+- **npm, production tree** (`npm audit --omit=dev`): clean; it never gets
+  an exception.
+- **npm, the only exception, GHSA-g3hv-75wg-m249 (minimatch, moderate):**
+  re-checked 2026-11-02; unchanged since 13-A2. `eslint-plugin-jsx-a11y`
+  6.10.2 is still the latest release, pins minimatch ^3.1.2 and caps its
+  eslint peer at 9; eslint 10.14.0 uses minimatch ^10.2.6 (still in the
+  advisory's range below 11.0.1); `openapi-typescript` 7.13.0 is still the
+  latest and needs `@redocly/openapi-core` 1.x (minimatch 5.1.9). Forcing
+  minimatch 11 is unsafe: eslint, `@eslint/config-array`,
+  `@eslint/eslintrc`, jsx-a11y and redocly call minimatch 3's default
+  function export, which 11.x removed.
+- **Decision:** the exception keeps its expiry, 2026-12-31 (not extended),
+  and now records its owner and remediation plan
+  (`frontend/audit-exceptions.json`). The audit gate
+  (`frontend/scripts/audit.mjs`) now fails any exception missing its
+  decision, owner, reason, plan or a dated expiry, besides failing on
+  expiry, on any new advisory and on a stale entry.
+
 ## P7-B — Consent and suppression (2026-10-28, under M1)
 
 - **Status:** Decided under M1 after the owner's "Go" (2026-10-28) to the

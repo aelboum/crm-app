@@ -3,7 +3,9 @@
     "id": "GHSA-g3hv-75wg-m249",
     "package": "minimatch",
     "expires": "2026-12-31",
-    "decision": "13-A2",
-    "reason": "Development tooling only (eslint, eslint-plugin-jsx-a11y, openapi-typescript); no patched 3.x or 5.x exists and 11.x breaks those packages. Glob patterns come from the repository's own configuration."
+    "decision": "13-A3",
+    "owner": "Repository owner (aelboum)",
+    "reason": "Development tooling only (eslint, eslint-plugin-jsx-a11y, openapi-typescript); no patched 3.x, 5.x or 10.x exists, 11.x removes the default export those packages call, and eslint 10 still uses an affected 10.x. Glob patterns come from the repository's own configuration; the production tree audits clean.",
+    "plan": "Before 2026-12-31: adopt a jsx-a11y release that supports eslint 10 or minimatch 11, an openapi-typescript release on @redocly/openapi-core 2, or replace either tool; otherwise the owner decides again. The gate fails on expiry."
   }
 ]

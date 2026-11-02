@@ -202,6 +202,13 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **13-A3, dependency audit review (2026-11-02):** pip-audit clean (no
+  exceptions); npm production tree clean; the one npm exception
+  (GHSA-g3hv-75wg-m249, minimatch, development tools only) re-verified
+  unfixable without breaking tooling, kept at its 2026-12-31 expiry (not
+  extended), now with owner and remediation plan; the audit gate fails an
+  exception missing either. Verified: `npm run audit` passes; with the
+  owner removed it fails ("missing owner").
 - **Phase 7 slice 7T, email templates (decision P7-T, 2026-11-02):**
   migration `0033_email_templates`; `/email-templates` API (campaign
   permissions; render with the reply permission); Templates panel under
