@@ -54,7 +54,6 @@ from crm_app.domains.records import InvalidValue
 from crm_app.models import ConsentRecord, Contact, ContactTag, Form, FormSubmission, Tag
 from crm_app.records import (
     CONTACT,
-    MAX_RECORD_TAGS,
     TOTAL_CAP,
     ConstraintViolationError,
     DuplicateRecordError,
@@ -65,12 +64,8 @@ from crm_app.records import (
     StaleVersionError,
     TransactionConflictError,
     _after,
-    _audit,
-    _Event,
     _OrderKey,
-    _touch,
     check_owner,
-    history_entry,
     insert_record,
 )
 
@@ -621,29 +616,6 @@ def _match(session: Session, workspace: uuid.UUID, email: str | None) -> Contact
     ).scalar_one_or_none()
 
 
-def _add_tag(session: Session, scope: Scope, contact: Contact, tag_id: uuid.UUID) -> bool:
-    """Tag a matched contact, unless it has the tag or is at the limit."""
-    current = set(
-        session.execute(
-            select(ContactTag.tag_id).where(
-                ContactTag.tenant_id == scope.workspace, ContactTag.contact_id == contact.id
-            )
-        ).scalars()
-    )
-    if tag_id in current or len(current) >= MAX_RECORD_TAGS:
-        return False
-    session.add(
-        ContactTag(
-            tenant_id=scope.workspace,
-            contact_id=contact.id,
-            tag_id=tag_id,
-            created_by_user_id=scope.actor,
-            created_at=_now(),
-        )
-    )
-    return True
-
-
 def _active_member(workspace: uuid.UUID, user_id: uuid.UUID) -> bool:
     membership = get_membership(workspace, user_id)
     return membership is not None and membership.status == _ACTIVE
@@ -702,19 +674,6 @@ def _create_contact(session: Session, accepted: _Accepted, form: Form) -> uuid.U
     return contact_id
 
 
-def _tag_matched(session: Session, scope: Scope, contact: Contact, form: Form) -> bool:
-    """The only change a submission makes to a matched contact (P7-A 6);
-    whether the form's tag was added."""
-    if form.tag_id is None or not _add_tag(session, scope, contact, form.tag_id):
-        return False
-    _touch(contact, scope)
-    session.flush()
-    session.add(history_entry(CONTACT, scope, contact.id, "updated", fields=["tags"]))
-    metadata = {"fields": ["tags"], "form_id": str(form.id)}
-    _audit(session, CONTACT, scope, _Event("updated", contact.id, metadata))
-    return True
-
-
 def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     """The submission's whole effect, in the idempotency transaction."""
     workspace = accepted.scope.workspace
@@ -729,7 +688,10 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
         contact_id, outcome = _create_contact(session, accepted, form), "created"
         tagged = form.tag_id is not None
     else:
-        tagged = _tag_matched(session, accepted.scope, contact, form)
+        # The email typed is an unverified claim (decision P7-V): an existing
+        # contact is not tagged, gets no consent and starts no automation
+        # from it; the submission is recorded against it all the same.
+        tagged = False
         contact_id, outcome = contact.id, "matched"
     consent = accepted.consent and email is not None and form.consent_text is not None
     now = _now()
@@ -749,7 +711,12 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
         )
     )
     session.flush()
-    if consent and form.consent_text is not None:
+    if consent and contact is not None:
+        # Only the address's owner can confirm, by the emailed link (P7-V).
+        from crm_app import consent_confirmations  # noqa: PLC0415
+
+        consent_confirmations.request(session, accepted.scope, contact, form, submission_id, now)
+    elif consent and form.consent_text is not None:
         session.add(
             ConsentRecord(
                 id=uuid.uuid4(),
@@ -769,9 +736,11 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     # Automations start in the same transaction (decision P8-B).
     from crm_app import automations  # noqa: PLC0415 - automations imports records
 
-    if tagged and form.tag_id is not None:
-        automations.on_event(session, accepted.scope, "tag_added", contact_id, form.tag_id)
-    automations.on_event(session, accepted.scope, "form_submitted", contact_id, form.id)
+    if contact is None:
+        # A contact this submission created; a matched one starts nothing (P7-V).
+        if tagged and form.tag_id is not None:
+            automations.on_event(session, accepted.scope, "tag_added", contact_id, form.tag_id)
+        automations.on_event(session, accepted.scope, "form_submitted", contact_id, form.id)
     return {"id": str(submission_id)}
 
 

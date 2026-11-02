@@ -2328,6 +2328,21 @@
         "title": "CompanyUpdate",
         "type": "object"
       },
+      "ConfirmIn": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "maxLength": 200,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ConfirmIn",
+        "type": "object"
+      },
       "Conflict": {
         "properties": {
           "ends_at": {
@@ -9731,6 +9746,52 @@
         "summary": "View Public Booking",
         "tags": [
           "public booking pages"
+        ]
+      }
+    },
+    "/v1/public/consent/{workspace_id}/confirm": {
+      "post": {
+        "operationId": "confirm_consent_v1_public_consent__workspace_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Consent",
+        "tags": [
+          "consent"
         ]
       }
     },

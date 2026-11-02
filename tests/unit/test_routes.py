@@ -472,6 +472,8 @@ PUBLIC_FORMS = {
     "GET /v1/public/domains/resolve",
     # 12D.2: the edge's on-demand TLS check (yes or no only).
     "GET /v1/public/domains/allowed",
+    # P7-V: a person confirms consent by the emailed link's token.
+    "POST /v1/public/consent/{workspace_id}/confirm",
     "GET /v1/public/booking-pages/{workspace_id}/{key}",
     "GET /v1/public/booking-pages/{workspace_id}/{key}/times",
     "POST /v1/public/booking-pages/{workspace_id}/{key}",

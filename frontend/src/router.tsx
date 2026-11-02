@@ -17,6 +17,7 @@ import { LoadError } from "./components/StateNotice";
 import { HomePage, isWorkspaceId } from "./pages/HomePage";
 import { InvitePage } from "./pages/InvitePage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
+import { ConsentConfirmPage } from "./pages/ConsentConfirmPage";
 import { PublicFormPage } from "./pages/PublicFormPage";
 import { VisitorBookingPage } from "./pages/VisitorBookingPage";
 import { CompaniesPage } from "./records/CompaniesPage";
@@ -113,6 +114,21 @@ const visitorBookingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/b/$workspaceId/manage",
   component: VisitorBookingRoutePage,
+});
+
+function ConsentConfirmRoutePage() {
+  const { workspaceId } = consentConfirmRoute.useParams();
+  // The token is the fragment: browsers never send it to the server.
+  const token = useLocation({ select: (location) => location.hash });
+  if (!isWorkspaceId(workspaceId)) return <PublicNotFound />;
+  return <ConsentConfirmPage workspaceId={workspaceId} token={token} />;
+}
+
+// Confirming consent given on a public form (P7-V): /app/c/<workspace>#<token>.
+const consentConfirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/c/$workspaceId",
+  component: ConsentConfirmRoutePage,
 });
 
 const notFound = (
@@ -407,6 +423,7 @@ const routeTree = rootRoute.addChildren([
   workspaceRoute.addChildren([workspaceIndexRoute, sectionRoute]),
   publicFormRoute,
   visitorBookingRoute,
+  consentConfirmRoute,
   publicBookingRoute,
 ]);
 

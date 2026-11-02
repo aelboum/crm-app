@@ -2682,6 +2682,48 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## P7-V — Public submissions that match an existing contact are unverified (2026-11-02)
+
+- **Status:** Approved by the owner on 2026-11-02 (brief 8): "Treat an email
+  address submitted through a public form or booking as an unverified
+  identity claim. Record the submission and booking, but do not
+  automatically modify an existing contact's tags, marketing consent or
+  automation state based only on an email match." Supersedes P7-A 6 (a
+  matched contact gets the form's tag) and the matched-contact part of P7-B
+  and P8-B.
+- **Forms:** when the email matches an existing contact, the submission is
+  still stored (outcome `matched`, the visitor's answers and consent box
+  kept) and audited, but:
+  - the form's tag is not added;
+  - no consent record is written; if the visitor ticked the consent box, a
+    confirmation email is queued to the contact's address instead;
+  - no form or tag automation starts.
+- **Bookings:** a booking for a matched contact is kept and attached to that
+  contact (the host must see it), but no `appointment_booked` automation
+  starts.
+- **Confirmation links:** table `consent_confirmation` (migration 0034,
+  tenant RLS). The link is `/app/c/<workspace>#<token>`; the token is in the
+  fragment, so it never reaches a server log, and only its SHA-256 hash is
+  stored. A link works for 7 days, confirms only in its own workspace, and
+  is idempotent: a second confirmation answers the same and records
+  nothing more. While a confirmation for the same contact and form is
+  pending and less than a day old, a repeat submission queues no new email,
+  so a stranger cannot flood the address. Confirming writes one consent record, `granted`, method
+  `email_confirmation`, with the form's wording, and is audited. The page
+  confirms only when the person presses the button, so a mail scanner that
+  opens the link confirms nothing. The route
+  `POST /v1/public/consent/{workspace_id}/confirm` answers 204 or 404 (an
+  unknown, foreign and expired token look the same) and is rate limited per
+  client address.
+- **Email:** the confirmation is purpose `consent_confirmation`, on the
+  transactional stream, and is never sent after its link expires. Sending
+  stays off (production email not authorised), so today the email is only
+  queued.
+- **Unchanged:** a submission or booking that creates a new contact behaves
+  as before (tag, `web_form` consent, automations); there is no
+  cross-workspace lookup.
+- **Tests:** `tests/integration/test_consent_confirmations.py`,
+  `frontend/src/pages/consentConfirm.test.tsx`.
 ## 13-O1 — One operations page, and the improvements that need no decision (2026-11-02)
 
 - **Status:** Done under the owner's instruction of 2026-11-02 ("Identify
@@ -2698,7 +2740,8 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
      1 when any is overdue (`tests/integration/test_health_check.py`).
   2. **Performance:** a seeded local load test (about 50,000 contacts) of
      the contact list and search, the reports and the reminder run, to set
-     a baseline before production.
+     a baseline before production. Planned, not run:
+     `LOAD-TEST-PLAN.md` (2026-11-02).
   3. **Accessibility:** the human screen-reader pass
      (`SCREEN-READER-CHECKLIST.md`).
   4. **Security:** size the email webhook's rate limit from Resend's real

@@ -202,7 +202,16 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
-- **13-O1, operations page (2026-11-02):** `docs/project/OPERATIONS.md`
+- **P7-V, unverified public matches (2026-11-02, brief 8 approved):** a
+  public form or booking that matches an existing contact by email keeps
+  its submission or booking but no longer tags the contact, records consent
+  or starts automations; consent waits for an emailed confirmation link
+  (7 days, hash stored, workspace-bound, idempotent; queued only, sending
+  stays off). Migration `0034_consent_confirmations`; public route
+  `POST /v1/public/consent/{workspace_id}/confirm`; page `/app/c/<ws>#<token>`.
+  Also prepared for review, not acted on: `LOAD-TEST-PLAN.md` (not run),
+  `SAAS-OS-GET-PROPOSAL.md` (pin unchanged), `ROLE-UPGRADE-DRY-RUN-REPORT.md`
+  (dry run on the test database only; nothing applied).- **13-O1, operations page (2026-11-02):** `docs/project/OPERATIONS.md`
   (processes, scheduled commands and cadence, operator commands, health
   signals); further no-decision improvements listed in DECISIONS 13-O1.
   The queue-age check `python -m crm_app.health_check` (read-only, exits 1

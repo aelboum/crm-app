@@ -89,6 +89,8 @@ SENDER_WAIT_SECONDS = 3600
 TIMELY_FOR = {
     "booking_confirmation": timedelta(days=1),
     "appointment_reminder": timedelta(days=1),
+    # Its link works 7 days (P7-V); never sent after that.
+    "consent_confirmation": timedelta(days=7),
 }
 _ERROR_CODE = re.compile(r"[^a-z0-9_]+")
 

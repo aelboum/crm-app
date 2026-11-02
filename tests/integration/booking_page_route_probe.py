@@ -279,6 +279,23 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             refused.json(),
             "secret-not-an-email" in refused.text,
         ]
+        # A booking automation: only a booking that creates the contact starts
+        # it; a matched email is an unverified claim (decision P7-V).
+        flow = client.post(
+            f"/v1/workspaces/{a.id}/automations",
+            json={
+                "name": "On booking",
+                "definition": {
+                    "trigger": {"type": "appointment_booked", "booking_page_id": page["id"]},
+                    "yes": [{"type": "set_lifecycle_stage", "stage": "customer"}],
+                },
+            },
+            headers=auth("owner"),
+        ).json()
+        client.post(
+            f"/v1/workspaces/{a.id}/automations/{flow['id']}/activate",
+            headers=auth("owner", flow["version"]),
+        )
         before = _counts(a.id)
         first = client.post(public, json=visitor, headers=key("visit-1"))
         token = first.json()["token"]
@@ -319,6 +336,15 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         )
         fourth = client.post(public, json={**visitor, "starts_at": at(12)}, headers=key("visit-4"))
         result["limit"] = [third.status_code, fourth.status_code, fourth.json()["detail"]]
+        with tenant_session_scope(a.id) as session:
+            result["booking_runs"] = session.execute(
+                text(
+                    "SELECT count(*) FROM crm_app.automation_run r JOIN crm_app.contact c"
+                    " ON c.tenant_id = r.tenant_id AND c.id = r.contact_id"
+                    " WHERE r.tenant_id = :t AND lower(c.email) = 'ada@example.test'"
+                ),
+                {"t": a.id},
+            ).scalar_one()
         bot = client.post(
             public,
             json={**visitor, "starts_at": at(14), "email": "bot@example.test", "website": "x"},

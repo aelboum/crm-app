@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     from crm_app.api.booking_pages import router as booking_pages_router  # noqa: PLC0415
     from crm_app.api.campaigns import public_router as public_unsubscribe_router  # noqa: PLC0415
     from crm_app.api.campaigns import router as campaigns_router  # noqa: PLC0415
+    from crm_app.api.consent import public_router as public_consent_router  # noqa: PLC0415
     from crm_app.api.conversations import router as conversations_router  # noqa: PLC0415
     from crm_app.api.custom_domains import public_router as public_domains_router  # noqa: PLC0415
     from crm_app.api.custom_domains import router as custom_domains_router  # noqa: PLC0415
@@ -109,19 +110,20 @@ def create_app() -> FastAPI:
         invitations_router,
     ):
         app.include_router(router)
-    # SaaS-OS's acceptance route (ADR-0046): the invitee, signed in with the
-    # invited verified email, redeems the token; no role is given (Q5).
-    app.include_router(invitation_acceptance_router)
-    app.include_router(sign_out_router)
-    # Self-service signup (S-1): 404 while SIGNUP_ENABLED is off.
-    app.include_router(signups_router)
-    # Public routes: hosted pages, provider webhooks, unsubscribing, custom
-    # domains; then the single-page app.
+    # SaaS-OS's acceptance route (ADR-0046: the invitee, signed in with the
+    # invited verified email, redeems the token; no role is given, Q5); sign
+    # out; self-service signup (S-1: 404 while SIGNUP_ENABLED is off). Then
+    # the public routes: hosted pages, provider webhooks, unsubscribing,
+    # consent confirmation, custom domains; then the single-page app.
     for router in (
+        invitation_acceptance_router,
+        sign_out_router,
+        signups_router,
         public_forms_router,
         public_booking_router,
         public_email_router,
         public_unsubscribe_router,
+        public_consent_router,
         public_domains_router,
         spa_router,
     ):

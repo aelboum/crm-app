@@ -462,6 +462,7 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "campaign",
         "campaign_recipient",
         "email_template",
+        "consent_confirmation",
         "website",
         "custom_domain",
         "custom_domain_index",

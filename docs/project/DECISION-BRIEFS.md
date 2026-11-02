@@ -10,10 +10,10 @@ off). Costs are indicative orders of magnitude, not quotes.
 
 | # | Decision | Blocks | Urgency |
 | --- | --- | --- | --- |
-| 1 | Public submissions that match an existing contact (brief 8) | A known impersonation path into automations and consent | High: affects live behaviour |
+| 1 | Public submissions that match an existing contact (brief 8) | **Approved 2026-11-02 and implemented (DECISIONS P7-V)** | Done |
 | 2 | Parent email domain and production activation (brief 6) | All real email: confirmations, reminders, replies | High: the product's core channel |
-| 3 | SaaS-OS GET support for inbound email (brief 1) | Inbound email content | High: needs an upstream release first |
-| 4 | Role-upgrade execution (brief 7) | New features for workspaces created before them | Medium: only when such workspaces exist |
+| 3 | SaaS-OS GET support for inbound email (brief 1) | Inbound email content | High: needs an upstream release first. Proposal for SaaS-OS ready for review: `SAAS-OS-GET-PROPOSAL.md` |
+| 4 | Role-upgrade execution (brief 7) | New features for workspaces created before them | Medium: only when such workspaces exist. Test-database dry-run report for review: `ROLE-UPGRADE-DRY-RUN-REPORT.md` |
 | 5 | Custom-domain resolver and certificates (brief 4) | Hosted pages on customer domains | Medium |
 | 6 | Agency workspaces and billing (brief 3) | Phase 11, paid plans | Medium: commercial model |
 | 7 | AI provider, plan limits, permitted data (brief 2) | Phase 9 | Lower: no dependency for others |
@@ -169,6 +169,9 @@ off). Costs are indicative orders of magnitude, not quotes.
   is no automatic undo.
 
 ## Brief 8 — Public submissions that match an existing contact
+
+**Status:** approved by the owner on 2026-11-02 and implemented as decision
+P7-V (see `DECISIONS.md`).
 
 **Finding:** forms and bookings match an existing contact by the email the
 visitor typed, without proving the visitor owns it. Today such a submission

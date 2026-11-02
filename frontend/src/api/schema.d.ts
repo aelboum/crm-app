@@ -153,6 +153,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/consent/{workspace_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Consent */
+        post: operations["confirm_consent_v1_public_consent__workspace_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/domains/allowed": {
         parameters: {
             query?: never;
@@ -3089,6 +3106,11 @@ export interface components {
             /** Website */
             website?: string | null;
         };
+        /** ConfirmIn */
+        ConfirmIn: {
+            /** Token */
+            token: string;
+        };
         /** Conflict */
         Conflict: {
             /**
@@ -5663,6 +5685,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BookingView"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_consent_v1_public_consent__workspace_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

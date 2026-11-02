@@ -372,6 +372,7 @@ def test_the_migration_rolls_back_and_forward(
         "campaign",
         "campaign_recipient",
         "email_template",
+        "consent_confirmation",
         "website",
         "custom_domain",
         "custom_domain_index",

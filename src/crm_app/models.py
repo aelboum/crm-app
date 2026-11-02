@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0033_email_templates` own the
+Migrations `0002_contacts_companies` to `0034_consent_confirmations` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -629,6 +629,27 @@ class FormSubmission(Base):
     website_id: Mapped[uuid.UUID | None] = mapped_column()
     # SQL NULL, not JSON null, when there is none (the column's check wants an object).
     attribution: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+
+
+class ConsentConfirmation(Base):
+    """Consent from a public form for an existing contact, waiting for the
+    person's email confirmation (migration 0034, decision P7-V). Only the
+    token's hash is kept; used once, expires."""
+
+    __tablename__ = "consent_confirmation"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    contact_id: Mapped[uuid.UUID] = mapped_column()
+    form_id: Mapped[uuid.UUID | None] = mapped_column()
+    submission_id: Mapped[uuid.UUID | None] = mapped_column()
+    wording: Mapped[str] = mapped_column(Text)
+    token_hash: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    email_message_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class ConsentRecord(Base):

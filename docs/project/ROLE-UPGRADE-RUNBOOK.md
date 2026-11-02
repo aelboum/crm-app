@@ -26,7 +26,8 @@ customers' members may do).
 
 1. **Back up** (or confirm the point-in-time backup of) the production
    database. Nothing is deleted, but the change is to access control.
-2. **Dry run**, one workspace first, then the set:
+2. **Dry run**, one workspace first, then the set (an example report, from the
+   test database: `ROLE-UPGRADE-DRY-RUN-REPORT.md`):
 
        python -m crm_app.role_upgrade --workspace <id> --confirm-production
        python -m crm_app.role_upgrade --all --confirm-production --json > plan.json

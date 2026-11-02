@@ -178,6 +178,9 @@ def test_a_matched_contact_is_never_changed_and_is_limited(probe: Probe) -> None
     assert probe["second"] == 201
     assert probe["contact_after_second"] == probe["contact_after_first"]
     assert probe["limit"] == [201, 409, {"code": "booking_limit"}]
+    # Only the first booking, which created the contact, started the
+    # booking automation; the matched ones did not (decision P7-V).
+    assert probe["booking_runs"] == 1
 
 
 def test_the_honeypot_looks_like_a_taken_time_and_stores_nothing(probe: Probe) -> None:

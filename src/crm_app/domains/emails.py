@@ -27,6 +27,7 @@ PURPOSES = (
     "conversation_reply",
     "campaign",
     "appointment_reminder",
+    "consent_confirmation",
 )
 SUBJECT_MAX = 200
 BODY_MAX = 20_000
