@@ -93,6 +93,11 @@ RECORDS |= {
     "GET /v1/workspaces/{tenant_id}/reports/deals": "crm_app.opportunity:read",
     "GET /v1/workspaces/{tenant_id}/reports/tasks": "crm_app.task:read",
     "GET /v1/workspaces/{tenant_id}/reports/appointments": "crm_app.appointment:read",
+    # The same reports as CSV (P10-B), with the same permissions.
+    "GET /v1/workspaces/{tenant_id}/reports/contacts/export.csv": "crm_app.contact:read",
+    "GET /v1/workspaces/{tenant_id}/reports/deals/export.csv": "crm_app.opportunity:read",
+    "GET /v1/workspaces/{tenant_id}/reports/tasks/export.csv": "crm_app.task:read",
+    "GET /v1/workspaces/{tenant_id}/reports/appointments/export.csv": "crm_app.appointment:read",
 }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 

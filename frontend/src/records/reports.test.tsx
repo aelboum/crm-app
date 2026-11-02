@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { fileDownload } from "../api/exportContacts";
 import { daysBefore, daysIn, todayIn } from "../api/reports";
 import {
   accessibilityViolations,
@@ -290,6 +291,32 @@ describe("reports", () => {
     expect(rows).toHaveLength(3);
     expect(rows[1]).toHaveTextContent(/You2€1,000\.5003/);
     expect(rows[2]).toHaveTextContent(/Member bbbbbbbb0—30/);
+  });
+
+  it("downloads a card's figures as CSV for the chosen period", async () => {
+    const user = userEvent.setup();
+    const save = vi
+      .spyOn(fileDownload, "save")
+      .mockImplementation(() => undefined);
+    const { sent } = renderApp(`/w/${WS}/reports`, (method, path, body) =>
+      path.includes("/reports/deals/export.csv")
+        ? { status: 200, body: "section,item,value,previous" }
+        : reports()(method, path, body),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Download Deal outcomes as CSV",
+      }),
+    );
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+    const asked = sent.find((r) => r.path.includes("/export.csv"));
+    expect(asked?.path).toMatch(
+      /\/reports\/deals\/export\.csv\?start=\d{4}-\d{2}-\d{2}&end=\d{4}-\d{2}-\d{2}$/,
+    );
+    expect(save.mock.calls[0]?.[1]).toMatch(/^report-deals-.*\.csv$/);
+    save.mockRestore();
   });
 });
 

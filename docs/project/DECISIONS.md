@@ -2409,6 +2409,27 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_booking_page_rules.py`,
   `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
 
+## P10-B — Reports as CSV (2026-11-02, under M1)
+
+- **Status:** Decided and built under M1 (owner, 2026-11-01: "proceed" with
+  the recommended order, report export fourth). Slice 10B.
+- **Decisions:**
+  1. Each report card has a "CSV" download of the same figures for the
+     same period: `GET .../reports/<name>/export.csv` with the report's own
+     read permission and period rules (P10-A).
+  2. **Contents:** rows of `section, item, value, previous`: the period,
+     each total with its comparison value, and each breakdown (sources,
+     statuses, amounts per currency, members by id). Only counts, rates,
+     amounts and member ids, never a record's contents, so no new
+     permission or rate limit is needed (unlike record exports, P3-E1).
+  3. Cells pass the spreadsheet-formula protection of P3-E1; UTF-8 with a
+     byte-order mark; a fixed file name `report-<name>-<date>.csv`;
+     `Cache-Control: no-store`.
+  4. **Not in 10B:** member names in the file (ids only), scheduled or
+     emailed reports, the team card's merged table.
+- **Tests:** `tests/integration/test_reports.py`,
+  `tests/unit/test_report_csv.py`, `frontend/src/records/reports.test.tsx`.
+
 ## P10-A — Reports over stored CRM data (2026-11-01, under M1)
 
 - **Status:** Decided under M1. The owner's mission of 2026-10-31 makes

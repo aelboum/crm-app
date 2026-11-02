@@ -109,6 +109,25 @@ def test_every_role_reads_its_workspaces_reports_and_nobody_else_does(probe: Pro
     assert set(probe["access"]["anonymous"].values()) == {401}
 
 
+def test_a_report_downloads_as_csv_with_its_comparison(probe: Probe) -> None:
+    csv = probe["csv"]
+    assert csv["status"] == 200
+    assert csv["type"] == "text/csv; charset=utf-8"
+    assert csv["disposition"].startswith('attachment; filename="report-deals-')
+    assert csv["header"] == "section,item,value,previous"
+    assert csv["won_line"] == "total,won,2,1"
+    assert csv["period_start"] == "period,start,2026-10-01,"
+    assert csv["has_email"] is False
+
+
+def test_the_csv_has_the_reports_permission_and_period_rules(probe: Probe) -> None:
+    every = dict.fromkeys(("contacts", "deals", "tasks", "appointments"), 200)
+    assert probe["csv_access"]["reader"] == every
+    assert set(probe["csv_access"]["other_owner"].values()) == {404}
+    assert set(probe["csv_access"]["anonymous"].values()) == {401}
+    assert probe["csv_refused"] == {"detail": {"code": "invalid_period"}}
+
+
 def test_periods_outside_the_rules_are_refused(probe: Probe) -> None:
     refusals = probe["refusals"]
     for name in ("end_before_start", "too_long", "year"):

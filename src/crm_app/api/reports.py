@@ -5,6 +5,9 @@
     GET /v1/workspaces/{tenant_id}/reports/tasks         crm_app.task:read
     GET /v1/workspaces/{tenant_id}/reports/appointments  crm_app.appointment:read
 
+and each as CSV at `.../reports/<name>/export.csv` with the same
+permission (decision P10-B).
+
 Each report is guarded by the read permission of the records it counts,
 so a member sees exactly the figures for records they may read, and a card
 whose permission is missing fails alone. `start` and `end` are calendar
@@ -21,7 +24,7 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict
 from saas_os.api.context import RequestContext
@@ -29,6 +32,7 @@ from saas_os.api.dependencies import require_permission
 from saas_os.infra.db import OperationalError, is_statement_timeout
 
 from crm_app import reports
+from crm_app.domains import export as csv_export
 from crm_app.domains import reports as rules
 from crm_app.records import Scope
 
@@ -173,3 +177,69 @@ async def report_tasks(context: ReadTasks, params: Params) -> Any:
 )
 async def report_appointments(context: ReadAppointments, params: Params) -> Any:
     return await _report(context, params, reports.appointments)
+
+
+# --- CSV (decision P10-B) ----------------------------------------------------------------
+# The same figures as the card, as rows; the same permission. Only counts,
+# rates, amounts and member ids: never a record's contents.
+
+_CSV: dict[int | str, dict[str, Any]] = {
+    200: {"content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}}}
+}
+
+
+async def _csv(context: RequestContext, params: PeriodParams, name: str, build: Any) -> Response:
+    report = await _report(context, params, build)
+    content = await run_in_threadpool(csv_export.to_csv, rules.CSV_COLUMNS, rules.csv_rows(report))
+    file_name = csv_export.filename(f"report-{name}", datetime.now(UTC).date())
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{file_name}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.get(
+    "/{tenant_id}/reports/contacts/export.csv",
+    response_class=Response,
+    responses=_CSV,
+    name="export_report_contacts",
+)
+async def export_report_contacts(context: ReadContacts, params: Params) -> Response:
+    return await _csv(context, params, "contacts", reports.contacts)
+
+
+@router.get(
+    "/{tenant_id}/reports/deals/export.csv",
+    response_class=Response,
+    responses=_CSV,
+    name="export_report_deals",
+)
+async def export_report_deals(context: ReadDeals, params: Params) -> Response:
+    return await _csv(context, params, "deals", reports.deals)
+
+
+@router.get(
+    "/{tenant_id}/reports/tasks/export.csv",
+    response_class=Response,
+    responses=_CSV,
+    name="export_report_tasks",
+)
+async def export_report_tasks(context: ReadTasks, params: Params) -> Response:
+    now = datetime.now(UTC)
+    return await _csv(
+        context, params, "tasks", lambda scope, chosen: reports.tasks(scope, chosen, now)
+    )
+
+
+@router.get(
+    "/{tenant_id}/reports/appointments/export.csv",
+    response_class=Response,
+    responses=_CSV,
+    name="export_report_appointments",
+)
+async def export_report_appointments(context: ReadAppointments, params: Params) -> Response:
+    return await _csv(context, params, "appointments", reports.appointments)

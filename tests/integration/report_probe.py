@@ -205,6 +205,35 @@ def main() -> None:
         }
         result["one_day"] = report("contacts", start="2026-10-01", end="2026-10-01").json()
 
+        # --- The same figures as CSV (decision P10-B) ---------------------------------------
+        def export(kind: str, caller: str | None = "owner", **params: str) -> Any:
+            return client.get(
+                f"{base}/reports/{kind}/export.csv", params=params or PERIOD, headers=auth(caller)
+            )
+
+        deals_csv = export("deals")
+        text = deals_csv.content.decode("utf-8-sig")
+        lines = text.splitlines()
+        result["csv"] = {
+            "status": deals_csv.status_code,
+            "type": deals_csv.headers.get("content-type"),
+            "disposition": deals_csv.headers.get("content-disposition"),
+            "header": lines[0] if lines else None,
+            "won_line": next((line for line in lines if line.startswith("total,won,")), None),
+            "period_start": next(
+                (line for line in lines if line.startswith("period,start,")), None
+            ),
+            "has_email": "@" in text,
+        }
+        result["csv_access"] = {
+            caller or "anonymous": {
+                kind: export(kind, caller).status_code
+                for kind in ("contacts", "deals", "tasks", "appointments")
+            }
+            for caller in ("reader", "other_owner", None)
+        }
+        result["csv_refused"] = export("deals", start="2026-10-31", end="2026-10-01").json()
+
     print("RESULT " + json.dumps(result, default=str))
 
 

@@ -871,7 +871,7 @@ Avoid building a general autonomous agent platform before the core CRM and secur
 
 # 15. Phase 10 — Reviews, Reporting, and Business Insights
 
-**Status:** In progress. Slice 10A (decision P10-A, 2026-11-01): reports over contacts, deals, tasks and appointments for a period with a comparison, every metric defined, tenant-bounded and permission-checked. Not yet: export, campaign performance (Phase 7 campaigns), reviews.
+**Status:** In progress. Slice 10A (decision P10-A, 2026-11-01): reports over contacts, deals, tasks and appointments for a period with a comparison, every metric defined, tenant-bounded and permission-checked. Slice 10B (decision P10-B, 2026-11-02): each report as CSV with its own permission. Not yet: campaign performance (Phase 7 campaigns), reviews.
 
 ## Objectives
 

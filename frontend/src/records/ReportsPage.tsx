@@ -1,15 +1,19 @@
+import { Download } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import { Button as AriaButton } from "react-aria-components";
 
+import { fileDownload } from "../api/exportContacts";
 import {
   type AppointmentReport,
   daysBefore,
   daysIn,
   type DealReport,
+  exportReport,
   MAX_DAYS,
   type Period,
+  type ReportKind,
   type TaskReport,
   todayIn,
   useAppointmentReport,
@@ -188,10 +192,13 @@ function Card({
   id,
   title,
   children,
+  csv,
 }: {
   id: string;
   title: string;
   children: ReactNode;
+  // The card's figures as a CSV download (decision P10-B).
+  csv?: { workspaceId: string; kind: ReportKind; period: Period };
 }) {
   return (
     <section className="home-card" aria-labelledby={id}>
@@ -199,9 +206,57 @@ function Card({
         <h2 id={id} className="home-card-title">
           {title}
         </h2>
+        {csv ? <CsvButton {...csv} title={title} /> : null}
       </div>
       {children}
     </section>
+  );
+}
+
+function CsvButton({
+  workspaceId,
+  kind,
+  period,
+  title,
+}: {
+  workspaceId: string;
+  kind: ReportKind;
+  period: Period;
+  title: string;
+}) {
+  const t = useT();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="report-csv">
+      <Button
+        size="sm"
+        aria-label={t("reports.csvNamed", { report: title })}
+        isDisabled={busy}
+        onPress={() => {
+          setBusy(true);
+          setFailed(false);
+          exportReport(workspaceId, kind, period)
+            .then(({ blob, fileName }) => {
+              fileDownload.save(blob, fileName);
+            })
+            .catch(() => {
+              setFailed(true);
+            })
+            .finally(() => {
+              setBusy(false);
+            });
+        }}
+      >
+        <Download size={13} aria-hidden="true" />
+        {t("reports.csv")}
+      </Button>
+      {failed ? (
+        <span className="notice error" role="alert">
+          {t("reports.csvFailed")}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -350,7 +405,11 @@ function ContactsCard({
   const t = useT();
   const report = useContactReport(workspaceId, period);
   return (
-    <Card id="reports-contacts" title={t("reports.contacts")}>
+    <Card
+      id="reports-contacts"
+      title={t("reports.contacts")}
+      csv={{ workspaceId, kind: "contacts", period }}
+    >
       {report.isError ? (
         <LoadError error={report.error} onRetry={() => void report.refetch()} />
       ) : report.data ? (
@@ -402,7 +461,11 @@ function DealsCard({
   const report = useDealReport(workspaceId, period);
   const data = report.data;
   return (
-    <Card id="reports-deals" title={t("reports.deals")}>
+    <Card
+      id="reports-deals"
+      title={t("reports.deals")}
+      csv={{ workspaceId, kind: "deals", period }}
+    >
       {report.isError ? (
         <LoadError error={report.error} onRetry={() => void report.refetch()} />
       ) : data ? (
@@ -445,7 +508,11 @@ function TasksCard({
   const report = useTaskReport(workspaceId, period);
   const data: TaskReport | undefined = report.data;
   return (
-    <Card id="reports-tasks" title={t("reports.tasks")}>
+    <Card
+      id="reports-tasks"
+      title={t("reports.tasks")}
+      csv={{ workspaceId, kind: "tasks", period }}
+    >
       {report.isError ? (
         <LoadError error={report.error} onRetry={() => void report.refetch()} />
       ) : data ? (
@@ -486,7 +553,11 @@ function AppointmentsCard({
   const report = useAppointmentReport(workspaceId, period);
   const data: AppointmentReport | undefined = report.data;
   return (
-    <Card id="reports-appointments" title={t("reports.appointments")}>
+    <Card
+      id="reports-appointments"
+      title={t("reports.appointments")}
+      csv={{ workspaceId, kind: "appointments", period }}
+    >
       {report.isError ? (
         <LoadError error={report.error} onRetry={() => void report.refetch()} />
       ) : data ? (

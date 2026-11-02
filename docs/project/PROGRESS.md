@@ -202,6 +202,13 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **Phase 10 slice 10B, reports as CSV (decision P10-B, 2026-11-02):**
+  `GET .../reports/<name>/export.csv` for contacts, deals, tasks and
+  appointments with each report's permission; a CSV button on each card.
+  Verified: unit 727 (without configuration, as CI); integration
+  `test_reports.py`, `test_workspace_routes.py`, `test_foundation.py` (41;
+  no schema change, so the full suite runs in CI); Vitest 306; lint, types,
+  import contracts and build clean.
 - **Phase 8 slice 8B, automation triggers and actions (decision P8-B,
   2026-11-02):** migration `0032_automation_triggers`; `on_event` starts
   automations for a tag added, a form submitted, an online booking and a
