@@ -2682,6 +2682,28 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 13-O1 — One operations page, and the improvements that need no decision (2026-11-02)
+
+- **Status:** Done under the owner's instruction of 2026-11-02 ("Identify
+  any further security, reliability, performance or accessibility
+  improvements that do not require new product decisions").
+- **Done:** `docs/project/OPERATIONS.md` lists every process, deployment
+  step, scheduled command (with its cadence and what stops if it stops),
+  operator command and the health signals to watch. Until now, the
+  schedules were only in the modules' own docstrings.
+- **Identified, not yet done (no product decision needed):**
+  1. **Reliability:** a health check that reports due rows older than 15
+     minutes in `email_index` and `automation_due`, so a stopped worker or
+     scheduler is noticed (the deployment's monitoring).
+  2. **Performance:** a seeded local load test (about 50,000 contacts) of
+     the contact list and search, the reports and the reminder run, to set
+     a baseline before production.
+  3. **Accessibility:** the human screen-reader pass
+     (`SCREEN-READER-CHECKLIST.md`).
+  4. **Security:** size the email webhook's rate limit from Resend's real
+     delivery bursts when sending is activated (brief 6); review again the
+     per-form submission budget then.
+
 ## 13-D1 — Decision briefs, the decision register and the screen-reader checklist (2026-11-02)
 
 - **Status:** Prepared under the owner's instruction of 2026-11-02

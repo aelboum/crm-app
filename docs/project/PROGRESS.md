@@ -202,6 +202,10 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **13-O1, operations page (2026-11-02):** `docs/project/OPERATIONS.md`
+  (processes, scheduled commands and cadence, operator commands, health
+  signals); further no-decision improvements listed in DECISIONS 13-O1.
+  Documentation only.
 - **13-D1, decision briefs and screen-reader checklist (2026-11-02):**
   `docs/project/DECISION-BRIEFS.md` (eight briefs, prioritised register),
   `docs/project/SCREEN-READER-CHECKLIST.md`; the public-submission matching
