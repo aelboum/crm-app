@@ -46,7 +46,10 @@ waste.
   twice in a row needs attention.
 - **The `failed` counts** in `email_maintenance` output: one workspace failing
   repeatedly is isolated (13-H5) but should be looked at.
-- **Queue depth:** due rows in `email_index` and `automation_due` older than
-  15 minutes mean the worker or a scheduled command is not running.
+- **Queue age:** `python -m crm_app.health_check` (every few minutes from
+  monitoring) prints `emails_overdue`, `automation_runs_overdue` and
+  `imports_overdue` and exits 1 when any is above zero: email retries or
+  automation runs overdue by more than 15 minutes, or import clean-ups by
+  more than 3 hours, mean the worker or a scheduled command is not running.
 - **Logs:** carry workspace ids and error types only; never message bodies,
   tokens or addresses.

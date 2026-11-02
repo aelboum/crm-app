@@ -2692,9 +2692,10 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   operator command and the health signals to watch. Until now, the
   schedules were only in the modules' own docstrings.
 - **Identified, not yet done (no product decision needed):**
-  1. **Reliability:** a health check that reports due rows older than 15
-     minutes in `email_index` and `automation_due`, so a stopped worker or
-     scheduler is noticed (the deployment's monitoring).
+  1. **Reliability — done:** `python -m crm_app.health_check` counts email
+     retries and automation runs overdue by more than 15 minutes and import
+     clean-ups overdue by more than 3 hours, read-only, counts only; exits
+     1 when any is overdue (`tests/integration/test_health_check.py`).
   2. **Performance:** a seeded local load test (about 50,000 contacts) of
      the contact list and search, the reports and the reminder run, to set
      a baseline before production.

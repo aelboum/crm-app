@@ -205,7 +205,9 @@ decisions P2-A to P2-E approved)
 - **13-O1, operations page (2026-11-02):** `docs/project/OPERATIONS.md`
   (processes, scheduled commands and cadence, operator commands, health
   signals); further no-decision improvements listed in DECISIONS 13-O1.
-  Documentation only.
+  The queue-age check `python -m crm_app.health_check` (read-only, exits 1
+  when work is overdue). Verified: `test_health_check.py` 2 passed; unit
+  suite and static checks clean.
 - **13-D1, decision briefs and screen-reader checklist (2026-11-02):**
   `docs/project/DECISION-BRIEFS.md` (eight briefs, prioritised register),
   `docs/project/SCREEN-READER-CHECKLIST.md`; the public-submission matching
