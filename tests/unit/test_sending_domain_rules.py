@@ -76,6 +76,23 @@ def test_domain_events_are_parsed_and_others_ignored() -> None:
         "verified",
     )
     assert event.domain.records is None
+    assert event.occurred_at is None
+    timed = rules.domain_event(
+        {
+            "type": "domain.updated",
+            "created_at": "2026-11-01T10:00:00.000Z",
+            "data": {"id": "d_1", "status": "failed"},
+        }
+    )
+    assert timed is not None
+    assert timed.occurred_at is not None
+    assert timed.occurred_at.isoformat() == "2026-11-01T10:00:00+00:00"
+    for bad in ("yesterday", "2026-11-01T10:00:00", 5, "9" * 50):
+        late = rules.domain_event(
+            {"type": "domain.deleted", "created_at": bad, "data": {"id": "d"}}
+        )
+        assert late is not None
+        assert late.occurred_at is None
     assert rules.domain_event({"type": "email.sent", "data": {}}) is None
     with pytest.raises(rules.ProviderAnswerError):
         rules.domain_event({"type": "domain.updated", "data": {"id": "bad id"}})

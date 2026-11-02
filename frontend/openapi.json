@@ -7019,6 +7019,18 @@
             ],
             "title": "Checked At"
           },
+          "claim_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Expires At"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -7066,7 +7078,8 @@
               "verified",
               "failed",
               "temporary_failure",
-              "unknown"
+              "unknown",
+              "expired"
             ],
             "title": "Status",
             "type": "string"
@@ -7084,6 +7097,7 @@
           "last_error",
           "checked_at",
           "created_at",
+          "claim_expires_at",
           "version",
           "identities"
         ],

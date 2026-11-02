@@ -129,7 +129,13 @@ def test_a_routed_email_needs_review_unless_it_is_clean_mail_from_the_contact() 
     assert rules.review_reason(clean, None) == "no_contact"
     failed = rules.received_content(_answer(authentication={"dmarc": "fail"}))
     assert rules.review_reason(failed, "ada@example.test") == "dmarc_failed"
-    empty = rules.received_content(_answer(text="   "))
+    # Without a DMARC pass a forged sender must not join the thread (13-H3).
+    for verdict in ({}, {"dmarc": "none"}, {"dmarc": "softfail"}, {"dmarc": "temperror"}):
+        unverified = rules.received_content(_answer(authentication=verdict))
+        assert rules.review_reason(unverified, "ada@example.test") == "dmarc_unverified"
+    unsigned = rules.received_content(_answer())
+    assert rules.review_reason(unsigned, "ada@example.test") == "dmarc_unverified"
+    empty = rules.received_content(_answer(text="   ", authentication={"dmarc": "pass"}))
     assert rules.review_reason(empty, "ada@example.test") == "empty_body"
 
 

@@ -69,6 +69,8 @@ def test_one_workspace_holds_a_hostname_and_a_handover_needs_the_record(probe: P
     assert probe["resolve_after_lapse"] == 404
     assert probe["b_takes_over"] == {"status": "verified", "error": None}
     assert probe["resolve_b"] is True
+    assert probe["resolve_suspended"] == 404
+    assert probe["resolve_reactivated"] is True
 
 
 def test_removal_and_expiry_free_the_hostname(probe: Probe) -> None:

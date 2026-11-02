@@ -95,6 +95,8 @@ def test_a_valid_recent_signature_is_accepted() -> None:
         "v2_only",
         "bad_id",
         "bad_secret",
+        "unicode_digit",
+        "huge_stamp",
     ],
 )
 def test_anything_else_is_refused(case: str) -> None:
@@ -120,6 +122,11 @@ def test_anything_else_is_refused(case: str) -> None:
         event_id = "msg 1; drop"
     elif case == "bad_secret":
         secret = "whsec_not base64!"  # pragma: allowlist secret
+    elif case == "unicode_digit":
+        # str.isdigit() accepts it and int() then raised (13-H3).
+        stamp = "²"
+    elif case == "huge_stamp":
+        stamp = "9" * 5000
     assert not rules.signature_valid(secret, event_id, stamp, signature, body, NOW)
 
 

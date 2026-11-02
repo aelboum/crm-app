@@ -2397,6 +2397,54 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   definition, another workspace, roles and outsiders, refused periods),
   `frontend/src/records/reports.test.tsx`.
 
+## 13-H3 — Security review of the email, domain and website surface (2026-11-01, under M1)
+
+- **Status:** Done. A read-only review of every public and webhook route
+  added in Phases 6, 7 and 12 (Resend delivery and inbound webhooks,
+  one-click unsubscribe, custom-domain lookup, cross-site form posting,
+  sending domains and their events, sender selection) and migrations
+  0024-0029. No critical or high findings. Fixed (migration
+  `0030_domain_claims`):
+  1. **Inbound mail without a DMARC pass (medium, dormant until a receiving
+     client exists):** only an explicit DMARC `pass` may join a thread
+     unreviewed; a missing, `none`, `softfail` or `temperror` verdict goes
+     to review as `dmarc_unverified`. A forged sender who learned a
+     routing address can no longer post into a thread.
+  2. **Sending-domain squatting (medium):** a domain never verified holds
+     its name for 7 days (`CLAIM_DAYS`); then the daily email maintenance
+     releases the name, and the workspace's row becomes `expired` (it can
+     be removed and registered again). A domain that was ever verified is
+     never released. Settings shows the deadline. The provider-side domain
+     of an expired claim, if one was created, is left for an operator
+     (SaaS-OS has no DELETE, `saas-os-gaps.md` items 2-3).
+  3. **Webhook timestamp (low):** the Svix timestamp must be 1-12 ASCII
+     digits; Unicode digits or a huge number answered 500 before.
+  4. **Domain events (low, defense in depth):** an event naming another
+     domain is ignored, and one older than the newest applied
+     (`sending_domain.event_at`) changes nothing.
+  5. **Custom-domain lookup:** a suspended, deleted or closed workspace's
+     domain resolves to nothing.
+- **Recorded, not changed:** the unsubscribe route is POST only; a GET
+  confirmation page and `List-Unsubscribe-Post` are required before
+  campaign sending (already blocked, `saas-os-gaps.md` item 1). The
+  per-form submission limit is keyed on public data, so one visitor can
+  exhaust a form's bucket (accepted trade-off; per-address limits also
+  apply). The webhook rate limit must be sized for Resend's bursts before
+  production. Registering and verifying call Resend inside the workspace
+  transaction, so a failed commit can leave an orphan domain at Resend
+  (operational).
+- **Checked and sound:** Svix verification (HMAC over id, timestamp and
+  body, constant-time compare, 5-minute window both ways, 64 KiB cap,
+  signature before parsing, fail closed without a secret); workspace
+  routing only from global indexes keyed on provider ids or hashed tokens;
+  production locks for every email switch; CORS reflects only a
+  workspace's active websites, without credentials; unsubscribe tokens
+  hashed, always 204; sender identities re-checked at send time; the only
+  outbound host is the fixed Resend API.
+- **Tests:** `tests/unit/test_email_rules.py`, `test_inbound_rules.py`,
+  `test_sending_domain_rules.py`; `tests/integration/test_sending_domains.py`,
+  `test_custom_domains.py`; `frontend/src/pages/sendingDomainSettings.test.tsx`.
+
 ## 13-H2 — Public booking limits and link expiry (2026-11-01, under M1)
 
 - **Status:** Decided under M1. The owner's mission of 2026-10-31 puts

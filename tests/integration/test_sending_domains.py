@@ -80,6 +80,16 @@ def test_the_workspaces_address_is_used_only_while_verified(probe: Probe) -> Non
     assert sent == 0
 
 
+def test_late_or_mismatched_domain_events_change_nothing(probe: Probe) -> None:
+    assert probe["late_events"] == [204, "failed", 204, "failed"]
+
+
+def test_a_name_never_verified_is_released_after_its_claim_time(probe: Probe) -> None:
+    assert probe["claim_held"] == [True, 409]
+    assert probe["claim_released"] == [True, "expired", "claim_expired", None, 422, 201]
+    assert probe["verified_kept"] == 409
+
+
 def test_other_workspaces_see_nothing_and_removal_frees_the_domain(probe: Probe) -> None:
-    assert probe["isolation"] == [0, 404, 403]
+    assert probe["isolation"] == [False, 404, 403]
     assert probe["removed"] == [204, 201]

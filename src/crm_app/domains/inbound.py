@@ -274,10 +274,14 @@ def decide(content: ReceivedContent, parent: str) -> Decision:
 
 def review_reason(content: ReceivedContent, contact_email: str | None) -> str | None:
     """Why a routed email needs a member's review before it joins the
-    thread, or None: DMARC failed, the sender is not the conversation's
-    contact, the thread has no contact, or there is no text."""
+    thread, or None: DMARC did not pass (failed, or no verdict: a forged
+    sender must not join the thread unreviewed, security review 13-H3), the
+    sender is not the conversation's contact, the thread has no contact, or
+    there is no text."""
     if content.dmarc == "fail":
         return "dmarc_failed"
+    if content.dmarc != "pass":
+        return "dmarc_unverified"
     if contact_email is None:
         return "no_contact"
     if content.sender != contact_email.strip().lower():

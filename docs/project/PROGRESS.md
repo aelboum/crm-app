@@ -202,6 +202,14 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **13-H3, security review of the email, domain and website surface
+  (2026-11-01):** no critical or high findings; fixed inbound mail without
+  a DMARC pass (now reviewed), sending-domain squatting (unverified claims
+  released after 7 days, migration `0030_domain_claims`), the webhook
+  timestamp parse, late or mismatched domain events, and lookups of a
+  suspended workspace's custom domain. Verified: unit suite 711 (run without
+  configuration, as CI does); full integration suite 788 passed (55 files,
+  in seven groups); Vitest 302, lint and build clean.
 - **13-H2, public booking limits and link expiry (2026-11-01):** visitor
   links expire 7 days after their appointment ends; bookings and link
   lookups count against each visitor's own hourly budget instead of one

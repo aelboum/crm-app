@@ -125,7 +125,8 @@ each one gets its own decision entry, tests and documentation.
    `reply+<token>@inbound.<parent>` whose token (random, 128 bits or more,
    stored hashed) maps to one workspace and conversation; nothing in the
    email (headers, workspace names) is trusted for authorization. A sender
-   that does not match the conversation's contact, a failed DMARC result,
+   that does not match the conversation's contact, a DMARC result other than
+   `pass` (decision 13-H3),
    an unknown token or a malformed payload goes to quarantine (review by a
    member with reply permission, or by an operator for mail that matches
    no workspace); valid mail is never silently dropped. Text is preferred;

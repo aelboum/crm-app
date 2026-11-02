@@ -57,7 +57,11 @@ def maintain() -> dict[str, int]:
     from crm_app import custom_domains  # noqa: PLC0415
 
     domains = custom_domains.recheck_due()
+    from crm_app import sending_domains  # noqa: PLC0415
+
+    released = sending_domains.release_unverified()
     return {
+        "sending_claims_released": released,
         "domains_lapsed": domains["lapsed"],
         "domain_claims_expired": domains["expired"],
         "queued": queued,

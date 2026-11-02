@@ -33,6 +33,7 @@ const TONE: Record<SendingDomain["status"], Tone> = {
   failed: "risk",
   temporary_failure: "pending",
   unknown: "neutral",
+  expired: "risk",
 };
 
 function failure(error: unknown): MessageId {
@@ -98,7 +99,7 @@ function DomainCard({
         </Badge>
         {canEdit ? (
           <span className="domain-actions">
-            {domain.status !== "verified" ? (
+            {domain.status !== "verified" && domain.status !== "expired" ? (
               <Button
                 size="sm"
                 isDisabled={verify.isPending}
@@ -122,6 +123,13 @@ function DomainCard({
           </span>
         ) : null}
       </div>
+      {domain.claim_expires_at && domain.status !== "verified" ? (
+        <p className="muted">
+          {t("sending.claimExpires", {
+            date: new Date(domain.claim_expires_at).toLocaleDateString(),
+          })}
+        </p>
+      ) : null}
       {domain.last_error ? (
         <p className="muted">
           {t(`sending.lastError.${domain.last_error}` as MessageId)}

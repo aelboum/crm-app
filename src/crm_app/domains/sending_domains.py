@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 
 from crm_app.domains import custom_domains
 from crm_app.domains import email_streams as streams
@@ -148,10 +149,26 @@ def provider_domain(raw: object) -> ProviderDomain:
 class DomainEvent:
     type: str
     domain: ProviderDomain
+    # When the provider says it happened, if it said so readably.
+    occurred_at: datetime | None = None
+
+
+def _instant(value: object) -> datetime | None:
+    if not isinstance(value, str) or len(value) > 40:
+        return None
+    try:
+        moment = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return moment if moment.tzinfo is not None else None
 
 
 def domain_event(payload: object) -> DomainEvent | None:
     """A verified webhook body's domain event, or None for other types."""
     if not isinstance(payload, dict) or payload.get("type") not in EVENT_TYPES:
         return None
-    return DomainEvent(type=str(payload["type"]), domain=provider_domain(payload.get("data")))
+    return DomainEvent(
+        type=str(payload["type"]),
+        domain=provider_domain(payload.get("data")),
+        occurred_at=_instant(payload.get("created_at")),
+    )

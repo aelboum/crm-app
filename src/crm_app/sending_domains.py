@@ -30,7 +30,7 @@ import os
 import uuid
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
 from saas_os.core.audit_log import record_in_transaction
@@ -61,6 +61,8 @@ from crm_app.settings import email_parent_domain
 
 RESOURCE = "crm_app.sending_domain"
 DOMAINS_MAX = 10
+# An unverified domain holds its name this long (security review 13-H3).
+CLAIM_DAYS = timedelta(days=7)
 IDENTITIES_MAX = 50
 FLAG = "EMAIL_CUSTOMER_DOMAINS_ENABLED"
 RESEND_DOMAINS_URL = "https://api.resend.com/domains"
@@ -236,6 +238,13 @@ def _identity_item(row: SenderIdentity, verified: bool) -> Item:
     }
 
 
+def _claim_expires(row: SendingDomain) -> datetime | None:
+    """When an unverified claim lapses (13-H3); None once ever verified."""
+    if row.verified_at is not None or row.status == "expired":
+        return None
+    return row.created_at + CLAIM_DAYS
+
+
 def _domain_item(row: SendingDomain, identities: list[SenderIdentity]) -> Item:
     verified = row.status == "verified"
     return {
@@ -246,6 +255,7 @@ def _domain_item(row: SendingDomain, identities: list[SenderIdentity]) -> Item:
         "last_error": row.last_error,
         "checked_at": row.checked_at,
         "created_at": row.created_at,
+        "claim_expires_at": _claim_expires(row),
         "version": row.version,
         "identities": [_identity_item(i, verified) for i in identities],
     }
@@ -300,6 +310,8 @@ def list_domains(scope: Scope) -> list[Item]:
 def _apply_provider(row: SendingDomain, answer: rules.ProviderDomain) -> None:
     row.provider_id = answer.provider_id
     row.status = answer.status
+    if answer.status == "verified" and row.verified_at is None:
+        row.verified_at = _now()
     if answer.records is not None:
         row.records = [record.as_dict() for record in answer.records]
 
@@ -331,7 +343,10 @@ def register(scope: Scope, domain: str, *, provider: DomainProvider | None = Non
         with session_scope() as global_session:
             global_session.add(
                 SendingDomainIndex(
-                    domain=name, workspace_id=scope.workspace, sending_domain_id=domain_id
+                    domain=name,
+                    workspace_id=scope.workspace,
+                    sending_domain_id=domain_id,
+                    claimed_at=_now(),
                 )
             )
     except IntegrityError:
@@ -390,6 +405,8 @@ def verify(
         row = _load(session, scope, domain_id)
         if row.version != expected_version:
             raise StaleVersionError(row.version)
+        if row.status == "expired":
+            raise DomainRuleError("domain: the claim expired; remove it and register it again")
         now = _now()
         if provider is None or row.provider_id is None:
             _create_at_provider(row, provider)
@@ -445,7 +462,16 @@ def apply_event(event: rules.DomainEvent) -> str:
         ).scalar_one_or_none()
         if row is None or row.provider_id != event.domain.provider_id:
             return "unknown"
+        # Defense in depth (13-H3): the event must name the registered domain,
+        # and an event older than one already applied changes nothing.
+        if event.domain.name is not None and event.domain.name != name:
+            return "unknown"
+        moment = event.occurred_at
+        if moment is not None and row.event_at is not None and moment <= row.event_at:
+            return "stale"
         now = _now()
+        if moment is not None:
+            row.event_at = moment
         if event.type == "domain.deleted":
             row.status, row.provider_id = "not_registered", None
             row.last_error = "deleted_at_provider"
@@ -664,6 +690,45 @@ def sender_valid(
         and _allowed(identity, stream)
         and domain_status == "verified"
     )
+
+
+def release_unverified(limit: int = 200) -> int:
+    """Free names claimed longer than `CLAIM_DAYS` ago by domains never
+    verified (security review 13-H3: a workspace cannot squat a business's
+    domain). The workspace keeps its row as `expired`; the provider-side
+    domain, if any, is left for an operator (no DELETE, saas-os-gaps 2-3).
+    Returns how many were released."""
+    cutoff = _now() - CLAIM_DAYS
+    with session_scope() as session:
+        claims = [
+            (row.domain, row.workspace_id, row.sending_domain_id)
+            for row in session.execute(
+                select(SendingDomainIndex)
+                .where(SendingDomainIndex.claimed_at <= cutoff)
+                .order_by(SendingDomainIndex.claimed_at)
+                .limit(limit)
+            ).scalars()
+        ]
+    released = 0
+    for name, workspace, domain_id in claims:
+        with tenant_session_scope(workspace) as session:
+            row = session.execute(
+                select(SendingDomain)
+                .where(SendingDomain.tenant_id == workspace, SendingDomain.id == domain_id)
+                .with_for_update()
+            ).scalar_one_or_none()
+            if row is not None and (row.verified_at is not None or row.created_at > cutoff):
+                continue
+            if row is not None:
+                now = _now()
+                row.status, row.last_error = "expired", "claim_expired"
+                row.updated_at, row.version = now, row.version + 1
+        with session_scope() as session:
+            index = session.get(SendingDomainIndex, name)
+            if index is not None and index.sending_domain_id == domain_id:
+                session.delete(index)
+                released += 1
+    return released
 
 
 def forget_workspace(tenant_id: uuid.UUID) -> bool:

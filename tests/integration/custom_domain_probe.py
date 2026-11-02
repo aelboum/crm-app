@@ -14,7 +14,14 @@ import uuid
 from typing import Any
 
 from fastapi.testclient import TestClient
+from saas_os.core.authority import SystemAuthority, SystemCaller, UserCaller
 from saas_os.core.identity import issue_session
+from saas_os.core.platform_authority import (
+    PlatformPermission,
+    enroll_operator,
+    grant_platform_permission,
+)
+from saas_os.core.tenancy import TenantStatus, transition_tenant_status
 from saas_os.infra.db import tenant_session_scope
 from sqlalchemy import text
 
@@ -177,6 +184,20 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         result["resolve_after_lapse"] = resolve(host)
         result["b_takes_over"] = check(scope_b, b_claim["id"])
         result["resolve_b"] = resolve(host) == str(b.id)
+
+        # 13-H3: a suspended workspace's domain resolves to nothing, and
+        # again once the workspace is reactivated.
+        bootstrap = SystemCaller(SystemAuthority.PLATFORM_BOOTSTRAP)
+        operator_user = _new_user()
+        operator = enroll_operator(operator_user, caller=bootstrap, reason="crm-app domain test")
+        for permission in (PlatformPermission.TENANT_SUSPEND, PlatformPermission.TENANT_REACTIVATE):
+            grant_platform_permission(
+                operator.id, permission, caller=bootstrap, reason="crm-app domain test"
+            )
+        transition_tenant_status(b.id, TenantStatus.SUSPENDED, caller=UserCaller(operator_user))
+        result["resolve_suspended"] = resolve(host)
+        transition_tenant_status(b.id, TenantStatus.ACTIVE, caller=UserCaller(operator_user))
+        result["resolve_reactivated"] = resolve(host) == str(b.id)
 
         # Removing frees the host at once.
         result["removed"] = [

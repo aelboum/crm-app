@@ -36,6 +36,7 @@ const DOMAIN = {
   last_error: null,
   checked_at: stamp,
   created_at: stamp,
+  claim_expires_at: "2026-11-08T09:30:00+00:00",
   version: 3,
   identities: [
     {
@@ -104,6 +105,7 @@ describe("settings › sending domains", () => {
     expect(section).toHaveTextContent("jan@acme-shop.nl");
     expect(section).toHaveTextContent("Waiting for verification");
     expect(section).toHaveTextContent("No email provider is connected");
+    expect(section).toHaveTextContent("the name is released");
     expect(await accessibilityViolations()).toEqual([]);
   });
 

@@ -28,6 +28,8 @@ BODY_MAX = 20_000
 # by the job queue (`JOBS_MAX_TRIES`).
 MAX_ATTEMPTS = 5
 SIGNATURE_TOLERANCE_SECONDS = 300
+# Seconds since the epoch, ASCII digits only (security review 13-H3).
+_TIMESTAMP = re.compile(r"[0-9]{1,12}")
 WEBHOOK_BODY_MAX = 64 * 1024
 
 # Final statuses: nothing is sent again. `failed`: never accepted by the
@@ -157,7 +159,7 @@ def signature_valid(  # noqa: PLR0913, PLR0917 - the headers, the body, the secr
 ) -> bool:
     """Whether a Svix-style signature over `body` is valid and recent."""
     key = _decoded_secret(secret)
-    if not key or not _EVENT_ID.fullmatch(event_id) or not timestamp.isdigit():
+    if not key or not _EVENT_ID.fullmatch(event_id) or not _TIMESTAMP.fullmatch(timestamp):
         return False
     if abs(now.timestamp() - int(timestamp)) > SIGNATURE_TOLERANCE_SECONDS:
         return False

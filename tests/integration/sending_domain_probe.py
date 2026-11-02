@@ -22,7 +22,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from saas_os.core.email import EmailMessage, EmailSendResult
 from saas_os.core.identity import issue_session
-from saas_os.infra.db import tenant_session_scope
+from saas_os.infra.db import session_scope, tenant_session_scope
 from saas_os.infra.secrets import get_secrets_provider
 from sqlalchemy import text
 
@@ -223,21 +223,27 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             body, headers = _signed(payload)
             return client.post(WEBHOOK, content=body, headers=headers).status_code
 
-        def domain_event(status: str, provider_id: str) -> int:
+        def domain_event(
+            status: str, provider_id: str, minute: int, name: str | None = None
+        ) -> int:
             return event(
                 {
                     "type": "domain.updated",
-                    "created_at": "2026-11-01T10:00:00Z",
-                    "data": {"id": provider_id, "name": domain, "status": status},
+                    "created_at": f"2026-11-01T10:{minute:02d}:00Z",
+                    "data": {"id": provider_id, "name": name or domain, "status": status},
                 }
             )
+
+        def status_now() -> str:
+            found = next(d for d in sending_domains.list_domains(scope_a) if d["domain"] == domain)
+            return str(found["status"])
 
         result["verify_request"] = sending_domains.verify(
             scope_a, domain_id, expected_version=1, provider=provider
         )["status"]
         result["events"] = [
-            domain_event("verified", pid),
-            domain_event("verified", "dom_unknown"),
+            domain_event("verified", pid, 1),
+            domain_event("verified", "dom_unknown", 2),
             event({"type": "domain.updated", "data": {"id": 5}}),
         ]
         now = next(d for d in sending_domains.list_domains(scope_a) if d["domain"] == domain)
@@ -256,7 +262,7 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         # The provider reports the domain failing: an email queued with the
         # identity waits and is never sent from another address.
         waiting = queue_reply()
-        domain_event("failed", pid)
+        domain_event("failed", pid, 10)
         sent_before = len(recorder.sent)
         result["after_failure"] = [
             sender_of(waiting),
@@ -266,13 +272,71 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         os.environ.pop("EMAIL_SENDING_ENABLED")
         os.environ.pop("EMAIL_CONVERSATION_SENDING_ENABLED")
 
+        # 13-H3: an older event delivered late, or one naming another
+        # domain, changes nothing.
+        result["late_events"] = [
+            domain_event("verified", pid, 5),
+            status_now(),
+            domain_event("verified", pid, 20, name="other-example.nl"),
+            status_now(),
+        ]
+
+        # 13-H3: a name never verified is released after its claim time.
+        squat = f"squat-{secrets.token_hex(3)}.nl"
+        held = add(squat).json()
+        result["claim_held"] = [
+            held["claim_expires_at"] is not None,
+            add(squat, "other_owner", b.id).status_code,
+        ]
+        with tenant_session_scope(a.id) as session:
+            session.execute(
+                text(
+                    "UPDATE crm_app.sending_domain SET created_at = now() - interval '8 days'"
+                    " WHERE tenant_id = :t AND id = :d"
+                ),
+                {"t": a.id, "d": held["id"]},
+            )
+        with session_scope() as session:
+            session.execute(
+                text(
+                    "UPDATE crm_app.sending_domain_index"
+                    " SET claimed_at = now() - interval '8 days' WHERE domain = :n"
+                ),
+                {"n": squat},
+            )
+        released = sending_domains.release_unverified()
+        expired = next(d for d in sending_domains.list_domains(scope_a) if d["domain"] == squat)
+        result["claim_released"] = [
+            released >= 1,
+            expired["status"],
+            expired["last_error"],
+            expired["claim_expires_at"],
+            client.post(
+                f"{base}/{held['id']}/verify", headers=auth(version=expired["version"])
+            ).status_code,
+            add(squat, "other_owner", b.id).status_code,
+        ]
+        # A verified domain is never released, however old its claim.
+        with session_scope() as session:
+            session.execute(
+                text(
+                    "UPDATE crm_app.sending_domain_index"
+                    " SET claimed_at = now() - interval '30 days' WHERE domain = :n"
+                ),
+                {"n": domain},
+            )
+        sending_domains.release_unverified()
+        result["verified_kept"] = add(domain, "other_owner", b.id).status_code
+
         # Other workspaces see nothing; removing frees the domain.
         result["isolation"] = [
-            len(
-                client.get(
+            str(domain_id)
+            in [
+                item["id"]
+                for item in client.get(
                     f"/v1/workspaces/{b.id}/sending-domains", headers=auth("other_owner")
                 ).json()["items"]
-            ),
+            ],
             client.delete(
                 f"/v1/workspaces/{b.id}/sending-domains/{domain_id}",
                 headers=auth("other_owner"),

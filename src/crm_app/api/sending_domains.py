@@ -42,6 +42,7 @@ Status = Literal[
     "failed",
     "temporary_failure",
     "unknown",
+    "expired",
 ]
 
 
@@ -101,6 +102,8 @@ class SendingDomainOut(BaseModel):
     last_error: str | None
     checked_at: datetime | None
     created_at: datetime
+    # When an unverified domain's claim on its name lapses (13-H3).
+    claim_expires_at: datetime | None
     version: int
     identities: list[IdentityOut]
 

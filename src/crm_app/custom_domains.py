@@ -34,7 +34,14 @@ from typing import Any, Protocol
 
 from saas_os.core.audit_log import record_in_transaction
 from saas_os.core.authority import UserCaller
-from saas_os.core.tenancy import lock_open_tenant
+from saas_os.core.tenancy import (
+    PRINCIPAL_INACCESSIBLE_STATUSES,
+    TenantClosedError,
+    TenantNotFoundError,
+    TenantStatus,
+    lock_open_tenant,
+    require_open_tenant,
+)
 from saas_os.infra.db import (
     IntegrityError,
     OperationalError,
@@ -207,7 +214,16 @@ def workspace_for_host(host: str) -> uuid.UUID | None:
                 CustomDomainIndex.hostname == name, CustomDomainIndex.verified.is_(True)
             )
         ).first()
-    return None if row is None else row[0]
+    if row is None:
+        return None
+    # A closed or suspended workspace's domain serves nothing (13-H3).
+    try:
+        tenant = require_open_tenant(row[0])
+    except (TenantClosedError, TenantNotFoundError):
+        return None
+    if TenantStatus(tenant.status) in PRINCIPAL_INACCESSIBLE_STATUSES:
+        return None
+    return row[0]
 
 
 # --- Writes -----------------------------------------------------------------------------

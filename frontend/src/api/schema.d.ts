@@ -4472,6 +4472,8 @@ export interface components {
         SendingDomainOut: {
             /** Checked At */
             checked_at: string | null;
+            /** Claim Expires At */
+            claim_expires_at: string | null;
             /**
              * Created At
              * Format: date-time
@@ -4494,7 +4496,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "not_registered" | "not_started" | "pending" | "verified" | "failed" | "temporary_failure" | "unknown";
+            status: "not_registered" | "not_started" | "pending" | "verified" | "failed" | "temporary_failure" | "unknown" | "expired";
             /** Version */
             version: number;
         };
