@@ -1368,6 +1368,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/email-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Email Templates */
+        get: operations["list_email_templates_v1_workspaces__tenant_id__email_templates_get"];
+        put?: never;
+        /** Create Email Template */
+        post: operations["create_email_template_v1_workspaces__tenant_id__email_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/email-templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Email Template */
+        delete: operations["delete_email_template_v1_workspaces__tenant_id__email_templates__template_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Email Template */
+        patch: operations["update_email_template_v1_workspaces__tenant_id__email_templates__template_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/email-templates/{template_id}/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render Email Template
+         * @description The template filled in for one of the workspace's contacts.
+         */
+        post: operations["render_email_template_v1_workspaces__tenant_id__email_templates__template_id__render_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/forms": {
         parameters: {
             query?: never;
@@ -4456,6 +4512,21 @@ export interface components {
             /** Recipient Problem */
             recipient_problem: string | null;
         };
+        /** RenderIn */
+        RenderIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+        };
+        /** Rendered */
+        Rendered: {
+            /** Body */
+            body: string;
+            /** Subject */
+            subject: string;
+        };
         /** Resolved */
         Resolved: {
             /**
@@ -5119,6 +5190,55 @@ export interface components {
             /** Overdue Now */
             overdue_now: number;
             period: components["schemas"]["PeriodOut"];
+        };
+        /** TemplateIn */
+        TemplateIn: {
+            /** Body */
+            body: string;
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+        };
+        /** TemplateList */
+        TemplateList: {
+            /** Items */
+            items: components["schemas"]["TemplateOut"][];
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** TemplatePatch */
+        TemplatePatch: {
+            /** Body */
+            body?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Subject */
+            subject?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -8910,6 +9030,185 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DomainOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_email_templates_v1_workspaces__tenant_id__email_templates_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_email_template_v1_workspaces__tenant_id__email_templates_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_email_template_v1_workspaces__tenant_id__email_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                template_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_email_template_v1_workspaces__tenant_id__email_templates__template_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                template_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplatePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    render_email_template_v1_workspaces__tenant_id__email_templates__template_id__render_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                template_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rendered"];
                 };
             };
             /** @description Validation Error */

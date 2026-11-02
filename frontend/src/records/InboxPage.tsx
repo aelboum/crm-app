@@ -32,6 +32,7 @@ import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
+import { TemplatePicker } from "./EmailTemplates";
 import { type Option, ownerLabel, ownerOptions } from "./parts";
 import { useDebounced } from "./useDebounced";
 
@@ -630,6 +631,15 @@ function Composer({
           </button>
         ))}
       </div>
+      {kind === "outbound" && thread.contact_id ? (
+        <TemplatePicker
+          workspaceId={workspaceId}
+          contactId={thread.contact_id}
+          onPick={(_subject, filled) => {
+            setBody(filled);
+          }}
+        />
+      ) : null}
       <label className="sr-only" htmlFor={`compose-${thread.id}`}>
         {t(`inbox.mode.${kind}`)}
       </label>

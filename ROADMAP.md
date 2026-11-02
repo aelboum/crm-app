@@ -666,7 +666,7 @@ Implement:
 
 # 12. Phase 7 — Marketing, Forms, and Campaigns
 
-**Status:** In progress. 7.3 Forms built (slice 7A, decision P7-A); 7.5 consent and suppression management built (slice 7B, decision P7-B); 7.2 campaign preparation built (slice 7C, decision P7-C): drafts, audiences, eligibility, approval bound to content, one-click unsubscribe; sending waits for List-Unsubscribe support in SaaS-OS and production authorization; 7.4 landing pages deferred; templates and campaign metrics not built.
+**Status:** In progress. 7.3 Forms built (slice 7A, decision P7-A); 7.5 consent and suppression management built (slice 7B, decision P7-B); 7.2 campaign preparation built (slice 7C, decision P7-C): drafts, audiences, eligibility, approval bound to content, one-click unsubscribe; sending waits for List-Unsubscribe support in SaaS-OS and production authorization; 7.4 landing pages deferred; 7.1 email templates built (slice 7T, decision P7-T, 2026-11-02): reusable subjects and texts for campaign drafts and email replies; campaign metrics not built.
 
 ## Objectives
 

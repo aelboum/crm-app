@@ -202,6 +202,13 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **Phase 7 slice 7T, email templates (decision P7-T, 2026-11-02):**
+  migration `0033_email_templates`; `/email-templates` API (campaign
+  permissions; render with the reply permission); Templates panel under
+  Campaigns, "Use a template" in the campaign editor and the reply
+  composer. Verified: unit 727 (without configuration, as CI); full
+  integration suite 807 passed (58 files, eight foreground groups); Vitest
+  309; lint, types, import contracts and build clean.
 - **Phase 10 slice 10B, reports as CSV (decision P10-B, 2026-11-02):**
   `GET .../reports/<name>/export.csv` for contacts, deals, tasks and
   appointments with each report's permission; a CSV button on each card.

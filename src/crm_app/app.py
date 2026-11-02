@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
     from crm_app.api.custom_domains import public_router as public_domains_router  # noqa: PLC0415
     from crm_app.api.custom_domains import router as custom_domains_router  # noqa: PLC0415
     from crm_app.api.custom_fields import router as custom_fields_router  # noqa: PLC0415
+    from crm_app.api.email_templates import router as email_templates_router  # noqa: PLC0415
     from crm_app.api.emails import public_router as public_email_router  # noqa: PLC0415
     from crm_app.api.errors import validation_error  # noqa: PLC0415
     from crm_app.api.forms import public_router as public_forms_router  # noqa: PLC0415
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
         automations_router,
         conversations_router,
         campaigns_router,
+        email_templates_router,
         notes_router,
         tags_router,
         custom_fields_router,

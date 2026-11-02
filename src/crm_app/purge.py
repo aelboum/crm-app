@@ -59,6 +59,7 @@ PURGE_TABLES: tuple[str, ...] = (
     "custom_domain",
     "campaign_recipient",
     "campaign",
+    "email_template",
     "inbound_quarantine",
     "conversation_route",
     "conversation_read",

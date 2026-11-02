@@ -114,6 +114,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         # P7-C (campaigns).
         "campaign",
         "campaign_recipient",
+        # P7-T (email templates).
+        "email_template",
         # P12-W (websites).
         "website",
         # P12-D (custom domains).

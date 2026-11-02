@@ -19,6 +19,7 @@ import { Button } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { TemplatePicker, TemplatesPanel } from "./EmailTemplates";
 import { stageLabel } from "./parts";
 
 /*
@@ -150,6 +151,7 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
           )}
         </div>
       )}
+      <TemplatesPanel workspaceId={workspaceId} canManage={canManage} />
       {editing ? (
         <Editor
           workspaceId={workspaceId}
@@ -450,6 +452,13 @@ function Editor({
           }}
         />
       </label>
+      <TemplatePicker
+        workspaceId={workspaceId}
+        onPick={(chosenSubject, chosenBody) => {
+          setSubject(chosenSubject);
+          setBody(chosenBody);
+        }}
+      />
       <label className="field">
         <span className="field-label">{t("campaigns.field.subject")}</span>
         <input

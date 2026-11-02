@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0032_automation_triggers` own the
+Migrations `0002_contacts_companies` to `0033_email_templates` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -984,6 +984,24 @@ class InboundQuarantine(Base):
     decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer)
+
+
+class EmailTemplate(Base):
+    """A reusable subject and body (migration 0033, decision P7-T)."""
+
+    __tablename__ = "email_template"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(Text)
+    subject: Mapped[str] = mapped_column(Text)
+    body: Mapped[str] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
 
 

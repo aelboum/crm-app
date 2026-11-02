@@ -93,6 +93,14 @@ RECORDS |= {
     "GET /v1/workspaces/{tenant_id}/reports/deals": "crm_app.opportunity:read",
     "GET /v1/workspaces/{tenant_id}/reports/tasks": "crm_app.task:read",
     "GET /v1/workspaces/{tenant_id}/reports/appointments": "crm_app.appointment:read",
+    # Email templates (P7-T): the campaign permissions; rendering replies.
+    "GET /v1/workspaces/{tenant_id}/email-templates": "crm_app.campaign:read",
+    "POST /v1/workspaces/{tenant_id}/email-templates": "crm_app.campaign:manage",
+    "PATCH /v1/workspaces/{tenant_id}/email-templates/{template_id}": "crm_app.campaign:manage",
+    "DELETE /v1/workspaces/{tenant_id}/email-templates/{template_id}": ("crm_app.campaign:manage"),
+    "POST /v1/workspaces/{tenant_id}/email-templates/{template_id}/render": (
+        "crm_app.conversation:reply"
+    ),
     # The same reports as CSV (P10-B), with the same permissions.
     "GET /v1/workspaces/{tenant_id}/reports/contacts/export.csv": "crm_app.contact:read",
     "GET /v1/workspaces/{tenant_id}/reports/deals/export.csv": "crm_app.opportunity:read",

@@ -1999,6 +1999,32 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_website_rules.py`,
   `frontend/src/records/embedSnippet.test.ts`, `forms.test.tsx`.
 
+## P7-T — Email templates (2026-11-02, under M1)
+
+- **Status:** Decided and built under M1 (owner, 2026-11-01: "proceed" with
+  the recommended order, email templates fifth). Slice 7T. Roadmap 7.1
+  "message templates"; `ScreenTemplates.dc.html` is an empty stub, so the
+  list lives under Campaigns.
+- **Decisions:**
+  1. **Shape:** a name (unique per workspace), a one-line subject and a
+     plain-text body, with exactly the campaign rules: the placeholders
+     `{{first_name}}` and `{{last_name}}`, nothing evaluated, no HTML.
+     Table `email_template` (migration `0033_email_templates`), at most
+     100 per workspace, versioned writes (If-Match), audited without text.
+  2. **Permissions:** the existing campaign ones (every role reads; Owners,
+     Admins and Members manage); no new permission, so gate G7 is not
+     touched. Filling a template in for a contact takes the permission to
+     reply (`crm_app.conversation:reply`) and only for the workspace's own
+     contacts; values are inserted literally and never expanded again.
+  3. **Use:** the campaign editor copies a template's subject and text into
+     the draft (the campaign then needs its own approval, P7-C); the reply
+     composer fills in a template's text for the conversation's contact.
+     A template never sends anything.
+  4. **Not in 7T:** HTML, attachments, more placeholders, shared or
+     agency-wide templates (Phase 11), template use statistics.
+- **Tests:** `tests/integration/test_email_templates.py`,
+  `frontend/src/records/emailTemplates.test.tsx`.
+
 ## P7-C — Campaign drafts, audiences and approval (2026-11-01)
 
 - **Status:** Implemented under the owner's email mission of 2026-11-01
