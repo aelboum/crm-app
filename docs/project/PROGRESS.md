@@ -202,6 +202,11 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **13-R1, bound role upgrade (2026-11-02):** `role_upgrade` dry runs print
+  a plan fingerprint and a JSON report; `--apply --expect` applies only the
+  reviewed plan (required in production); runbook
+  `docs/project/ROLE-UPGRADE-RUNBOOK.md`. Not run on any real workspace.
+  Verified: `test_role_upgrade.py` 7 passed.
 - **13-H5, security review of 5D, 8B, 7T, booking and the worker
   (2026-11-02):** no critical or high findings; fixed late timely mail
   (expired or no longer due), reminder starvation, one workspace stopping

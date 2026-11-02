@@ -2,9 +2,14 @@
 (gate G7, decision P2-G7).
 
     python -m crm_app.role_upgrade (--workspace <id> ... | --all)
-        [--apply] [--include-administrative] [--confirm-production]
+        [--apply [--expect FINGERPRINT]] [--include-administrative]
+        [--confirm-production] [--json]
 
-An operator command, never an HTTP route. Without `--apply` it only reports.
+An operator command, never an HTTP route. Without `--apply` it only reports,
+with a fingerprint of exactly what it would grant; `--apply --expect` grants
+only if the plan still matches that reviewed fingerprint (required in
+production), and `--json` prints the report for the change record
+(decision 13-R1, runbook in `docs/project/ROLE-UPGRADE-RUNBOOK.md`).
 For each workspace it compares the four product roles (Owner, Admin,
 Member, Read-only, found by their exact names) with
 `crm_app.roles.ROLE_TEMPLATES` and grants what is missing. It never
@@ -36,6 +41,8 @@ Prints identifiers and permission names only.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import sys
 import uuid
@@ -149,11 +156,36 @@ def apply(workspace: WorkspacePlan) -> None:
                 pass
 
 
+def fingerprint(plans: Sequence[WorkspacePlan]) -> str:
+    """A short digest of exactly what a run would grant: the dry run prints
+    it, and `--apply --expect` refuses unless the plan still matches what
+    was reviewed (decision 13-R1)."""
+    canonical = sorted(
+        (
+            str(w.tenant_id),
+            w.skipped or "",
+            sorted((r.role, sorted(f"{a}:{b}" for a, b in r.missing)) for r in w.roles),
+        )
+        for w in plans
+    )
+    digest = hashlib.sha256(json.dumps(canonical, separators=(",", ":")).encode("utf-8"))
+    return digest.hexdigest()[:16]
+
+
 def upgrade(
-    targets: Sequence[uuid.UUID], *, apply_changes: bool, include_administrative: bool
+    targets: Sequence[uuid.UUID],
+    *,
+    apply_changes: bool,
+    include_administrative: bool,
+    expect: str | None = None,
 ) -> list[WorkspacePlan]:
     plans = [plan(t, include_administrative=include_administrative) for t in targets]
     if apply_changes:
+        if expect is not None and fingerprint(plans) != expect.strip().lower():
+            raise UpgradeRefusedError(
+                "The plan changed since the reviewed dry run (fingerprint "
+                f"{fingerprint(plans)}, expected {expect}); run the dry run again."
+            )
         for workspace in plans:
             apply(workspace)
     return plans
@@ -187,11 +219,48 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--confirm-production", action="store_true", help="Required when ENVIRONMENT=production."
     )
+    parser.add_argument(
+        "--expect",
+        metavar="FINGERPRINT",
+        help="With --apply: the fingerprint of the reviewed dry run; required in production.",
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="Print the report as JSON (for the change record)."
+    )
     return parser
+
+
+def report_json(plans: Sequence[WorkspacePlan], *, applied: bool) -> dict[str, object]:
+    """The same report as data: identifiers and permission names only."""
+
+    def names(keys: Sequence[Key]) -> list[str]:
+        return [f"{resource}:{action}" for resource, action in keys]
+
+    return {
+        "applied": applied,
+        "fingerprint": fingerprint(plans),
+        "workspaces": [
+            {
+                "workspace": str(w.tenant_id),
+                "skipped": w.skipped,
+                "roles": [
+                    {
+                        "role": r.role,
+                        "grant": names(r.granted if applied else r.missing),
+                        "held_back": names(r.held_back),
+                        "custom_grants_kept": r.custom,
+                    }
+                    for r in w.roles
+                ],
+            }
+            for w in plans
+        ],
+    }
 
 
 def report(plans: Sequence[WorkspacePlan], *, applied: bool) -> list[str]:
     lines = ["role upgrade: " + ("APPLIED" if applied else "DRY RUN, nothing was changed")]
+    lines.append(f"plan fingerprint: {fingerprint(plans)}")
     for workspace in plans:
         if workspace.skipped:
             lines.append(f"workspace {workspace.tenant_id}: skipped ({workspace.skipped})")
@@ -215,20 +284,29 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     args = _parser().parse_args(argv)
     try:
-        if os.environ.get("ENVIRONMENT", "") == "production" and not args.confirm_production:
+        production = os.environ.get("ENVIRONMENT", "") == "production"
+        if production and not args.confirm_production:
             raise UpgradeRefusedError(
                 "ENVIRONMENT is production: pass --confirm-production to upgrade roles."
+            )
+        if production and args.apply and not args.expect:
+            raise UpgradeRefusedError(
+                "In production --apply needs --expect with the reviewed dry run's fingerprint."
             )
         validate_settings(Process.APP)
         plans = upgrade(
             _targets(args),
             apply_changes=args.apply,
             include_administrative=args.include_administrative,
+            expect=args.expect,
         )
     except UpgradeRefusedError as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 2
-    print("\n".join(report(plans, applied=args.apply)))
+    if args.json:
+        print(json.dumps(report_json(plans, applied=args.apply), indent=2))
+    else:
+        print("\n".join(report(plans, applied=args.apply)))
     return 0
 
 

@@ -112,6 +112,22 @@ def main() -> None:
     result["dry_run"] = [code, text.splitlines()[0]]
     result["after_dry_run"] = [_can(member, old, reply), _can(owner, old, read)]
 
+    # 13-R1: the dry run's fingerprint binds the apply to what was reviewed.
+    printed = text.splitlines()[1].removeprefix("plan fingerprint: ")
+    code, as_json = _cli("--workspace", str(other), "--json")
+    report = json.loads(as_json)
+    wrong_code, wrong = _cli("--workspace", str(other), "--apply", "--expect", "0" * 16)
+    result["fingerprint"] = [
+        len(printed),
+        code,
+        report["applied"],
+        report["fingerprint"] != printed,
+        sorted(report["workspaces"][0]["roles"][0]),
+        wrong_code,
+        "plan changed" in wrong,
+        _can(other_member, other, reply),
+    ]
+
     first = role_upgrade.upgrade([old], apply_changes=True, include_administrative=False)
     result["first"] = _summary(first[0])
     result["after_first"] = [
@@ -141,10 +157,17 @@ def main() -> None:
     os.environ["ENVIRONMENT"] = "production"
     try:
         code, text = _cli("--all", "--apply")
+        unbound_code, unbound = _cli("--all", "--apply", "--confirm-production")
     finally:
         os.environ["ENVIRONMENT"] = "test"
     result["production"] = [code, text.strip()]
+    result["production_needs_expect"] = [unbound_code, "--expect" in unbound]
     result["other_after_refusal"] = _can(other_member, other, reply)
+    # The reviewed fingerprint applies, and only then.
+    code, dry = _cli("--workspace", str(other))
+    reviewed = dry.splitlines()[1].removeprefix("plan fingerprint: ")
+    applied_code, _ = _cli("--workspace", str(other), "--apply", "--expect", reviewed)
+    result["bound_apply"] = [applied_code, _can(other_member, other, reply)]
     print("RESULT " + json.dumps(result, default=str))
 
 

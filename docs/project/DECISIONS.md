@@ -2682,6 +2682,28 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 13-R1 — An auditable, bound role upgrade (2026-11-02, under the hardening mandate)
+
+- **Status:** Prepared under the owner's instruction of 2026-11-02 ("Prepare
+  a safe, auditable role_upgrade migration and dry-run mechanism. Do not
+  execute it against real workspaces or change customer permissions.").
+  Not run against any real workspace.
+- **Decisions:**
+  1. The dry run prints a fingerprint of exactly what it would grant
+     (workspaces, roles, permissions; a SHA-256 prefix of the canonical
+     plan), and `--json` prints the whole report as data for the change
+     record.
+  2. `--apply --expect <fingerprint>` grants only if the current plan still
+     has that fingerprint; anything that changed since the review refuses
+     the run (exit 2, nothing granted).
+  3. In production, `--apply` needs `--expect` as well as
+     `--confirm-production`.
+  4. The procedure, review and rollback are in
+     `docs/project/ROLE-UPGRADE-RUNBOOK.md`.
+- **Tests:** `tests/integration/test_role_upgrade.py` (fingerprint, JSON
+  report, a wrong fingerprint refused and granting nothing, production
+  needing `--expect`, the matching fingerprint applying).
+
 ## 13-H5 — Security review of reminders, automation triggers, templates, booking and the worker (2026-11-02, under the hardening mandate)
 
 - **Status:** Done under the owner's instruction of 2026-11-02 (focused

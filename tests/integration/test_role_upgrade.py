@@ -77,6 +77,18 @@ def test_other_and_fresh_workspaces(probe: Probe) -> None:
     assert probe["unknown"] == "not found"
 
 
+def test_an_apply_is_bound_to_the_reviewed_dry_run(probe: Probe) -> None:
+    length, code, applied, differs, keys, wrong_code, changed, granted = probe["fingerprint"]
+    # 16 hex characters; the JSON report is a dry run of another workspace
+    assert (length, code, applied, differs) == (16, 0, False, True)
+    assert keys == ["custom_grants_kept", "grant", "held_back", "role"]
+    # a fingerprint that does not match refuses and grants nothing
+    assert (wrong_code, changed, granted) == (2, True, False)
+    # in production --apply needs --expect; the matching one applies
+    assert probe["production_needs_expect"] == [2, True]
+    assert probe["bound_apply"] == [0, True]
+
+
 def test_bad_input_and_unconfirmed_production_are_refused(probe: Probe) -> None:
     assert probe["bad_id"] == [2, "refused: A workspace id is not a UUID."]
     assert probe["production"][0] == 2
