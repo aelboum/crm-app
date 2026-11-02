@@ -138,7 +138,10 @@ export function TemplatesPanel({
   const remove = useDeleteTemplate(workspaceId);
   const [editing, setEditing] = useState<EmailTemplate | "new" | null>(null);
   return (
-    <section className="records-card" aria-labelledby="templates-title">
+    <section
+      className="records-card templates-card"
+      aria-labelledby="templates-title"
+    >
       <div className="home-card-head">
         <h2 id="templates-title" className="home-card-title">
           {t("templates.title")}

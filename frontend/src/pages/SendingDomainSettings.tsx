@@ -1,5 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
+import { useIntl } from "react-intl";
 
 import { ApiError } from "../api/client";
 import {
@@ -59,6 +60,7 @@ function DomainCard({
   canEdit: boolean;
 }) {
   const t = useT();
+  const intl = useIntl();
   const verify = useVerifyDomain(workspaceId);
   const remove = useRemoveSendingDomain(workspaceId);
   const addIdentity = useAddIdentity(workspaceId);
@@ -126,7 +128,11 @@ function DomainCard({
       {domain.claim_expires_at && domain.status !== "verified" ? (
         <p className="muted">
           {t("sending.claimExpires", {
-            date: new Date(domain.claim_expires_at).toLocaleDateString(),
+            date: intl.formatDate(new Date(domain.claim_expires_at), {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }),
           })}
         </p>
       ) : null}
@@ -216,26 +222,29 @@ function DomainCard({
               }}
             />
           </label>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={conversation}
-              onChange={(event) => {
-                setConversation(event.target.checked);
-              }}
-            />
-            {t("sending.forConversation")}
-          </label>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={campaign}
-              onChange={(event) => {
-                setCampaign(event.target.checked);
-              }}
-            />
-            {t("sending.forCampaign")}
-          </label>
+          <fieldset className="sending-flags">
+            <legend>{t("sending.useFor")}</legend>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={conversation}
+                onChange={(event) => {
+                  setConversation(event.target.checked);
+                }}
+              />
+              {t("sending.forConversation")}
+            </label>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={campaign}
+                onChange={(event) => {
+                  setCampaign(event.target.checked);
+                }}
+              />
+              {t("sending.forCampaign")}
+            </label>
+          </fieldset>
           <Button
             type="submit"
             size="sm"

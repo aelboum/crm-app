@@ -2682,6 +2682,47 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## 13-H4 — Accessibility and responsive audit of the new screens (2026-11-02, under the hardening mandate)
+
+- **Status:** Done under the owner's instruction of 2026-11-02 ("Audit all
+  newly implemented screens. Check keyboard navigation, focus management,
+  labels, contrast and screen-reader accessibility. Test desktop and phone
+  widths, especially 390px. Fix layout defects and accessibility issues.
+  Add regression tests where practical.").
+- **How:** the built app ran locally against the test database with a
+  throwaway workspace and session (the token stayed in a local file, never
+  in logs, and was deleted afterwards). In Chrome at 390 × 844 (mobile,
+  touch) and 1280 × 800: Home, Calendar and the appointment drawer,
+  Automations and its editor, Campaigns with templates, Inbox, Reports,
+  Forms, Settings › Business profile, Domains and Sending domains. Per
+  screen: horizontal overflow, form controls without a label, buttons and
+  links without an accessible name, and the WCAG AA text contrast of every
+  text node (4.5:1, or 3:1 for large text). Axe runs in the screens'
+  component tests (`accessibilityViolations`).
+- **Found and fixed:**
+  1. The email-template panel had no styles at 390 px: list bullets, name
+     and subject run together, no padding. Now a padded card with a
+     two-line item and its actions beside it.
+  2. A campaign's status badge stretched across the whole item.
+  3. Sending domains: the claim deadline used the browser's numeric date
+     (09/11/2026, ambiguous); now the month is written out. The
+     "Conversations" and "Campaigns" choices are a fieldset with the
+     legend "Use this address for" (regression test).
+  4. Automations: the trigger section was still labelled "When a contact
+     is created from" whatever the trigger, and the page introduction named
+     only that trigger; both now describe every trigger.
+  5. The appointment drawer now says when no automatic reminder is
+     planned, instead of saying nothing.
+- **Checked and sound:** no page scrolls sideways at 390 or 1280 px (the
+  contact table and view tabs scroll inside their own regions by design);
+  every control has a label; every button and link has a name; no text
+  falls below AA contrast (the only flag, the active settings item, is a
+  measuring artefact of its translucent background and reads 4.5:1 or
+  better on screen); dialogs and drawers keep focus through the shared
+  react-aria `Dialog` and `Drawer` components; a skip link leads to `main`.
+- **Not covered:** a full screen-reader session (VoiceOver or NVDA), which
+  needs a person; the public booking and form pages were audited in 13-H1.
+
 ## 13-A3 — Dependency audit review (2026-11-02, under the hardening mandate)
 
 - **Status:** Reviewed under the owner's instruction of 2026-11-02 ("Review

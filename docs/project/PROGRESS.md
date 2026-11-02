@@ -202,6 +202,12 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **13-H4, accessibility and responsive audit (2026-11-02):** the new
+  screens checked in Chrome at 390 px and 1280 px (overflow, labels,
+  accessible names, AA contrast); fixed the template panel and badge
+  layout, the ambiguous claim date, an unlabelled checkbox group, stale
+  automation wording, and a silent reminder state. Verified: Vitest 309,
+  lint and build clean; screens re-checked after the fixes.
 - **13-A3, dependency audit review (2026-11-02):** pip-audit clean (no
   exceptions); npm production tree clean; the one npm exception
   (GHSA-g3hv-75wg-m249, minimatch, development tools only) re-verified

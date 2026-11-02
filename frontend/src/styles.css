@@ -1474,7 +1474,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
 /* Campaigns (P7-C) */
 .campaigns { display: grid; grid-template-columns: minmax(220px, 320px) 1fr; gap: 16px; align-items: start; }
 .campaign-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.campaign-item { width: 100%; text-align: left; display: grid; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; overflow-wrap: anywhere; }
+.campaign-item { width: 100%; text-align: left; display: grid; justify-items: start; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; overflow-wrap: anywhere; }
 .campaign-item.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .campaign-item-name { font-weight: 600; }
 .campaign-detail { border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-wrap: anywhere; }
@@ -1531,3 +1531,14 @@ a.btn-primary:hover { filter: brightness(0.94); }
 /* Appointment reminders (P5-D) */
 .reminder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .reminder-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Email templates (P7-T) */
+.templates-card { padding: 14px 16px; margin-top: 16px; }
+.template-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.template-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name actions" "subject actions"; gap: 2px 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.template-name { grid-area: name; font-weight: 600; }
+.template-item > .muted { grid-area: subject; }
+.template-actions { grid-area: actions; display: flex; gap: 4px; }
+.template-picker { display: grid; gap: 4px; max-width: 320px; }
+.sending-flags { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.sending-flags legend { padding: 0; margin-bottom: 4px; font-size: 12.5px; font-weight: 600; }

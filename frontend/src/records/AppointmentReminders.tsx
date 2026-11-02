@@ -87,6 +87,9 @@ export function AppointmentReminders({
               ? ` ${t("reminders.next", { when: when(status.data.next_at) })}`
               : null}
           </p>
+          {status.data.lead_minutes !== null && !status.data.next_at ? (
+            <p className="muted">{t("reminders.noneFor")}</p>
+          ) : null}
           {status.data.recipient_problem ? (
             <p className="muted">
               {t(

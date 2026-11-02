@@ -138,6 +138,11 @@ describe("settings › sending domains", () => {
       within(section).getByLabelText("Address before @acme-shop.nl"),
       "news",
     );
+    // The two choices are one labelled group for screen readers.
+    const uses = within(section).getByRole("group", {
+      name: "Use this address for",
+    });
+    expect(within(uses).getAllByRole("checkbox")).toHaveLength(2);
     await user.click(
       within(section).getByRole("checkbox", { name: "Campaigns" }),
     );
