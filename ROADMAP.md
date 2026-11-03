@@ -629,6 +629,8 @@ Potential channels include:
 
 Do not assume every provider or channel is available in the initial release.
 
+AI voice agents (inbound and outbound) have their own workstream, 15V in Phase 15 (decision P15-V); voice stays outside the K5 MVP.
+
 Select providers based on market requirements, cost, reliability, legal requirements, and technical compatibility.
 
 ### 6.3 Delivery and reliability
@@ -1158,6 +1160,44 @@ Potential later features include:
 * Advanced analytics.
 
 These features are not automatically part of the MVP.
+
+## Workstream 15V — AI Voice Agents (intended direction, decision P15-V)
+
+**Status:** Intended product capability, not started and not authorised to
+build. Outside the K5 MVP; voice stays deferred until the owner approves a
+scope change. Full brief: `docs/project/VOICE-AGENTS-BRIEF.md`.
+
+Both references have AI voice agents (the reference template's Vapi and
+Twilio module; GoHighLevel Voice AI), so they are part of the product
+direction. LeadStack builds them independently on SaaS-OS, PostgreSQL with
+RLS and ZITADEL; no Firebase, and no copied architecture.
+
+Scope, delivered in slices:
+
+* Inbound AI calls: answering, qualification, booking, messages, transfers.
+* Outbound AI calls: one contact, automation-triggered, and bulk voice campaigns with per-campaign approval.
+* Agent configuration: instructions, greeting, languages, selectable voices, business hours, allowed actions, versions.
+* Business knowledge from the Phase 9 knowledge sources.
+* Call transfers to people, transcripts, optional recordings, summaries and call outcomes.
+* Human review of proposed CRM changes; usage limits and metering.
+* Integration with contacts and companies, deals and pipelines, appointments, conversations (a `voice` channel), automations, knowledge, reporting and usage.
+* Compliance: mandatory AI disclosure (AI Act Art. 50), provable consent before any outbound AI call (Telecommunicatiewet 11.7), in-call opt-out, caller ID, recording notice, retention, DPIA.
+
+Slices (detail and exit criteria in the brief, §10):
+
+| Slice | Scope |
+| --- | --- |
+| V0 | Owner decisions: K5 scope change, providers, legal review and DPIA, plan limits, SaaS-OS requests |
+| V1 | Voice domain, permissions, agent editor and call log behind a feature flag; no provider |
+| V2 | Inbound calls in a provider sandbox, with disclosure, knowledge and transfer |
+| V3 | After the call: transcripts, summaries, outcomes, review queue, CRM links, booking |
+| V4 | Outbound single calls with every compliance check failing closed |
+| V5 | Bulk voice campaigns with approval, pacing and caps |
+| V6 | Metering, budgets, reconciliation, reporting and launch review |
+
+Dependencies: Phase 9 (AI) decisions and knowledge; Phase 11 billing for
+resale; SaaS-OS streaming inference (for the lowest latency) and GET egress
+(for recordings), requested and released upstream, never changed here.
 
 ## Exit criteria
 

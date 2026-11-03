@@ -18,6 +18,7 @@ off). Costs are indicative orders of magnitude, not quotes.
 | 6 | Agency workspaces and billing (brief 3) | Phase 11, paid plans | Medium: commercial model |
 | 7 | AI provider, plan limits, permitted data (brief 2) | Phase 9 | Lower: no dependency for others |
 | 8 | Website tracking and consent (brief 5) | Visit history | Lower: optional feature |
+| 9 | AI voice agents: direction and workstream 15V (brief 9) | Any voice work; nothing else | Direction recorded (DECISIONS P15-V); build stays outside K5 until a scope change. Full brief: `VOICE-AGENTS-BRIEF.md` |
 | — | minimatch audit exception (13-A3) | Nothing; development tools only | Expires 2026-12-31: decide again before then if no fix exists |
 
 ## Brief 1 — SaaS-OS GET support for Resend inbound email
@@ -205,3 +206,26 @@ bounded:
 - **Security:** closes the impersonation path into automations and consent;
   members still see every submission.
 - **Reversibility:** high. A per-automation setting and a consent state.
+
+## Brief 9 — AI voice agents (inbound and outbound)
+
+**Status:** direction recorded 2026-11-03 (DECISIONS P15-V) on the owner's
+correction; the full brief is `VOICE-AGENTS-BRIEF.md`. Not authorised to
+build; K5 unchanged.
+
+- **Decision:** approve AI voice agents as an intended capability with
+  roadmap workstream 15V (slices V0 to V6), built after launch.
+- **Alternatives:**
+  - (a) record the direction now, build after launch (recommended);
+  - (b) an inbound-only pilot before launch, widening the MVP;
+  - (c) leave voice to an external product through the API platform.
+- **Recommendation:** (a), with a hosted voice platform behind a product
+  adapter and every LLM turn through SaaS-OS governed inference.
+- **Cost:** none now. Later: provider fees per minute (market reference
+  roughly $0.07 to $0.25 a minute before telephony), a legal review and
+  DPIA, about six engineering slices.
+- **Security:** a new public surface and new personal data (audio,
+  transcripts); per-tenant webhook credentials, tenant derived server-side,
+  fail-closed outbound checks, mandatory AI disclosure, provable consent.
+- **Reversibility:** high: nothing is built; after a release, kill switches
+  stop calls at once.

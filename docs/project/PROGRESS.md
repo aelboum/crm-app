@@ -202,6 +202,13 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **P15-V, AI voice agents direction (2026-11-03):** the owner corrected
+  the roadmap: inbound and outbound AI voice agents are an intended
+  capability. Recorded as workstream 15V in Phase 15 (slices V0 to V6) and
+  brief 9; `docs/project/VOICE-AGENTS-BRIEF.md` (references, capability
+  scope, integrations, architecture on SaaS-OS, EU and Dutch requirements,
+  roadmap). Documentation only; K5 unchanged; nothing bought, configured,
+  enabled or implemented.
 - **P7-V, unverified public matches (2026-11-02, brief 8 approved):** a
   public form or booking that matches an existing contact by email keeps
   its submission or booking but no longer tags the contact, records consent

@@ -36,6 +36,10 @@ date must be re-verified before they are relied on.
   - RAG knowledge base filtered by sub-account.
   - Agency → sub-accounts with snapshots.
   - Stripe platform billing.
+  - AI voice agents (added 2026-11-03; omitted here originally, see
+    DECISIONS P15-V): inbound calls on Vapi with Twilio numbers, single and
+    bulk outbound calls, test calls, post-call summaries and outcomes, an
+    outbound compliance gate (`src/lib/comms/voice`).
   - `/api/v1` with hashed API keys, idempotency, and signed outbound
     webhooks.
 - **Stubs or partial [V]:**

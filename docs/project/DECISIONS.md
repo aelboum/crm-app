@@ -2682,6 +2682,36 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## P15-V — AI voice agents are an intended capability, with workstream 15V (2026-11-03)
+
+- **Status:** Direction recorded on the owner's correction of 2026-11-03;
+  the brief (`VOICE-AGENTS-BRIEF.md`, brief 9) awaits the owner's review.
+  **Not authorised to build.** K5 is unchanged: voice stays deferred and is
+  not in the MVP until the owner explicitly approves a scope change.
+- **Correction:** on 2026-11-03 the owner was told that AI call agents were
+  not a planned part of the roadmap. That was an incorrect interpretation:
+  the product vision combines the reference LeadStack template and
+  GoHighLevel, and both include inbound and outbound AI voice agents.
+  `PHASE0-DISCOVERY.md` §2 had omitted the template's voice module; it is
+  corrected there.
+- **Direction:** inbound and outbound AI calling, with agent configuration,
+  selectable voices, business knowledge, call transfers, transcripts,
+  summaries, call outcomes, usage limits and human review, integrated with
+  contacts and companies, deals, appointments, conversations, automations,
+  knowledge and reporting. Roadmap workstream 15V, slices V0 to V6.
+- **Architecture boundary:** built on SaaS-OS public contracts, PostgreSQL
+  with RLS and ZITADEL; no Firebase; the references' features inform the
+  product, their architecture is not copied (K1). The recommended first
+  path is a hosted voice platform behind a product adapter, with every LLM
+  turn through `saas_os.inference` (option A in the brief).
+- **Known SaaS-OS gaps (v0.6.0):** no streaming inference
+  (`streaming_not_enabled`), no audio capability, egress POST only, no
+  WebSocket egress, no object storage in the public surface. Any change is
+  requested upstream; the pin is not moved here.
+- **Boundaries kept:** no telephony or AI service purchased, no provider
+  account created, no phone number configured, no call enabled, nothing
+  implemented, SaaS-OS and its pin unchanged.
+
 ## P7-V — Public submissions that match an existing contact are unverified (2026-11-02)
 
 - **Status:** Approved by the owner on 2026-11-02 (brief 8): "Treat an email
