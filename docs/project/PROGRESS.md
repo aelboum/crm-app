@@ -202,6 +202,16 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **P15-V approved (2026-11-03):** the owner approved the voice direction
+  and workstream 15V with eight decisions (K5 unchanged, providers
+  deferred, legal review required, no recording by default, explicit
+  consent for AI outbound calls). Prepared, documentation only:
+  `VOICE-PROVIDER-COMPARISON.md`, `VOICE-COST-MODEL.md` (about $0.08–0.11
+  a minute at list prices; no commercial prices), `VOICE-LEGAL-REVIEW.md`
+  (DPIA requirements, questions for counsel, retention),
+  `VOICE-THREAT-MODEL.md` (diagrams, STRIDE, emergency stop),
+  `SAAS-OS-REALTIME-PROPOSAL.md` (pin unchanged). CI run 41635128590 on
+  `8089760` passed all four jobs.
 - **P15-V, AI voice agents direction (2026-11-03):** the owner corrected
   the roadmap: inbound and outbound AI voice agents are an intended
   capability. Recorded as workstream 15V in Phase 15 (slices V0 to V6) and

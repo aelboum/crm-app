@@ -2684,10 +2684,39 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 
 ## P15-V — AI voice agents are an intended capability, with workstream 15V (2026-11-03)
 
-- **Status:** Direction recorded on the owner's correction of 2026-11-03;
-  the brief (`VOICE-AGENTS-BRIEF.md`, brief 9) awaits the owner's review.
-  **Not authorised to build.** K5 is unchanged: voice stays deferred and is
-  not in the MVP until the owner explicitly approves a scope change.
+- **Status:** **Approved by the owner on 2026-11-03** (direction and
+  workstream 15V), with these eight decisions, quoted in substance:
+  1. **Voice direction: approved.** Phase 15V stays in the roadmap as a
+     planned post-launch capability. The question whether voice belongs in
+     the long-term product is not reopened.
+  2. **K5: unchanged.** Voice stays outside the MVP; no silent expansion.
+  3. **Providers: deferred.** A comparison is prepared
+     (`VOICE-PROVIDER-COMPARISON.md`); no accounts, no purchases.
+  4. **Legal review: required** before production implementation or
+     activation. DPIA requirements and questions for counsel prepared
+     (`VOICE-LEGAL-REVIEW.md`); the legal summary in the brief is not a
+     final legal determination.
+  5. **Pricing and plan limits:** a cost model only (`VOICE-COST-MODEL.md`);
+     no commercial prices.
+  6. **SaaS-OS:** a technical proposal for streaming and real-time
+     interaction (`SAAS-OS-REALTIME-PROPOSAL.md`); no change to SaaS-OS, its
+     release or LeadStack's pin.
+  7. **Recording and retention:** no recording is the design default until
+     an approved recording policy and legal review exist; transcript and
+     metadata retention documented separately (`VOICE-LEGAL-REVIEW.md` §3).
+  8. **Outbound consent:** explicit, demonstrable consent for AI outbound
+     calls is the initial product policy; no outbound calling until the
+     legal interpretation and operational controls are reviewed.
+- **Product requirements (owner, 2026-11-03):** inbound and outbound agents
+  integrate with contacts, companies, deals, appointments, conversations,
+  automations, knowledge and reporting, with human handoff, selectable
+  voices, agent configuration, call summaries, transcripts where permitted,
+  outcome classification, usage metering, tenant isolation, campaign
+  approval, opt-outs, rate limits, budget limits and emergency stop
+  controls. Threat model and diagrams: `VOICE-THREAT-MODEL.md`.
+- **Still not authorised:** building the voice platform, activating
+  providers, creating phone numbers, purchasing services, changing K5,
+  changing SaaS-OS, or enabling production calls.
 - **Correction:** on 2026-11-03 the owner was told that AI call agents were
   not a planned part of the roadmap. That was an incorrect interpretation:
   the product vision combines the reference LeadStack template and

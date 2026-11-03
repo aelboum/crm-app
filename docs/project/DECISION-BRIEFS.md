@@ -18,7 +18,7 @@ off). Costs are indicative orders of magnitude, not quotes.
 | 6 | Agency workspaces and billing (brief 3) | Phase 11, paid plans | Medium: commercial model |
 | 7 | AI provider, plan limits, permitted data (brief 2) | Phase 9 | Lower: no dependency for others |
 | 8 | Website tracking and consent (brief 5) | Visit history | Lower: optional feature |
-| 9 | AI voice agents: direction and workstream 15V (brief 9) | Any voice work; nothing else | Direction recorded (DECISIONS P15-V); build stays outside K5 until a scope change. Full brief: `VOICE-AGENTS-BRIEF.md` |
+| 9 | AI voice agents: direction and workstream 15V (brief 9) | Any voice work; nothing else | **Direction approved 2026-11-03 (DECISIONS P15-V)**; K5 unchanged. Open: providers (`VOICE-PROVIDER-COMPARISON.md`), legal review and DPIA (`VOICE-LEGAL-REVIEW.md`), prices (`VOICE-COST-MODEL.md`), SaaS-OS streaming (`SAAS-OS-REALTIME-PROPOSAL.md`) |
 | — | minimatch audit exception (13-A3) | Nothing; development tools only | Expires 2026-12-31: decide again before then if no fix exists |
 
 ## Brief 1 — SaaS-OS GET support for Resend inbound email
@@ -209,9 +209,11 @@ bounded:
 
 ## Brief 9 — AI voice agents (inbound and outbound)
 
-**Status:** direction recorded 2026-11-03 (DECISIONS P15-V) on the owner's
-correction; the full brief is `VOICE-AGENTS-BRIEF.md`. Not authorised to
-build; K5 unchanged.
+**Status:** direction **approved** by the owner on 2026-11-03 (DECISIONS
+P15-V, eight points); the full brief is `VOICE-AGENTS-BRIEF.md`. Not
+authorised to build; K5 unchanged; providers deferred; legal review required
+before production implementation; no recording by default; explicit,
+demonstrable consent for AI outbound calls.
 
 - **Decision:** approve AI voice agents as an intended capability with
   roadmap workstream 15V (slices V0 to V6), built after launch.

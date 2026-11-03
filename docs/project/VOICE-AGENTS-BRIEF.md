@@ -1,8 +1,8 @@
 # AI voice agents: decision brief and roadmap proposal
 
-**Status:** proposal for the owner's review, prepared 2026-11-03 under the
-owner's correction of the same date: AI voice agents, inbound and outbound,
-are part of the intended LeadStack product direction. **This is not
+**Status:** direction **approved** by the owner on 2026-11-03 (decision P15-V,
+with eight points; §11). AI voice agents, inbound and outbound, are a
+planned post-launch LeadStack capability (workstream 15V). **This is not
 authorisation to build.** Decision K5 (the MVP scope) is unchanged, and voice
 stays deferred until the owner explicitly approves a scope change. Nothing
 here purchases a service, creates a provider account, configures a phone
@@ -126,8 +126,9 @@ per-tenant webhook credentials, and EU data residency.
    and per-campaign approval like e-mail campaigns.
 5. **Call transfers:** warm or cold transfer to a member's or the business's
    number, with a spoken handover; a fallback message if nobody answers.
-6. **Transcripts, recordings and summaries:** a turn-by-turn transcript, an
-   optional recording, a generated summary, and extracted fields.
+6. **Transcripts and summaries:** a turn-by-turn transcript where permitted,
+   a generated summary, and extracted fields. **No call recording** until an
+   approved recording policy and legal review exist (P15-V point 7).
 7. **Call outcomes:** a fixed list (answered by a person, voicemail, no
    answer, busy, failed, transferred, booked, qualified, not interested,
    callback requested, opted out), set by rules and the model, and
@@ -218,8 +219,8 @@ per-tenant webhook credentials, and EU data residency.
   processing (summary, extraction, review items, automations), the
   retention purge, usage reconciliation against the provider's billing.
 - **Frontend:** agent editor with a test console, number settings, call log
-  and detail (transcript, summary, outcome, recording player for permitted
-  roles), review queue, campaign editor and approval, usage page; every
+  and detail (transcript where permitted, summary, outcome; no recording
+  player until a recording policy is approved), review queue, campaign editor and approval, usage page; every
   control disabled with a reason while voice is off.
 
 ### 6.4 Security and tenant isolation
@@ -295,11 +296,11 @@ A research summary, not legal advice; dated 2026-11-03.
 | Caller ID | Tw 11.7(8): never withheld | In force | Calls only from a verified number shown to the callee |
 | Fines | ACM up to €900,000 or 1% of turnover; AI Act Art. 50 breaches up to €15M or 3% | In force | Per-campaign approval, audit trail, consent evidence export |
 | Calling hours | No statutory hours found; the Dutch telemarketing code (Code Telemarketing 2024) is self-regulation (not read in full) | Self-regulation | Default set after reading the code (proposal: weekdays 09:00–20:00 local time, no Sundays or public holidays), never widened beyond it |
-| Recording | Criminal law: a participant may record (Sr 139a, 139c). GDPR (AP guidance): a legal basis, and the caller told **at the start of the call** that it is recorded and why; access on request | In force | Recording off by default; when on, a spoken notice before recording starts; recordings exportable per contact for access requests |
+| Recording | Criminal law: a participant may record (Sr 139a, 139c). GDPR (AP guidance): a legal basis, and the caller told **at the start of the call** that it is recorded and why; access on request | In force | **No recording** (P15-V point 7) until an approved policy and legal review; then a spoken notice before recording starts and export per contact |
 | Privacy | GDPR: voice is personal data, biometric only when used to identify someone; a DPIA (the AP's list covers communications data and behavioural observation); processor agreements with each provider; minimisation; the absolute right to object to direct marketing (Art. 21) | In force | DPIA before any pilot; processor agreements; no speaker identification; an objection stops all voice marketing |
 | Transfers | EU-US Data Privacy Framework in force; appeal C-703/25 P pending | In force, at risk | Prefer EU-hosted speech and model processing; a fallback if the framework falls |
 | Telecom status | Offering numbers to the public as LeadStack's own service may require ACM registration and 112 duties (EECC Art. 109) | In force | Numbers come from a licensed provider under the business's or agency's own account; LeadStack does not become a telecom provider |
-| Retention | No fixed period; storage limitation (GDPR Art. 5(1)(e)) | In force | Proposal: recordings 30 days, transcripts and summaries 12 months, call metadata as CRM history; configurable down, never up, without a decision |
+| Retention | No fixed period; storage limitation (GDPR Art. 5(1)(e)) | In force | Documented separately for each kind of data in `VOICE-LEGAL-REVIEW.md` §3: no recordings; transcripts, summaries and metadata on their own periods |
 
 Open legal questions for counsel: whether a conversational AI agent is an
 "automated calling system" (the cautious reading is assumed above); the
@@ -347,7 +348,26 @@ the usual gates. No slice places a real call before slice V4's approval.
 | V5 Campaigns | Audience, pacing, per-campaign approval, cancel, outcomes, reporting | V4 | No double dial under duplicate jobs; approval required; plan caps enforced |
 | V6 Metering and launch | Usage events, entitlements, budgets, reconciliation, reporting and CSV, operator alerts, the health check, a launch review | V5; Phase 11 billing for resale | Usage matches provider billing in a reconciliation test; production enablement only by the owner |
 
-## 11. Decisions that remain with the owner
+## 11. Owner decisions (P15-V, 2026-11-03)
+
+| # | Decision | Outcome | Follow-up |
+| --- | --- | --- | --- |
+| 1 | Voice direction | **Approved**: Phase 15V stays as a planned post-launch capability | Not reopened |
+| 2 | MVP scope K5 | **Unchanged**: voice outside the MVP | Only an explicit owner decision changes it |
+| 3 | Providers | **Deferred** | `VOICE-PROVIDER-COMPARISON.md`; no accounts, no purchases |
+| 4 | Legal review | **Required** before production implementation or activation | `VOICE-LEGAL-REVIEW.md` (DPIA requirements, questions for counsel); §7 is not a final legal determination |
+| 5 | Pricing and plan limits | Cost model only, no commercial prices | `VOICE-COST-MODEL.md` |
+| 6 | SaaS-OS | Proposal only; no SaaS-OS, release or pin change | `SAAS-OS-REALTIME-PROPOSAL.md` |
+| 7 | Recording and retention | **No recording** as the design default until an approved policy and legal review; transcript and metadata retention documented separately | `VOICE-LEGAL-REVIEW.md` §3 |
+| 8 | Outbound consent | **Explicit, demonstrable consent** for AI outbound calls as the initial policy; no outbound calling until the legal interpretation and operational controls are reviewed | Slices V4 and V5 wait for that review |
+
+Also required by the owner for both directions: human handoff, selectable
+voices, agent configuration, call summaries, transcripts where permitted,
+outcome classification, usage metering, tenant isolation, campaign approval,
+opt-outs, rate limits, budget limits and emergency stop controls
+(`VOICE-THREAT-MODEL.md` §6 for the emergency stop).
+
+### Original list of decisions (kept for the record)
 
 1. Approve the direction and workstream 15V (this brief).
 2. When, if ever, to change K5 to bring a voice slice into a release.

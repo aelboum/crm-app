@@ -1163,9 +1163,13 @@ These features are not automatically part of the MVP.
 
 ## Workstream 15V — AI Voice Agents (intended direction, decision P15-V)
 
-**Status:** Intended product capability, not started and not authorised to
-build. Outside the K5 MVP; voice stays deferred until the owner approves a
-scope change. Full brief: `docs/project/VOICE-AGENTS-BRIEF.md`.
+**Status:** Direction approved by the owner on 2026-11-03 (decision P15-V):
+a planned post-launch capability. Not started and not authorised to build.
+Outside the K5 MVP. A legal review is required before production
+implementation; no call recording by default; explicit, demonstrable
+consent for AI outbound calls. Documents: `docs/project/VOICE-AGENTS-BRIEF.md`,
+`VOICE-PROVIDER-COMPARISON.md`, `VOICE-COST-MODEL.md`, `VOICE-LEGAL-REVIEW.md`,
+`VOICE-THREAT-MODEL.md`, `SAAS-OS-REALTIME-PROPOSAL.md`.
 
 Both references have AI voice agents (the reference template's Vapi and
 Twilio module; GoHighLevel Voice AI), so they are part of the product
