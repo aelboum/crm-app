@@ -2682,6 +2682,28 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## S-UP1 — Two SaaS-OS proposals submitted upstream (2026-11-03)
+
+- **Status:** Authorised by the owner on 2026-11-03 for submission and
+  discussion only, and done the same day:
+  - aelboum/saas-os#205, GET (and optionally DELETE) on
+    `StrictEgressClient`, needed for inbound email content
+    (`SAAS-OS-GET-PROPOSAL.md`);
+  - aelboum/saas-os#206, enabling `stream_inference` with a voice
+    first-event deadline, plus optional governed audio and media ingress,
+    needed for the future voice workstream 15V
+    (`SAAS-OS-REALTIME-PROPOSAL.md`).
+- Kept separate so they can be reviewed and implemented independently.
+  Each states the business rationale, security and compatibility
+  requirements, the tests expected upstream and release criteria.
+- **Not authorised:** implementing either feature in SaaS-OS, merging
+  upstream changes, creating a SaaS-OS release, changing LeadStack's pin,
+  or building or enabling voice.
+- **Other decisions of the same date:** no paid vendor sandbox accounts;
+  legal counsel not commissioned yet; a cost estimate for both
+  (`VOICE-ACTIVITY-COSTS.md`); provider research continues from public
+  documentation; voice recording stays disabled by default; K5 and the MVP
+  scope unchanged.
 ## P15-V — AI voice agents are an intended capability, with workstream 15V (2026-11-03)
 
 - **Status:** **Approved by the owner on 2026-11-03** (direction and

@@ -202,6 +202,14 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **S-UP1, SaaS-OS proposals submitted (2026-11-03):** aelboum/saas-os#205
+  (GET on the egress client, for inbound email) and #206 (streaming
+  inference with a voice first-event deadline, for workstream 15V),
+  separate, for discussion only; pin unchanged. Also
+  `VOICE-ACTIVITY-COSTS.md`: a bake-off of three platforms about $60–120
+  (Dutch numbers need a KvK extract and address; +3197 numbers cannot carry
+  voice), legal review and DPIA about €5k–12k (boutique) or €15k–35k (large
+  firm); neither approved.
 - **P15-V approved (2026-11-03):** the owner approved the voice direction
   and workstream 15V with eight decisions (K5 unchanged, providers
   deferred, legal review required, no recording by default, explicit

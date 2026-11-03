@@ -119,6 +119,20 @@ adapters, or a confirmed EU endpoint through an existing adapter.
 Runner-up: **Telnyx** as one vendor for carrier and voice, if EU storage at
 rest without guaranteed EU processing is acceptable.
 
+## 5a. Answered on 2026-11-03 (public documentation; detail in `VOICE-ACTIVITY-COSTS.md` §4)
+
+- **Twilio ConversationRelay and Media Streams run in Ireland (IE1)** (`<Connect>`
+  documentation).
+- **Twilio's Dutch "mobile" number is a +3197 machine-to-machine number** and
+  cannot carry person-to-person voice; an AI voice line needs a local or
+  national number (KvK extract and Dutch address).
+- **Deepgram:** Nova-3 recognises Dutch (`nl`, `nl-BE`) and Aura-2 has Dutch
+  voices; trial accounts get a $200 credit; whether free or pay-as-you-go
+  accounts may use the EU endpoint is not stated.
+- **ElevenLabs:** zero retention for Agents is Enterprise only.
+- **Telnyx:** Dutch local, national, mobile (application use only) and toll-free
+  numbers exist; Dutch per-minute rates are not public.
+
 ## 6. Questions for vendors (before any account)
 
 - Written EU processing and storage commitments, including sub-processors,
@@ -126,8 +140,8 @@ rest without guaranteed EU processing is acceptable.
 - EU-tier pricing (Vapi Premier, ElevenLabs Enterprise).
 - Dutch recognition accuracy on 8 kHz phone audio (no published benchmarks
   found); a sandbox for a bake-off.
-- Twilio: whether ConversationRelay and Media Streams run in IE1; which
-  Dutch number types support person-to-person voice.
+- Twilio: monthly prices of Dutch local and national numbers.
+- Deepgram: EU endpoint eligibility for pay-as-you-go accounts.
 - Telnyx: Dutch rates and +31 availability; guaranteed EU processing.
 - SLAs and uptime history (only Vapi publishes SLA tiers: 99% Pro, 99.9%
   Premier).

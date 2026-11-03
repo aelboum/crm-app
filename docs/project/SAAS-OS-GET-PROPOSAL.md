@@ -1,5 +1,9 @@
 # Proposal to SaaS-OS: GET (and DELETE) on the strict egress client
 
+**Submitted upstream on 2026-11-03** as aelboum/saas-os#205, under the
+owner's authorisation of the same date (submission and discussion only; no
+implementation, merge, release or pin change authorised).
+
 **Status:** a proposal for review, prepared on 2026-11-02 under the owner's
 instruction "Prepare the SaaS-OS GET change as a separate reviewable
 proposal. Do not change the SaaS-OS pin or release SaaS-OS." It is written

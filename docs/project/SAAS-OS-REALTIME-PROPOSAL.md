@@ -1,5 +1,10 @@
 # Proposal to SaaS-OS: streaming inference and real-time audio for voice agents
 
+**Submitted upstream on 2026-11-03** as aelboum/saas-os#206, separate from
+the GET proposal (#205), under the owner's authorisation of the same date
+(submission and discussion only; no implementation, merge, release, pin
+change or voice work authorised).
+
 **Status:** a technical proposal for review, prepared on 2026-11-03 under
 the owner's decision P15-V point 6 ("Prepare the technical proposal for
 streaming audio and real-time AI interactions. Do not change SaaS-OS, its
