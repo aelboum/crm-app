@@ -89,17 +89,29 @@ discussion, not as a request to build now.
 ### 4.1 Interfaces (a sketch; the maintainers' design governs)
 
 ```python
-async with transcribe_stream(caller, tenant_id=..., request=TranscribeRequest(
-        alias="default-stt", use_case="voice.listen", language="nl-NL",
-        sample_rate=8000, encoding="mulaw")) as session:
-    await session.send_audio(chunk)          # bytes
-    async for event in session:              # PartialTranscript | FinalTranscript | UsageUpdate | Completed
+async with transcribe_stream(
+    caller,
+    tenant_id=...,
+    request=TranscribeRequest(
+        alias="default-stt",
+        use_case="voice.listen",
+        language="nl-NL",
+        sample_rate=8000,
+        encoding="mulaw",
+    ),
+) as session:
+    await session.send_audio(chunk)  # bytes
+    async for event in session:  # PartialTranscript | FinalTranscript | UsageUpdate | Completed
         ...
 
-async with synthesize_stream(caller, tenant_id=..., request=SynthesizeRequest(
-        alias="default-tts", use_case="voice.speak", voice="nl-NL-standard-1",
-        text_source=...)) as session:
-    async for event in session:              # AudioChunk | UsageUpdate | Completed
+async with synthesize_stream(
+    caller,
+    tenant_id=...,
+    request=SynthesizeRequest(
+        alias="default-tts", use_case="voice.speak", voice="nl-NL-standard-1", text_source=...
+    ),
+) as session:
+    async for event in session:  # AudioChunk | UsageUpdate | Completed
         ...
 ```
 
