@@ -202,6 +202,13 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **P15-V2, voice readiness specification (2026-11-03):** `VOICE-SPEC.md`
+  (requirements, architecture with Exists or Proposed SaaS-OS
+  capabilities, security and permissions), `VOICE-UX-SPEC.md` (screens
+  S1–S8), `VOICE-SLICES.md` (V0–V6 with approval gates and V1 test
+  specifications); second provider research pass and further legal
+  requirements. Documentation only; SaaS-OS #205 and #206 open with no
+  response.
 - **S-UP1, SaaS-OS proposals submitted (2026-11-03):** aelboum/saas-os#205
   (GET on the egress client, for inbound email) and #206 (streaming
   inference with a voice first-event deadline, for workstream 15V),

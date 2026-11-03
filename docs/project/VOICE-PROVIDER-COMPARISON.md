@@ -133,6 +133,52 @@ rest without guaranteed EU processing is acceptable.
 - **Telnyx:** Dutch local, national, mobile (application use only) and toll-free
   numbers exist; Dutch per-minute rates are not public.
 
+## 5b. Second research pass (2026-11-03): integration details
+
+[V] read on the vendor's page; [S] secondary or search text only; [U] not
+found. Public documentation only.
+
+| Topic | Deepgram Voice Agent | ElevenLabs Agents | Vapi | Telnyx Voice AI | Twilio ConversationRelay |
+| --- | --- | --- | --- | --- | --- |
+| Latency claim | Median under 700 ms, P90 under 1 s (one vendor set-up) [S]; per-turn `LatencyReport` [S] | None numeric; speech starts at the first comma [V] | None [U] | None [U] | Median under 0.5 s, P95 under 0.725 s (internal) [S] |
+| Turn detection | Flux `eot_threshold`, `eager_eot_threshold`, `eot_timeout_ms`, changeable mid-call; `ForceEndTurn` [V] | `turn_timeout`, `turn_eagerness`, filler while the LLM is slow [V] | `waitSeconds`; "vapi" smart endpointing recommended for non-English (Dutch) [V] | Flux or `wait_seconds` [S] | Inside the speech provider [U] |
+| Barge-in signal | `UserStartedSpeaking`; our bridge clears the carrier audio [V]; `defer_until_eot` holds function calls until the turn is final [V] | Interruption on or off [V]; cancel to the custom LLM [U] | `stopSpeakingPlan` [V]; abort of the in-flight LLM call [U] | On by default; backchannel threshold [S] | `interrupt` with what the caller actually heard (`utteranceUntilInterrupt`) [V] |
+| Custom LLM | Any Chat Completions endpoint, free-form headers [V]; streaming requirement [U] | Chat Completions or Responses, **SSE required** [V] | `/chat/completions`, API key or OAuth2 [V]; call metadata option [S] | `/v1/chat/completions` [S]; stored bearer key [V]; metadata forwarding [V] | Our own WebSocket loop (no LLM contract) [V] |
+| Webhook signing | No webhooks: WebSocket events | HMAC header, one secret per webhook [V]; dedupe on conversation id [V] | Bearer, secret header, OAuth2 or **HMAC with timestamp** [V]; 7.5 s limit on assistant requests [V] | Ed25519 signature and timestamp [S] | HMAC-SHA1 `X-Twilio-Signature` [V]; idempotency token header and retry overrides [V] |
+| Retention | Model-improvement programme **on by default** (keeps audio): `mip_opt_out: true` required [V]; no deletion API found [U] | `retention_days` (default 2 years) [V]; delete API [V] | Zero data retention org-wide [V] (another page calls it an add-on [S]); delete API [V] | [U] | [U] |
+| Transfers | Our carrier code [I] | Warm and blind **only with native Twilio**; SIP REFER on trunks [V] | Mostly Twilio-only warm modes; one experimental on own SIP [V] | SIP REFER, warm transfer [S] | Carrier features [S] |
+| Outbound | 45 concurrent per project in the EU [V]; voicemail detection from the carrier | Voicemail tool [V]; caller ID must be a Twilio number [V]; Twilio IE1 compatibility [U] | Voicemail detection options [V]; plan-based concurrency [V] | Voicemail detection [U] | Answering-machine detection [V]; in IE1 [U] |
+| Configuration as code | The whole agent is our own JSON settings [V] | CLI pull and push of JSON configs [V] | CLI for assistants [V] | JSON assistant API [V] | Our code |
+| SLA | None public [U] | "SLAs" on Enterprise, no figure [S] | 99% Pro, 99.9% Premier [V] | 99.99% core voice [V] | APIs 99.95% [S] |
+
+**What changes in the shortlist:**
+1. **Deepgram stays first, with a condition:** `mip_opt_out: true` and the
+   EU endpoint are mandatory, because by default it keeps audio. It has the
+   best turn-detection controls and `defer_until_eot` (suited to tools that
+   change data), and the configuration is entirely ours. Costs: LeadStack
+   builds transfers, answering-machine detection and the barge-in clear on
+   the carrier; no public SLA.
+2. **ElevenLabs moves down for an EU set-up:** warm and blind transfers need
+   its native Twilio integration (IE1 compatibility unverified); the static
+   EU SIP endpoint and zero retention are Enterprise only; SSE is mandatory.
+3. **Vapi improves on governance:** HMAC or OAuth2 webhooks, zero retention
+   and a delete API; the EU region is still Premier only.
+4. **Twilio ConversationRelay strengthens as the build-it-ourselves option:**
+   the clearest interruption signal, documented retries and idempotency
+   tokens, available in IE1.
+5. **Telnyx rises slightly:** the only published voice uptime (99.99%), SIP
+   REFER and Ed25519 signing.
+6. **Gaps for every platform:** no published first-token timeout and no
+   documented cancel to the custom LLM on interruption. Both must be
+   measured in the bake-off.
+7. **Dutch carriers:** no Dutch provider was found with a public
+   programmable-voice API; CM.com is the only plausible Dutch SIP carrier
+   (requirements unverified).
+
+The shortlist for a bake-off is therefore: (1) Deepgram with Twilio IE1,
+(2) Vapi, (3) Twilio ConversationRelay as the do-it-yourself baseline;
+ElevenLabs and Telnyx as alternates. No provider is selected; selection
+needs the owner's approval with this evidence.
 ## 6. Questions for vendors (before any account)
 
 - Written EU processing and storage commitments, including sub-processors,

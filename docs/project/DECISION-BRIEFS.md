@@ -18,7 +18,7 @@ off). Costs are indicative orders of magnitude, not quotes.
 | 6 | Agency workspaces and billing (brief 3) | Phase 11, paid plans | Medium: commercial model |
 | 7 | AI provider, plan limits, permitted data (brief 2) | Phase 9 | Lower: no dependency for others |
 | 8 | Website tracking and consent (brief 5) | Visit history | Lower: optional feature |
-| 9 | AI voice agents: direction and workstream 15V (brief 9) | Any voice work; nothing else | **Direction approved 2026-11-03 (DECISIONS P15-V)**; K5 unchanged. Open: providers (`VOICE-PROVIDER-COMPARISON.md`), legal review and DPIA (`VOICE-LEGAL-REVIEW.md`), prices (`VOICE-COST-MODEL.md`), SaaS-OS streaming submitted upstream 2026-11-03 as aelboum/saas-os#206 (`SAAS-OS-REALTIME-PROPOSAL.md`). Sandbox accounts and legal counsel not approved yet; cost estimate in `VOICE-ACTIVITY-COSTS.md` |
+| 9 | AI voice agents: direction and workstream 15V (brief 9) | Any voice work; nothing else | **Direction approved 2026-11-03 (DECISIONS P15-V)**; K5 unchanged. Open: providers (`VOICE-PROVIDER-COMPARISON.md`), legal review and DPIA (`VOICE-LEGAL-REVIEW.md`), prices (`VOICE-COST-MODEL.md`), SaaS-OS streaming submitted upstream 2026-11-03 as aelboum/saas-os#206 (`SAAS-OS-REALTIME-PROPOSAL.md`). Sandbox accounts and legal counsel not approved yet; cost estimate in `VOICE-ACTIVITY-COSTS.md`. Readiness specification and slices with approval gates: `VOICE-SPEC.md`, `VOICE-UX-SPEC.md`, `VOICE-SLICES.md` (next gate: V0/V1) |
 | — | minimatch audit exception (13-A3) | Nothing; development tools only | Expires 2026-12-31: decide again before then if no fix exists |
 
 ## Brief 1 — SaaS-OS GET support for Resend inbound email

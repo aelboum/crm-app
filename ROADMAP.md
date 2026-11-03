@@ -1187,7 +1187,9 @@ Scope, delivered in slices:
 * Integration with contacts and companies, deals and pipelines, appointments, conversations (a `voice` channel), automations, knowledge, reporting and usage.
 * Compliance: mandatory AI disclosure (AI Act Art. 50), provable consent before any outbound AI call (Telecommunicatiewet 11.7), in-call opt-out, caller ID, recording notice, retention, DPIA.
 
-Slices (detail and exit criteria in the brief, §10):
+Slices (scope, dependencies, database, API, screens, security, tests,
+acceptance, rollback and approval gate for each: `docs/project/VOICE-SLICES.md`;
+requirements and architecture: `VOICE-SPEC.md`; screens: `VOICE-UX-SPEC.md`):
 
 | Slice | Scope |
 | --- | --- |

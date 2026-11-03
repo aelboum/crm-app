@@ -165,6 +165,77 @@ signed off before any pilot with real callers (slice V2 with real numbers).
     calling, and what contract terms, controls and audit evidence reduce
     it?
 
+## 2a. Further requirements to put before counsel (2026-11-03)
+
+A research summary, not legal advice; items marked "to confirm" were not
+verified in a primary source this session.
+
+### 2a.1 Special categories spoken during calls
+Callers may volunteer health or other special-category data (GDPR Art. 9),
+for example at a dental or medical practice, the design's example vertical.
+Product controls proposed:
+- extraction never targets special categories;
+- summaries avoid repeating them;
+- transcripts follow the shortest retention;
+- a workspace can turn transcripts off.
+
+Counsel to confirm the lawful basis, and whether a workspace in health care
+needs stricter defaults.
+
+### 2a.2 Transcription as processing
+Even without recording, a live transcript is processing of the
+conversation's content.
+
+Proposed:
+- the greeting says the call is handled by an AI and transcribed (with the
+  disclosure);
+- the privacy notice link is in the workspace's contact pages.
+
+Counsel to confirm the wording and the legal basis (`§2.3` Q15).
+
+### 2a.3 AI Act duties beyond Art. 50
+- **AI literacy (Art. 4):** providers and deployers ensure sufficient AI
+  literacy of the people operating the system, in force since 2 Feb 2025
+  (to confirm whether the Digital Omnibus changed it).
+  - Product support: operator guidance in the review screens and a short
+    help page.
+- **General-purpose AI models:** the upstream LLM and speech providers carry
+  their own duties. LeadStack keeps their documentation and terms on file.
+- **No high-risk use intended:** the product should not offer uses listed
+  in Annex III (for example creditworthiness or employment screening by
+  phone).
+  - Product control: terms of use, plus agent templates limited to
+    reception, qualification, booking and follow-up.
+
+### 2a.4 Dutch numbers and telecom
+- Number types (as reflected in carrier guidelines that follow the Dutch
+  numbering rules):
+  - geographic numbers need an address in the area;
+  - national (085, 088) numbers need a Dutch address;
+  - +3197 numbers are machine-to-machine and may not carry
+    person-to-person voice.
+- Caller ID must not be withheld for telemarketing (Tw 11.7(8)), and the
+  number shown should be one on which the business can be reached (to
+  confirm).
+- Numbers held in the business's or agency's own carrier account, so
+  LeadStack is not the number holder (`§2.5` Q23).
+- Porting the business's existing number to a voice platform is a carrier
+  process outside LeadStack; it is documented, not automated.
+
+### 2a.5 Children and vulnerable callers
+No targeting of minors.
+
+Proposed:
+- the agent offers a person when a caller seems to be a child or in
+  distress;
+- such calls are flagged for review.
+
+Counsel to confirm whether more is needed.
+
+### 2a.6 Cross-border calls
+Outbound is limited to Dutch numbers at first. Calls to other member states
+follow their own telemarketing rules (`§2.1` Q9), so other countries stay
+off until reviewed.
 ## 3. Retention, documented separately (proposal for review)
 
 | Data | Default proposal | Notes |

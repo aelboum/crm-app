@@ -335,6 +335,10 @@ disclosure and marking.
 
 ## 10. Roadmap proposal: workstream 15V (after launch, outside K5)
 
+Superseded in detail by `VOICE-SLICES.md` (2026-11-03); the summary below is
+kept for the decision record. Implementation-readiness specification:
+`VOICE-SPEC.md`; screens: `VOICE-UX-SPEC.md`.
+
 Each slice keeps the Definition of Done, negative authorisation tests and
 the usual gates. No slice places a real call before slice V4's approval.
 

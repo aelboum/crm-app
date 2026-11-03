@@ -2682,6 +2682,41 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## P15-V2 — Voice implementation-readiness specification (2026-11-03)
+
+- **Status:** Prepared under the owner's instruction of 2026-11-03 to
+  continue voice preparation autonomously without building it.
+  Documentation only. K5 unchanged, recording off by default, no provider
+  activated, nothing bought.
+- **Records:**
+  - `VOICE-SPEC.md`: product requirements with ids and acceptance; an
+    architecture with SaaS-OS capabilities marked Exists or Proposed; the
+    data model; the call state machine; provider-neutral interfaces;
+    streaming and interruption; tools and context limits; idempotency;
+    failure recovery; metering; security and permissions.
+  - `VOICE-UX-SPEC.md`: screens S1–S8 on the existing design system and the
+    design's Assistants screen.
+  - `VOICE-SLICES.md`: V0–V6 with scope, dependencies, database, API,
+    screens, security, tests, acceptance, rollback and approval gates, plus
+    test specifications for V1.
+  - Second provider research pass in `VOICE-PROVIDER-COMPARISON.md` §5b.
+  - Further legal requirements in `VOICE-LEGAL-REVIEW.md` §2a.
+- **Findings from the code that V1 must address:**
+  - contact phones are stored as entered, with no E.164 normalisation;
+  - `consent_record.channel` allows only `email`;
+  - `suppression` is keyed by email only;
+  - `conversation.channel` allows only `email` and `other`;
+  - the product does not yet use SaaS-OS feature flags.
+- **Bake-off shortlist (no selection):**
+  1. Deepgram Voice Agent with Twilio IE1 (`mip_opt_out` and the EU endpoint
+     mandatory);
+  2. Vapi;
+  3. Twilio ConversationRelay as the do-it-yourself baseline.
+  - Alternates: ElevenLabs and Telnyx.
+- **Upstream:** aelboum/saas-os#205 and #206 open, no maintainer response
+  as of 2026-11-03.
+- **Not authorised:** any slice V1–V6; each needs its own approval gate
+  (`VOICE-SLICES.md`).
 ## S-UP1 — Two SaaS-OS proposals submitted upstream (2026-11-03)
 
 - **Status:** Authorised by the owner on 2026-11-03 for submission and
