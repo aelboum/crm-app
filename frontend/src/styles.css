@@ -1542,3 +1542,5 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .template-picker { display: grid; gap: 4px; max-width: 320px; }
 .sending-flags { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .sending-flags legend { padding: 0; margin-bottom: 4px; font-size: 12.5px; font-weight: 600; }
+.profile-name-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.profile-name-row .field-input { flex: 1; min-width: 200px; }

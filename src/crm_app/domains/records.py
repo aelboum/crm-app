@@ -84,6 +84,23 @@ def tag_name(value: str) -> str:
     return trimmed
 
 
+DISPLAY_NAME_MAX = 80
+
+
+def display_name(value: str) -> str:
+    """A member's display name as stored (decision M-P1, migration 0035):
+    inner runs of spaces collapsed, trimmed, 1..80 characters, no control,
+    format or separator characters (a name must never hide or mislead)."""
+    if not visible_text(value):
+        raise InvalidValue("must not contain control characters")
+    collapsed = " ".join(value.split())
+    if not collapsed:
+        raise InvalidValue("is required")
+    if len(collapsed) > DISPLAY_NAME_MAX:
+        raise InvalidValue(f"must be at most {DISPLAY_NAME_MAX} characters")
+    return collapsed
+
+
 # Control characters a note may not hold: all but tab and line feed (the
 # migration 0003 `note_body_check` refuses the same set).
 _NOTE_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")

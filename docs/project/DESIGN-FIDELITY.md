@@ -63,8 +63,8 @@ L243-247):
 | Settings › other sections (business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
 | Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values; flows checked in Chrome at desktop width |
 | Companies (`ScreenCompanies`) | `/companies` | 3 | List, drawer with the company's people, and create/edit dialog (§4c); compared from source values; flows checked in Chrome at desktop width |
-| Tasks (`ScreenTasks`) | `/tasks` | 4 | **Implemented (4C)** — tabs with counts, quick add, groups, complete, delete as designed. Differences: real due times (the design's are display strings) with a No due date group; an Edit dialog; priority stored as data; members by ID; task sections in record drawers |
-| Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | **Implemented (4B)** — board, table, drawer, create/edit. Differences: no pipeline switcher (one pipeline); no Won column (won and lost are outcomes, Mark lost asks a reason, closed deals offer Reopen); summary shows open value, weighted forecast and open deals only; values in the deal's currency; drag-and-drop plus keyboard stage buttons in the drawer; members by ID |
+| Tasks (`ScreenTasks`) | `/tasks` | 4 | **Implemented (4C)** — tabs with counts, quick add, groups, complete, delete as designed. Differences: real due times (the design's are display strings) with a No due date group; an Edit dialog; priority stored as data; task sections in record drawers; members by their display name (M-P1) or ID |
+| Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | **Implemented (4B)** — board, table, drawer, create/edit. Differences: no pipeline switcher (one pipeline); no Won column (won and lost are outcomes, Mark lost asks a reason, closed deals offer Reopen); summary shows open value, weighted forecast and open deals only; values in the deal's currency; drag-and-drop plus keyboard stage buttons in the drawer; members by display name (M-P1) or ID |
 | Settings › Business profile › Business hours (`ScreenSettings.dc.html` L34-37) | `/settings?section=business` | 5 (P5-B) | **Implemented** — a switch and one range per day; not set until saved; can be cleared; in the workspace time zone |
 | Settings › Suppression list and the contact's Consent section (not in the design; P7-B) | `/settings?section=suppression`; contact drawer | 7 (P7-B) | **Implemented** — paste addresses with a reason, search, remove after a confirmation; a contact's email status and consent history, record consent with its wording, withdraw (suppresses the address) |
 | Settings › Sales pipeline (not in the design; P4 4A) | `/settings?section=pipeline` | 4 | **Implemented** — stage names, probabilities and order; won and lost are outcomes, not stages |
@@ -179,8 +179,9 @@ L243-247):
   - member row 738×57.
 
 **Remaining deviations, with reasons:**
-- **Member rows:** show the membership ID (Geist Mono) and status instead
-  of name and email, because member profiles wait on G1.
+- **Member rows:** show the member's display name when they chose one
+  (decision M-P1), otherwise the invited email or the membership ID (Geist
+  Mono), and the status.
 - **Role control:** the design's per-row role `<select>` is a "select"
   button opening the actions menu. Roles are added and removed
   individually, Owner changes need confirmation, and Admins may not touch
@@ -207,9 +208,8 @@ L243-247):
   workspace name.
 - **Name and e-mail:** not available. SaaS-OS stores no name, and
   `/auth/me` returns only the user ID.
-- **Storing a display name or time zone:** blocked. It would need a
-  product table holding personal data, which waits on G1 together with
-  member profiles (`PHASE2-PLAN.md` §6.5). No storage was added.
+- **Display name:** stored per workspace and set by the member (decision
+  M-P1). **Time zone:** still not stored; the field stays disabled and says so.
 - **"Manage":** has no target that keeps the identity provider invisible
   (Login V2 has no self-service page; the ZITADEL console would expose
   the provider, against SaaS-OS ADR-0023).
@@ -410,8 +410,8 @@ messages; the design's validation texts.
   Company, Source and Updated; companies show Company (with domain),
   Industry, Owner, City and Updated. Sorting is by name or last update,
   the API's allow-list.
-- *Owners* show as "You" or "Member <id>", because member names are not
-  stored yet (PHASE2-PLAN.md §6.5).
+- *Owners* show as "You", the member's own display name (decision M-P1,
+  set in My profile), or "Member <id>" for a member who has not chosen one.
 - *Full record page:* not built; the drawer holds every stored field and
   the edit, archive, restore and delete actions. The companies drawer
   lists the company's people; choosing one opens it in Contacts.

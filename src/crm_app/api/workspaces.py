@@ -23,7 +23,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import get_current_actor, require_permission
 from saas_os.api.errors import rate_limited, service_unavailable
@@ -37,13 +37,19 @@ from saas_os.infra.ratelimit import (
     get_ratelimit_config,
 )
 
-from crm_app import directory
+from crm_app import directory, member_profiles
+from crm_app.domains import records as values
 from crm_app.domains.membership import MANAGE_SUSPENDED, visible_statuses
 
 router = APIRouter(prefix="/v1/workspaces", tags=["workspaces"])
 
 ReadWorkspace = Annotated[RequestContext, Depends(require_permission("crm_app.workspace", "read"))]
 ReadMembers = Annotated[RequestContext, Depends(require_permission("membership", "read"))]
+# Every role holds it; it proves an active membership in this workspace, and
+# the profile routes only ever read or write the caller's own row.
+OwnProfile = Annotated[
+    RequestContext, Depends(require_permission("crm_app.member_profile", "read"))
+]
 
 MAX_PAGE_SIZE = 200
 
@@ -59,6 +65,27 @@ class Member(BaseModel):
     user_id: uuid.UUID
     status: str
     roles: list[str]
+    # The member's own display name, when they chose one (decision M-P1).
+    display_name: str | None = None
+
+
+class ProfileIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # None or blank clears the name.
+    display_name: str | None = Field(default=None, max_length=400)
+
+    @field_validator("display_name")
+    @classmethod
+    def _name(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        return values.display_name(value)
+
+
+class ProfileOut(BaseModel):
+    user_id: uuid.UUID
+    display_name: str | None
 
 
 class MemberPage(BaseModel):
@@ -133,6 +160,7 @@ def list_members(
     )
     page = memberships[offset : offset + limit]
     role_names = {role.id: role.name for role in list_roles(workspace)} if page else {}
+    shown = member_profiles.names(workspace, (m.user_id for m in page))
     items = [
         Member(
             membership_id=m.id,
@@ -143,7 +171,26 @@ def list_members(
                 for a in list_membership_roles(workspace, m.id)
                 if a.role_id in role_names
             ),
+            display_name=shown.get(m.user_id),
         )
         for m in page
     ]
     return MemberPage(items=items, total=len(memberships), limit=limit, offset=offset)
+
+
+@router.get("/{tenant_id}/me/profile", response_model=ProfileOut)
+def get_own_profile(tenant_id: uuid.UUID, context: OwnProfile) -> ProfileOut:
+    """The caller's own display name in this workspace (decision M-P1)."""
+    del tenant_id
+    return ProfileOut(
+        user_id=context.actor_id,
+        display_name=member_profiles.own(context.tenant_id, context.actor_id),
+    )
+
+
+@router.put("/{tenant_id}/me/profile", response_model=ProfileOut)
+def put_own_profile(tenant_id: uuid.UUID, body: ProfileIn, context: OwnProfile) -> ProfileOut:
+    """Set or clear the caller's own display name; never another member's."""
+    del tenant_id
+    stored = member_profiles.set_own(context.tenant_id, context.actor_id, body.display_name)
+    return ProfileOut(user_id=context.actor_id, display_name=stored)

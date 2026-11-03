@@ -15,7 +15,37 @@ export const keys = {
   workspace: (id: string) => ["workspace", id] as const,
   access: (id: string) => ["workspace", id, "access"] as const,
   members: (id: string, offset: number) => ["workspace", id, "members", offset] as const,
+  allMembers: (id: string) => ["workspace", id, "members"] as const,
+  profile: (id: string) => ["workspace", id, "profile"] as const,
 };
+
+/** The caller's own display name in a workspace (decision M-P1). */
+export function useOwnProfile(workspaceId: string) {
+  return useQuery({
+    queryKey: keys.profile(workspaceId),
+    queryFn: async () =>
+      unwrap(await api.GET("/v1/workspaces/{tenant_id}/me/profile", path(workspaceId))),
+  });
+}
+
+/** Sets (or, with an empty name, clears) the caller's own display name. */
+export function useSetOwnProfile(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (displayName: string) =>
+      unwrap(
+        await api.PUT("/v1/workspaces/{tenant_id}/me/profile", {
+          ...path(workspaceId),
+          body: { display_name: displayName.trim() === "" ? null : displayName },
+        }),
+      ),
+    onSuccess: (profile) => {
+      client.setQueryData(keys.profile(workspaceId), profile);
+      // Every member list (and so every name shown) refreshes.
+      void client.invalidateQueries({ queryKey: keys.allMembers(workspaceId) });
+    },
+  });
+}
 
 /** The signed-in user, or null when there is no valid session. */
 export function useMe() {

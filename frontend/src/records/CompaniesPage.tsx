@@ -32,6 +32,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import {
   Avatar,
   Drawer,
@@ -380,6 +381,7 @@ function CompanyDrawer({
   onOpenDeal: (id: string) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const company = useCompany(workspaceId, id);
   const definitions = useFieldDefinitions(workspaceId);
@@ -453,7 +455,7 @@ function CompanyDrawer({
             <FieldRow label={t("company.field.industry")}>{record.industry}</FieldRow>
             <FieldRow label={t("company.field.city")}>{record.city}</FieldRow>
             <FieldRow label={t("company.field.country")}>{record.country_code}</FieldRow>
-            <FieldRow label={t("records.field.owner")}>{ownerLabel(t, record.owner_user_id, meId)}</FieldRow>
+            <FieldRow label={t("records.field.owner")}>{ownerLabel(t, record.owner_user_id, meId, names)}</FieldRow>
             <FieldRow label={t("records.field.created")}>
               <When value={record.created_at} />
             </FieldRow>

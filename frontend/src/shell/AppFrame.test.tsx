@@ -244,18 +244,41 @@ describe("app frame", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows My profile with the real role and no field that pretends to save", async () => {
+  it("shows My profile with the real role, a display name that saves and a time zone that does not", async () => {
     const user = userEvent.setup();
-    const { router } = renderApp(`/w/${WS}/settings`, signedIn);
+    const profile = `/v1/workspaces/${WS}/me/profile`;
+    const { router, sent } = renderApp(`/w/${WS}/settings`, (method, path, body) => {
+      if (path === profile && method === "GET") {
+        return { status: 200, body: { user_id: "u", display_name: null } };
+      }
+      if (path === profile && method === "PUT") {
+        const name = (body as { display_name: string | null }).display_name;
+        return { status: 200, body: { user_id: "u", display_name: name } };
+      }
+      return signedIn(method, path, body);
+    });
     await user.click(await screen.findByRole("button", { name: "My profile" }));
     expect(
       await screen.findByRole("heading", { level: 1, name: "My profile" }),
     ).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ section: "profile" });
     expect(screen.getByText("Owner · Acme Studio")).toBeInTheDocument();
-    expect(screen.getByLabelText("Display name")).toBeDisabled();
+    // Decision M-P1: the display name is stored for this workspace.
+    const name = screen.getByLabelText("Display name");
+    await waitFor(() => {
+      expect(name).toBeEnabled();
+    });
+    expect(name).toHaveAccessibleDescription(/Shown to the members of this workspace/);
+    expect(screen.getByRole("button", { name: "Save name" })).toBeDisabled();
+    await user.type(name, "  Anna de Vries ");
+    await user.click(screen.getByRole("button", { name: "Save name" }));
+    expect(await screen.findByText("Display name saved")).toBeInTheDocument();
+    expect(sent.find((r) => r.method === "PUT")?.body).toEqual({
+      display_name: "  Anna de Vries ",
+    });
+    // The time zone still cannot be saved, and says so.
     expect(screen.getByLabelText("Time zone")).toBeDisabled();
-    expect(screen.getByLabelText("Display name")).toHaveAccessibleDescription(
+    expect(screen.getByLabelText("Time zone")).toHaveAccessibleDescription(
       /can't be saved yet/,
     );
     expect(screen.getByRole("button", { name: /Manage/ })).toBeDisabled();

@@ -3,6 +3,7 @@ import { type IntlShape, useIntl } from "react-intl";
 import { type Deal, type DealEvent, type DealSummary, IDLE_DAYS, minorDigits } from "../api/opportunities";
 import type { MessageId } from "../i18n/en";
 import type { useT } from "../i18n/useT";
+import type { MemberNames } from "../members/names";
 import { ownerLabel } from "./parts";
 
 type T = ReturnType<typeof useT>;
@@ -107,7 +108,12 @@ const FIELD_LABEL: Partial<Record<string, MessageId>> = {
 };
 
 /** One history entry as a sentence. */
-export function eventText(t: T, event: DealEvent, meId: string | undefined): string {
+export function eventText(
+  t: T,
+  event: DealEvent,
+  meId: string | undefined,
+  names?: MemberNames,
+): string {
   switch (event.kind) {
     case "created":
       return t("deals.history.created", { stage: event.stage_to_name ?? "" });
@@ -126,7 +132,7 @@ export function eventText(t: T, event: DealEvent, meId: string | undefined): str
         to: event.stage_to_name ?? "",
       });
     case "owner_changed":
-      return t("deals.history.owner", { owner: ownerLabel(t, event.owner_to, meId) });
+      return t("deals.history.owner", { owner: ownerLabel(t, event.owner_to, meId, names) });
     case "outcome_changed":
       if (event.outcome_to === "won") return t("deals.history.won");
       if (event.outcome_to === "lost") return t("deals.history.lost");

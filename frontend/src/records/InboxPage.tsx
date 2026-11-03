@@ -31,6 +31,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { type MemberNames, useMemberNames } from "../members/names";
 import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
 import { TemplatePicker } from "./EmailTemplates";
 import { type Option, ownerLabel, ownerOptions } from "./parts";
@@ -402,9 +403,10 @@ function author(
   kind: string,
   authorId: string | null,
   meId: string | undefined,
+  names: MemberNames,
 ): string {
   if (kind === "inbound") return t("inbox.kind.inbound");
-  return ownerLabel(t, authorId, meId);
+  return ownerLabel(t, authorId, meId, names);
 }
 
 function Thread({
@@ -425,6 +427,7 @@ function Thread({
   onOpenContact: (id: string) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const thread = useConversation(workspaceId, id);
   const update = useUpdateConversation(workspaceId);
@@ -461,7 +464,7 @@ function Thread({
   const assignee = item.assignee_user_id ?? "";
   const choices =
     assignee && !people.some((p) => p.id === assignee)
-      ? [...people, { id: assignee, label: ownerLabel(t, assignee, meId) }]
+      ? [...people, { id: assignee, label: ownerLabel(t, assignee, meId, names) }]
       : people;
   const contactId = item.contact_id;
   return (
@@ -543,7 +546,7 @@ function Thread({
             <div className="inbox-message-head">
               <span className="inbox-message-author">
                 {message.kind === "note" ? `${t("inbox.kind.note")} · ` : ""}
-                {author(t, message.kind, message.author_user_id, meId)}
+                {author(t, message.kind, message.author_user_id, meId, names)}
               </span>
               <ShortTime value={message.created_at} />
             </div>

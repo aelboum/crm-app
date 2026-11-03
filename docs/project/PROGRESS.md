@@ -202,6 +202,11 @@ decisions P2-A to P2-E approved)
   test workspace": the figures match its data, the appointments card
   fails alone (that workspace has no appointment grant), no overflow at
   390 px.
+- **M-P1, member display names (2026-11-03):** voice set aside by the owner.
+  Members set their own display name in My profile (migration
+  `0035_member_profiles`, `GET`/`PUT /v1/workspaces/{ws}/me/profile`), and
+  every owner, assignee, host, author and team row shows it instead of
+  "Member <id>".
 - **P15-V2, voice readiness specification (2026-11-03):** `VOICE-SPEC.md`
   (requirements, architecture with Exists or Proposed SaaS-OS
   capabilities, security and permissions), `VOICE-UX-SPEC.md` (screens

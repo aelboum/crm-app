@@ -31,6 +31,7 @@ import { Badge } from "../components/ui/Badge";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { STATUS_LABEL, STATUS_TONE } from "./appointmentParts";
 import {
   addDecimals,
@@ -593,6 +594,7 @@ function HomeTask({
   onError: (message: MessageId) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const update = useUpdateTask(workspaceId);
   const overdue =
@@ -624,7 +626,7 @@ function HomeTask({
         <span className="home-row-sub">
           <DueText value={task.due_at} overdue={overdue} />
           {" · "}
-          {ownerLabel(t, task.assignee_user_id, meId)}
+          {ownerLabel(t, task.assignee_user_id, meId, names)}
         </span>
       </span>
     </li>
@@ -639,6 +641,7 @@ function ActivityCard({
   onGo: Go;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const me = useMe();
   const feed = useRecentActivity(workspaceId);
   const describe = useDescribe();
@@ -689,7 +692,7 @@ function ActivityCard({
                   </p>
                   <p className="activity-meta">
                     {entry.actor_user_id
-                      ? ownerLabel(t, entry.actor_user_id, meId)
+                      ? ownerLabel(t, entry.actor_user_id, meId, names)
                       : t("history.system")}
                     {" · "}
                     <When value={entry.occurred_at} />

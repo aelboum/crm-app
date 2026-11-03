@@ -20,6 +20,7 @@ import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { ownerLabel, When } from "./parts";
 
 /*
@@ -193,6 +194,7 @@ function NoteCard({
   onEditChanged: (noteId: string, changed: boolean) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const edit = useEditNote(workspaceId, kind, recordId);
   const remove = useDeleteNote(workspaceId, kind, recordId);
@@ -282,7 +284,7 @@ function NoteCard({
         </form>
       )}
       <p className="note-meta">
-        {ownerLabel(t, note.author_user_id, meId)} · <When value={note.created_at} />
+        {ownerLabel(t, note.author_user_id, meId, names)} · <When value={note.created_at} />
         {note.edited ? ` · ${t("notes.edited")}` : ""}
       </p>
       {error ? (
@@ -373,6 +375,7 @@ const STAGE_LABELS: Partial<Record<string, MessageId>> = {
 /** One history entry as a sentence; also used by the Home page's feed. */
 export function useDescribe() {
   const t = useT();
+  const names = useMemberNames();
   const intl = useIntl();
   const label = (labels: Partial<Record<string, MessageId>>, value: string | null | undefined) => {
     const id = value ? labels[value] : undefined;
@@ -396,7 +399,7 @@ export function useDescribe() {
           to: label(STAGE_LABELS, entry.stage_to),
         });
       case "owner_changed":
-        return t("history.owner", { to: ownerLabel(t, entry.owner_to, meId) });
+        return t("history.owner", { to: ownerLabel(t, entry.owner_to, meId, names) });
       case "company_linked":
         return t("history.linked", { company });
       case "company_unlinked":
@@ -438,6 +441,7 @@ export function ActivitySection({
   meId: string | undefined;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const activity = useActivity(workspaceId, kind, id);
   const describe = useDescribe();
   const items = (activity.data?.pages ?? []).flatMap((page) => page.items);
@@ -472,7 +476,7 @@ export function ActivitySection({
                     </p>
                   ) : null}
                   <p className="activity-meta">
-                    {entry.actor_user_id ? ownerLabel(t, entry.actor_user_id, meId) : t("history.system")}
+                    {entry.actor_user_id ? ownerLabel(t, entry.actor_user_id, meId, names) : t("history.system")}
                     {" · "}
                     <When value={entry.occurred_at} />
                   </p>

@@ -293,6 +293,35 @@ describe("reports", () => {
     expect(rows[2]).toHaveTextContent(/Member bbbbbbbb0—30/);
   });
 
+  it("shows a member by the display name they chose (decision M-P1)", async () => {
+    const base = `/v1/workspaces/${WS}`;
+    const handler = reports();
+    renderApp(`/w/${WS}/reports`, (method, path, body) => {
+      if (path.startsWith(`${base}/members?`)) {
+        return {
+          status: 200,
+          body: {
+            items: [
+              { membership_id: "m1", user_id: ME, status: "active", roles: ["Owner"], display_name: "Me" },
+              { membership_id: "m2", user_id: ADA, status: "active", roles: ["Member"], display_name: "Ada Bakker" },
+            ],
+            total: 2,
+            limit: 50,
+            offset: 0,
+          },
+        };
+      }
+      return handler(method, path, body);
+    });
+    const team = await screen.findByRole("region", { name: "Team" });
+    const rows = await within(team).findAllByRole("row");
+    await waitFor(() => {
+      expect(rows[2]).toHaveTextContent(/^Ada Bakker/);
+    });
+    // The caller is still "You", whatever name they chose.
+    expect(rows[1]).toHaveTextContent(/^You/);
+  });
+
   it("downloads a card's figures as CSV for the chosen period", async () => {
     const user = userEvent.setup();
     const save = vi

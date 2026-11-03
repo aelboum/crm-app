@@ -26,6 +26,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { KIND_LABEL } from "./appointmentParts";
 import { Drawer, type Option, ownerLabel } from "./parts";
 
@@ -70,6 +71,7 @@ export function BookingPagesDrawer({
   onClose: () => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const pages = useBookingPages(workspaceId);
   const update = useUpdateBookingPage(workspaceId);
@@ -156,7 +158,7 @@ export function BookingPagesDrawer({
                   {t("bookingPages.summary", {
                     length: page.length_minutes,
                     kind: t(KIND_LABEL[page.kind]),
-                    host: ownerLabel(t, page.host_user_id, meId),
+                    host: ownerLabel(t, page.host_user_id, meId, names),
                   })}
                   {" · "}
                   {t("bookingPages.count", { count: page.booking_count })}
@@ -274,6 +276,7 @@ function BookingPageDialog({
   onClose: () => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const create = useCreateBookingPage(workspaceId);
   const update = useUpdateBookingPage(workspaceId);
@@ -292,7 +295,7 @@ function BookingPageDialog({
   const busy = create.isPending || update.isPending;
   const hostChoices = hosts.some((option) => option.id === host)
     ? hosts
-    : [...hosts, { id: host, label: ownerLabel(t, host, meId) }];
+    : [...hosts, { id: host, label: ownerLabel(t, host, meId, names) }];
   const notices: readonly number[] = NOTICES.some((value) => value === notice) ? NOTICES : [...NOTICES, notice];
   const horizonDays = Number(horizon);
   const horizonValid = Number.isInteger(horizonDays) && horizonDays >= 1 && horizonDays <= HORIZON_MAX;

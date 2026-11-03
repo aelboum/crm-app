@@ -26,6 +26,7 @@ import { Loading, LoadError } from "../components/StateNotice";
 import { Button } from "../components/ui/Button";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { STATUS_LABEL } from "./appointmentParts";
 import { formatMoney } from "./dealParts";
 import { ownerLabel } from "./parts";
@@ -601,6 +602,7 @@ function TeamCard({
   period: Period;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const intl = useIntl();
   const me = useMe();
   const meId = me.data?.user_id;
@@ -659,7 +661,7 @@ function TeamCard({
             <tbody>
               {[...people].map((id) => (
                 <tr key={id}>
-                  <th scope="row">{ownerLabel(t, id, meId)}</th>
+                  <th scope="row">{ownerLabel(t, id, meId, names)}</th>
                   <td className="numeric">
                     {cell(deals.isError, won.get(id)?.won)}
                   </td>

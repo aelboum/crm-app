@@ -10,6 +10,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { REASON_LABEL } from "../pages/SuppressionSettings";
 import { ownerLabel, When } from "./parts";
 
@@ -55,6 +56,7 @@ export function ConsentSection({
   canUpdate: boolean;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const consent = useContactConsent(workspaceId, contactId);
   const status = useEmailStatus(workspaceId, contactId);
   const [dialog, setDialog] = useState<"record" | "withdraw" | null>(null);
@@ -105,7 +107,7 @@ export function ConsentSection({
               </span>
               <span className="consent-source">
                 {record.method === "manual"
-                  ? t("consent.byMember", { who: ownerLabel(t, record.recorded_by_user_id, meId) })
+                  ? t("consent.byMember", { who: ownerLabel(t, record.recorded_by_user_id, meId, names) })
                   : record.form_name
                     ? t("consent.viaForm", { name: record.form_name })
                     : t("consent.viaDeletedForm")}

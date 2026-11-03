@@ -46,6 +46,7 @@ import {
 } from "../api/queries";
 import { leaveAfterSignOut, signOutTarget } from "../api/signOut";
 import { useT } from "../i18n/useT";
+import { MemberNamesProvider } from "../members/names";
 import { highestRole } from "../members/actions";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
 import { findGroup, GROUPS, type Section, SETTINGS_SLUG } from "./navigation";
@@ -728,7 +729,8 @@ export function AppFrame({
   const [paletteOpen, setPaletteOpen] = useState(false);
   useCommandPaletteShortcut(setPaletteOpen);
   return (
-    <div className="frame">
+    <MemberNamesProvider workspaceId={workspaceId}>
+      <div className="frame">
       <SkipLink />
       <header className="app-header">
         {sidebar.narrow ? (
@@ -783,7 +785,8 @@ export function AppFrame({
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </MemberNamesProvider>
   );
 }
 

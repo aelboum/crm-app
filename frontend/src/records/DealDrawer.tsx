@@ -12,6 +12,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { refusalOf } from "./DealDialog";
 import { daysInStage, eventText, Money, stageShade } from "./dealParts";
 import { Drawer, FieldRow, ownerLabel, When } from "./parts";
@@ -51,6 +52,7 @@ export function DealDrawer({
   onOpenCompany: (id: string) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const query = useDeal(workspaceId, id);
   const update = useUpdateDeal(workspaceId);
@@ -182,7 +184,7 @@ export function DealDrawer({
           </section>
 
           <dl className="field-list">
-            <FieldRow label={t("records.field.owner")}>{ownerLabel(t, deal.owner_user_id, meId)}</FieldRow>
+            <FieldRow label={t("records.field.owner")}>{ownerLabel(t, deal.owner_user_id, meId, names)}</FieldRow>
             <FieldRow label={t("deals.field.close")}>
               {deal.expected_close_date ? <When value={`${deal.expected_close_date}T12:00:00`} /> : null}
             </FieldRow>
@@ -320,6 +322,7 @@ export function DealDrawer({
 
 function History({ workspaceId, id, meId }: { workspaceId: string; id: string; meId: string | undefined }) {
   const t = useT();
+  const names = useMemberNames();
   const history = useDealHistory(workspaceId, id);
   const entries = (history.data?.pages ?? []).flatMap((page) => page.items);
   return (
@@ -335,9 +338,9 @@ function History({ workspaceId, id, meId }: { workspaceId: string; id: string; m
         <ol className="deal-history">
           {entries.map((entry) => (
             <li key={entry.id}>
-              <span>{eventText(t, entry, meId)}</span>
+              <span>{eventText(t, entry, meId, names)}</span>
               <span className="deal-history-meta">
-                {ownerLabel(t, entry.actor_user_id, meId)} · <When value={entry.occurred_at} />
+                {ownerLabel(t, entry.actor_user_id, meId, names)} · <When value={entry.occurred_at} />
               </span>
             </li>
           ))}

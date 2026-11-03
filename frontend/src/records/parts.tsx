@@ -18,6 +18,7 @@ import type { ExportKind } from "../api/exportContacts";
 import type { Stage } from "../api/records";
 import { Button } from "../components/ui/Button";
 import type { MessageId } from "../i18n/en";
+import { type MemberNames, useMemberNames } from "../members/names";
 import { useT } from "../i18n/useT";
 import { exportMessage } from "./useRecordExport";
 
@@ -88,22 +89,40 @@ export function Avatar({
   );
 }
 
-/** Who owns a record. Members have no stored names yet, so they show by ID (PHASE2-PLAN.md §6.5). */
-export function ownerLabel(t: T, ownerId: string | null | undefined, meId: string | undefined): string {
+/**
+ * Who owns a record: "You", the member's own display name (decision M-P1),
+ * or, for a member who chose none, their short ID.
+ */
+export function ownerLabel(
+  t: T,
+  ownerId: string | null | undefined,
+  meId: string | undefined,
+  names?: MemberNames,
+): string {
   if (!ownerId) return t("records.owner.none");
   if (ownerId === meId) return t("records.owner.me");
-  return t("records.owner.member", { id: ownerId.slice(0, 8) });
+  return names?.get(ownerId) ?? t("records.owner.member", { id: ownerId.slice(0, 8) });
+}
+
+/** The two letters in a member's dot: from the display name when there is one. */
+function memberInitials(ownerId: string, names: MemberNames): string {
+  const words = (names.get(ownerId) ?? "").split(" ").filter(Boolean);
+  if (words.length === 0) return ownerId.slice(0, 2).toUpperCase();
+  const first = words[0] ?? "";
+  const last = words.length > 1 ? (words[words.length - 1] ?? "") : "";
+  return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
 export function OwnerCell({ ownerId, meId }: { ownerId: string | null | undefined; meId: string | undefined }) {
   const t = useT();
+  const names = useMemberNames();
   if (!ownerId) return <span className="muted">{t("records.owner.none")}</span>;
   return (
     <span className="owner-cell">
       <span className="owner-dot" aria-hidden="true">
-        {ownerId === meId ? t("records.owner.meShort") : ownerId.slice(0, 2).toUpperCase()}
+        {ownerId === meId ? t("records.owner.meShort") : memberInitials(ownerId, names)}
       </span>
-      <span className="owner-name">{ownerLabel(t, ownerId, meId)}</span>
+      <span className="owner-name">{ownerLabel(t, ownerId, meId, names)}</span>
     </span>
   );
 }
@@ -184,11 +203,14 @@ export function FilterMenu({
   );
 }
 
-/** Owner choices for filters and forms: the caller first, then active members by ID. */
+/** Owner choices for filters and forms: the caller first, then active members by name or ID. */
 export function ownerOptions(t: T, members: Member[], meId: string | undefined): Option[] {
   const active = members.filter((m) => m.status === "active");
   const ordered = [...active.filter((m) => m.user_id === meId), ...active.filter((m) => m.user_id !== meId)];
-  return ordered.map((m) => ({ id: m.user_id, label: ownerLabel(t, m.user_id, meId) }));
+  const names: MemberNames = new Map(
+    active.flatMap((m) => (m.display_name ? [[m.user_id, m.display_name] as const] : [])),
+  );
+  return ordered.map((m) => ({ id: m.user_id, label: ownerLabel(t, m.user_id, meId, names) }));
 }
 
 /**

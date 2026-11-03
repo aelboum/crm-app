@@ -53,6 +53,7 @@ from saas_os.infra.db import (
     set_local_statement_timeout,
 )
 
+from crm_app import member_profiles
 from crm_app.api.workspaces import Member
 from crm_app.domains.membership import ACTIVE, ChangeFacts, Refusal, refusal_for
 from crm_app.roles import Role
@@ -177,6 +178,7 @@ def _view(workspace: uuid.UUID, membership_id: uuid.UUID) -> Member:
         user_id=snap.target_user_id,
         status=snap.target_status,
         roles=sorted(snap.target_roles),
+        display_name=member_profiles.own(workspace, snap.target_user_id),
     )
 
 

@@ -23,8 +23,16 @@ import {
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Button as AriaButton, Menu, MenuItem, MenuTrigger, Popover } from "react-aria-components";
 
-import type { Access, Member } from "../api/client";
-import { PAGE_SIZE, useAccess, useMemberChange, useMembers, useWorkspace } from "../api/queries";
+import { type Access, ApiError, type Member } from "../api/client";
+import {
+  PAGE_SIZE,
+  useAccess,
+  useMemberChange,
+  useMembers,
+  useOwnProfile,
+  useSetOwnProfile,
+  useWorkspace,
+} from "../api/queries";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState, Loading, LoadError } from "../components/StateNotice";
 import { Badge, type Tone } from "../components/ui/Badge";
@@ -140,7 +148,9 @@ function MemberRow({
       </span>
       <div className="member-text">
         <div className="member-name">
-          {invitation ? (
+          {member.display_name ? (
+            <span>{member.display_name}</span>
+          ) : invitation ? (
             <span>{invitation.email}</span>
           ) : (
             <span className="mono">{t("members.id", { id: shortId(member.membership_id) })}</span>
@@ -493,7 +503,82 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
  * because the identity provider has no self-service page that keeps it
  * invisible (SaaS-OS ADR-0023).
  */
-function ProfileSection({ access, workspaceName }: { access: Access; workspaceName: string }) {
+/**
+ * The member's own display name in this workspace (decision M-P1): shown
+ * wherever they own, host or wrote something; empty clears it.
+ */
+function DisplayNameField({ workspaceId }: { workspaceId: string }) {
+  const t = useT();
+  const toast = useToast();
+  const profile = useOwnProfile(workspaceId);
+  const save = useSetOwnProfile(workspaceId);
+  const [draft, setDraft] = useState<string | null>(null);
+  const stored = profile.data?.display_name ?? "";
+  const value = draft ?? stored;
+  const changed = value.trim() !== stored;
+  const invalid = save.error instanceof ApiError && save.error.status === 422;
+  return (
+    <form
+      className="field-stack"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!changed) return;
+        save.mutate(value, {
+          onSuccess: () => {
+            setDraft(null);
+            toast(t("profileForm.saved"));
+          },
+        });
+      }}
+    >
+      <label htmlFor="profile-name" className="field-label">
+        {t("profileForm.name")}
+      </label>
+      <div className="profile-name-row">
+        <input
+          id="profile-name"
+          className="field-input"
+          value={value}
+          maxLength={80}
+          disabled={profile.isPending}
+          placeholder={t("profileForm.namePlaceholder")}
+          aria-describedby="profile-name-help"
+          aria-invalid={invalid}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            save.reset();
+          }}
+        />
+        <Button type="submit" isDisabled={!changed || save.isPending}>
+          {save.isPending ? t("profileForm.saving") : t("profileForm.save")}
+        </Button>
+      </div>
+      <p id="profile-name-help" className="profile-note">
+        {t("profileForm.nameHelp")}
+      </p>
+      {save.isError ? (
+        <p className="notice error" role="alert">
+          {t(invalid ? "profileForm.nameInvalid" : "profileForm.saveFailed")}
+        </p>
+      ) : null}
+      {profile.isError ? (
+        <p className="notice error" role="alert">
+          {t("profileForm.loadFailed")}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+function ProfileSection({
+  workspaceId,
+  access,
+  workspaceName,
+}: {
+  workspaceId: string;
+  access: Access;
+  workspaceName: string;
+}) {
   const t = useT();
   const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const role = highestRole(access.roles);
@@ -511,18 +596,7 @@ function ProfileSection({ access, workspaceName }: { access: Access; workspaceNa
         </div>
       </div>
       <div className="profile-fields">
-        <div className="field-stack">
-          <label htmlFor="profile-name" className="field-label">
-            {t("profileForm.name")}
-          </label>
-          <input
-            id="profile-name"
-            className="field-input"
-            disabled
-            placeholder={t("profileForm.notStored")}
-            aria-describedby="profile-note"
-          />
-        </div>
+        <DisplayNameField workspaceId={workspaceId} />
         <div className="field-stack">
           <label htmlFor="profile-zone" className="field-label">
             {t("profileForm.zone")}
@@ -617,7 +691,11 @@ export function SettingsPage({
             <LoadError error={access.error} onRetry={() => void access.refetch()} />
           ) : null}
           {access.data && isProfile ? (
-            <ProfileSection access={access.data} workspaceName={workspace.data?.name ?? ""} />
+            <ProfileSection
+              workspaceId={workspaceId}
+              access={access.data}
+              workspaceName={workspace.data?.name ?? ""}
+            />
           ) : null}
           {access.data && section === "business" ? (
             <BusinessSettings

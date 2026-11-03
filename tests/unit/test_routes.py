@@ -22,6 +22,9 @@ MEMBER = "/v1/workspaces/{tenant_id}/members/{membership_id}"
 EXPECTED = {
     "GET /v1/workspaces/{tenant_id}": "crm_app.workspace:read",
     "GET /v1/workspaces/{tenant_id}/members": "membership:read",
+    # Decision M-P1: a member reads and sets only their own display name.
+    "GET /v1/workspaces/{tenant_id}/me/profile": "crm_app.member_profile:read",
+    "PUT /v1/workspaces/{tenant_id}/me/profile": "crm_app.member_profile:read",
     "GET /v1/workspaces/{tenant_id}/access": "crm_app.workspace:read",
     # Workspace settings (decision P2-F 1): read for every role, change for
     # Owner and Admin.
@@ -55,8 +58,11 @@ EXPECTED = {
     f"POST {MEMBER}/reactivate": "membership:reactivate",
     f"POST {MEMBER}/revoke": "membership:revoke",
 }
+# A member's own display name (decision M-P1): every role may set its own and
+# only its own (the route writes the caller's row; tests/integration prove it).
+OWN_PROFILE = {"PUT /v1/workspaces/{tenant_id}/me/profile"}
 # Membership and role changes (gate G-LOCK): Owner and Admin only.
-CHANGING = {key for key in EXPECTED if not key.startswith("GET ")}
+CHANGING = {key for key in EXPECTED if not key.startswith("GET ")} - OWN_PROFILE
 
 # Contact and company records (slice 3A, decision P3-A): reads for every role,
 # create and update (including archive and restore) for Owner, Admin and
@@ -350,7 +356,7 @@ def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) 
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
     changing = {key for key in policies if not key.startswith("GET ")}
-    assert changing == CHANGING | {
+    assert changing == CHANGING | OWN_PROFILE | {
         key
         for key in RECORDS | INVITATIONS | CONFIGURATION | EXPORTS | SUPPRESSIONS
         if not key.startswith("GET ")

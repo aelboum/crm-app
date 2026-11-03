@@ -1662,6 +1662,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Own Profile
+         * @description The caller's own display name in this workspace (decision M-P1).
+         */
+        get: operations["get_own_profile_v1_workspaces__tenant_id__me_profile_get"];
+        /**
+         * Put Own Profile
+         * @description Set or clear the caller's own display name; never another member's.
+         */
+        put: operations["put_own_profile_v1_workspaces__tenant_id__me_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/members": {
         parameters: {
             query?: never;
@@ -4184,6 +4208,8 @@ export interface components {
         };
         /** Member */
         Member: {
+            /** Display Name */
+            display_name?: string | null;
             /**
              * Membership Id
              * Format: uuid
@@ -4384,6 +4410,21 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+        };
+        /** ProfileIn */
+        ProfileIn: {
+            /** Display Name */
+            display_name?: string | null;
+        };
+        /** ProfileOut */
+        ProfileOut: {
+            /** Display Name */
+            display_name: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /** PublicBookingPage */
         PublicBookingPage: {
@@ -9896,6 +9937,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvitationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_own_profile_v1_workspaces__tenant_id__me_profile_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_own_profile_v1_workspaces__tenant_id__me_profile_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
                 };
             };
             /** @description Validation Error */

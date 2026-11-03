@@ -39,6 +39,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { AppointmentReminders } from "./AppointmentReminders";
 import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
 import { Drawer, FieldRow, type Option, ownerLabel } from "./parts";
@@ -195,6 +196,7 @@ export function AppointmentDialog({
   onSaved?: (appointment: Appointment) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const create = useCreateAppointment(workspaceId);
   const update = useUpdateAppointment(workspaceId);
@@ -226,7 +228,7 @@ export function AppointmentDialog({
     : [...LENGTHS, length].sort((a, b) => a - b);
   const hostChoices = hosts.some((option) => option.id === host)
     ? hosts
-    : [...hosts, { id: host, label: ownerLabel(t, host, meId) }];
+    : [...hosts, { id: host, label: ownerLabel(t, host, meId, names) }];
 
   const startDate = start ? new Date(start) : null;
   const valid =
@@ -549,6 +551,7 @@ export function AppointmentDrawer({
   onOpenContact: (id: string) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const query = useAppointment(workspaceId, id);
   const update = useUpdateAppointment(workspaceId);
@@ -678,7 +681,7 @@ export function AppointmentDrawer({
 
           <dl className="field-list">
             <FieldRow label={t("appointments.field.host")}>
-              {ownerLabel(t, query.data.host_user_id, meId)}
+              {ownerLabel(t, query.data.host_user_id, meId, names)}
             </FieldRow>
             <FieldRow label={t("appointments.field.kind")}>
               {t(KIND_LABEL[query.data.kind])}

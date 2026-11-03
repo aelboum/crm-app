@@ -2682,6 +2682,46 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   eslint 10, an openapi-typescript release on redocly 2, or replace
   either tool; otherwise the owner decides again.
 
+## M-P1 — Member display names (2026-11-03)
+
+- **Status:** Built under the standing autonomous mandate (M1, unfinished
+  features first), after the owner set voice aside on 2026-11-03 ("put the
+  ai voice for now asside we proceed further"). It implements the approved
+  Phase 2 plan, `PHASE2-PLAN.md` §6.5 (gate G1 passed long ago).
+- **Problem:** SaaS-OS's `core.users` stores no name, so every owner,
+  assignee, host, author and team row showed "Member <id>".
+- **Decision:**
+  1. Table `crm_app.member_profile` (migration `0035_member_profiles`):
+     tenant-owned, forced RLS, one display name per member and workspace,
+     1–80 visible characters (no control, format or separator characters;
+     inner spaces collapsed). There is no foreign key to
+     `core.tenant_memberships`, because the product purge runs before the
+     platform's. The table is in `PURGE_TABLES`.
+  2. A member sets or clears **only their own** name:
+     `GET`/`PUT /v1/workspaces/{ws}/me/profile`. The route needs
+     `crm_app.member_profile:read`, which every role holds and which proves
+     an active membership; it reads and writes only the caller's row.
+     Nobody sets another member's name.
+  3. `Member` responses (`GET /members` and the membership changes) carry
+     `display_name`, so names follow the member list's existing visibility
+     rules; no new visibility is added.
+  4. Audited as `crm_app.member_profile.updated` or `.cleared`, without the
+     name in the metadata. The name is personal data: kept with the
+     workspace and removed by the purge.
+  5. Frontend:
+     - a member-names context fed by the member list's first page (50);
+     - `ownerLabel` and the owner dots show the name when there is one;
+     - "You" stays "You";
+     - a member without a name still shows by ID;
+     - My profile's display-name field now saves (the time zone still
+       cannot, and says so).
+- **Not done:** names beyond the first 50 members fall back to the ID; time
+  zone and other profile preferences; an erasure path for a former member's
+  name inside a workspace (it goes with the workspace purge).
+- **Tests:** `tests/integration/test_member_profiles.py`;
+  `tests/unit/test_routes.py` (the own-profile write is the one named
+  exception to "changes are Owner and Admin only"); `AppFrame.test.tsx`
+  (profile saves); `reports.test.tsx` (a member shown by name).
 ## P15-V2 — Voice implementation-readiness specification (2026-11-03)
 
 - **Status:** Prepared under the owner's instruction of 2026-11-03 to

@@ -24,6 +24,7 @@ import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { useMemberNames } from "../members/names";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
 import { CustomFieldsSection } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
@@ -400,6 +401,7 @@ function ContactDrawer({
   onOpenDeal: (id: string) => void;
 }) {
   const t = useT();
+  const names = useMemberNames();
   const toast = useToast();
   const contact = useContact(workspaceId, id);
   const definitions = useFieldDefinitions(workspaceId);
@@ -480,7 +482,7 @@ function ContactDrawer({
               <StagePill stage={record.lifecycle_stage} />
             </FieldRow>
             <FieldRow label={t("contact.field.source")}>{sourceLabel(t, record.source)}</FieldRow>
-            <FieldRow label={t("records.field.owner")}>{ownerLabel(t, record.owner_user_id, meId)}</FieldRow>
+            <FieldRow label={t("records.field.owner")}>{ownerLabel(t, record.owner_user_id, meId, names)}</FieldRow>
             <FieldRow label={t("records.field.created")}>
               <When value={record.created_at} />
             </FieldRow>
