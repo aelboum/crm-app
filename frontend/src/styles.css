@@ -417,6 +417,8 @@ p { margin: 0; }
 }
 .field-input:disabled { background: #f6f7f9; color: #5f6778; cursor: not-allowed; }
 .profile-note { font-size: 12px; color: #687082; }
+.profile-zone-label, .profile-zone { margin: 0; }
+.profile-zone { min-height: 34px; display: flex; align-items: center; font-weight: 500; overflow-wrap: anywhere; }
 .idp-card {
   display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: #f6f7f9;
   border: 1px solid var(--line); align-items: center;
@@ -567,7 +569,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
   .placeholder-page { padding: 20px 16px; }
   .settings-layout { flex-direction: column; height: auto; overflow: visible; }
   .settings-nav { width: auto; border-right: none; border-bottom: 1px solid var(--line); }
-  .settings-content { padding: 20px 16px 40px; }
+  /* At least a screen tall, so choosing a section can bring its heading to
+     the top while its content is still loading. */
+  .settings-content { padding: 20px 16px 40px; min-height: 100dvh; }
 }
 
 /* --- Contacts and Companies: ScreenContacts.dc.html (list L12-97, drawer
@@ -1000,6 +1004,8 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .task-row:last-child { border-bottom: 0; }
 .task-row:hover { background: #fafbfc; }
 .task-check { width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
+/* Touch screens: a 24px target (WCAG 2.5.8) for completing a task. */
+@media (pointer: coarse) { .task-check { width: 24px; height: 24px; } }
 .task-main { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .task-title { overflow-wrap: anywhere; }
 .task-row.done .task-title { text-decoration: line-through; color: #687082; }

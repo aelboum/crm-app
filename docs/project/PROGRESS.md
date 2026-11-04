@@ -207,6 +207,20 @@ decisions P2-A to P2-E approved)
   `0035_member_profiles`, `GET`/`PUT /v1/workspaces/{ws}/me/profile`), and
   every owner, assignee, host, author and team row shows it instead of
   "Member <id>".
+- **M-P2 and phone-width check (2026-11-04):** My profile states the
+  device's time zone instead of a picker that could not save, and notes
+  when the workspace's business zone differs (owner chose this over a
+  stored member zone). Phone check at 375 px in Chrome of Contacts,
+  Companies, Opportunities (board, create dialog, drawer), Tasks, the
+  contact drawer and Settings: no page-level horizontal overflow; drawers
+  and dialogs fit; Escape closes the drawer and returns focus to the row;
+  the create dialog works by keyboard; stage moves are buttons. Fixed:
+  task checkboxes are 24 px on touch screens (were 16 px); on screens
+  below 760 px, choosing a Settings section brings its heading to the top
+  and focuses it (its content used to start below the fold). Vitest 314.
+  The queue-age health check already existed (`c6b15f4`); received
+  inbound email is deliberately not counted until a receiving client
+  exists (OPERATIONS.md).
 - **P15-V2, voice readiness specification (2026-11-03):** `VOICE-SPEC.md`
   (requirements, architecture with Exists or Proposed SaaS-OS
   capabilities, security and permissions), `VOICE-UX-SPEC.md` (screens

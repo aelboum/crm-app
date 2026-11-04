@@ -32,6 +32,7 @@ import {
   useOwnProfile,
   useSetOwnProfile,
   useWorkspace,
+  useWorkspaceSettings,
 } from "../api/queries";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState, Loading, LoadError } from "../components/StateNotice";
@@ -496,13 +497,52 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
 
 /**
  * Settings › My profile (ScreenSettings.dc.html L43-52). The role line is
- * real. Display name and time zone cannot be stored yet: SaaS-OS keeps no
- * name, `/auth/me` returns only the user ID, and a profile table waits on
- * gate G1 (PHASE2-PLAN.md §6.5). The fields are therefore shown disabled,
- * with the browser's time zone for reference, and "Manage" is unavailable
- * because the identity provider has no self-service page that keeps it
- * invisible (SaaS-OS ADR-0023).
+ * real and the display name is stored (decision M-P1). "Manage" is
+ * unavailable because the identity provider has no self-service page that
+ * keeps it invisible (SaaS-OS ADR-0023).
  */
+
+/**
+ * The time zone times are shown in (decision M-P2): this device's, because
+ * every screen formats and computes times in it. There is no stored profile
+ * zone, so the design's picker is replaced by a statement, with a warning
+ * when the workspace's business time zone differs (business hours, booking
+ * pages and reports use the workspace's).
+ */
+function TimeZoneNote({ workspaceId }: { workspaceId: string }) {
+  const t = useT();
+  const settings = useWorkspaceSettings(workspaceId);
+  const device = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const workspace = settings.data?.time_zone;
+  const differs = workspace !== undefined && !sameZone(device, workspace);
+  return (
+    <div className="field-stack">
+      <p className="field-label profile-zone-label">{t("profileForm.zone")}</p>
+      <p className="profile-zone">
+        {t("profileForm.deviceZone", { zone: device.replaceAll("_", " ") })}
+      </p>
+      <p className="profile-note">{t("profileForm.zoneNote")}</p>
+      {differs ? (
+        <p className="notice" role="note">
+          {t("profileForm.zoneDiffers", { zone: workspace.replaceAll("_", " ") })}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Two zone names that are the same zone (aliases such as "UTC" and "Etc/UTC"). */
+function sameZone(a: string, b: string): boolean {
+  if (a === b) return true;
+  try {
+    const canonical = (zone: string) =>
+      new Intl.DateTimeFormat("en", { timeZone: zone }).resolvedOptions().timeZone;
+    return canonical(a) === canonical(b);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The member's own display name in this workspace (decision M-P1): shown
  * wherever they own, host or wrote something; empty clears it.
@@ -580,7 +620,6 @@ function ProfileSection({
   workspaceName: string;
 }) {
   const t = useT();
-  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const role = highestRole(access.roles);
   return (
     <section className="profile-card" aria-label={t("settings.profile")}>
@@ -597,24 +636,8 @@ function ProfileSection({
       </div>
       <div className="profile-fields">
         <DisplayNameField workspaceId={workspaceId} />
-        <div className="field-stack">
-          <label htmlFor="profile-zone" className="field-label">
-            {t("profileForm.zone")}
-          </label>
-          <select
-            id="profile-zone"
-            className="field-input"
-            disabled
-            defaultValue={browserZone}
-            aria-describedby="profile-note"
-          >
-            <option value={browserZone}>{t("profileForm.browserZone", { zone: browserZone })}</option>
-          </select>
-        </div>
+        <TimeZoneNote workspaceId={workspaceId} />
       </div>
-      <p id="profile-note" className="profile-note">
-        {t("profileForm.note")}
-      </p>
       <div className="idp-card">
         <Shield size={16} className="idp-icon" aria-hidden="true" />
         <div className="idp-text">
@@ -646,6 +669,20 @@ export function SettingsPage({
   const workspace = useWorkspace(workspaceId);
   const isProfile = section === "profile";
   const text = SECTION_TEXT[section];
+  // Below 760 px the menu sits above the section, so a chosen section's
+  // content would start below the fold: bring its heading into view and
+  // move focus there. Wider screens keep focus on the menu item.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const reveal = useRef(false);
+  useEffect(() => {
+    if (!reveal.current) return;
+    reveal.current = false;
+    const target = heading.current;
+    if (!target) return;
+    // focus() alone does not scroll a heading that is barely on screen.
+    if (typeof target.scrollIntoView === "function") target.scrollIntoView({ block: "start" });
+    target.focus({ preventScroll: true });
+  }, [section]);
   return (
     <div className="settings-layout">
       <nav className="settings-nav" aria-label={t("settings.title")}>
@@ -665,8 +702,13 @@ export function SettingsPage({
                       className={current ? "settings-nav-item active" : "settings-nav-item"}
                       aria-current={current ? "page" : false}
                       onPress={() => {
-                        if (built) onSelect(item.id as SettingsSection);
-                        else toast(t("settings.unavailable", { name: t(item.label) }));
+                        if (built) {
+                          reveal.current =
+                            !current &&
+                            typeof window.matchMedia === "function" &&
+                            window.matchMedia("(max-width: 759px)").matches;
+                          onSelect(item.id as SettingsSection);
+                        } else toast(t("settings.unavailable", { name: t(item.label) }));
                       }}
                     >
                       <Icon size={15} className="settings-nav-icon" aria-hidden="true" />
@@ -683,7 +725,9 @@ export function SettingsPage({
       <div className="settings-scroll">
         <div className="settings-content">
           <div className="settings-header">
-            <h1 className="settings-title">{t(text.title)}</h1>
+            <h1 className="settings-title" ref={heading} tabIndex={-1}>
+              {t(text.title)}
+            </h1>
             <p className="settings-desc">{t(text.desc)}</p>
           </div>
           {access.isPending ? <Loading /> : null}

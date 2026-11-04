@@ -209,15 +209,18 @@ L243-247):
 - **Name and e-mail:** not available. SaaS-OS stores no name, and
   `/auth/me` returns only the user ID.
 - **Display name:** stored per workspace and set by the member (decision
-  M-P1). **Time zone:** still not stored; the field stays disabled and says so.
+  M-P1). **Time zone:** not stored (decision M-P2). Every screen shows and
+  computes times in the device's zone, so the design's input is replaced
+  by a read-only statement of that zone, with a note when the workspace's
+  business time zone differs.
 - **"Manage":** has no target that keeps the identity provider invisible
   (Login V2 has no self-service page; the ZITADEL console would expose
   the provider, against SaaS-OS ADR-0023).
 
 **Implemented:**
 - the design's layout with the real role line;
-- disabled fields with an explicit note that they cannot be saved yet;
-- the browser's detected time zone shown read-only;
+- a display name that saves (M-P1);
+- the device's time zone stated read-only, with the workspace-zone note (M-P2);
 - "Manage" disabled.
 - No backend change, endpoint or storage.
 

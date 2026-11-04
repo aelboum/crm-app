@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   accessibilityViolations,
@@ -244,10 +244,14 @@ describe("app frame", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows My profile with the real role, a display name that saves and a time zone that does not", async () => {
+  it("shows My profile with the real role, a display name that saves and the device's time zone", async () => {
     const user = userEvent.setup();
     const profile = `/v1/workspaces/${WS}/me/profile`;
     const { router, sent } = renderApp(`/w/${WS}/settings`, (method, path, body) => {
+      if (path === `/v1/workspaces/${WS}/settings` && method === "GET") {
+        // A zone no test machine uses, so the "differs" warning shows.
+        return { status: 200, body: { time_zone: "Pacific/Kiritimati" } };
+      }
       if (path === profile && method === "GET") {
         return { status: 200, body: { user_id: "u", display_name: null } };
       }
@@ -276,17 +280,44 @@ describe("app frame", () => {
     expect(sent.find((r) => r.method === "PUT")?.body).toEqual({
       display_name: "  Anna de Vries ",
     });
-    // The time zone still cannot be saved, and says so.
-    expect(screen.getByLabelText("Time zone")).toBeDisabled();
-    expect(screen.getByLabelText("Time zone")).toHaveAccessibleDescription(
-      /can't be saved yet/,
-    );
+    // Decision M-P2: times use the device's zone; no picker that cannot save.
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone.replaceAll("_", " ");
+    expect(screen.queryByRole("combobox", { name: "Time zone" })).not.toBeInTheDocument();
+    expect(screen.getByText(`${zone} (this device)`)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/The workspace's business time zone is Pacific\/Kiritimati/),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Manage/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "My profile" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("on a phone, moves to the chosen settings section's heading", async () => {
+    // The menu sits above the section below 760 px (styles.css).
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, signedIn);
+    await user.click(await screen.findByRole("button", { name: "My profile" }));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "My profile" }),
+    ).toHaveFocus();
+  });
+
+  it("on a wide screen, keeps focus on the settings menu item", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, signedIn);
+    const item = await screen.findByRole("button", { name: "My profile" });
+    await user.click(item);
+    await screen.findByRole("heading", { level: 1, name: "My profile" });
+    expect(item).toHaveFocus();
   });
 
   it("opens My profile directly from its link", async () => {

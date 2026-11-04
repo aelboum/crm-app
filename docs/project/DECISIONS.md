@@ -2722,6 +2722,25 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_routes.py` (the own-profile write is the one named
   exception to "changes are Owner and Admin only"); `AppFrame.test.tsx`
   (profile saves); `reports.test.tsx` (a member shown by name).
+## M-P2 — Times use the device's time zone (2026-11-04)
+
+- **Status:** Owner decision, 2026-11-04 ("Device zone, honest field").
+- **Problem:** My profile showed a disabled time-zone picker. Every screen
+  formats times, and the calendar, task and appointment dialogs, booking
+  page and dashboard compute days and times, in the device's zone (about
+  50 places). A stored zone applied only to how times are displayed would
+  make the edit dialogs disagree with the lists and risk wrong appointment
+  times.
+- **Decision:**
+  1. No stored member time zone. My profile states the device's zone
+     read-only and says that changing the device's zone changes it.
+  2. When the workspace's business time zone (business hours, booking
+     pages, reports) differs, My profile says so.
+- **Not done:** a member time-zone preference applied everywhere. It needs
+  zone-aware date handling across those screens; revisit if members work
+  across zones from wrongly set devices.
+- **Tests:** `frontend/src/shell/AppFrame.test.tsx` (My profile).
+
 ## P15-V2 — Voice implementation-readiness specification (2026-11-03)
 
 - **Status:** Prepared under the owner's instruction of 2026-11-03 to

@@ -51,5 +51,9 @@ waste.
   `imports_overdue` and exits 1 when any is above zero: email retries or
   automation runs overdue by more than 15 minutes, or import clean-ups by
   more than 3 hours, mean the worker or a scheduled command is not running.
+  Received inbound email is deliberately not counted yet: it waits as
+  `received` by design until a receiving client is approved (brief 1,
+  aelboum/saas-os#205). Add an `inbound_overdue` count in the same change
+  that configures that client.
 - **Logs:** carry workspace ids and error types only; never message bodies,
   tokens or addresses.
