@@ -3217,6 +3217,23 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `@redocly/openapi-core` 1.x (now 1.34.23, minimatch 5), and eslint 10.14.0
   still uses minimatch ^10.2.6. The expiry stays 2026-12-31.
 
+## 13-A4 — The minimatch audit exception is removed (2026-11-06)
+
+- **Status:** Done under the hardening mandate (dependency audit: "remove
+  resolved ones").
+- **Cause:** CI run 42203444021 failed the frontend audit gate with
+  "GHSA-g3hv-75wg-m249: no longer reported; remove its exception". The
+  advisory was updated on 2026-11-04 (not withdrawn): its affected range
+  is now minimatch `>= 7.0.0, < 11.0.1` (first patched 11.0.1). The
+  installed copies are 3.1.5 (four), 5.1.9 and 11.0.3, all outside that
+  range; no package was changed.
+- **Verified:** `npm audit` reports 0 vulnerabilities of any severity;
+  `npm run audit` passes with `frontend/audit-exceptions.json` emptied
+  to `[]`.
+- **Decision:** the exception is removed. The gate keeps failing on any
+  new advisory, so a future range change that covers these versions
+  again fails CI instead of passing silently.
+
 ## P7-B — Consent and suppression (2026-10-28, under M1)
 
 - **Status:** Decided under M1 after the owner's "Go" (2026-10-28) to the
