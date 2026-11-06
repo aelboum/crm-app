@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0036_activity_source` own the
+Migrations `0002_contacts_companies` to `0037_member_notifications` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -645,6 +645,25 @@ class MemberProfile(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     display_name: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MemberNotification(Base):
+    """One in-app notification for a member (migration 0037, decision N-1):
+    what happened (`kind`), to which record (`subject_type`, `subject_id`),
+    who did it (`actor_user_id`, none for a visitor) and when it was read."""
+
+    __tablename__ = "member_notification"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column()
+    kind: Mapped[str] = mapped_column(Text)
+    subject_type: Mapped[str] = mapped_column(Text)
+    subject_id: Mapped[uuid.UUID] = mapped_column()
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ConsentConfirmation(Base):

@@ -1333,6 +1333,38 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## In-app notifications (decision N-1, 2026-11-06)
+
+Members get notifications in the header bell when someone else assigns
+them a task, conversation or appointment, and when a visitor books or
+cancels on their booking page. The table is product-owned
+(`crm_app.member_notification`, migration `0037_member_notifications`)
+because SaaS-OS v0.8.0's `in_app` channel has no type, reference, read
+state or paging. Filed upstream as aelboum/saas-os#230. The routes are
+`/v1/workspaces/{ws}/me/notifications`, plus `/read-all` and `/{id}/read`.
+The Tasks page now opens a task from `?record=`. A review found three
+issues, all fixed before commit: reopening the same linked task, a silent
+"Mark all read" failure, and timestamps from the application clock (both
+now use the database clock).
+
+| Check | Result |
+| --- | --- |
+| `ruff format --check .` / `ruff check .` / `pyright` / `lint-imports` | Clean / clean / 0 errors / 2 kept |
+| `pytest tests/unit` (no configuration in the environment) | 752 passed |
+| `pytest tests/integration` (full suite) | 852 passed |
+| `test_notifications`, `test_booking_page_routes` after the clock fix | 26 passed |
+| Frontend `tsc -b`, `eslint`, `vitest run --maxWorkers=3`, `vite build` | Clean, clean, 333 passed, built |
+
+The frontend suite with default parallelism timed out 1 to 3 settings and
+consent tests (5 s limit) on this machine. All of them pass alone and in
+the full run with 3 workers, so this looks like CPU contention; CI is the
+check.
+
+Not done: a browser check at desktop and 390 px (the local identity stack
+was not running). Not built: overdue and upcoming reminders, notifications
+for form submissions, owner changes and automation failures, preferences,
+email or push delivery, and real-time updates.
+
 ## Quick wins (decision UI-Q1, 2026-11-06)
 
 Frontend only: contact conversations, "+ New" › Appointment and

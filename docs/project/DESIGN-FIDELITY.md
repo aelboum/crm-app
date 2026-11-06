@@ -148,8 +148,9 @@ L243-247):
   vertical offset of everything below the header.
 - **Avatar:** a person icon instead of initials, because no name is
   stored.
-- **Inbox unread badge and notification dot:** not shown, because there
-  is nothing unread; the design hardcodes the dot.
+- **Inbox unread badge:** not shown. **Notification dot:** shown only
+  while the member has an unread notification (decision N-1, 2026-11-06),
+  where the design always shows it.
 - **"soon" markers:** shown on every unbuilt module, using the design's
   own `showPreview` marker. They use `#687082` instead of `#8A91A0` for
   4.5:1 contrast, and the accent-ink colour on the active item.
@@ -158,8 +159,13 @@ L243-247):
   "Profile & preferences" opens My profile and the avatar shows the
   member's initials. Help and Security are still disabled and labelled "Not
   available yet". Search answers with the
-  design's toast pattern. The notifications panel shows an empty state
-  instead of invented notifications.
+  design's toast pattern. The notifications panel lists the member's own
+  notifications (decision N-1): a task, conversation or appointment
+  someone else assigned to them, and visitor bookings and cancellations.
+  It shows each one's time and the record's current name, has loading,
+  error and empty states and "Mark all read", and opening a notification
+  goes to its record. Settings › Notifications (preferences) is still
+  "soon".
 - **Workspace switcher:** shows the current workspace and lists the
   member's other workspaces.
 - **Below 760 px:** search and help are hidden and the switcher is

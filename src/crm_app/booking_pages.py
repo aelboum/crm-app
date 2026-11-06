@@ -51,7 +51,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import appointments, emails, system_audit
+from crm_app import appointments, emails, notifications, system_audit
 from crm_app.domains import appointments as appointment_rules
 from crm_app.domains import booking_pages as rules
 from crm_app.domains.records import InvalidValue
@@ -742,6 +742,9 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             "by": "visitor",
         },
     )
+    notifications.notify(
+        session, workspace, offer.host, "booking_received", appointment_id, actor=None
+    )
     session.add(
         Booking(
             id=uuid.uuid4(),
@@ -962,6 +965,14 @@ def cancel(workspace: uuid.UUID, token: str) -> Item:
             resource_type=appointments.RESOURCE,
             resource_id=str(appointment.id),
             metadata=metadata,
+        )
+        notifications.notify(
+            session,
+            workspace,
+            appointment.host_user_id,
+            "booking_cancelled",
+            appointment.id,
+            actor=None,
         )
         return _view(appointment, page, booking)
 

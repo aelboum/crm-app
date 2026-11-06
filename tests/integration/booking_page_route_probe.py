@@ -447,6 +447,38 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         result["page_id"] = page["id"]
         result["contact_id"] = str(result["contact_after_first"][0]["id"])
 
+    # Decision N-1: the host hears of each visitor booking and cancellation.
+    with tenant_session_scope(a.id) as session:
+        result["host_notifications"] = [
+            [kind, str(user_id), actor, str(subject_id)]
+            for kind, user_id, actor, subject_id in session.execute(
+                text(
+                    "SELECT kind, user_id, actor_user_id, subject_id"
+                    " FROM crm_app.member_notification WHERE tenant_id = :t"
+                    " ORDER BY created_at, id"
+                ),
+                {"t": a.id},
+            ).all()
+        ]
+        result["booked_appointments"] = sorted(
+            str(x)
+            for x in session.execute(
+                text(
+                    "SELECT appointment_id FROM crm_app.booking"
+                    " WHERE tenant_id = :t AND token_hash <> :past"
+                ),
+                {"t": a.id, "past": hashlib.sha256(past.encode("ascii")).hexdigest()},
+            ).scalars()
+        )
+        result["cancelled_appointment"] = str(
+            session.execute(
+                text(
+                    "SELECT appointment_id FROM crm_app.booking"
+                    " WHERE tenant_id = :t AND cancelled_by_visitor_at IS NOT NULL"
+                ),
+                {"t": a.id},
+            ).scalar_one()
+        )
     print("RESULT " + json.dumps(result, default=str))
 
 

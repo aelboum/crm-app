@@ -116,6 +116,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "campaign_recipient",
         # M-P1 (member display names).
         "member_profile",
+        # N-1 (in-app notifications).
+        "member_notification",
         # P7-V (consent confirmations).
         "consent_confirmation",
         # P7-T (email templates).

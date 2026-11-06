@@ -563,7 +563,7 @@ Only show metrics whose definitions are documented and whose calculations are co
 
 # 10. Phase 5 — Calendar and Appointment Booking
 
-**Status:** In progress (decision P5-A, started by the owner on 2026-10-28). Slice 5A built: appointments, views, status, cancel, rescheduling, conflict detection, time zones, contact association, team assignment. Slice 5B built: business hours, availability, the outside-hours warning (decision P5-B). Slice 5C built: public booking pages with the visitor's own link to cancel (decision P5-C). Slice 5D built: appointment reminder emails to contacts, automatic at a chosen lead time and on request (decision P5-D; queued only while sending is off). Notifications for team members remain (need a notification channel).
+**Status:** In progress (decision P5-A, started by the owner on 2026-10-28). Slice 5A built: appointments, views, status, cancel, rescheduling, conflict detection, time zones, contact association, team assignment. Slice 5B built: business hours, availability, the outside-hours warning (decision P5-B). Slice 5C built: public booking pages with the visitor's own link to cancel (decision P5-C). Slice 5D built: appointment reminder emails to contacts, automatic at a chosen lead time and on request (decision P5-D; queued only while sending is off). In-app notifications for team members built (decision N-1, 2026-11-06): the host hears of appointments someone else gives them and of visitor bookings and cancellations; reminders before an appointment are not built.
 
 ## Objectives
 

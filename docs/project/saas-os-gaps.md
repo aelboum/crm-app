@@ -30,6 +30,7 @@ and the owner approves a pin move.
 | 12 | `saas_os.infra.db` | No SQL function constructor or cast exported | Full-text search via a stored generated column and an inlined product operator `crm_app.@@` (migration 0023) |
 | 13 | `saas_os.inference` | No embeddings API | Phase 9 knowledge retrieval not built (decision P9-0) |
 | 14 | `saas_os.core.email` | `EmailOutcomeUnknownError` (with `retry_within`) and `EmailNotSentError` exist since v0.7.0 but are not exported from `saas_os.core.email`; the public `EmailProviderError` fields cannot tell an unknown outcome from a plain transient failure | `crm_app.emails` keeps retrying every non-permanent failure up to `MAX_ATTEMPTS`, so an SMTP send whose outcome is unknown may be delivered twice (Resend is de-duplicated by the `Message-ID` key). Production sending is not authorized (decision K3.4). Filed as aelboum/saas-os#223 (2026-11-06) |
+| 15 | `saas_os.core.notifications` | The `in_app` channel stores only subject and body text: no type or record reference, no read state, an unpaged and unordered `list_notifications()`, and no link from a row to the outbox event that made it | A product-owned inbox, `crm_app.member_notification`, written in the change's own transaction (decision N-1). Filed as aelboum/saas-os#230 (2026-11-06) |
 
 ## Suggested order for SaaS-OS
 
@@ -40,6 +41,7 @@ and the owner approves a pin move.
 5. Permission upgrade for existing tenants (10, saas-os #88).
 6. Display names (4), attachments (6), DB functions (12), embeddings (13).
 7. Export the email outcome errors (14): small, and lets products stop retrying an unknown outcome.
+8. An in-app inbox (15): a type, a reference, read state and a paged list would let LeadStack move its inbox to SaaS-OS.
 
 Adopting any SaaS-OS release that closes a gap needs the owner's approval
 of a pin move (decision K3 and its amendments).

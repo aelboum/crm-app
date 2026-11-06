@@ -2970,6 +2970,80 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_routes.py` (the own-profile write is the one named
   exception to "changes are Owner and Admin only"); `AppFrame.test.tsx`
   (profile saves); `reports.test.tsx` (a member shown by name).
+## N-1 — In-app notifications in a product-owned inbox (2026-11-06)
+
+- **Status:** Owner decision, 2026-11-06: "Product inbox (Recommended)",
+  chosen over using SaaS-OS's channel as it is or waiting for an upstream
+  change.
+- **Problem:** the header bell showed only an empty panel, and nothing
+  told a member when a task, conversation or appointment was put on them or
+  a visitor booked them. SaaS-OS v0.8.0's `saas_os.core.notifications`
+  `in_app` channel was checked first. It records a delivery outcome, not an
+  inbox:
+  - rows carry only subject and body text: no type and no link to a record;
+  - there is no read state (its own docstring leaves that to the product);
+  - `list_notifications()` returns all of a user's rows, unordered and
+    unpaged;
+  - no row records the outbox event that made it, so the product cannot
+    attach its own data to one.
+- **Decision:**
+  1. Table `crm_app.member_notification` (migration
+     `0037_member_notifications`): tenant-owned, forced RLS, in
+     `PURGE_TABLES`. Each row holds the recipient, a `kind`, the record by
+     type and ID, the acting member (none for a visitor or an automation),
+     `created_at` and `read_at`. A CHECK ties each kind to its record type
+     and forbids a member being the actor of their own notification. It has
+     no foreign key to the record, so a notification outlives a deleted
+     record, and none to `core.tenant_memberships` (same reason as M-P1).
+  2. Five kinds, each written by `crm_app.notifications.notify()` in the
+     same transaction as the change it reports: a rollback notifies nobody,
+     and an idempotent replay (which skips the business function) notifies
+     nobody twice.
+     - `task_assigned`: a task created with, or changed to, an assignee. An
+       automation's task step counts too, with no actor.
+     - `conversation_assigned`
+     - `appointment_assigned`: a host set or changed on an appointment that
+       is not cancelled.
+     - `booking_received` and `booking_cancelled`: a visitor's booking or
+       cancellation, sent to the host.
+     Nobody is notified about their own action.
+  3. Routes: `GET /v1/workspaces/{ws}/me/notifications` (newest first,
+     cursor-paged, at most 50 a page, `unread` filter, unread count capped at
+     99), `POST …/me/notifications/{id}/read` and `POST …/read-all`. All
+     need `crm_app.workspace:read`, which every role holds, so no new
+     permission and no grant migration is needed. The recipient is always
+     the caller: no route takes a member ID, and another member's or another
+     workspace's notification is 404. Marking read is routine and not
+     audited.
+  4. No record content is copied. The list reads each record's current
+     name, only when the reader holds that record type's read permission. A
+     deleted record shows as "No longer available".
+  5. Retention: rows older than 90 days are deleted for a recipient whenever
+     a new one is written for them. This needs no scheduled job, but an
+     inactive recipient keeps their last rows until the workspace purge.
+  6. Frontend: the bell shows the design's dot only while something is
+     unread, and its label says how many. The panel lists the notifications
+     with loading, error, empty and "load more" states and a "Mark all read"
+     button. Opening one marks it read and goes to the task (the Tasks page
+     now opens `?record=`), the conversation or the appointment. The list
+     refreshes every 60 seconds and when the window regains focus; there is
+     no push channel.
+  7. SaaS-OS stays the path for notification email once sending is
+     authorised. The gaps above are recorded in `saas-os-gaps.md` (gap 15,
+     filed as aelboum/saas-os#230) so the
+     inbox can move to SaaS-OS if it gains them.
+- **Not done:** overdue-task and upcoming-appointment reminders (they need a
+  scheduled scan); notifications for form submissions, deal or contact
+  owner changes and automation failures; per-member notification
+  preferences (Settings › Notifications stays "soon"); email or push
+  delivery; real-time updates.
+- **Tests:** `tests/integration/test_notifications.py`, with booking
+  notifications in `test_booking_page_routes.py`;
+  `tests/unit/test_routes.py` (marking one's own notifications read is the
+  second named exception to "changes are Owner and Admin only");
+  `AppFrame.test.tsx` (dot, list, open, mark all, error);
+  `tasks.test.tsx` (a linked task opens; a deleted one says so).
+
 ## M-P2 — Times use the device's time zone (2026-11-04)
 
 - **Status:** Owner decision, 2026-11-04 ("Device zone, honest field").

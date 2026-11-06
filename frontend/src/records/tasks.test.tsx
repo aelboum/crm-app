@@ -16,6 +16,7 @@ const stamp = "2026-10-27T09:30:00+00:00";
 const T1 = "a1000000-0000-4000-8000-000000000001";
 const T2 = "a1000000-0000-4000-8000-000000000002";
 const T3 = "a1000000-0000-4000-8000-000000000003";
+const GONE = "a1000000-0000-4000-8000-000000000009";
 
 function task(id: string, title: string, due: Date | null, extra: Record<string, unknown> = {}) {
   return {
@@ -72,6 +73,12 @@ function workspace(
     }
     if (method === "GET" && path.startsWith(`${base}/tasks/counts`)) {
       return { status: 200, body: { open: 3, mine: 3, overdue: 1, done: 4 } };
+    }
+    if (method === "GET" && path === `${base}/tasks/${T3}`) {
+      return { status: 200, body: ITEMS[2] };
+    }
+    if (method === "GET" && path === `${base}/tasks/${GONE}`) {
+      return { status: 404, body: { detail: { code: "not_found" } } };
     }
     if (method === "GET" && path.startsWith(`${base}/tasks?`)) {
       const items = path.includes("status=done") ? DONE : ITEMS;
@@ -157,6 +164,34 @@ describe("tasks page", () => {
     await waitFor(() => {
       expect(sent.some((r) => r.method === "DELETE" && r.path.endsWith(T3))).toBe(true);
     });
+  });
+
+  it("opens the task a link names, and closes back to the list (N-1)", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(`${URL}?record=${T3}`, workspace(MEMBER));
+    const dialog = await screen.findByRole("dialog", { name: "Edit task" });
+    expect(within(dialog).getByDisplayValue("Plan the demo")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({});
+    });
+    // The same link again (a second click on its notification) opens it again.
+    await router.navigate({
+      to: "/w/$workspaceId/$section",
+      params: { workspaceId: WS, section: "tasks" },
+      search: { record: T3 },
+    });
+    expect(await screen.findByRole("dialog", { name: "Edit task" })).toBeInTheDocument();
+  });
+
+  it("says when a linked task no longer exists", async () => {
+    renderApp(`${URL}?record=${GONE}`, workspace(MEMBER));
+    expect(
+      await screen.findByText("That task is no longer available. It may have been deleted."),
+    ).toBeInTheDocument();
   });
 
   it("offers a Read-only member the list only", async () => {

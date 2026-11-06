@@ -495,6 +495,7 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "email_template",
         "consent_confirmation",
         "member_profile",
+        "member_notification",
         "website",
         "custom_domain",
         "custom_domain_index",

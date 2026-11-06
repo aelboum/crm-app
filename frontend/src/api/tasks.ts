@@ -77,6 +77,21 @@ export function useTaskList(workspaceId: string, filters: TaskFilters, enabled =
   });
 }
 
+/** One task, for opening it from a link (`?record=`, e.g. a notification). */
+export function useTask(workspaceId: string, taskId: string | null) {
+  return useQuery({
+    queryKey: [...taskKeys.all(workspaceId), "one", taskId] as const,
+    enabled: taskId !== null,
+    retry: false,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/tasks/{task_id}", {
+          params: { path: { tenant_id: workspaceId, task_id: taskId ?? "" } },
+        }),
+      ),
+  });
+}
+
 export function useTaskCounts(workspaceId: string, assignees: string[]) {
   return useQuery({
     queryKey: taskKeys.counts(workspaceId, assignees),

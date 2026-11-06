@@ -25,6 +25,12 @@ EXPECTED = {
     # Decision M-P1: a member reads and sets only their own display name.
     "GET /v1/workspaces/{tenant_id}/me/profile": "crm_app.member_profile:read",
     "PUT /v1/workspaces/{tenant_id}/me/profile": "crm_app.member_profile:read",
+    # Decision N-1: a member reads and marks only their own notifications.
+    "GET /v1/workspaces/{tenant_id}/me/notifications": "crm_app.workspace:read",
+    "POST /v1/workspaces/{tenant_id}/me/notifications/read-all": "crm_app.workspace:read",
+    "POST /v1/workspaces/{tenant_id}/me/notifications/{notification_id}/read": (
+        "crm_app.workspace:read"
+    ),
     "GET /v1/workspaces/{tenant_id}/access": "crm_app.workspace:read",
     # Workspace settings (decision P2-F 1): read for every role, change for
     # Owner and Admin.
@@ -60,7 +66,12 @@ EXPECTED = {
 }
 # A member's own display name (decision M-P1): every role may set its own and
 # only its own (the route writes the caller's row; tests/integration prove it).
-OWN_PROFILE = {"PUT /v1/workspaces/{tenant_id}/me/profile"}
+OWN_PROFILE = {
+    "PUT /v1/workspaces/{tenant_id}/me/profile",
+    # Decision N-1: marking one's own notifications read, for every role.
+    "POST /v1/workspaces/{tenant_id}/me/notifications/read-all",
+    "POST /v1/workspaces/{tenant_id}/me/notifications/{notification_id}/read",
+}
 # Membership and role changes (gate G-LOCK): Owner and Admin only.
 CHANGING = {key for key in EXPECTED if not key.startswith("GET ")} - OWN_PROFILE
 

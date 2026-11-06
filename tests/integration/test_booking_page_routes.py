@@ -319,3 +319,18 @@ def test_changes_are_audited_by_id_and_name_the_booking_page_for_the_host(
     assert [(kind, actor, source, str(ref)) for kind, actor, source, ref in history] == [
         ("created", None, "booking_page", probe["page_id"])
     ]
+
+
+def test_the_host_is_notified_of_each_visitor_booking_and_cancellation(probe: Probe) -> None:
+    """Decision N-1: one notification per booking (a replayed request adds
+    none) and one for the visitor's cancellation, with no member as actor."""
+    # The owner also books the admin directly (`appointment_assigned`).
+    rows = [row for row in probe["host_notifications"] if row[0].startswith("booking_")]
+    assert {(kind, user, actor) for kind, user, actor, _ in rows} == {
+        ("booking_received", probe["admin_id"], None),
+        ("booking_cancelled", probe["admin_id"], None),
+    }
+    received = sorted(subject for kind, _, _, subject in rows if kind == "booking_received")
+    assert received == probe["booked_appointments"]
+    cancelled = [subject for kind, _, _, subject in rows if kind == "booking_cancelled"]
+    assert cancelled == [probe["cancelled_appointment"]]

@@ -45,6 +45,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
+from crm_app import notifications
 from crm_app.domains import appointments as rules
 from crm_app.domains import settings as setting_values
 from crm_app.domains.records import InvalidValue
@@ -493,6 +494,7 @@ def create(
         session.flush()
         given = sorted(name for name in FIELDS if values.get(name) is not None)
         _audit(session, scope, "created", appointment_id, fields=given, status=status)
+        _notify_host(session, scope, host, appointment_id)
         return {"id": str(appointment_id)}
 
     replay = False
@@ -572,9 +574,25 @@ def update(
         row.updated_by_user_id = scope.actor
         session.flush()
         _audit_update(session, scope, row.id, changed, (old_status, status))
+        if "host_user_id" in changed and row.status != "cancelled":
+            _notify_host(session, scope, row.host_user_id, row.id)
 
     _transaction(scope, apply)
     return get(scope, appointment_id)
+
+
+def _notify_host(
+    session: Session, scope: Scope, host: uuid.UUID, appointment_id: uuid.UUID
+) -> None:
+    """Tell a host someone else booked them in (N-1)."""
+    notifications.notify(
+        session,
+        scope.workspace,
+        host,
+        "appointment_assigned",
+        appointment_id,
+        actor=notifications.acting(scope),
+    )
 
 
 def _audit_update(

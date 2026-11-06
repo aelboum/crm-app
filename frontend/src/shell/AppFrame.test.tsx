@@ -32,7 +32,56 @@ const signedIn: Handler = (method, path) => {
   if (path.startsWith(`/v1/workspaces/${WS}/members?`)) {
     return { status: 200, body: { items: [], total: 0, limit: 50, offset: 0 } };
   }
+  if (path === `/v1/workspaces/${WS}/me/notifications`) {
+    return {
+      status: 200,
+      body: { items: [], next_cursor: null, unread: 0, unread_capped: false },
+    };
+  }
   return undefined;
+};
+
+const ACTOR = "aaaaaaaa-1111-4222-8333-444444444444";
+const TASK = "bbbbbbbb-1111-4222-8333-444444444444";
+const NOTIFIED = {
+  items: [
+    {
+      id: "n1",
+      kind: "task_assigned",
+      subject_type: "task",
+      subject_id: TASK,
+      subject_label: "Call Ada back",
+      actor_user_id: ACTOR,
+      created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+      read_at: null,
+    },
+    {
+      id: "n2",
+      kind: "booking_received",
+      subject_type: "appointment",
+      subject_id: "cccccccc-1111-4222-8333-444444444444",
+      subject_label: null,
+      actor_user_id: null,
+      created_at: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+      read_at: new Date().toISOString(),
+    },
+  ],
+  next_cursor: null,
+  unread: 1,
+  unread_capped: false,
+};
+
+const notified: Handler = (method, path, body) => {
+  if (path === `/v1/workspaces/${WS}/me/notifications`) {
+    return { status: 200, body: NOTIFIED };
+  }
+  if (method === "POST" && path === `/v1/workspaces/${WS}/me/notifications/n1/read`) {
+    return { status: 204 };
+  }
+  if (method === "POST" && path === `/v1/workspaces/${WS}/me/notifications/read-all`) {
+    return { status: 200, body: { marked: 1 } };
+  }
+  return signedIn(method, path, body);
 };
 
 describe("app frame", () => {
@@ -308,16 +357,81 @@ describe("app frame", () => {
     });
   });
 
-  it("shows an empty notifications panel rather than invented notifications", async () => {
+  it("shows an empty notifications panel when nothing happened to the member", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/settings`, signedIn);
     await user.click(
       await screen.findByRole("button", { name: "Notifications" }),
     );
     expect(
-      await screen.findByText("No notifications yet."),
+      await screen.findByText(/^No notifications yet\./),
     ).toBeInTheDocument();
   });
+
+  it("shows the member's own notifications with an unread dot and opens one", async () => {
+    const user = userEvent.setup();
+    const { sent, router } = renderApp(`/w/${WS}/settings`, notified);
+    const bell = await screen.findByRole("button", {
+      name: "Notifications, 1 unread",
+    });
+    await user.click(bell);
+    const list = await screen.findByRole("list", { name: "Notifications" });
+    const buttons = within(list).getAllByRole("button");
+    expect(buttons).toHaveLength(2);
+    const [task, booking] = buttons as [HTMLElement, HTMLElement];
+    expect(task).toHaveTextContent(
+      `Member ${ACTOR.slice(0, 8)} assigned you a task (unread)`,
+    );
+    expect(task).toHaveTextContent("Call Ada back");
+    expect(task).toHaveTextContent("5 minutes ago");
+    // A visitor's booking, its appointment since deleted.
+    expect(booking).toHaveTextContent("New booking on your booking page");
+    expect(booking).toHaveTextContent("No longer available");
+    expect(booking).not.toHaveTextContent("unread");
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(task);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/w/${WS}/tasks`);
+    });
+    expect(router.state.location.search).toEqual({ record: TASK });
+    expect(sent).toContainEqual({
+      method: "POST",
+      path: `/v1/workspaces/${WS}/me/notifications/n1/read`,
+      body: undefined,
+    });
+  });
+
+  it("marks every notification read", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(`/w/${WS}/settings`, notified);
+    await user.click(
+      await screen.findByRole("button", { name: "Notifications, 1 unread" }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Mark all read" }));
+    await waitFor(() => {
+      expect(sent).toContainEqual({
+        method: "POST",
+        path: `/v1/workspaces/${WS}/me/notifications/read-all`,
+        body: undefined,
+      });
+    });
+  });
+
+  it("says when notifications could not be loaded", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, (method, path, body) =>
+      path === `/v1/workspaces/${WS}/me/notifications`
+        ? { status: 500 }
+        : signedIn(method, path, body),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Notifications" }),
+    );
+    // A server failure is retried twice first (App.tsx).
+    expect(
+      await screen.findByRole("alert", {}, { timeout: 8000 }),
+    ).toBeInTheDocument();
+  }, 15_000);
 
   it("answers an unknown section like an unknown workspace", async () => {
     renderApp(`/w/${WS}/nonsense`, signedIn);

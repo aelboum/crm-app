@@ -357,6 +357,10 @@ function SectionPage() {
       <TasksPage
         workspaceId={workspaceId}
         initialTab={view === "overdue" ? "overdue" : "open"}
+        openId={record ?? null}
+        onOpenDone={() => {
+          void navigate({ search: {}, replace: true });
+        }}
         onOpenLink={(kind, id) => {
           const target =
             kind === "contact"

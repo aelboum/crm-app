@@ -3,7 +3,16 @@ import { useMemo, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
 import { useAccess, useMe, useMembers } from "../api/queries";
-import { dueGroup, type DueGroup, NO_TASK_FILTERS, type Task, type TaskFilters, useTaskCounts, useTaskList } from "../api/tasks";
+import {
+  dueGroup,
+  type DueGroup,
+  NO_TASK_FILTERS,
+  type Task,
+  type TaskFilters,
+  useTask,
+  useTaskCounts,
+  useTaskList,
+} from "../api/tasks";
 import { Loading, LoadError } from "../components/StateNotice";
 import { Button } from "../components/ui/Button";
 import type { MessageId } from "../i18n/en";
@@ -41,11 +50,17 @@ export function TasksPage({
   workspaceId,
   onOpenLink,
   initialTab = "open",
+  openId = null,
+  onOpenDone,
 }: {
   workspaceId: string;
   onOpenLink: (kind: "contact" | "company" | "opportunity", id: string) => void;
   /** The Home page opens the Overdue tab (P4-D 1). */
   initialTab?: Tab;
+  /** A task to open first (`?record=`, e.g. from a notification, N-1). */
+  openId?: string | null;
+  /** The task opened from `openId` was closed or could not be loaded. */
+  onOpenDone?: () => void;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -56,6 +71,13 @@ export function TasksPage({
   const [assignee, setAssignee] = useState("");
   const [editing, setEditing] = useState<Task | null>(null);
   const [refusal, setRefusal] = useState<MessageId | null>(null);
+  const linked = useTask(workspaceId, openId);
+  // The linked task opens until its dialog is closed once.
+  const [closedLink, setClosedLink] = useState<string | null>(null);
+  // Once the link is gone from the URL, the same task may be linked again.
+  if (openId === null && closedLink !== null) setClosedLink(null);
+  const fromLink = openId && closedLink !== openId ? (linked.data ?? null) : null;
+  const shown = editing ?? fromLink;
   const can = (action: string) => access.data?.actions[action] === true;
   const owners = ownerOptions(t, members.data?.items ?? [], meId);
   const choices = owners.length ? owners : meId ? [{ id: meId, label: t("records.owner.me") }] : [];
@@ -134,6 +156,11 @@ export function TasksPage({
           {t(refusal)}
         </p>
       ) : null}
+      {openId && linked.isError ? (
+        <p className="notice records-notice" role="status">
+          {t("tasks.openGone")}
+        </p>
+      ) : null}
 
       {list.isPending ? (
         <div className="records-card">
@@ -182,13 +209,17 @@ export function TasksPage({
           </Button>
         </div>
       ) : null}
-      {editing ? (
+      {shown ? (
         <TaskDialog
           workspaceId={workspaceId}
-          task={editing}
+          task={shown}
           owners={choices}
           onClose={() => {
             setEditing(null);
+            if (openId) {
+              setClosedLink(openId);
+              onOpenDone?.();
+            }
           }}
         />
       ) : null}

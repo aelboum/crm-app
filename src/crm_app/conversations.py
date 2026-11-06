@@ -37,7 +37,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import emails, inbound
+from crm_app import emails, inbound, notifications
 from crm_app.domains import conversations as rules
 from crm_app.domains import paging
 from crm_app.domains.records import InvalidValue, visible_text
@@ -576,6 +576,15 @@ def update(
         if changed == ["status"]:
             verb = "closed" if changes["status"] == "closed" else "reopened"
         _audit(session, scope, verb, conversation_id, fields=changed)
+        if "assignee_user_id" in changed:
+            notifications.notify(
+                session,
+                scope.workspace,
+                row.assignee_user_id,
+                "conversation_assigned",
+                conversation_id,
+                actor=notifications.acting(scope),
+            )
 
     _transaction(scope, apply)
     return get(scope, conversation_id)

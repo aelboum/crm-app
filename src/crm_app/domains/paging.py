@@ -67,6 +67,8 @@ ORDER_KEYS: Mapping[str, Mapping[str, Sequence[str]]] = {
     "suppression": {"created_at": ("datetime", "uuid")},
     # The Inbox, latest message first (decision P6-C1).
     "conversation": {"last_message_at": ("datetime", "uuid")},
+    # A member's notifications, newest first (decision N-1).
+    "notification": {"created_at": ("datetime", "uuid")},
 }
 
 Value = str | datetime | date | Decimal | int | uuid.UUID | None

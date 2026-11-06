@@ -34,7 +34,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import system_audit
+from crm_app import notifications, system_audit
 from crm_app.domains import paging
 from crm_app.domains import tasks as rules
 from crm_app.models import Company, Contact, Opportunity, Task
@@ -167,6 +167,7 @@ def create_in(
     session.flush()
     given = sorted(name for name in FIELDS if values.get(name) is not None)
     _audit(session, scope, "created", task_id, fields=given, **audit)
+    _notify_assignee(session, scope, values.get("assignee_user_id"), task_id)
     return task_id
 
 
@@ -180,6 +181,20 @@ def _audit(session: Session, scope: Scope, verb: str, task_id: uuid.UUID, **meta
         resource_type=RESOURCE,
         resource_id=str(task_id),
         metadata=metadata,
+    )
+
+
+def _notify_assignee(
+    session: Session, scope: Scope, assignee: uuid.UUID | None, task_id: uuid.UUID
+) -> None:
+    """Tell a newly set assignee, unless they assigned themselves (N-1)."""
+    notifications.notify(
+        session,
+        scope.workspace,
+        assignee,
+        "task_assigned",
+        task_id,
+        actor=notifications.acting(scope),
     )
 
 
@@ -434,6 +449,7 @@ def create(
         session.flush()
         given = sorted(name for name in FIELDS if values.get(name) is not None)
         _audit(session, scope, "created", task_id, fields=given)
+        _notify_assignee(session, scope, values.get("assignee_user_id"), task_id)
         return {"id": str(task_id)}
 
     replay = False
@@ -493,6 +509,8 @@ def update(
         session.flush()
         verb = ("completed" if done else "reopened") if toggled else "updated"
         _audit(session, scope, verb, row.id, fields=changed)
+        if "assignee_user_id" in changed:
+            _notify_assignee(session, scope, row.assignee_user_id, row.id)
 
     _transaction(scope, apply)
     return get(scope, task_id)

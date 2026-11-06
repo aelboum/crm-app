@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { useIntl } from "react-intl";
 import {
   Button as AriaButton,
   Dialog,
@@ -45,9 +46,18 @@ import {
   useSignOut,
   useWorkspace,
 } from "../api/queries";
+import {
+  type Notification,
+  notificationTarget,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from "../api/notifications";
 import { leaveAfterSignOut, signOutTarget } from "../api/signOut";
+import { Loading, LoadError } from "../components/StateNotice";
 import { useT } from "../i18n/useT";
-import { MemberNamesProvider } from "../members/names";
+import { MemberNamesProvider, useMemberNames } from "../members/names";
+import { ownerLabel } from "../records/parts";
 import { highestRole } from "../members/actions";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
 import { findGroup, GROUPS, type Section, SETTINGS_SLUG } from "./navigation";
@@ -365,12 +375,68 @@ function CreateMenu({
   );
 }
 
-function Notifications() {
+/** Short "5 min ago" style time for the notification list. */
+function useAgo() {
+  const intl = useIntl();
+  return (value: string, now: number = Date.now()) => {
+    const seconds = Math.round((new Date(value).getTime() - now) / 1000);
+    const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+      ["second", 60],
+      ["minute", 60],
+      ["hour", 24],
+      ["day", 7],
+    ];
+    let amount = seconds;
+    for (const [unit, size] of steps) {
+      if (Math.abs(amount) < size) {
+        return unit === "second"
+          ? intl.formatRelativeTime(0, "second", { numeric: "auto" })
+          : intl.formatRelativeTime(amount, unit, { numeric: "auto" });
+      }
+      amount = Math.round(amount / size);
+    }
+    return intl.formatDate(new Date(value), { day: "numeric", month: "short" });
+  };
+}
+
+function notificationText(
+  t: ReturnType<typeof useT>,
+  item: Notification,
+  meId: string | undefined,
+  names: ReturnType<typeof useMemberNames>,
+): string {
+  const actor = item.actor_user_id
+    ? ownerLabel(t, item.actor_user_id, meId, names)
+    : t("notif.actor.automation");
+  return t(`notif.kind.${item.kind}`, { actor });
+}
+
+function Notifications({ workspaceId }: { workspaceId: string }) {
   const t = useT();
+  const ago = useAgo();
+  const navigate = useNavigate();
+  const me = useMe();
+  const names = useMemberNames();
+  const [open, setOpen] = useState(false);
+  const list = useNotifications(workspaceId);
+  const markRead = useMarkNotificationRead(workspaceId);
+  const markAll = useMarkAllNotificationsRead(workspaceId);
+  const first = list.data?.pages[0];
+  const unread = first?.unread ?? 0;
+  const items = (list.data?.pages ?? []).flatMap((page) => page.items);
+  const unreadText = first?.unread_capped ? "99+" : String(unread);
   return (
-    <DialogTrigger>
-      <AriaButton className="icon-button" aria-label={t("notif.button")}>
+    <DialogTrigger isOpen={open} onOpenChange={setOpen}>
+      <AriaButton
+        className="icon-button notif-button"
+        aria-label={
+          unread > 0
+            ? t("notif.buttonUnread", { count: unreadText })
+            : t("notif.button")
+        }
+      >
         <Bell size={17} aria-hidden="true" />
+        {unread > 0 ? <span className="notif-dot" aria-hidden="true" /> : null}
       </AriaButton>
       <Popover
         className="menu-popover notif-panel"
@@ -380,8 +446,93 @@ function Notifications() {
         <Dialog className="notif-dialog" aria-label={t("notif.title")}>
           <div className="notif-head">
             <span className="notif-title">{t("notif.title")}</span>
+            <AriaButton
+              className="btn btn-ghost btn-sm notif-mark-all"
+              isDisabled={unread === 0 || markAll.isPending}
+              onPress={() => {
+                markAll.mutate();
+              }}
+            >
+              {t("notif.markAll")}
+            </AriaButton>
           </div>
-          <p className="notif-empty">{t("notif.empty")}</p>
+          {markAll.isError ? (
+            <p className="notice error notif-error" role="alert">
+              {t("notif.markAllFailed")}
+            </p>
+          ) : null}
+          {list.isPending ? (
+            <div className="notif-state">
+              <Loading />
+            </div>
+          ) : list.isError ? (
+            <div className="notif-state">
+              <LoadError
+                error={list.error}
+                onRetry={() => {
+                  void list.refetch();
+                }}
+              />
+            </div>
+          ) : items.length === 0 ? (
+            <p className="notif-empty">{t("notif.empty")}</p>
+          ) : (
+            <ul className="notif-list" aria-label={t("notif.title")}>
+              {items.map((item) => {
+                const isUnread = item.read_at === null;
+                const target = notificationTarget(item);
+                return (
+                  <li key={item.id}>
+                    <AriaButton
+                      className={`notif-item${isUnread ? " unread" : ""}`}
+                      onPress={() => {
+                        // Opening goes ahead even if marking fails: the list
+                        // refreshes and shows it unread again.
+                        if (isUnread) markRead.mutate(item.id);
+                        setOpen(false);
+                        void navigate({
+                          to: "/w/$workspaceId/$section",
+                          params: { workspaceId, section: target.section },
+                          search: { record: target.record },
+                        });
+                      }}
+                    >
+                      <span className="notif-marker" aria-hidden="true" />
+                      <span className="notif-body">
+                        <span className="notif-text">
+                          {notificationText(t, item, me.data?.user_id, names)}
+                          {isUnread ? (
+                            <span className="sr-only">{` (${t("notif.unread")})`}</span>
+                          ) : null}
+                        </span>
+                        <span
+                          className={`notif-subject${item.subject_label === null ? " gone" : ""}`}
+                        >
+                          {item.subject_label ?? t("notif.unavailable")}
+                        </span>
+                        <time className="notif-time" dateTime={item.created_at}>
+                          {ago(item.created_at)}
+                        </time>
+                      </span>
+                    </AriaButton>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {list.hasNextPage ? (
+            <div className="notif-more">
+              <AriaButton
+                className="btn btn-ghost btn-sm"
+                isDisabled={list.isFetchingNextPage}
+                onPress={() => {
+                  void list.fetchNextPage();
+                }}
+              >
+                {t("records.loadMore")}
+              </AriaButton>
+            </div>
+          ) : null}
         </Dialog>
       </Popover>
     </DialogTrigger>
@@ -780,7 +931,7 @@ export function AppFrame({
             workspaceId={workspaceId}
             workspaceName={workspace.data?.name ?? ""}
           />
-          <Notifications />
+          <Notifications workspaceId={workspaceId} />
           <HelpMenu />
           <ProfileMenu workspaceId={workspaceId} />
         </div>
