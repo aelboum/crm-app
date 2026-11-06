@@ -5,7 +5,7 @@ destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
 **Last updated:** 2026-10-24 (Phase 2 complete, decisions P2-F and P2-G).
-Earlier: 2026-10-31 (SaaS-OS pin moved to v0.6.0, decision K3.3); 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2); 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
+Earlier: 2026-11-06 (SaaS-OS pin moved to v0.8.0, decision K3.4); 2026-10-31 (SaaS-OS pin moved to v0.6.0, decision K3.3); 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2); 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
 first local commits, decision K2.1; remote, push and first CI run,
 decision K2.2; Claude Design inspection, D-DES and K5.1; Phase 2
 decisions P2-A to P2-E approved)
@@ -1332,6 +1332,41 @@ The table above records the evidence at `b0809ee`. On the new pin
 | Clean copy (criterion 1): trackable files copied to a fresh temporary directory, empty uv cache | `uv sync --locked` and `uv lock --check` exit 0; installed commit `5905156…`; unit tests 43 passed; directory removed afterwards |
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
+
+## SaaS-OS upgrade to v0.8.0 (decision K3.4, 2026-11-06)
+
+On the new pin `140d9dd` (v0.8.0, from v0.6.0 `d980e73`; v0.7.0 skipped)
+every check was run again, locally on Windows, on `main`:
+
+| Check | Result |
+| --- | --- |
+| Tag | `v0.8.0` resolves to `140d9dd…`; `git tag -v v0.8.0`: good ED25519 signature by the owner's key |
+| `uv lock --upgrade-package saas-os`, `uv lock --check`, `uv sync` | Only the saas-os entry changed (0.6.0 → 0.8.0); installed `saas-os` 0.8.0 from commit `140d9dd…` |
+| `ruff format --check .` / `ruff check .` | All formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| detect-secrets hook over tracked files | Exit 0, after replacing the audited false-positive hashes of the pin SHA and of the SaaS-OS migration head in `.secrets.baseline` |
+| `pytest tests/unit` | 740 passed; includes the pin test, now asserting `140d9dd` |
+| `pytest tests/integration` against `crm_app_test`, in six sequential groups (memory) | 147 passed and 2 errors; 140 passed and 1 failed; 134 passed, 1 failed and 8 errors; 146, 119 and 127 passed |
+| The four affected files run again, each on its own | `test_health_check` 2, `test_import_commit` 8, `test_task_tables` 13, `test_owner_protection` 10: all passed |
+
+The errors were `relation "crm_app.email_index"` / `"crm_app.task" does
+not exist` at setup: the shared test database was left below the product
+head by an earlier test in the same ad-hoc group (the groups were cut by
+file name, not the usual grouping). Each file passed alone on the final
+code. The concurrency test
+`test_two_owners_removing_each_other_leave_exactly_one_active_owner[drop_role]`
+failed once under load and passed on its own; watch it in CI.
+
+No product code changed: crm-app has no outbox consumer or webhook
+subscription, passes no `initiated_by`, neither reads nor writes
+`core.platform_audit_log`, and never deletes `core.users` rows (K3.4).
+The expected SaaS-OS migration head in `tests/integration/test_foundation.py`
+is now `e2b7c4d9a1f6`.
+
+Not run for this move: `tests/identity` (opt-in, needs the local
+ZITADEL) and the frontend checks (no frontend file changed). The local
+development database `crm_app` was not migrated; `crm_app.migrate` moves
+it to `e2b7c4d9a1f6` on its next run.
 
 ## SaaS-OS upgrade to v0.6.0 (decision K3.3, 2026-10-31)
 

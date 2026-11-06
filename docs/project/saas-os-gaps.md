@@ -1,7 +1,7 @@
 # SaaS-OS gaps found by LeadStack
 
-Status: 2026-11-01. Against the pinned SaaS-OS v0.6.0
-(`d980e73b0313ed63f2a59fd4a991a89f75791c0e`), verified in the installed
+Status: 2026-11-06. Against the pinned SaaS-OS v0.8.0
+(`140d9dd2e724357cf54e74fb3be9dadb8943a238`), verified in the installed
 package. These are capabilities SaaS-OS does not provide that LeadStack
 needs. LeadStack does not change, fork or patch SaaS-OS; each gap has a
 product-side workaround or keeps a feature blocked until SaaS-OS ships it
@@ -25,8 +25,8 @@ and the owner approves a pin move.
 | 7 | `saas_os.core.email` | No inbound (receiving) support and no Resend/Svix webhook verification | Product webhooks with their own Svix signature check (`crm_app.domains.emails.signature_valid`) |
 | 8 | `saas_os.infra.jobs` | Retries are plain exponential backoff: no jitter, provider `Retry-After` ignored | `email_message.next_attempt_at` and `inbound_email.next_attempt_at` with jitter and `Retry-After` |
 | 9 | `saas_os.infra.jobs` | System jobs take no payload; no cron scheduling on the public surface | Due-row batches with `SKIP LOCKED`; maintenance commands run by the deployment's scheduler |
-| 10 | `saas_os.core.rbac` | No sanctioned way to grant a newly added permission to existing tenants' roles (saas-os #88) | Operator command `crm_app.role_upgrade` using `SystemCaller(PROVISIONING)` beyond its documented purpose (decision P2-G7) |
-| 11 | `saas_os.core.audit_log` / `authority` | No system caller for audit entries when no member acts (a worker, an unsubscribe link, inbound mail) | Those actions are recorded in their own rows and states, without an audit entry |
+| 10 | `saas_os.core.rbac` | No sanctioned way to grant a newly added permission to existing tenants' roles (saas-os #88). **v0.7.0 adds one:** declared permission grant migrations applied by `saas-os-operator apply-permission-grants` (ADR 0060); not adopted (decision K3.4, needs owner approval) | Operator command `crm_app.role_upgrade` using `SystemCaller(PROVISIONING)` beyond its documented purpose (decision P2-G7) |
+| 11 | `saas_os.core.audit_log` / `authority` | No system caller for audit entries when no member acts (a worker, an unsubscribe link, inbound mail). **v0.7.0 adds** `record_system_action_in_transaction` with a `SystemActor`; not adopted yet (decision K3.4 follow-up) | Those actions are recorded in their own rows and states, without an audit entry |
 | 12 | `saas_os.infra.db` | No SQL function constructor or cast exported | Full-text search via a stored generated column and an inlined product operator `crm_app.@@` (migration 0023) |
 | 13 | `saas_os.inference` | No embeddings API | Phase 9 knowledge retrieval not built (decision P9-0) |
 

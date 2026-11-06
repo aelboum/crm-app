@@ -19,7 +19,7 @@ import pytest
 
 from tests.support import run_module, run_python
 
-SAAS_OS_MIGRATION_HEAD = "b3d5f7a9c2e4"
+SAAS_OS_MIGRATION_HEAD = "e2b7c4d9a1f6"
 PRODUCT_MIGRATION_HEAD = "0035_member_profiles"
 
 _STARTUP_PROBE = (

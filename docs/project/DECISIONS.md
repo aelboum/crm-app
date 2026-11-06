@@ -265,6 +265,74 @@ approval), **Superseded**.
 - **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
   `.secrets.baseline` hash back. Both releases share the migration head.
 
+## K3.4 — SaaS-OS pin moved to v0.8.0
+
+- **Status:** Approved by the owner, 2026-11-06 ("Saas-os is updated
+  please upgrade crm-app"). Supersedes the commit named in K3.3; every
+  other part of K3 stands. The pin stays fixed until a further approved
+  decision.
+- **Decision:** Exactly one SaaS-OS dependency:
+  `saas-os @ git+https://github.com/aelboum/saas-os@140d9dd2e724357cf54e74fb3be9dadb8943a238`
+  (v0.8.0, the latest release; v0.7.0 is skipped as an intermediate
+  step, and the unreleased commits after v0.8.0 on SaaS-OS `main` are
+  not taken).
+- **Evidence (verified 2026-11-06):**
+  - The tag `v0.8.0` resolves to `140d9dd…`, the merge commit of release
+    pull request #219; `git tag -v v0.8.0` reports a good ED25519
+    signature by the owner's key.
+  - Between `d980e73` (v0.6.0) and `140d9dd`: eight migrations (head
+    `b3d5f7a9c2e4` → `f0cc2e656d79` at v0.7.0 → `e2b7c4d9a1f6`), all
+    additive; the permission-grant ledger and its operator commands;
+    system actor attribution (`SystemActor`,
+    `record_system_action_in_transaction`); outbox timing on the
+    database clock, ambiguous-outcome classification and started
+    markers (off by default); `http://` webhook destinations refused by
+    default; stricter single-mailbox address validation; platform audit
+    rows about a user store a reference (`user_subject`) instead of the
+    raw id. The public API snapshot only grew.
+  - CONSUMER-GUIDE §14, v0.6.0 → v0.7.0 and v0.7.0 → v0.8.0, against
+    this product:
+    1. Migrations: `crm_app.migrate` runs SaaS-OS's first, so local and
+       test databases move to `e2b7c4d9a1f6` on the next run;
+       `tests/integration/test_foundation.py` expects that head.
+    2. New platform permissions: not needed; this product runs none of
+       those operator commands.
+    3. `http://` webhooks, `OUTBOX_LEASE_SECONDS`, receiver
+       de-duplication, outbox consumer timeouts, started markers: this
+       product registers no outbox consumer and no webhook subscription,
+       and sets neither setting.
+    4. Audit initiators: every `record_in_transaction` call passes a
+       `UserCaller` and no `initiated_by`, so the new refusal of a user
+       initiator does not apply.
+    5. Platform audit target shape: this product neither writes nor
+       reads `core.platform_audit_log`.
+    6. `core.users` rows: this product and its tests never delete them.
+    7. Email: `EmailMessage` is built by keyword. The new
+       `EmailOutcomeUnknownError` and `EmailNotSentError` subclass
+       `EmailProviderError` and are not permanent, so `crm_app.emails`
+       keeps its existing retry path for them (unchanged behaviour from
+       v0.6.0). The stricter address check is already mapped to a
+       permanent `invalid_address` failure.
+  - Every SaaS-OS import is still a public export
+    (`tests/unit/test_import_surface.py`).
+  - `uv lock --upgrade-package saas-os` changed only the saas-os entry.
+- **Follow-ups (not done in this move, each needs its own slice):**
+  - `crm_app.emails` could stop retrying an `EmailOutcomeUnknownError`
+    whose `retry_within` is `None` (SMTP: a retry may deliver twice),
+    and bound Resend retries to `retry_within`. Production sending is
+    not authorized, so nothing is sent twice today.
+  - Gap 11 (`saas-os-gaps.md`): `record_system_action_in_transaction`
+    with a `SystemActor` now exists, so worker, public-link and inbound
+    actions could get tenant audit entries.
+  - Gap 10: `saas-os-operator apply-permission-grants` (ADR 0060) is
+    the sanctioned way to add a new permission to existing tenants'
+    roles and could replace `crm_app.role_upgrade`; adopting it changes
+    role semantics and needs owner approval.
+- **Rollback:** move the pin, lock entry, `APPROVED_PIN`, the expected
+  migration head and the `.secrets.baseline` hash back. v0.6.0's
+  `saas-os-migrate` cannot run against a database at the new head
+  (`Can't locate revision`); recreate local and test databases instead.
+
 ## K3.3 — SaaS-OS pin moved to v0.6.0
 
 - **Status:** Approved by the owner, 2026-10-31 ("saas-os is ready we can
