@@ -93,3 +93,13 @@ def test_a_name_never_verified_is_released_after_its_claim_time(probe: Probe) ->
 def test_other_workspaces_see_nothing_and_removal_frees_the_domain(probe: Probe) -> None:
     assert probe["isolation"] == [False, 404, 403]
     assert probe["removed"] == [204, 201]
+
+
+def test_provider_and_sweep_status_changes_are_system_entries(probe: Probe) -> None:
+    entries = probe["system_audit"]
+    assert entries, "no system entry was recorded"
+    assert all(no_member for _, _, no_member in entries)
+    names = {name for name, _, _ in entries}
+    assert names == {"crm_app.sending_domain_events", "crm_app.domain_maintenance"}
+    assert ["crm_app.sending_domain_events", "verified", True] in entries
+    assert ["crm_app.domain_maintenance", "expired", True] in entries

@@ -137,3 +137,12 @@ def test_changes_are_audited_as_the_member(
         "crm_app.automation.deleted",
     ):
         assert expected in actions
+
+
+def test_each_ended_run_is_audited_once_by_the_run_worker(probe: Probe) -> None:
+    audit = probe["run_audit"]
+    assert all(row["no_member"] for row in audit["entries"])
+    entries = {row["action"]: row["n"] for row in audit["entries"]}
+    assert entries == {row["action"]: row["n"] for row in audit["runs"]}
+    assert {"crm_app.automation_run.completed", "crm_app.automation_run.failed"} <= set(entries)
+    assert "crm_app.automation_run.cancelled" in entries

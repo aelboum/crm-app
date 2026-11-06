@@ -347,6 +347,21 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             client.delete(f"{base}/{domain_id}", headers=auth()).status_code,
             add(domain, "other_owner", b.id).status_code,
         ]
+        # Status changes the provider or the claim sweep made (K3.5): system
+        # entries naming no member; a member's own changes stay member entries.
+        with tenant_session_scope(a.id) as session:
+            result["system_audit"] = [
+                list(row)
+                for row in session.execute(
+                    text(
+                        "SELECT metadata->'system_actor'->>'name', metadata->>'status',"
+                        " actor_user_id IS NULL FROM core.audit_log WHERE tenant_id = :t"
+                        " AND action = 'crm_app.sending_domain.status_changed'"
+                        " ORDER BY created_at, metadata->>'status'"
+                    ),
+                    {"t": a.id},
+                )
+            ]
     print("RESULT " + json.dumps(result, default=str))
 
 

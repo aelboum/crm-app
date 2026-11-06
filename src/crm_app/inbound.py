@@ -45,6 +45,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
+from crm_app import system_audit
 from crm_app.domains import emails as email_rules
 from crm_app.domains import inbound as rules
 from crm_app.models import (
@@ -317,27 +318,51 @@ def _deliver(
             )
             reason = rules.review_reason(content, contact.email if contact else None)
             if reason is not None:
-                _quarantine(
+                if _quarantine(
                     session,
                     workspace,
                     conversation_id=conversation_id,
                     inbound_id=inbound_id,
                     content=content,
                     reason=reason,
-                )
+                ):
+                    _inbound_audit(
+                        session, workspace, conversation_id, "inbound_quarantined", reason
+                    )
                 return "quarantined"
-            append(
+            if append(
                 session,
                 workspace,
                 conversation=conversation,
                 inbound_id=inbound_id,
                 text=content.text,
                 attachments=_attachments(content),
-            )
+            ):
+                _inbound_audit(session, workspace, conversation_id, "inbound_received", None)
             return "routed"
     except IntegrityError:
         # A concurrent try already delivered this email: same outcome once.
         return _already(workspace, inbound_id)
+
+
+def _inbound_audit(
+    session: Session,
+    workspace: uuid.UUID,
+    conversation_id: uuid.UUID,
+    verb: str,
+    reason: str | None,
+) -> None:
+    """The inbound processor changed the thread, not a member (K3.5). Codes
+    only: never the sender, subject or text."""
+    system_audit.record(
+        session,
+        workspace=workspace,
+        component="crm_app.inbound_process",
+        action=f"crm_app.conversation.{verb}",
+        resource_type="crm_app.conversation",
+        resource_id=str(conversation_id),
+        metadata={"reason": reason} if reason is not None else None,
+    )
 
 
 def _already(workspace: uuid.UUID, inbound_id: uuid.UUID) -> str:
@@ -359,7 +384,9 @@ def _quarantine(  # noqa: PLR0913 - one quarantined email's parts
     inbound_id: uuid.UUID,
     content: rules.ReceivedContent,
     reason: str,
-) -> None:
+) -> bool:
+    """Hold an email for review, at most once per email; returns whether
+    it was held now."""
     exists = session.execute(
         select(InboundQuarantine.id).where(
             InboundQuarantine.tenant_id == workspace,
@@ -367,7 +394,7 @@ def _quarantine(  # noqa: PLR0913 - one quarantined email's parts
         )
     ).first()
     if exists:
-        return
+        return False
     session.add(
         InboundQuarantine(
             id=uuid.uuid4(),
@@ -386,6 +413,7 @@ def _quarantine(  # noqa: PLR0913 - one quarantined email's parts
         )
     )
     session.flush()
+    return True
 
 
 def append(  # noqa: PLR0913 - one inbound message's parts

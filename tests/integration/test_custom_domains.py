@@ -84,3 +84,7 @@ def test_removal_and_expiry_free_the_hostname(probe: Probe) -> None:
     assert probe["removed"] == [204, 404]
     assert probe["expired_check"] == {"code": "claim_expired"}
     assert probe["expired_cleared"] is True
+
+
+def test_the_recheck_records_its_own_lapse_and_expiry(probe: Probe) -> None:
+    assert probe["recheck_audit"] == probe["recheck_expected"]

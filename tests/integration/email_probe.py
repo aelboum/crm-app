@@ -342,6 +342,39 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             post("msg_failed_late", event("email.delivered", racing_id)),
             _row(a.id, racing)["status"],
         ]
+        # An email queued by nobody (K3.5): the worker and the webhook record
+        # their own system entries, the provider suppression too; no member.
+        with tenant_session_scope(a.id) as session:
+            nobody = emails.queue(
+                session,
+                Scope(workspace=a.id, actor=None),  # type: ignore[arg-type]
+                purpose="test",
+                to_email="nobody@example.test",
+                subject="Hello",
+                text_body="Hello.",
+            )
+        nobody_sent = send(nobody)
+        nobody_bounced = post(
+            "msg_nobody_bounced",
+            event("email.bounced", _row(a.id, nobody)["provider_message_id"]),
+        )
+        with tenant_session_scope(a.id) as session:
+            entries = session.execute(
+                text(
+                    "SELECT action, actor_type, actor_user_id IS NULL,"
+                    " metadata->'system_actor'->>'name', metadata::text"
+                    " FROM core.audit_log WHERE tenant_id = :t"
+                    " AND (resource_id = :e OR (action = 'crm_app.suppression.added'"
+                    " AND metadata->'system_actor'->>'name' = 'crm_app.email_events'))"
+                    " ORDER BY created_at"
+                ),
+                {"t": a.id, "e": str(nobody)},
+            ).all()
+        result["nobody"] = {
+            "outcomes": [nobody_sent, nobody_bounced],
+            "entries": [list(row[:4]) for row in entries],
+            "address_in_audit": any("nobody@example.test" in row[4] for row in entries),
+        }
         result["too_large"] = client.post(
             WEBHOOK, content=b"x" * (70 * 1024), headers={"content-type": "application/json"}
         ).status_code

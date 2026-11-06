@@ -320,10 +320,15 @@ approval), **Superseded**.
   - `crm_app.emails` could stop retrying an `EmailOutcomeUnknownError`
     whose `retry_within` is `None` (SMTP: a retry may deliver twice),
     and bound Resend retries to `retry_within`. Production sending is
-    not authorized, so nothing is sent twice today.
+    not authorized, so nothing is sent twice today. **Blocked
+    (2026-11-06):** the error classes are not exported from
+    `saas_os.core.email`, and importing them from the private module or
+    reading their attributes would break K3's public-surface rule;
+    recorded as gap 14 in `saas-os-gaps.md`.
   - Gap 11 (`saas-os-gaps.md`): `record_system_action_in_transaction`
     with a `SystemActor` now exists, so worker, public-link and inbound
-    actions could get tenant audit entries.
+    actions could get tenant audit entries. **Done** for every path that
+    had no entry (K3.5).
   - Gap 10: `saas-os-operator apply-permission-grants` (ADR 0060) is
     the sanctioned way to add a new permission to existing tenants'
     roles and could replace `crm_app.role_upgrade`; adopting it changes
@@ -332,6 +337,48 @@ approval), **Superseded**.
   migration head and the `.secrets.baseline` hash back. v0.6.0's
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
+
+## K3.5 — System-actor audit entries for actions no member performs
+
+- **Status:** Done under the autonomous mandate, 2026-11-06 (owner:
+  "Proceed" on the K3.4 follow-ups). Additive only: no approved
+  attribution changed.
+- **Decision:** Where crm-app changed workspace data with no member acting
+  and wrote no audit entry, it now writes one through SaaS-OS v0.7.0's
+  `record_system_action_in_transaction`, inside the same tenant
+  transaction. `crm_app.system_audit` is the single writer. It holds a
+  fixed list of components, each with its `SystemActorKind`; an unlisted
+  name is refused. `initiated_by` is never passed, so SaaS-OS stores
+  `"unavailable"` and no member id. Metadata holds ids, codes and counts
+  only.
+
+  | Path | Component (kind) | Entries |
+  | --- | --- | --- |
+  | Campaign unsubscribe link | `crm_app.unsubscribe_link` (public_link) | `crm_app.contact.consent_withdrawn`, `crm_app.suppression.added` |
+  | Email send worker, email queued by nobody | `crm_app.email_send` (worker_job) | `crm_app.email.sent` / `.failed` / `.suppressed` |
+  | Resend email events, email queued by nobody | `crm_app.email_events` (provider_event_processor) | `crm_app.email.bounced` / `.complained`, `crm_app.suppression.added` (origin `provider`) |
+  | Resend domain events | `crm_app.sending_domain_events` (provider_event_processor) | `crm_app.sending_domain.status_changed` (only when the status changes) |
+  | Unverified sending-domain claim released | `crm_app.domain_maintenance` (maintenance) | `crm_app.sending_domain.status_changed` (`expired`) |
+  | Custom-domain re-check | `crm_app.domain_maintenance` (maintenance) | `crm_app.custom_domain.status_changed` (`lapsed`, `expired`) |
+  | Import retention sweep | `crm_app.import_maintenance` (maintenance) | `crm_app.import.expired`, `crm_app.import.rows_cleared` |
+  | Inbound email processing | `crm_app.inbound_process` (inbound_processor) | `crm_app.conversation.inbound_received`, `crm_app.conversation.inbound_quarantined` (reason code only), each once per email |
+  | Automation run ends | `crm_app.automation_run` (worker_job) | `crm_app.automation_run.completed` / `.failed` / `.cancelled` |
+
+- **Not changed (approved decisions; changing them needs the owner):**
+  entries for bookings and visitor cancellations (as the host, `"by":
+  "visitor"`, 13-H1), form submissions (as the form's contact owner,
+  P7-A 8), consent confirmations, automation steps (as the activating
+  member, P8-A 8), and emails a member queued (as that member, P6-E 5).
+  Moving them to system actors is a separate owner decision.
+- **Also:** inbound quarantine now reports whether it held the email this
+  time, so a reprocessed email is audited once.
+- **Tests:** `tests/unit/test_system_audit.py`; integration assertions in
+  `test_campaigns.py`, `test_emails.py`, `test_sending_domains.py`,
+  `test_custom_domains.py`, `test_import_maintenance.py`,
+  `test_inbound_email.py` and `test_automations.py` check the action,
+  `actor_type` `system`, no `actor_user_id`, the component name, "exactly
+  once", and no address in metadata.
+- **Closes:** gap 11 in `saas-os-gaps.md` for these paths.
 
 ## K3.3 — SaaS-OS pin moved to v0.6.0
 

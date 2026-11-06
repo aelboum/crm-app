@@ -55,6 +55,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
+from crm_app import system_audit
 from crm_app.domains import custom_domains as rules
 from crm_app.domains import dns_wire
 from crm_app.domains import websites as site_rules
@@ -441,6 +442,7 @@ def recheck_due(resolver: TxtResolver | None = None, *, limit: int = BATCH) -> d
             if row.status == "pending" and row.expires_at and row.expires_at < now:
                 _drop_index(row.id)
                 session.delete(row)
+                _maintenance_audit(session, workspace, row.id, "expired", "pending")
                 counts["expired"] += 1
                 continue
             due = row.checked_at is None or row.checked_at < now - timedelta(hours=RECHECK_HOURS)
@@ -451,8 +453,24 @@ def recheck_due(resolver: TxtResolver | None = None, *, limit: int = BATCH) -> d
                 row.status = "lapsed"
                 row.updated_at, row.version = now, row.version + 1
                 _index(row.id, verified=False)
+                _maintenance_audit(session, workspace, row.id, "lapsed", "verified")
                 counts["lapsed"] += 1
     return counts
+
+
+def _maintenance_audit(
+    session: Session, workspace: uuid.UUID, domain_id: uuid.UUID, status: str, previous: str
+) -> None:
+    """The scheduled recheck changed a domain, not a member (K3.5)."""
+    system_audit.record(
+        session,
+        workspace=workspace,
+        component="crm_app.domain_maintenance",
+        action=f"{RESOURCE}.status_changed",
+        resource_type=RESOURCE,
+        resource_id=str(domain_id),
+        metadata={"previous_status": previous, "status": status},
+    )
 
 
 def forget_workspace(tenant_id: uuid.UUID) -> bool:

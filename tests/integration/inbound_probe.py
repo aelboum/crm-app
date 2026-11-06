@@ -451,6 +451,38 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         finally:
             os.environ["ENVIRONMENT"] = "test"
 
+        # The processor's own entries (K3.5): one per message it added and per
+        # email it held, however often an email was processed; no member.
+        with tenant_session_scope(a.id) as session:
+            result["inbound_audit"] = {
+                str(row[0]): [row[1], row[2]]
+                for row in session.execute(
+                    text(
+                        "SELECT action, count(*), bool_and(actor_user_id IS NULL)"
+                        " FROM core.audit_log WHERE tenant_id = :t"
+                        " AND metadata->'system_actor'->>'name' = 'crm_app.inbound_process'"
+                        " GROUP BY action"
+                    ),
+                    {"t": a.id},
+                )
+            }
+            result["inbound_rows"] = {
+                "crm_app.conversation.inbound_received": session.execute(
+                    text(
+                        "SELECT count(*) FROM crm_app.conversation_message m"
+                        " WHERE m.tenant_id = :t AND m.inbound_email_id IS NOT NULL"
+                        # An accepted review adds its message as the member's act.
+                        " AND NOT EXISTS (SELECT 1 FROM crm_app.inbound_quarantine q"
+                        "  WHERE q.tenant_id = m.tenant_id AND q.status = 'accepted'"
+                        "  AND q.inbound_email_id = m.inbound_email_id)"
+                    ),
+                    {"t": a.id},
+                ).scalar_one(),
+                "crm_app.conversation.inbound_quarantined": session.execute(
+                    text("SELECT count(*) FROM crm_app.inbound_quarantine WHERE tenant_id = :t"),
+                    {"t": a.id},
+                ).scalar_one(),
+            }
     print("RESULT " + json.dumps(result, default=str))
 
 

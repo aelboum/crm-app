@@ -253,6 +253,24 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             automations.record_failure(a.id, flaky_run["id"], "operationalerror") for _ in range(5)
         ]
         result["failures"] = [statuses, _run(a.id, flaky), _due(flaky_run["id"])]
+        # Every ended run has exactly one entry by the run worker (K3.5), and
+        # no other system entry names a member.
+        result["run_audit"] = {
+            "entries": _q(
+                a.id,
+                "SELECT action, count(*) AS n, bool_and(actor_user_id IS NULL) AS no_member"
+                " FROM core.audit_log WHERE tenant_id = :t"
+                " AND metadata->'system_actor'->>'name' = 'crm_app.automation_run'"
+                " GROUP BY action ORDER BY action",
+            ),
+            "runs": _q(
+                a.id,
+                "SELECT 'crm_app.automation_run.' || status AS action, count(*) AS n"
+                " FROM crm_app.automation_run WHERE tenant_id = :t"
+                " AND status IN ('completed', 'failed', 'cancelled')"
+                " GROUP BY status ORDER BY 1",
+            ),
+        }
 
         # --- History; pausing stops new runs; deleting removes everything -------------------
         history = client.get(f"{item}/runs", headers=auth("member"))

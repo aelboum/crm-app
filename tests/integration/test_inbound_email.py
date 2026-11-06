@@ -151,3 +151,11 @@ def test_mail_routed_to_another_workspace_stays_there(probe: Probe) -> None:
 
 def test_production_receives_and_processes_nothing(probe: Probe) -> None:
     assert probe["production"] == [404, {}]
+
+
+def test_the_processor_audits_each_added_message_and_held_email_once(probe: Probe) -> None:
+    audit, rows = probe["inbound_audit"], probe["inbound_rows"]
+    assert rows["crm_app.conversation.inbound_received"] >= 1
+    assert rows["crm_app.conversation.inbound_quarantined"] >= 1
+    assert {action: count for action, (count, _) in audit.items()} == rows
+    assert all(no_member for _, no_member in audit.values())

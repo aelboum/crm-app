@@ -93,6 +93,11 @@ def test_a_changed_approval_is_refused_and_recipients_are_added_once(probe: Prob
 def test_unsubscribing_suppresses_and_withdraws_consent(probe: Probe) -> None:
     assert probe["unsubscribe"] == [204, 204, 204, 204, 204]
     assert probe["after_unsubscribe"] == [1, 1, "unsubscribed"]
+    link = ["system", True, "public_link", "crm_app.unsubscribe_link", "unavailable"]
+    assert probe["unsubscribe_audit"] == [
+        ["crm_app.contact.consent_withdrawn", *link],
+        ["crm_app.suppression.added", *link],
+    ]
     assert probe["late_send"] == [True, "suppressed"]
 
 

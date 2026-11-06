@@ -46,6 +46,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
+from crm_app import system_audit
 from crm_app.domains import email_streams as streams
 from crm_app.domains import sending_domains as rules
 from crm_app.domains.records import InvalidValue
@@ -472,6 +473,7 @@ def apply_event(event: rules.DomainEvent) -> str:
         now = _now()
         if moment is not None:
             row.event_at = moment
+        previous = row.status
         if event.type == "domain.deleted":
             row.status, row.provider_id = "not_registered", None
             row.last_error = "deleted_at_provider"
@@ -479,6 +481,17 @@ def apply_event(event: rules.DomainEvent) -> str:
             _apply_provider(row, event.domain)
             row.last_error = None
         row.checked_at, row.updated_at, row.version = now, now, row.version + 1
+        if row.status != previous:
+            # The provider changed the domain, not a member (K3.5).
+            system_audit.record(
+                session,
+                workspace=workspace,
+                component="crm_app.sending_domain_events",
+                action=f"{RESOURCE}.status_changed",
+                resource_type=RESOURCE,
+                resource_id=str(row.id),
+                metadata={"previous_status": previous, "status": row.status, "event": event.type},
+            )
     if event.type == "domain.deleted":
         _set_index_provider(name, None)
     return "applied"
@@ -721,8 +734,18 @@ def release_unverified(limit: int = 200) -> int:
                 continue
             if row is not None:
                 now = _now()
+                previous = row.status
                 row.status, row.last_error = "expired", "claim_expired"
                 row.updated_at, row.version = now, row.version + 1
+                system_audit.record(
+                    session,
+                    workspace=workspace,
+                    component="crm_app.domain_maintenance",
+                    action=f"{RESOURCE}.status_changed",
+                    resource_type=RESOURCE,
+                    resource_id=str(row.id),
+                    metadata={"previous_status": previous, "status": "expired"},
+                )
         with session_scope() as session:
             index = session.get(SendingDomainIndex, name)
             if index is not None and index.sending_domain_id == domain_id:

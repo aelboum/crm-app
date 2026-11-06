@@ -82,6 +82,7 @@ def _handle(
         update,
     )
 
+    from crm_app import system_audit  # noqa: PLC0415
     from crm_app.models import ImportExpiry, ImportJob, ImportRow  # noqa: PLC0415
 
     cleared, expired, postponed, orphans = counts
@@ -99,12 +100,24 @@ def _handle(
                         ImportRow.tenant_id == workspace_id, ImportRow.import_id == import_id
                     )
                 )
+                verb = "rows_cleared"
                 if job.status == "previewed":
                     job.status = "expired"
                     job.finished_at = now
                     job.version += 1
                     job.updated_at = now
                     expired += 1
+                    verb = "expired"
+                # The retention sweep acted, not a member (K3.5).
+                system_audit.record(
+                    session,
+                    workspace=workspace_id,
+                    component="crm_app.import_maintenance",
+                    action=f"crm_app.import.{verb}",
+                    resource_type="crm_app.import",
+                    resource_id=str(import_id),
+                    metadata={"status": job.status},
+                )
                 cleared += 1
         with session_scope() as session:
             if keep:

@@ -41,6 +41,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
+from crm_app import system_audit
 from crm_app.domains import paging
 from crm_app.domains import suppression as rules
 from crm_app.models import ConsentRecord, Contact, Suppression
@@ -60,6 +61,7 @@ from crm_app.records import (
 
 RESOURCE = "crm_app.suppression"
 _CHANNEL = "email"
+_UNSUBSCRIBE_LINK = "crm_app.unsubscribe_link"
 
 
 class SuppressionNotFoundError(RecordError):
@@ -267,7 +269,8 @@ def suppress_from_provider(
     """Suppress an address the email provider reported as bounced or
     complained (origin `provider`, decision P6-E), inside the caller's
     workspace transaction; `False` when it was already suppressed or the
-    list is full. Audited as the member whose email it was, when known."""
+    list is full. Audited as the member whose email it was, when known;
+    otherwise as the provider-event processor (decision K3.5)."""
     try:
         added = _suppress(
             session,
@@ -288,6 +291,16 @@ def suppress_from_provider(
             count=added,
             reason=reason,
             origin="provider",
+        )
+    elif added:
+        system_audit.record(
+            session,
+            workspace=workspace,
+            component="crm_app.email_events",
+            action=f"{RESOURCE}.added",
+            resource_type=RESOURCE,
+            resource_id=str(workspace),
+            metadata={"count": added, "reason": reason, "origin": "provider"},
         )
     return bool(added)
 
@@ -348,7 +361,8 @@ def suppress_unsubscribed(
     """A recipient used a campaign's unsubscribe link (decision P7-C): a
     `withdrawn` consent record (method `unsubscribe_link`) and the address
     suppressed (reason `unsubscribed`), in the caller's transaction. Nobody
-    acts for the person, so no member is named; a full list leaves the
+    acts for the person, so no member is named: the entries' actor is the
+    link (`crm_app.unsubscribe_link`, decision K3.5). A full list leaves the
     withdrawn consent, which alone stops marketing mail."""
     if contact_id is not None:
         session.add(
@@ -367,8 +381,17 @@ def suppress_unsubscribed(
             )
         )
         session.flush()
+        system_audit.record(
+            session,
+            workspace=workspace,
+            component=_UNSUBSCRIBE_LINK,
+            action=f"{CONTACT.resource}.consent_withdrawn",
+            resource_type=CONTACT.resource,
+            resource_id=str(contact_id),
+            metadata={"channel": _CHANNEL, "method": "unsubscribe_link"},
+        )
     try:
-        _suppress(
+        added = _suppress(
             session,
             Scope(workspace=workspace, actor=None),  # type: ignore[arg-type]
             [email],
@@ -378,6 +401,16 @@ def suppress_unsubscribed(
         )
     except SuppressionLimitError:
         return
+    if added:
+        system_audit.record(
+            session,
+            workspace=workspace,
+            component=_UNSUBSCRIBE_LINK,
+            action=f"{RESOURCE}.added",
+            resource_type=RESOURCE,
+            resource_id=str(workspace),
+            metadata={"count": added, "reason": "unsubscribed", "origin": "consent_withdrawn"},
+        )
 
 
 def may_send(

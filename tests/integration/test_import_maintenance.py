@@ -38,6 +38,9 @@ def test_due_rows_are_deleted_and_created_records_stay(probe: Probe) -> None:
         "rows": 0,
         "imported_contacts": 2,
         "entry_later": None,
+        "system_audit": [
+            ["crm_app.import.rows_cleared", "system", True, "crm_app.import_maintenance"]
+        ],
     }
 
 
@@ -45,6 +48,9 @@ def test_a_preview_never_committed_expires(probe: Probe) -> None:
     assert probe["abandoned"]["status"] == "expired"
     assert probe["abandoned"]["rows"] == 0
     assert probe["abandoned"]["entry_later"] is None
+    sweep = [True, "crm_app.import_maintenance"]
+    assert probe["abandoned"]["system_audit"] == [["crm_app.import.expired", "system", *sweep]]
+    assert probe["queued"]["system_audit"] == []
 
 
 def test_a_queued_import_is_left_alone_and_checked_later(probe: Probe) -> None:

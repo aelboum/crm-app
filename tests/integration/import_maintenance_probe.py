@@ -47,12 +47,30 @@ def _state(workspace: uuid.UUID, import_id: uuid.UUID) -> dict[str, Any]:
         contacts = session.execute(
             text("SELECT count(*) FROM crm_app.contact WHERE source = 'import'")
         ).scalar_one()
+        # The sweep's own entries (K3.5): system actor, no member named.
+        audit = [
+            list(row)
+            for row in session.execute(
+                text(
+                    "SELECT action, actor_type, actor_user_id IS NULL,"
+                    " metadata->'system_actor'->>'name' FROM core.audit_log"
+                    " WHERE resource_id = :id AND actor_type = 'system'"
+                ),
+                {"id": str(import_id)},
+            )
+        ]
     with session_scope() as session:
         entry = session.execute(
             text("SELECT due_at > now() FROM crm_app.import_expiry WHERE import_id = :id"),
             {"id": import_id},
         ).scalar_one_or_none()
-    return {"status": status, "rows": rows, "imported_contacts": contacts, "entry_later": entry}
+    return {
+        "status": status,
+        "rows": rows,
+        "imported_contacts": contacts,
+        "entry_later": entry,
+        "system_audit": audit,
+    }
 
 
 def main() -> None:

@@ -253,6 +253,22 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
                 "SELECT status FROM crm_app.campaign_recipient WHERE tenant_id = :t LIMIT 1",
             ),
         ]
+        # The link is the actor (K3.5): system entries, once, no member named.
+        with tenant_session_scope(a.id) as session:
+            result["unsubscribe_audit"] = [
+                list(row)
+                for row in session.execute(
+                    text(
+                        "SELECT action, actor_type, actor_user_id IS NULL,"
+                        " metadata->'system_actor'->>'kind', metadata->'system_actor'->>'name',"
+                        " metadata->>'initiated_by'"
+                        " FROM core.audit_log WHERE tenant_id = :t"
+                        " AND metadata->'system_actor'->>'name' = 'crm_app.unsubscribe_link'"
+                        " ORDER BY action"
+                    ),
+                    {"t": a.id},
+                )
+            ]
         # A campaign email queued before the unsubscribe is not sent after it.
         late = campaigns.SENDING_AVAILABLE
         with tenant_session_scope(a.id) as session:

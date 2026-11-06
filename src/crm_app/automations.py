@@ -43,7 +43,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import records, tasks
+from crm_app import records, system_audit, tasks
 from crm_app.domains import automations as rules
 from crm_app.domains.records import InvalidValue
 from crm_app.models import (
@@ -74,6 +74,7 @@ _SUBJECT_MODELS: dict[str, Any] = {
     "deal_stage_changed": PipelineStage,
 }
 RESOURCE = "crm_app.automation"
+RUN_RESOURCE = "crm_app.automation_run"
 JOB_NAME = "crm_app_automation_run"
 MAX_ATTEMPTS = 5
 RETRY_DELAY = timedelta(minutes=5)
@@ -639,14 +640,16 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
         if contact is None or actor is None or not _active_member(workspace, actor):
             # The member who activated it left or was suspended: it stops
             # acting in their name (13-H5).
-            _finish(run, "cancelled", now, "contact_gone" if contact is None else "not_active")
+            _finish(
+                session, run, "cancelled", now, "contact_gone" if contact is None else "not_active"
+            )
             _forget([run_id])
             return run.status, False
         if run.branch is None:
             run.branch = rules.branch_for(definition.condition, _facts(session, workspace, contact))
         steps = definition.branch(run.branch)
         if run.next_step >= len(steps):
-            _finish(run, "completed", now, None)
+            _finish(session, run, "completed", now, None)
             _forget([run_id])
             return run.status, False
         position = run.next_step
@@ -689,10 +692,23 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
         return "running", True
 
 
-def _finish(run: AutomationRun, status: str, now: datetime, error: str | None) -> None:
+def _finish(
+    session: Session, run: AutomationRun, status: str, now: datetime, error: str | None
+) -> None:
+    """End a run. The worker ends it, not a member, so its entry names the
+    run worker as a system actor (K3.5); the steps keep their entries."""
     run.status, run.finished_at, run.updated_at, run.resume_at = status, now, now, None
     if error is not None:
         run.last_error = error
+    system_audit.record(
+        session,
+        workspace=run.tenant_id,
+        component="crm_app.automation_run",
+        action=f"{RUN_RESOURCE}.{status}",
+        resource_type=RUN_RESOURCE,
+        resource_id=str(run.id),
+        metadata={"automation_id": str(run.automation_id), "error": error},
+    )
 
 
 def record_failure(workspace: uuid.UUID, run_id: uuid.UUID, code: str) -> str:
@@ -710,7 +726,7 @@ def record_failure(workspace: uuid.UUID, run_id: uuid.UUID, code: str) -> str:
         run.updated_at = now
         status = run.status
         if run.attempts >= MAX_ATTEMPTS:
-            _finish(run, "failed", now, code)
+            _finish(session, run, "failed", now, code)
             status = "failed"
     if status == "failed":
         _forget([run_id])

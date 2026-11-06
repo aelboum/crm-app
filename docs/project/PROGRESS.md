@@ -5,7 +5,7 @@ destination; this file records what is actually true. Do not record
 anything here that was not verified.
 
 **Last updated:** 2026-10-24 (Phase 2 complete, decisions P2-F and P2-G).
-Earlier: 2026-11-06 (SaaS-OS pin moved to v0.8.0, decision K3.4); 2026-10-31 (SaaS-OS pin moved to v0.6.0, decision K3.3); 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2); 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
+Earlier: 2026-11-06 (system-actor audit entries, K3.5; SaaS-OS pin moved to v0.8.0, decision K3.4); 2026-10-31 (SaaS-OS pin moved to v0.6.0, decision K3.3); 2026-10-23 (SaaS-OS pin moved to v0.5.0, decision K3.2); 2026-10-21 (SaaS-OS pin moved to v0.3.0, decision K3.1;
 first local commits, decision K2.1; remote, push and first CI run,
 decision K2.2; Claude Design inspection, D-DES and K5.1; Phase 2
 decisions P2-A to P2-E approved)
@@ -1332,6 +1332,28 @@ The table above records the evidence at `b0809ee`. On the new pin
 | Clean copy (criterion 1): trackable files copied to a fresh temporary directory, empty uv cache | `uv sync --locked` and `uv lock --check` exit 0; installed commit `5905156…`; unit tests 43 passed; directory removed afterwards |
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
+
+## System-actor audit entries (decision K3.5, 2026-11-06)
+
+New `crm_app.system_audit` writes SaaS-OS system-actor entries for the
+paths that changed workspace data with no member acting and recorded no
+entry: unsubscribe link, email worker and email events for emails queued
+by nobody, provider suppression without a member, Resend domain events,
+the sending-domain claim sweep, the custom-domain re-check, the import
+retention sweep, inbound processing and automation run endings. Member
+attributions under approved decisions are unchanged.
+
+| Check | Result |
+| --- | --- |
+| `ruff format --check .` / `ruff check .` | All formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| `pytest tests/unit` | 743 passed (3 new in `test_system_audit.py`) |
+| `pytest` over the 24 integration files for suppression, bookings, reminders, conversations, consent, forms, automations, campaigns, emails, inbound, sending and custom domains, imports | 278 passed |
+
+The full integration suite runs in CI.
+
+Gap 14 (new, `saas-os-gaps.md`): the SaaS-OS email outcome errors are not
+public, so the K3.4 email-retry follow-up stays blocked.
 
 ## SaaS-OS upgrade to v0.8.0 (decision K3.4, 2026-11-06)
 

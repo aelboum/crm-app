@@ -26,9 +26,10 @@ and the owner approves a pin move.
 | 8 | `saas_os.infra.jobs` | Retries are plain exponential backoff: no jitter, provider `Retry-After` ignored | `email_message.next_attempt_at` and `inbound_email.next_attempt_at` with jitter and `Retry-After` |
 | 9 | `saas_os.infra.jobs` | System jobs take no payload; no cron scheduling on the public surface | Due-row batches with `SKIP LOCKED`; maintenance commands run by the deployment's scheduler |
 | 10 | `saas_os.core.rbac` | No sanctioned way to grant a newly added permission to existing tenants' roles (saas-os #88). **v0.7.0 adds one:** declared permission grant migrations applied by `saas-os-operator apply-permission-grants` (ADR 0060); not adopted (decision K3.4, needs owner approval) | Operator command `crm_app.role_upgrade` using `SystemCaller(PROVISIONING)` beyond its documented purpose (decision P2-G7) |
-| 11 | `saas_os.core.audit_log` / `authority` | No system caller for audit entries when no member acts (a worker, an unsubscribe link, inbound mail). **v0.7.0 adds** `record_system_action_in_transaction` with a `SystemActor`; not adopted yet (decision K3.4 follow-up) | Those actions are recorded in their own rows and states, without an audit entry |
+| 11 | `saas_os.core.audit_log` / `authority` | No system caller for audit entries when no member acts (a worker, an unsubscribe link, inbound mail). **v0.7.0 adds** `record_system_action_in_transaction` with a `SystemActor`: adopted for every path that had no entry (decision K3.5) | System-actor entries through `crm_app.system_audit`; bookings, forms, consent confirmations, automation steps and member-queued emails still act as a member under their approved decisions |
 | 12 | `saas_os.infra.db` | No SQL function constructor or cast exported | Full-text search via a stored generated column and an inlined product operator `crm_app.@@` (migration 0023) |
 | 13 | `saas_os.inference` | No embeddings API | Phase 9 knowledge retrieval not built (decision P9-0) |
+| 14 | `saas_os.core.email` | `EmailOutcomeUnknownError` (with `retry_within`) and `EmailNotSentError` exist since v0.7.0 but are not exported from `saas_os.core.email`; the public `EmailProviderError` fields cannot tell an unknown outcome from a plain transient failure | `crm_app.emails` keeps retrying every non-permanent failure up to `MAX_ATTEMPTS`, so an SMTP send whose outcome is unknown may be delivered twice (Resend is de-duplicated by the `Message-ID` key). Production sending is not authorized (decision K3.4) |
 
 ## Suggested order for SaaS-OS
 
@@ -38,6 +39,7 @@ and the owner approves a pin move.
 4. Job retry controls (8) and the system audit caller (11).
 5. Permission upgrade for existing tenants (10, saas-os #88).
 6. Display names (4), attachments (6), DB functions (12), embeddings (13).
+7. Export the email outcome errors (14): small, and lets products stop retrying an unknown outcome.
 
 Adopting any SaaS-OS release that closes a gap needs the owner's approval
 of a pin move (decision K3 and its amendments).

@@ -18,10 +18,10 @@
 
 Personal data (address, subject, text) stays in the workspace's own rows;
 the global index holds ids and times; audit entries and errors carry codes,
-never addresses or provider texts. SaaS-OS has no system caller for a
-worker that sends on a member's behalf, so audit entries act as the member
-whose action queued the email; an email queued by nobody has its status
-and events as its record.
+never addresses or provider texts. Audit entries act as the member whose
+action queued the email (P6-E 5); for an email queued by nobody, the send
+worker and the provider-event processor record their own entries as system
+actors (decision K3.5).
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ from saas_os.infra.ratelimit import (
     get_ratelimit_config,
 )
 
-from crm_app import sending_domains, suppression
+from crm_app import sending_domains, suppression, system_audit
 from crm_app.domains import email_streams as streams
 from crm_app.domains import emails as rules
 from crm_app.models import (
@@ -81,6 +81,8 @@ from crm_app.settings import (
 )
 
 RESOURCE = "crm_app.email"
+_SENDER = "crm_app.email_send"
+_EVENTS = "crm_app.email_events"
 JOB_NAME = "crm_app_email_send"
 RETRY_DELAY = timedelta(minutes=10)
 RATE_WINDOW_SECONDS = 60
@@ -108,8 +110,28 @@ def _code(reason: str) -> str:
     return (_ERROR_CODE.sub("_", reason.lower()).strip("_") or "error")[:64]
 
 
-def _audit(session: Session, row: EmailMessage, verb: str, **meta: Any) -> None:
+def _audit(
+    session: Session,
+    row: EmailMessage,
+    verb: str,
+    *,
+    component: str | None = _SENDER,
+    **meta: Any,
+) -> None:
+    """The email's entry, as the member who queued it (P6-E 5). An email
+    queued by nobody is recorded as `component`, the worker or the
+    provider-event processor (K3.5); `None` (queuing) records nothing."""
     if row.created_by_user_id is None:
+        if component is not None:
+            system_audit.record(
+                session,
+                workspace=row.tenant_id,
+                component=component,
+                action=f"{RESOURCE}.{verb}",
+                resource_type=RESOURCE,
+                resource_id=str(row.id),
+                metadata={"purpose": row.purpose, **meta},
+            )
         return
     record_in_transaction(
         session,
@@ -181,7 +203,7 @@ def queue(  # noqa: PLR0913 - one email's fields
     )
     session.add(row)
     session.flush()
-    _audit(session, row, "queued")
+    _audit(session, row, "queued", component=None)
     return email_id
 
 
@@ -552,7 +574,7 @@ def _record_event(
             session, workspace, row.to_email, reason=event.type, actor=row.created_by_user_id
         )
         if added:
-            _audit(session, row, event.type)
+            _audit(session, row, event.type, component=_EVENTS)
     return "recorded"
 
 

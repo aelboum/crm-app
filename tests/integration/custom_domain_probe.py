@@ -232,6 +232,23 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             item["id"] for item in client.get(base, headers=auth()).json()["items"]
         ]
         result["outsider"] = client.get(base, headers=auth("outsider")).status_code
+        # The re-check's own entries (K3.5): one lapse, one expiry, no member.
+        with tenant_session_scope(a.id) as session:
+            result["recheck_audit"] = sorted(
+                [row[0], row[1], row[2]]
+                for row in session.execute(
+                    text(
+                        "SELECT resource_id, metadata->>'status', actor_user_id IS NULL"
+                        " FROM core.audit_log WHERE tenant_id = :t"
+                        " AND action = 'crm_app.custom_domain.status_changed'"
+                        " AND metadata->'system_actor'->>'name' = 'crm_app.domain_maintenance'"
+                    ),
+                    {"t": a.id},
+                )
+            )
+        result["recheck_expected"] = sorted(
+            [[claim["id"], "lapsed", True], [late["id"], "expired", True]]
+        )
     print("RESULT " + json.dumps(result, default=str))
 
 

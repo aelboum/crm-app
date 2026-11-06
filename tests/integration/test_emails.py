@@ -136,6 +136,19 @@ def test_audit_entries_name_the_email_never_the_address(
     assert "example.test" not in json.dumps([meta for _, meta in rows])
 
 
+def test_an_email_queued_by_nobody_is_audited_by_the_worker_and_the_webhook(
+    probe: Probe,
+) -> None:
+    nobody = probe["nobody"]
+    assert nobody["outcomes"] == ["sent", 204]
+    assert nobody["entries"] == [
+        ["crm_app.email.sent", "system", True, "crm_app.email_send"],
+        ["crm_app.suppression.added", "system", True, "crm_app.email_events"],
+        ["crm_app.email.bounced", "system", True, "crm_app.email_events"],
+    ]
+    assert nobody["address_in_audit"] is False
+
+
 # --- Streams, limits and production (decision P6-S) -------------------------------------
 
 
