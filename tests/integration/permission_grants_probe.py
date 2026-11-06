@@ -23,7 +23,7 @@ from saas_os.core.tenancy import TenantStatus, create_tenant, transition_tenant_
 from crm_app import permission_grants as pg
 from crm_app.roles import ROLE_TEMPLATES, Role
 from tests.integration.workspace_route_probe import PROVISIONING
-from tests.unit.test_permission_grants import BASELINE
+from tests.unit.permission_grants_guard import BASELINE
 
 
 def _workspace(label: str, *, current: bool) -> uuid.UUID:

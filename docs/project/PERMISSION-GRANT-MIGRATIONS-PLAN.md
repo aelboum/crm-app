@@ -140,7 +140,9 @@ What this means for crm-app:
   entry per (decision × role), in the order of the commits that added the
   permissions since `3bce9b6^`.
 - A read-only `--report` command.
-- `tests/unit/test_permission_grants.py` checks:
+- `tests/unit/test_permission_grants.py` runs `tests/unit/permission_grants_guard.py`
+  in a fresh interpreter with placeholder settings (importing SaaS-OS's
+  permission grants reads its configuration) and checks:
   - both lists pass SaaS-OS's validation, with ids unique across both;
   - no entry is authority-changing;
   - held-back permissions are only in the administrative list;
