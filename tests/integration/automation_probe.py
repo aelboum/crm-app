@@ -261,7 +261,25 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
                 "SELECT action, count(*) AS n, bool_and(actor_user_id IS NULL) AS no_member"
                 " FROM core.audit_log WHERE tenant_id = :t"
                 " AND metadata->'system_actor'->>'name' = 'crm_app.automation_run'"
+                " AND action LIKE 'crm_app.automation_run.%'"
                 " GROUP BY action ORDER BY action",
+            ),
+            # Steps' own entries name the run worker too, for the member (K3.6).
+            "steps": _q(
+                a.id,
+                "SELECT action, count(*) AS n,"
+                " bool_and(actor_user_id IS NULL) AS no_member,"
+                " bool_and(metadata->>'on_behalf_of_user_id' IS NOT NULL) AS on_behalf"
+                " FROM core.audit_log WHERE tenant_id = :t"
+                " AND metadata->'system_actor'->>'name' = 'crm_app.automation_run'"
+                " AND action NOT LIKE 'crm_app.automation_run.%'"
+                " GROUP BY action ORDER BY action",
+            ),
+            "member_step_entries": _q(
+                a.id,
+                "SELECT count(*) AS n FROM core.audit_log WHERE tenant_id = :t"
+                " AND actor_user_id IS NOT NULL"
+                " AND metadata->>'automation_id' IS NOT NULL AND action = 'crm_app.task.created'",
             ),
             "runs": _q(
                 a.id,

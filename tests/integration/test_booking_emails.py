@@ -2,7 +2,7 @@
 
 Drives `booking_email_probe` in a fresh interpreter with sending off: a
 booking on a page with confirmations on queues one email to the visitor,
-in the workspace's time zone, acting as the host, never with the private
+in the workspace's time zone, queued by the booking page, never with the private
 link; a replay queues nothing more; a page with confirmations off and the
 honeypot queue nothing; the setting accepts only true or false.
 """
@@ -46,7 +46,7 @@ def test_a_booking_queues_one_confirmation_to_the_visitor(probe: Probe) -> None:
     assert email["to_email"] == "ada@example.test"
     assert email["status"] == "queued"  # sending is off
     assert email["contact_id"] is not None
-    assert email["created_by_user_id"] == probe["owner"]  # the host
+    assert email["created_by_user_id"] is None  # queued by the booking page (K3.6)
     assert email["subject"].startswith("Booked: Intro call, ")
     assert "(Europe/Amsterdam)" in email["text_body"]
     assert "Phone call" in email["text_body"]

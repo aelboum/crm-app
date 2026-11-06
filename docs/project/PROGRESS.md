@@ -1333,6 +1333,22 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Visitor and automation-step attribution (decision K3.6, 2026-11-06)
+
+Bookings, visitor cancellations, form submissions, consent confirmations
+and automation steps are now audited as `crm_app.booking_page`,
+`crm_app.public_form`, `crm_app.consent_link` and `crm_app.automation_run`,
+with the member as `on_behalf_of_user_id`. Emails queued by those paths have
+no `created_by_user_id`. Rows and authorization are unchanged.
+
+| Check | Result |
+| --- | --- |
+| `ruff format --check .` / `ruff check .` | All formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| `pytest tests/unit` | 743 passed |
+| `test_booking_page_routes`, `test_form_routes`, `test_booking_emails`, `test_automations`, `test_consent_confirmations` | 52 passed after updating the expected actor |
+| `pytest tests/integration` (one ordered run) | 832 passed, 0 failed (45 min) |
+
 ## System-actor audit entries (decision K3.5, 2026-11-06)
 
 New `crm_app.system_audit` writes SaaS-OS system-actor entries for the

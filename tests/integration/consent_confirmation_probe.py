@@ -142,17 +142,6 @@ def main() -> None:
             token not in json.dumps([pending[0]["token_hash"]]),
             bool(token),
         ]
-        audits = (
-            _q(
-                a.id,
-                "SELECT action FROM core.audit_log_entries WHERE tenant_id = :t"
-                " AND action LIKE 'crm_app.consent_confirmation.%' ORDER BY created_at",
-            )
-            if False
-            else []
-        )
-        del audits
-
         # --- Confirming: once, idempotent, bound to its workspace ---------------------------
         confirm = f"/v1/public/consent/{a.id}/confirm"
         result["confirm"] = [
@@ -167,6 +156,18 @@ def main() -> None:
                 c=ada["id"],
             ),
         ]
+
+        # Requested by the form, confirmed through the link (K3.6): system
+        # entries, once each, no member as actor.
+        result["confirm_audit"] = _q(
+            a.id,
+            "SELECT action, actor_user_id IS NULL AS no_member,"
+            " metadata->'system_actor'->>'name' AS component"
+            " FROM core.audit_log WHERE tenant_id = :t"
+            " AND action LIKE 'crm_app.consent_confirmation.%'"
+            " AND metadata->>'contact_id' = :c ORDER BY created_at",
+            c=ada["id"],
+        )
 
         # --- An expired link confirms nothing ----------------------------------------------
         submit("ada@customer.example.org", "m-2")

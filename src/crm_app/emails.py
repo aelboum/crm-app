@@ -197,13 +197,15 @@ def queue(  # noqa: PLR0913 - one email's fields
         text_body=content.text_body,
         status="queued",
         attempts=0,
-        created_by_user_id=scope.actor,
+        # A component's email names no member (K3.6): its entries are the
+        # component's, then the worker's and the webhook's.
+        created_by_user_id=None if scope.component else scope.actor,
         created_at=now,
         updated_at=now,
     )
     session.add(row)
     session.flush()
-    _audit(session, row, "queued", component=None)
+    _audit(session, row, "queued", component=scope.component)
     return email_id
 
 

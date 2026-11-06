@@ -146,3 +146,10 @@ def test_each_ended_run_is_audited_once_by_the_run_worker(probe: Probe) -> None:
     assert entries == {row["action"]: row["n"] for row in audit["runs"]}
     assert {"crm_app.automation_run.completed", "crm_app.automation_run.failed"} <= set(entries)
     assert "crm_app.automation_run.cancelled" in entries
+
+
+def test_steps_are_audited_as_the_run_worker_for_the_activating_member(probe: Probe) -> None:
+    steps = {row["action"]: row for row in probe["run_audit"]["steps"]}
+    assert {"crm_app.contact.updated", "crm_app.task.created"} <= set(steps)
+    assert all(row["no_member"] and row["on_behalf"] for row in steps.values())
+    assert probe["run_audit"]["member_step_entries"] == [{"n": 0}]

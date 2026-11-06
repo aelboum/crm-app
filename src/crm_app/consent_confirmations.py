@@ -24,12 +24,10 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from saas_os.core.audit_log import record_in_transaction
-from saas_os.core.authority import UserCaller
 from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
 from saas_os.infra.db import Session, select, tenant_session_scope
 
-from crm_app import emails
+from crm_app import emails, system_audit
 from crm_app.domains.records import InvalidValue
 from crm_app.models import ConsentConfirmation, ConsentRecord, Contact, Form
 from crm_app.records import Scope
@@ -121,10 +119,11 @@ def request(  # noqa: PLR0913, PLR0917 - one confirmation's facts
             )
         except InvalidValue:
             row.email_message_id = None
-    record_in_transaction(
+    system_audit.record_scoped(
         session,
-        caller=UserCaller(scope.actor),
-        tenant_id=scope.workspace,
+        workspace=scope.workspace,
+        member=scope.actor,
+        component=scope.component,
         action=f"{RESOURCE}.requested",
         resource_type=RESOURCE,
         resource_id=str(row.id),
@@ -177,18 +176,18 @@ def confirm(workspace: uuid.UUID, token: str, now: datetime | None = None) -> bo
                     Form.tenant_id == workspace, Form.id == row.form_id
                 )
             ).scalar_one_or_none()
-            if owner is not None:
-                # SaaS-OS has no system caller: the form's owner, as the
-                # submission itself acts (P7-A); marked as the visitor's act.
-                record_in_transaction(
-                    session,
-                    caller=UserCaller(owner),
-                    tenant_id=workspace,
-                    action=f"{RESOURCE}.confirmed",
-                    resource_type=RESOURCE,
-                    resource_id=str(row.id),
-                    metadata={"contact_id": str(row.contact_id), "by": "visitor"},
-                )
+            # The person confirms through the link, not the form's owner
+            # (K3.6): recorded even when the form has no owner.
+            system_audit.record_scoped(
+                session,
+                workspace=workspace,
+                member=owner,
+                component="crm_app.consent_link",
+                action=f"{RESOURCE}.confirmed",
+                resource_type=RESOURCE,
+                resource_id=str(row.id),
+                metadata={"contact_id": str(row.contact_id), "by": "visitor"},
+            )
             return True
     except (TenantClosedError, TenantNotFoundError):
         return False

@@ -259,7 +259,7 @@ def test_unpublished_and_deleted_pages_keep_their_appointments(probe: Probe) -> 
     assert view["cancelled"] is True
 
 
-def test_changes_are_audited_by_id_and_act_as_the_host(
+def test_changes_are_audited_by_id_and_name_the_booking_page_for_the_host(
     probe: Probe, owner_connection: psycopg.Connection
 ) -> None:
     page_rows = owner_connection.execute(
@@ -286,13 +286,20 @@ def test_changes_are_audited_by_id_and_act_as_the_host(
     created, cancelled = appointment_rows
     assert created[1]["booking_page_id"] == probe["page_id"]
     assert created[1]["by"] == "visitor"
-    assert str(created[2]) == probe["admin_id"]
-    assert cancelled[1] == {
+    # The booking page acts, for the host (K3.6): no member is the actor.
+    page_actor = {"kind": "public_link", "name": "crm_app.booking_page"}
+    assert created[2] is None
+    assert created[1]["system_actor"] == page_actor
+    assert created[1]["on_behalf_of_user_id"] == probe["admin_id"]
+    assert created[1]["initiated_by"] == "unavailable"
+    assert {k: cancelled[1][k] for k in ("previous_status", "by", "booking_page_id")} == {
         "previous_status": "confirmed",
         "by": "visitor",
         "booking_page_id": probe["page_id"],
     }
-    assert str(cancelled[2]) == probe["admin_id"]
+    assert cancelled[2] is None
+    assert cancelled[1]["system_actor"] == page_actor
+    assert cancelled[1]["on_behalf_of_user_id"] == probe["admin_id"]
     text = json.dumps([meta for _, meta, _ in appointment_rows])
     assert "Lovelace" not in text
     assert "engine" not in text

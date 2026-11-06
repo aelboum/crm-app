@@ -9,9 +9,10 @@ transaction: the form ID and field names, never the form's text.
 The public side (`public_form`, `submit`) has no member: the workspace comes
 from the address and is only a lookup key. An unknown workspace or key, a
 draft form and a closed or suspended workspace are all `FormNotFoundError`.
-A submission creates or matches a contact in one transaction, acting as the
-form's contact owner (P7-A 6, 8); a matched contact gains at most the
-form's tag, never a changed field.
+A submission creates or matches a contact in one transaction, in the
+form's contact owner's scope (P7-A 6, 8); its audit entries name the form
+(`crm_app.public_form`) with the owner as `on_behalf_of_user_id` (K3.6). A
+matched contact gains at most the form's tag, never a changed field.
 
 SaaS-OS resolves configuration at import time; only code that runs after
 validation imports this module.
@@ -757,7 +758,8 @@ def submit(workspace: uuid.UUID, key: str, submission: Submission, *, idempotenc
     except rules.InvalidAnswers as exc:
         raise AnswersError(exc.errors) from None
     accepted = _Accepted(
-        scope=Scope(workspace=workspace, actor=owner),
+        # The visitor submits, not the owner: entries name the form (K3.6).
+        scope=Scope(workspace=workspace, actor=owner, component="crm_app.public_form"),
         key=key,
         fields=fields,
         answers=given,

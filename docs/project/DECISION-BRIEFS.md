@@ -168,6 +168,10 @@ off). Costs are indicative orders of magnitude, not quotes.
   audited; a backup is taken first.
 - **Reversibility:** medium. Grants can be revoked from `applied.json`; there
   is no automatic undo.
+- **Update 2026-11-06:** a proposed replacement runs the same additions
+  through SaaS-OS's permission grant migrations instead
+  (`PERMISSION-GRANT-MIGRATIONS-PLAN.md`); if approved, this brief becomes
+  that plan's steps D to F.
 
 ## Brief 8 — Public submissions that match an existing contact
 

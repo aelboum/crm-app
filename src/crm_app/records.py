@@ -46,6 +46,7 @@ from saas_os.infra.db import (
 )
 from saas_os.infra.db import update as update_rows
 
+from crm_app import system_audit
 from crm_app.domains import custom_fields as field_rules
 from crm_app.domains import paging
 from crm_app.domains.membership import ACTIVE
@@ -127,10 +128,16 @@ _OWN_KIND = frozenset({_STAGE, _OWNER, _COMPANY})
 
 @dataclass(frozen=True)
 class Scope:
-    """Who acts, in which workspace: both from the validated request context."""
+    """Who acts, in which workspace: both from the validated request context.
+
+    `component` is set when a system component acts in `actor`'s scope (a
+    public page, a consent link, an automation run, decision K3.6): rows
+    still name `actor` where they did, and audit entries name the
+    component (`crm_app.system_audit.record_scoped`)."""
 
     workspace: uuid.UUID
     actor: uuid.UUID
+    component: str | None = None
 
 
 class RecordError(Exception):
@@ -304,10 +311,11 @@ class _Event:
 
 
 def _audit(session: Session, kind: Kind, scope: Scope, event: _Event) -> None:
-    record_in_transaction(
+    system_audit.record_scoped(
         session,
-        caller=UserCaller(scope.actor),
-        tenant_id=scope.workspace,
+        workspace=scope.workspace,
+        member=scope.actor,
+        component=scope.component,
         action=f"{kind.resource}.{event.verb}",
         resource_type=kind.resource,
         resource_id=str(event.record_id),

@@ -11,8 +11,9 @@ only a lookup key. An unknown workspace or key, a draft page, a page whose
 host has left and a closed or suspended workspace are all
 `BookingPageNotFoundError`. A booking checks the time again under the
 host's lock (P5-A 4), creates or matches a contact and creates the
-appointment in one transaction, acting as the host (P5-C 6, 9); a matched
-contact is never changed. The visitor's link token is returned once and
+appointment in one transaction, in the host's scope (P5-C 6, 9); its audit
+entries name the booking page with the host as `on_behalf_of_user_id`
+(K3.6). A matched contact is never changed. The visitor's link token is returned once and
 stored only as its SHA-256.
 
 SaaS-OS resolves configuration at import time; only code that runs after
@@ -50,7 +51,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import appointments, emails
+from crm_app import appointments, emails, system_audit
 from crm_app.domains import appointments as appointment_rules
 from crm_app.domains import booking_pages as rules
 from crm_app.domains.records import InvalidValue
@@ -71,6 +72,7 @@ from crm_app.records import (
 )
 
 RESOURCE = "crm_app.booking_page"
+_PAGE = "crm_app.booking_page"  # the system actor of visitor actions (K3.6)
 FIELDS = (
     "name",
     "description",
@@ -656,7 +658,9 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     if _offer(page) != offer:
         # Changed since the details were checked: the visitor retries.
         raise TransactionConflictError
-    scope = Scope(workspace=workspace, actor=offer.host)
+    # The visitor books, not the host: entries name the booking page and
+    # the host as `on_behalf_of_user_id` (decision K3.6).
+    scope = Scope(workspace=workspace, actor=offer.host, component=_PAGE)
     starts_at = accepted.starts_at
     ends_at = starts_at + offer.length
     acquire_tenant_advisory_lock(session, workspace, "crm_app.booking.capacity")
@@ -723,10 +727,11 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
         given.append("location")
     if visitor["message"] is not None:
         given.append("note")
-    record_in_transaction(
+    system_audit.record_scoped(
         session,
-        caller=UserCaller(offer.host),
-        tenant_id=workspace,
+        workspace=workspace,
+        member=offer.host,
+        component=_PAGE,
         action=f"{appointments.RESOURCE}.created",
         resource_type=appointments.RESOURCE,
         resource_id=str(appointment_id),
@@ -734,7 +739,6 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             "fields": sorted(given),
             "status": appointment_rules.DEFAULT_STATUS,
             "booking_page_id": str(page.id),
-            # The host is the actor, but a visitor made the booking (13-H1).
             "by": "visitor",
         },
     )
@@ -767,8 +771,8 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             kind=page.kind,
             location=page.location,
         )
-        # Acting as the host, as the appointment does (P5-C 9). Sent only
-        # while EMAIL_SENDING_ENABLED is on (P6-E 3).
+        # Queued by the booking page, not the host (K3.6). Sent only while
+        # EMAIL_SENDING_ENABLED is on (P6-E 3).
         email_id = emails.queue(
             session,
             scope,
@@ -949,10 +953,11 @@ def cancel(workspace: uuid.UUID, token: str) -> Item:
         metadata: dict[str, object] = {"previous_status": previous, "by": "visitor"}
         if booking.booking_page_id is not None:
             metadata["booking_page_id"] = str(booking.booking_page_id)
-        record_in_transaction(
+        system_audit.record_scoped(
             session,
-            caller=UserCaller(appointment.host_user_id),
-            tenant_id=workspace,
+            workspace=workspace,
+            member=appointment.host_user_id,
+            component=_PAGE,
             action=f"{appointments.RESOURCE}.cancelled",
             resource_type=appointments.RESOURCE,
             resource_id=str(appointment.id),

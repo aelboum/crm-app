@@ -332,11 +332,58 @@ approval), **Superseded**.
   - Gap 10: `saas-os-operator apply-permission-grants` (ADR 0060) is
     the sanctioned way to add a new permission to existing tenants'
     roles and could replace `crm_app.role_upgrade`; adopting it changes
-    role semantics and needs owner approval.
+    role semantics and needs owner approval. Design for review:
+    `PERMISSION-GRANT-MIGRATIONS-PLAN.md` (2026-11-06).
 - **Rollback:** move the pin, lock entry, `APPROVED_PIN`, the expected
   migration head and the `.secrets.baseline` hash back. v0.6.0's
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
+
+## K3.6 — Visitor actions and automation steps are audited as system actors
+
+- **Status:** Approved by the owner, 2026-11-06 ("Go" on the
+  recommendation to re-attribute visitor actions and automation steps,
+  and to keep member-queued emails as the member). It amends the audit
+  attribution in 13-H1, P5-C 9, P6-E 2, P7-A 8 and P8-A 8; nothing else
+  in those decisions changes.
+- **Decision:** These actions ran in a member's scope and were audited as
+  that member, although the member did not act. Their new entries name a
+  system component instead, with the member as `on_behalf_of_user_id` in
+  the metadata:
+
+  | Action | Component (kind) | Was audited as |
+  | --- | --- | --- |
+  | A visitor books (contact created, appointment created, confirmation email queued) | `crm_app.booking_page` (public_link) | the host |
+  | A visitor cancels through the link | `crm_app.booking_page` (public_link) | the host |
+  | A form submission (contact created, confirmation requested, its email queued) | `crm_app.public_form` (public_link) | the form's contact owner |
+  | A person confirms consent through the link | `crm_app.consent_link` (public_link) | the form's contact owner, or nothing when it had none |
+  | An automation step (tags, stage, owner, task) | `crm_app.automation_run` (worker_job) | the activating member |
+
+- **What does not change:**
+  - Rows keep the member they named before (the host on the appointment
+    and the new contact, the form owner as contact owner, the activating
+    member's rights for steps), and steps still stop when that member
+    leaves (13-H5). Only audit attribution moves.
+  - Emails a member queued still name that member (P6-E 5). An email
+    queued by a component now has no `created_by_user_id`, so its later
+    entries come from the send worker and the email-events processor
+    (K3.5).
+  - `"by": "visitor"` stays in the booking and consent metadata.
+  - Earlier audit rows are not rewritten. Readers that filtered these
+    actions by `actor_user_id` must also read `on_behalf_of_user_id`.
+- **How:** `Scope` gained an optional `component`. `records`, `tasks`,
+  consent confirmations, bookings and email queuing write through
+  `crm_app.system_audit.record_scoped`: a member entry without a
+  component, the component's system entry with one. `initiated_by` is
+  never passed.
+- **Not changed (not part of this approval):** automatic appointment
+  reminders still queue their email as the host (`crm_app.reminders`).
+- **Tests:** `test_booking_page_routes.py`, `test_form_routes.py`,
+  `test_booking_emails.py`, `test_automations.py` and
+  `test_consent_confirmations.py` assert the system actor, no
+  `actor_user_id`, and the member in `on_behalf_of_user_id`. The consent
+  probe's disabled audit query (it named a table that does not exist) is
+  replaced by a working one.
 
 ## K3.5 — System-actor audit entries for actions no member performs
 
@@ -369,7 +416,8 @@ approval), **Superseded**.
   "visitor"`, 13-H1), form submissions (as the form's contact owner,
   P7-A 8), consent confirmations, automation steps (as the activating
   member, P8-A 8), and emails a member queued (as that member, P6-E 5).
-  Moving them to system actors is a separate owner decision.
+  Moving them to system actors is a separate owner decision (made in
+  K3.6 for all but member-queued emails).
 - **Also:** inbound quarantine now reports whether it held the email this
   time, so a reprocessed email is audited once.
 - **Tests:** `tests/unit/test_system_audit.py`; integration assertions in

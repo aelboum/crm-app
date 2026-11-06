@@ -220,7 +220,10 @@ def test_changes_are_audited_by_id_and_field_name(
     assert [action for action, _, _ in contact_rows] == ["crm_app.contact.created"]
     _, metadata, actor = contact_rows[0]
     assert metadata["form_id"] == probe["form_id"]
-    assert str(actor) == probe["admin_id"]
+    # The form acts, for its contact owner (K3.6): no member is the actor.
+    assert actor is None
+    assert metadata["system_actor"] == {"kind": "public_link", "name": "crm_app.public_form"}
+    assert metadata["on_behalf_of_user_id"] == probe["admin_id"]
     text = json.dumps([m for _, m, _ in form_rows + contact_rows])
     for secret in ("Contact us", "Sam", "sam@example.test", "email me"):
         assert secret not in text

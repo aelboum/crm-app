@@ -16,8 +16,10 @@
   (`crm_app.automation_maintenance`) enqueues due runs. A missing tag or a
   member who left skips the step with a code; a deleted contact cancels
   the run; anything unexpected raises, the job queue retries, and after
-  `MAX_ATTEMPTS` the run fails. Steps act as the member who activated the
-  automation: SaaS-OS has no system caller for this.
+  `MAX_ATTEMPTS` the run fails. Steps run with the rights of the member who
+  activated the automation, and stop when that member leaves (13-H5); their
+  audit entries name the run worker, with that member as
+  `on_behalf_of_user_id` (decision K3.6).
 """
 
 from __future__ import annotations
@@ -663,7 +665,9 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
             )
         ).first()
         if done is None:
-            scope = Scope(workspace=workspace, actor=actor)
+            # Steps run with the activating member's rights; the run worker
+            # acts, so their entries name it, not the member (K3.6).
+            scope = Scope(workspace=workspace, actor=actor, component="crm_app.automation_run")
             outcome, detail = _act(session, scope, contact, action, run)
             session.add(
                 AutomationStep(

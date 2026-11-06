@@ -23,8 +23,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from saas_os.core.audit_log import record_in_transaction
-from saas_os.core.authority import UserCaller
 from saas_os.core.idempotency import run_idempotent
 from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
 from saas_os.infra.db import (
@@ -36,6 +34,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
+from crm_app import system_audit
 from crm_app.domains import paging
 from crm_app.domains import tasks as rules
 from crm_app.models import Company, Contact, Opportunity, Task
@@ -172,10 +171,11 @@ def create_in(
 
 
 def _audit(session: Session, scope: Scope, verb: str, task_id: uuid.UUID, **metadata: Any) -> None:
-    record_in_transaction(
+    system_audit.record_scoped(
         session,
-        caller=UserCaller(scope.actor),
-        tenant_id=scope.workspace,
+        workspace=scope.workspace,
+        member=scope.actor,
+        component=scope.component,
         action=f"{RESOURCE}.{verb}",
         resource_type=RESOURCE,
         resource_id=str(task_id),

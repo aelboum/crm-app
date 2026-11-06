@@ -85,3 +85,18 @@ def test_a_new_persons_submission_behaves_as_before(probe: Probe) -> None:
         "runs": 2,
         "confirmations": 0,
     }
+
+
+def test_requesting_and_confirming_are_audited_as_the_form_and_the_link(probe: Probe) -> None:
+    assert probe["confirm_audit"] == [
+        {
+            "action": "crm_app.consent_confirmation.requested",
+            "no_member": True,
+            "component": "crm_app.public_form",
+        },
+        {
+            "action": "crm_app.consent_confirmation.confirmed",
+            "no_member": True,
+            "component": "crm_app.consent_link",
+        },
+    ]
