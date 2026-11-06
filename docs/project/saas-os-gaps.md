@@ -11,9 +11,9 @@ and the owner approves a pin move.
 
 | # | Area | Gap | Blocks | Ask of SaaS-OS |
 | --- | --- | --- | --- | --- |
-| 1 | `saas_os.core.email` | No custom headers except `Message-ID`: no `List-Unsubscribe` / `List-Unsubscribe-Post` (RFC 8058) | Sending campaigns (bulk-sender requirements); `crm_app.campaigns.SENDING_AVAILABLE` stays false | Let `EmailMessage` carry an allow-listed set of headers, at least the unsubscribe pair, `In-Reply-To` and `References`, validated against header injection |
+| 1 | `saas_os.core.email` | No custom headers except `Message-ID`: no `List-Unsubscribe` / `List-Unsubscribe-Post` (RFC 8058) | Sending campaigns (bulk-sender requirements); `crm_app.campaigns.SENDING_AVAILABLE` stays false | Let `EmailMessage` carry an allow-listed set of headers, at least the unsubscribe pair, `In-Reply-To` and `References`, validated against header injection. Filed as aelboum/saas-os#224 (2026-11-06) |
 | 2 | `saas_os.infra.egress` | `StrictEgressClient` sends only POST | Real inbound email: Resend's receiving API (`GET /emails/receiving/{id}`, attachments) needs GET; `crm_app.inbound.configured_client()` returns none | GET (and DELETE for item 3) with the same destination, TLS, size and timeout rules |
-| 3 | `saas_os.core.email` | No Resend Domains API (create, verify, read, delete a domain and its DNS records) | Customer-owned sending domains per workspace: create and verify are built on the egress client's POST (P6-D); reading and deleting a domain are not possible | A domain-management interface on the provider, Resend first, returning the provider's exact records |
+| 3 | `saas_os.core.email` | No Resend Domains API (create, verify, read, delete a domain and its DNS records) | Customer-owned sending domains per workspace: create and verify are built on the egress client's POST (P6-D); reading and deleting a domain are not possible | A domain-management interface on the provider, Resend first, returning the provider's exact records. Filed as aelboum/saas-os#225 (2026-11-06) |
 
 ## Worked around in LeadStack
 
