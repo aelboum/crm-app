@@ -32,6 +32,31 @@ function failure(error: unknown): MessageId {
   return "templates.error.generic";
 }
 
+// The sample contact of the preview, and the server's placeholder rule
+// (`crm_app.domains.campaigns.render`): a known placeholder becomes the
+// value, an unknown value is empty, whitespace in a value collapses.
+const SAMPLE: Record<string, string> = { first_name: "Ada", last_name: "Lovelace" };
+const PLACEHOLDER = /\{\{\s*([a-z_]+)\s*\}\}/g;
+
+export function renderSample(text: string): string {
+  return text.replace(PLACEHOLDER, (_, name: string) =>
+    (SAMPLE[name] ?? "").split(/\s+/).filter(Boolean).join(" "),
+  );
+}
+
+function Preview({ subject, body }: { subject: string; body: string }) {
+  const t = useT();
+  return (
+    <section className="template-preview wide" aria-labelledby="template-preview-title">
+      <h3 id="template-preview-title" className="field-label">
+        {t("templates.preview", { name: `${SAMPLE.first_name ?? ""} ${SAMPLE.last_name ?? ""}` })}
+      </h3>
+      <p className="template-preview-subject">{renderSample(subject) || "—"}</p>
+      <p className="template-preview-body">{renderSample(body) || "—"}</p>
+    </section>
+  );
+}
+
 function TemplateEditor({
   workspaceId,
   template,
@@ -115,6 +140,7 @@ function TemplateEditor({
             last: "{{last_name}}",
           })}
         </p>
+        <Preview subject={subject} body={body} />
         {save.error ? (
           <p className="notice error wide" role="alert">
             {t(failure(save.error))}

@@ -30,6 +30,7 @@ import { CustomFieldsSection } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
 import { AppointmentsSection } from "./AppointmentsSection";
 import { ConsentSection } from "./ConsentSection";
+import { ConversationsSection } from "./ConversationsSection";
 import { DealsSection } from "./DealsSection";
 import { TasksSection } from "./TasksSection";
 import { ActivitySection, NotesSection } from "./NotesSection";
@@ -89,6 +90,7 @@ export function ContactsPage({
   onCreateDone = () => undefined,
   onOpenAppointment = () => undefined,
   onOpenDeal = () => undefined,
+  onOpenConversation = () => undefined,
 }: {
   workspaceId: string;
   /** The contact whose preview is open (`?record=` in the URL). */
@@ -102,6 +104,8 @@ export function ContactsPage({
   onOpenAppointment?: (id: string) => void;
   /** Opens a deal on the Opportunities page (decision P4-E). */
   onOpenDeal?: (id: string) => void;
+  /** Opens a conversation in the Inbox (decision P6-C). */
+  onOpenConversation?: (id: string) => void;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -351,6 +355,7 @@ export function ContactsPage({
           onEdit={(contact) => { setDialog({ contact }); }}
           onOpenAppointment={onOpenAppointment}
           onOpenDeal={onOpenDeal}
+          onOpenConversation={onOpenConversation}
         />
       ) : null}
       {activeDialog ? (
@@ -387,6 +392,7 @@ function ContactDrawer({
   onEdit,
   onOpenAppointment,
   onOpenDeal,
+  onOpenConversation,
 }: {
   workspaceId: string;
   id: string;
@@ -399,6 +405,7 @@ function ContactDrawer({
   onEdit: (contact: Contact) => void;
   onOpenAppointment: (id: string) => void;
   onOpenDeal: (id: string) => void;
+  onOpenConversation: (id: string) => void;
 }) {
   const t = useT();
   const names = useMemberNames();
@@ -523,6 +530,11 @@ function ContactDrawer({
             workspaceId={workspaceId}
             contact={{ id: record.id, name: fullName(record) }}
             onOpen={onOpenAppointment}
+          />
+          <ConversationsSection
+            workspaceId={workspaceId}
+            contactId={record.id}
+            onOpen={onOpenConversation}
           />
           <ConsentSection workspaceId={workspaceId} contactId={record.id} meId={meId} canUpdate={canUpdate} />
           <CustomFieldsSection

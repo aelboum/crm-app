@@ -52,8 +52,9 @@ import { ownerOptions, When } from "./parts";
  * a live preview built from the same renderer as the hosted page, and
  * "After someone submits" (tag, contact owner, thank-you message, consent
  * wording). Publishing saves and publishes in one change. Below the editor
- * are the submissions. Landing pages, views and conversion, the embed
- * script and "Start automation" are not built (P7-A 1). Owners and Admins
+ * are the submissions, and the Websites panel with each form's embed code
+ * (P12-W). Landing pages, views and conversion, and "Start automation" are
+ * not built (P7-A 1). Owners and Admins
  * (`manage_forms`) change forms; everyone else sees them read-only.
  */
 

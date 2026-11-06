@@ -1,5 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { CornerDownLeft, Search, Settings, User, Users } from "lucide-react";
+import {
+  CornerDownLeft,
+  Kanban,
+  Search,
+  Settings,
+  User,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Autocomplete,
@@ -15,16 +24,23 @@ import {
   useFilter,
 } from "react-aria-components";
 
+import { api } from "../api/client";
+import { where } from "../api/records";
 import { type MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { ALL_SECTIONS, SETTINGS_SLUG } from "./navigation";
 
 /*
  * The ⌘K palette (LeadStack CRM.dc.html L257-281): 600 px panel, 52 px input,
- * results, footer. The design also searches contacts, opportunities and
- * workspaces; none of those can be searched yet, so only its "Go to" group
- * exists here, and the palette says so instead of returning invented results.
+ * results, footer. From two typed characters it also searches the workspace's
+ * contacts and opportunities with their lists' own search (`q`, the server's
+ * rules), a few of each; a refused or failed search shows no records rather
+ * than invented ones. Workspaces are not searched: the switcher lists them.
  */
+
+/** Records shown per group, and the shortest query that searches them. */
+const RECORDS = 5;
+const MIN_QUERY = 2;
 
 interface Target {
   id: string;
@@ -33,6 +49,14 @@ interface Target {
   icon: typeof Users;
   section: string;
   search?: { section: "profile" };
+}
+
+interface RecordHit {
+  key: string;
+  label: string;
+  sub: string;
+  section: "contacts" | "opportunities";
+  id: string;
 }
 
 export function useCommandPaletteShortcut(setOpen: (update: (open: boolean) => boolean) => void) {
@@ -50,6 +74,76 @@ export function useCommandPaletteShortcut(setOpen: (update: (open: boolean) => b
   }, [setOpen]);
 }
 
+/** The query once typing pauses, so each keystroke is not a request. */
+function useSettled(value: string, ms = 200): string {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSettled(value);
+    }, ms);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [value, ms]);
+  return settled;
+}
+
+function useRecordSearch(workspaceId: string, query: string): RecordHit[] {
+  const q = query.trim().slice(0, 100);
+  const enabled = q.length >= MIN_QUERY;
+  const contacts = useQuery({
+    queryKey: ["workspace", workspaceId, "palette", "contacts", q],
+    enabled,
+    retry: false,
+    queryFn: async () => {
+      const result = await api.GET("/v1/workspaces/{tenant_id}/contacts", {
+        params: { path: where(workspaceId), query: { q, limit: RECORDS } },
+      });
+      return result.data?.items ?? [];
+    },
+  });
+  const deals = useQuery({
+    queryKey: ["workspace", workspaceId, "palette", "opportunities", q],
+    enabled,
+    retry: false,
+    queryFn: async () => {
+      const result = await api.GET("/v1/workspaces/{tenant_id}/opportunities", {
+        params: { path: where(workspaceId), query: { q, limit: RECORDS } },
+      });
+      return result.data?.items ?? [];
+    },
+  });
+  if (!enabled) return [];
+  return [
+    ...(contacts.data ?? []).map((c) => ({
+      key: `contact:${c.id}`,
+      label: [c.first_name, c.last_name].filter(Boolean).join(" "),
+      sub: c.email ?? c.company?.name ?? "",
+      section: "contacts" as const,
+      id: c.id,
+    })),
+    ...(deals.data ?? []).map((d) => ({
+      key: `deal:${d.id}`,
+      label: d.title,
+      sub: d.contact?.name ?? d.company?.name ?? "",
+      section: "opportunities" as const,
+      id: d.id,
+    })),
+  ];
+}
+
+function HitItem({ hit }: { hit: RecordHit }) {
+  const Icon = hit.section === "contacts" ? UserRound : Kanban;
+  return (
+    <MenuItem id={hit.key} className="palette-item" textValue={hit.label}>
+      <Icon size={15} className="palette-item-icon" aria-hidden="true" />
+      <span className="palette-item-label">{hit.label}</span>
+      <span className="palette-item-sub">{hit.sub}</span>
+      <CornerDownLeft size={13} className="palette-enter" aria-hidden="true" />
+    </MenuItem>
+  );
+}
+
 export function CommandPalette({
   workspaceId,
   workspaceName,
@@ -65,6 +159,13 @@ export function CommandPalette({
   const navigate = useNavigate();
   const { contains } = useFilter({ sensitivity: "base" });
   const [query, setQuery] = useState("");
+  const hits = useRecordSearch(workspaceId, useSettled(query));
+  const contactHits = hits.filter((h) => h.section === "contacts");
+  const dealHits = hits.filter((h) => h.section === "opportunities");
+  // The server already matched the records (names, email, phone, ...); only
+  // pages are filtered here.
+  const filter = (textValue: string, input: string, node: { key: unknown }) =>
+    String(node.key).includes(":") || contains(textValue, input);
 
   const sub = (id: MessageId | null) => (id ? t("nav.soon") : t("palette.page"));
   const targets: Target[] = [
@@ -109,7 +210,7 @@ export function CommandPalette({
     >
       <Modal className="palette">
         <Dialog className="palette-dialog" aria-label={t("palette.title")}>
-          <Autocomplete inputValue={query} onInputChange={setQuery} filter={contains}>
+          <Autocomplete inputValue={query} onInputChange={setQuery} filter={filter}>
             {/* Typing starts at once, as in the design; the dialog restores focus on close. */}
             {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
             <SearchField className="palette-search" aria-label={t("palette.placeholder")} autoFocus>
@@ -119,14 +220,23 @@ export function CommandPalette({
                 esc
               </kbd>
             </SearchField>
-            <p className="palette-note">{t("palette.recordsUnavailable")}</p>
             <Menu
               className="palette-results"
-              aria-label={t("palette.goTo")}
+              aria-label={t("palette.title")}
               renderEmptyState={() => (
                 <p className="palette-empty">{t("palette.noMatches", { query })}</p>
               )}
               onAction={(key) => {
+                const hit = hits.find((h) => h.key === key);
+                if (hit) {
+                  close();
+                  void navigate({
+                    to: "/w/$workspaceId/$section",
+                    params: { workspaceId, section: hit.section },
+                    search: { record: hit.id },
+                  });
+                  return;
+                }
                 const target = targets.find((x) => x.id === key);
                 if (!target) return;
                 close();
@@ -137,6 +247,22 @@ export function CommandPalette({
                 });
               }}
             >
+              {contactHits.length ? (
+                <MenuSection>
+                  <Header className="palette-header">{t("nav.contacts")}</Header>
+                  {contactHits.map((hit) => (
+                    <HitItem key={hit.key} hit={hit} />
+                  ))}
+                </MenuSection>
+              ) : null}
+              {dealHits.length ? (
+                <MenuSection>
+                  <Header className="palette-header">{t("nav.opportunities")}</Header>
+                  {dealHits.map((hit) => (
+                    <HitItem key={hit.key} hit={hit} />
+                  ))}
+                </MenuSection>
+              ) : null}
               <MenuSection>
                 <Header className="palette-header">{t("palette.goTo")}</Header>
                 {targets.map((target) => {

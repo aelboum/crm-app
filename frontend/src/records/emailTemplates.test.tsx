@@ -91,6 +91,26 @@ describe("email templates", () => {
     });
   });
 
+  it("previews the text as a contact would get it", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/campaigns`, workspace(true));
+    const panel = await screen.findByRole("region", { name: "Email templates" });
+    await user.click(await within(panel).findByRole("button", { name: "New template" }));
+    const dialog = await screen.findByRole("dialog", { name: "New template" });
+    // `{` starts a keyboard descriptor in user-event, so `{{` types one brace.
+    await user.type(within(dialog).getByLabelText("Subject"), "Hello {{{{first_name}}");
+    await user.type(
+      within(dialog).getByLabelText("Text"),
+      "Dear {{{{ first_name }} {{{{last_name}},{{{{unknown}}!",
+    );
+    const preview = within(dialog).getByRole("region", {
+      name: "Preview, as sent to Ada Lovelace",
+    });
+    expect(preview).toHaveTextContent("Hello Ada");
+    expect(preview).toHaveTextContent("Dear Ada Lovelace,!");
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
   it("fills a new campaign from a template", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/campaigns`, workspace(true));

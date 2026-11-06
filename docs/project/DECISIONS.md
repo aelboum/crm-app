@@ -340,6 +340,39 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## UI-Q1 — Quick wins on built features (2026-11-06, owner: "Yes")
+
+- **Status:** Done under the autonomous mandate, frontend only. No API,
+  schema or permission changed.
+- **What:**
+  1. A contact's drawer lists its five most recent conversations (open or
+     closed), each opening in the Inbox (`/inbox?record=<id>`). "Calls are
+     not available yet" stays, because voice is parked.
+  2. "+ New" › Appointment and › Conversation open their pages' create
+     dialogs (`?create=appointment`, `?create=conversation`). Every item is
+     built, so a disabled item now means the role may not create it, and
+     the menu no longer says "soon".
+  3. The ⌘K palette searches contacts and deals from two characters, five
+     of each, with the lists' own server search. A refused or failed search
+     shows no records.
+  4. The campaign audience adds tag and owner filters to stages. Company
+     filters already saved are kept but not edited here (they are stored
+     as ids; a name lookup can follow). Filters combine as the server does:
+     every kind used must match, any one value within it.
+  5. The account menu's "Profile & preferences" opens My profile. The
+     avatar shows the member's initials from their display name. The Forms
+     scope text no longer says embedding is unavailable.
+  6. An email template shows a preview as a sample contact (Ada Lovelace)
+     would get it, mirroring the server's placeholder rule.
+- **Not done here:**
+  - "Start automation" from a form: the Automations page has no
+    pre-filled trigger yet.
+  - The business profile's phone, email, website and address: they need
+    a migration and nothing would use them yet.
+  - The campaign screen's company filter.
+- **Docs:** stale entries in `DESIGN-FIDELITY.md` corrected (templates,
+  report export, signup, workspace switcher, invitations, palette).
+
 ## K3.8 — History entries show the page, form or automation that made them
 
 - **Status:** Approved by the owner, 2026-11-06 (option "C"). It extends

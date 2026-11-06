@@ -185,7 +185,7 @@ interface SectionSearch {
   /** The contact or company whose preview is open. */
   record?: string;
   /** Opens a new-record dialog (the header's "New" menu). */
-  create?: "contact" | "opportunity";
+  create?: "contact" | "opportunity" | "appointment" | "conversation";
   /** A filtered list opened from the Home page (P4-D 1). */
   view?: "overdue" | "idle";
 }
@@ -206,6 +206,11 @@ function SectionPage() {
     return (
       <InboxPage
         workspaceId={workspaceId}
+        openId={record ?? null}
+        startCreate={create === "conversation"}
+        onCreateDone={() => {
+          void navigate({ search: record ? { record } : {}, replace: true });
+        }}
         onOpenContact={(id) => {
           void navigate({
             params: { workspaceId, section: "contacts" },
@@ -272,6 +277,12 @@ function SectionPage() {
             search: { record: id },
           });
         }}
+        onOpenConversation={(id) => {
+          void navigate({
+            params: { workspaceId, section: "inbox" },
+            search: { record: id },
+          });
+        }}
       />
     );
   }
@@ -281,6 +292,10 @@ function SectionPage() {
         workspaceId={workspaceId}
         openId={record ?? null}
         onOpen={openRecord}
+        startCreate={create === "appointment"}
+        onCreateDone={() => {
+          void navigate({ search: record ? { record } : {}, replace: true });
+        }}
         onOpenContact={(id) => {
           void navigate({
             params: { workspaceId, section: "contacts" },
@@ -408,7 +423,10 @@ const sectionRoute = createRoute({
     ...(typeof search.record === "string" && isWorkspaceId(search.record)
       ? { record: search.record }
       : {}),
-    ...(search.create === "contact" || search.create === "opportunity"
+    ...(search.create === "contact" ||
+    search.create === "opportunity" ||
+    search.create === "appointment" ||
+    search.create === "conversation"
       ? { create: search.create }
       : {}),
     ...(search.view === "overdue" || search.view === "idle"

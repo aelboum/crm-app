@@ -1333,6 +1333,22 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Quick wins (decision UI-Q1, 2026-11-06)
+
+Frontend only: contact conversations, "+ New" › Appointment and
+Conversation, palette record search, campaign tag and owner filters, the
+account menu and avatar, the Forms text, and the template preview
+(DECISIONS.md UI-Q1).
+
+| Check | Result |
+| --- | --- |
+| `tsc -b` / `eslint .` | Clean / clean |
+| `vitest run` | 328 passed (14 new or changed tests, each new view with an axe scan) |
+| `vite build` | Built |
+
+Not done: a browser check at desktop and 390 px. The changes reuse
+existing components and styles, and are covered by component tests.
+
 ## History sources (decision K3.8, 2026-11-06)
 
 History entries made by a booking page, a form or an automation now name

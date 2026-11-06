@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, Tag, User } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 
 import {
@@ -12,7 +12,8 @@ import {
   useUpdateCampaign,
 } from "../api/campaigns";
 import { ApiError } from "../api/client";
-import { useAccess } from "../api/queries";
+import { useAccess, useMe, useMembers } from "../api/queries";
+import { useTags } from "../api/tags";
 import { EmptyState, Loading, LoadError } from "../components/StateNotice";
 import { Badge, type Tone } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -20,7 +21,7 @@ import { Dialog } from "../components/ui/Dialog";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { TemplatePicker, TemplatesPanel } from "./EmailTemplates";
-import { stageLabel } from "./parts";
+import { FilterMenu, ownerOptions, stageLabel } from "./parts";
 
 /*
  * Campaigns (decision P7-C): drafts with a subject, a plain-text body and
@@ -192,8 +193,20 @@ function Detail({
   const segment = campaign.segment;
   const audience = segment.all_contacts
     ? t("campaigns.audience.all")
-    : segment.stages.map((stage) => stageLabel(t, stage)).join(", ") ||
-      t("campaigns.audience.filtered");
+    : [
+        segment.stages.map((stage) => stageLabel(t, stage)).join(", "),
+        segment.tag_ids.length
+          ? t("campaigns.audience.tags", { count: segment.tag_ids.length })
+          : "",
+        segment.owner_ids.length
+          ? t("campaigns.audience.owners", { count: segment.owner_ids.length })
+          : "",
+        segment.company_ids.length
+          ? t("campaigns.audience.companies", { count: segment.company_ids.length })
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ") || t("campaigns.audience.filtered");
 
   return (
     <section
@@ -369,10 +382,20 @@ function Editor({
     campaign?.segment.stages ?? [],
   );
   const [all, setAll] = useState(campaign?.segment.all_contacts ?? false);
+  const [tagIds, setTagIds] = useState<string[]>(campaign?.segment.tag_ids ?? []);
+  const [ownerIds, setOwnerIds] = useState<string[]>(campaign?.segment.owner_ids ?? []);
+  const tags = useTags(workspaceId);
+  const me = useMe();
+  const members = useMembers(workspaceId, 0, true);
   const problem = create.error ?? update.error;
+  // Filters combine: a contact must match each kind used, and any one value
+  // within it (the server's rule, decision P7-C). Company filters set before
+  // stay as they are; this dialog does not edit them.
   const segment = {
-    ...(campaign?.segment ?? { tag_ids: [], owner_ids: [], company_ids: [] }),
+    company_ids: campaign?.segment.company_ids ?? [],
     stages: all ? [] : stages,
+    tag_ids: all ? [] : tagIds,
+    owner_ids: all ? [] : ownerIds,
     all_contacts: all,
   };
   const save = () => {
@@ -520,6 +543,27 @@ function Editor({
             ))}
           </div>
         )}
+        {all ? null : (
+          <div className="campaign-filters">
+            {tags.data?.items.length ? (
+              <FilterMenu
+                label={t("tags.label")}
+                icon={<Tag size={14} aria-hidden="true" />}
+                options={tags.data.items.map((tag) => ({ id: tag.id, label: tag.name }))}
+                selected={tagIds}
+                onChange={setTagIds}
+              />
+            ) : null}
+            <FilterMenu
+              label={t("records.field.owner")}
+              icon={<User size={14} aria-hidden="true" />}
+              options={ownerOptions(t, members.data?.items ?? [], me.data?.user_id)}
+              selected={ownerIds}
+              onChange={setOwnerIds}
+            />
+          </div>
+        )}
+        {all ? null : <p className="muted">{t("campaigns.audience.combine")}</p>}
       </fieldset>
       {problem ? (
         <p className="notice error" role="alert">

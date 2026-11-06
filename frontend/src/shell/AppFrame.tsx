@@ -41,6 +41,7 @@ import {
   useAccess,
   useDirectory,
   useMe,
+  useOwnProfile,
   useSignOut,
   useWorkspace,
 } from "../api/queries";
@@ -257,9 +258,10 @@ interface CreateItem {
 }
 
 // The design's "+ New" menu for a client workspace, in its order and with its
-// shortcut letters. Contacts (slice 3A), opportunities (slice 4B) and tasks
-// (slice 4C, on the Tasks page) can be created by callers who may; every
-// other record type is not built yet and says so.
+// shortcut letters. Each item opens its page's own create dialog, for callers
+// who may: contacts (slice 3A), opportunities (4B), appointments (5A, the
+// Calendar), conversations (6C, the Inbox) and tasks (4C, the Tasks page's
+// quick-add row).
 const CREATE_ITEMS: CreateItem[] = [
   { id: "contact", icon: UserPlus, label: "create.contact", key: "C" },
   { id: "opportunity", icon: Kanban, label: "create.opportunity", key: "O" },
@@ -292,6 +294,8 @@ function CreateMenu({
     ...(access.data?.actions.create_contact === true ? ["contact"] : []),
     ...(access.data?.actions.create_opportunity === true ? ["opportunity"] : []),
     ...(access.data?.actions.create_task === true ? ["task"] : []),
+    ...(access.data?.actions.create_appointment === true ? ["appointment"] : []),
+    ...(access.data?.actions.reply_conversations === true ? ["conversation"] : []),
   ]);
   return (
     <MenuTrigger>
@@ -318,14 +322,18 @@ function CreateMenu({
                 params: { workspaceId, section: "tasks" },
               });
             }
-            if (key === "contact" || key === "opportunity") {
+            const pages = {
+              contact: "contacts",
+              opportunity: "opportunities",
+              appointment: "calendar",
+              conversation: "inbox",
+            } as const;
+            if (key in pages) {
+              const create = key as keyof typeof pages;
               void navigate({
                 to: "/w/$workspaceId/$section",
-                params: {
-                  workspaceId,
-                  section: key === "contact" ? "contacts" : "opportunities",
-                },
-                search: { create: key },
+                params: { workspaceId, section: pages[create] },
+                search: { create },
               });
             }
           }}
@@ -341,17 +349,12 @@ function CreateMenu({
                   key={item.id}
                   id={item.id}
                   className="menu-item"
-                  textValue={
-                    available.has(item.id)
-                      ? t(item.label)
-                      : `${t(item.label)} (${t("nav.soon")})`
-                  }
+                  textValue={t(item.label)}
                 >
+                  {/* Every type is built: a disabled item is one this member's
+                      role may not create, which the server also refuses. */}
                   <Icon size={15} className="menu-icon" aria-hidden="true" />
                   <span className="menu-item-label">{t(item.label)}</span>
-                  {available.has(item.id) ? null : (
-                    <span className="menu-soon">{t("nav.soon")}</span>
-                  )}
                 </MenuItem>
               );
             })}
@@ -422,9 +425,12 @@ function HelpMenu() {
 
 function ProfileMenu({ workspaceId }: { workspaceId: string }) {
   const t = useT();
+  const navigate = useNavigate();
   const access = useAccess(workspaceId);
+  const profile = useOwnProfile(workspaceId);
   const { signOut, run } = useSignOutAndLeave();
   const role = access.data ? highestRole(access.data.roles) : undefined;
+  const name = profile.data?.display_name ?? null;
   return (
     <>
       {signOut.isError ? (
@@ -435,7 +441,7 @@ function ProfileMenu({ workspaceId }: { workspaceId: string }) {
       <MenuTrigger>
         <AriaButton className="avatar-button" aria-label={t("profile.button")}>
           <span className="avatar" aria-hidden="true">
-            <User size={15} />
+            {name ? initials(name) : <User size={15} />}
           </span>
         </AriaButton>
         <Popover
@@ -446,26 +452,32 @@ function ProfileMenu({ workspaceId }: { workspaceId: string }) {
           <Menu
             className="menu"
             aria-label={t("profile.button")}
-            disabledKeys={["profile", "security"]}
+            disabledKeys={["security"]}
             onAction={(key) => {
               if (key === "signout") run();
+              if (key === "profile") {
+                void navigate({
+                  to: "/w/$workspaceId/$section",
+                  params: { workspaceId, section: SETTINGS_SLUG },
+                  search: { section: "profile" },
+                });
+              }
             }}
           >
             <MenuSection>
               <Header className="profile-head">
-                <span className="profile-name">{t("profile.signedIn")}</span>
+                <span className="profile-name">{name ?? t("profile.signedIn")}</span>
                 {role ? <span className="profile-role">{role}</span> : null}
               </Header>
               <MenuItem
                 id="profile"
                 className="menu-item"
-                textValue={`${t("profile.preferences")} (${t("nav.soon")})`}
+                textValue={t("profile.preferences")}
               >
                 <User size={15} className="menu-icon" aria-hidden="true" />
                 <span className="menu-item-label">
                   {t("profile.preferences")}
                 </span>
-                <span className="menu-soon">{t("nav.soon")}</span>
               </MenuItem>
               <MenuItem
                 id="security"

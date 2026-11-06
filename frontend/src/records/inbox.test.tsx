@@ -195,6 +195,24 @@ describe("inbox", () => {
     });
   });
 
+  it("opens a new conversation from \"+ New\" (?create=conversation), only for a member who may", async () => {
+    renderApp(`/w/${WS}/inbox?create=conversation`, workspace(true));
+    expect(
+      await screen.findByRole("dialog", { name: "New conversation" }),
+    ).toBeInTheDocument();
+  });
+
+  it("ignores ?create=conversation for a Read-only member", async () => {
+    renderApp(`/w/${WS}/inbox?create=conversation`, workspace(false));
+    await screen.findByRole("region", { name: "Conversations" });
+    expect(screen.queryByRole("dialog", { name: "New conversation" })).toBeNull();
+  });
+
+  it("opens the conversation named in the address, as from a contact's drawer", async () => {
+    renderApp(`/w/${WS}/inbox?record=${CONV}`, workspace(true));
+    expect(await screen.findByText("Can you send the quote?")).toBeInTheDocument();
+  });
+
   it("shows a queued reply as not sent, never as sent", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/inbox`, workspace(true));

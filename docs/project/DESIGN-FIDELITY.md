@@ -61,7 +61,7 @@ L243-247):
 | Settings › Team & roles (`ScreenSettings.dc.html` L11-27, L54-68) | `/app/w/{id}/settings` | 2 | **Implemented; compared (§4)** |
 | Settings › My profile (`ScreenSettings.dc.html` L43-52) | `/app/w/{id}/settings?section=profile` | 2 | **Implemented, read-only parts; compared (§4a)** |
 | Settings › other sections (business, notifications, custom fields, AI, integrations, appearance) | `/settings` (sections) | 3+ | Listed in the settings nav, marked "soon" |
-| Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values; flows checked in Chrome at desktop width |
+| Contacts (`ScreenContacts`) | `/contacts` | 3 | List, preview drawer and create/edit dialog built on the slice 3A API (§4c); compared from source values; flows checked in Chrome at desktop width. The drawer lists the contact's conversations, opening each in the Inbox (2026-11-06); calls stay unavailable (voice is parked) |
 | Companies (`ScreenCompanies`) | `/companies` | 3 | List, drawer with the company's people, and create/edit dialog (§4c); compared from source values; flows checked in Chrome at desktop width |
 | Tasks (`ScreenTasks`) | `/tasks` | 4 | **Implemented (4C)** — tabs with counts, quick add, groups, complete, delete as designed. Differences: real due times (the design's are display strings) with a No due date group; an Edit dialog; priority stored as data; task sections in record drawers; members by their display name (M-P1) or ID |
 | Opportunities (`ScreenPipeline`) | `/opportunities` | 4 | **Implemented (4B)** — board, table, drawer, create/edit. Differences: no pipeline switcher (one pipeline); no Won column (won and lost are outcomes, Mark lost asks a reason, closed deals offer Reopen); summary shows open value, weighted forecast and open deals only; values in the deal's currency; drag-and-drop plus keyboard stage buttons in the drawer; members by display name (M-P1) or ID |
@@ -72,16 +72,16 @@ L243-247):
 | Booking pages and the hosted booking page (not in the design; P5-C) | `/calendar` › Booking pages; `/app/b/<workspace>/<key>`; `/app/b/<workspace>/manage#<token>` | 5 (P5-C) | **Implemented** — pages with one host, free times inside the business hours, booking with the private link shown once, the visitor's view and cancel; styled like the hosted form |
 | Calendar (`ScreenCalendar`) | `/calendar` | 5 (outside MVP, K5; started by P5-A) | **Implemented (5A)** — Day, Week and Month views, toolbar, team filter with today's counts, Up next, legend, lanes for overlaps, click a free time to book, the drawer with status buttons and Cancel, the booking dialog with the live conflict check. Differences: cancel is a status after a confirmation; "Book anyway" for a conflict; no Send reminder or reminders (no channel yet). **5C:** the drawer's Source row (booked online and the page, or added in the calendar; cancelled by the visitor); Booking pages in the toolbar (not in the design). **5B:** closed time hatched from the business hours (no lunch block), the dialog's outside-hours warning, a status line per member from today's appointments (no "Away"); new appointments are Confirmed; whole-day grid opening at 07:00; Day view on phones |
 | Forms (`ScreenForms`) | `/forms`, hosted `/f/{workspace}/{key}` | 7 | **Implemented (7A)** — list cards, editor with fields (move, remove, Add palette), preview, "After someone submits" (tag, thank-you), publish, copy link, and (12W, P12-W) embed code for external websites with a Websites list of allowed origins. Differences: no Landing pages tab, views or conversion; no "Start automation"; contact owner and consent wording added; matched contacts are never changed; submissions table and the hosted page added |
-| Campaigns (`ScreenCampaigns`) | `/campaigns` | 7 | Implemented up to approval (slice 7C, P7-C): list, editor (name, subject, plain-text body, audience by stage or all contacts), audience check with exclusions by reason, submit, approve or reject with a note, cancel; a notice that sending is not available. Not built: sending, scheduling, templates, metrics, HTML editor |
+| Campaigns (`ScreenCampaigns`) | `/campaigns` | 7 | Implemented up to approval (slice 7C, P7-C): list, editor (name, subject, plain-text body, audience by stage, tag and owner or all contacts), audience check with exclusions by reason, submit, approve or reject with a note, cancel; a notice that sending is not available. Templates (P7-T) with a preview as a sample contact gets it (2026-11-06). Not built: sending, scheduling, metrics, HTML editor; the audience screen does not edit company filters |
 | Reviews | `/reviews` | 10 (deferred, K5) | Placeholder |
 | Automations (`ScreenAutomation`) | `/automations` | 8 | Implemented (slice 8A, P8-A): list with status, editor for trigger sources, condition and yes/no branches of task, tag, owner and wait steps, activate, pause, delete, run history. Not built: email, SMS, notify and AI steps, the canvas and zoom, round-robin |
 | Assistants, Knowledge, AI activity (`ScreenAssistants`, `ScreenKnowledge`, `ScreenAIActivity`) | `/assistants`, `/knowledge`, `/ai-activity` | 9 | Placeholders |
-| Reports (`ScreenReports`) | `/reports` | 10 | Implemented (slice 10A, P10-A): period switch, KPIs with comparison, contacts by source, deal outcomes, tasks, appointments, team. Not built: export, funnel, lead-source costs, first reply, reviews, agency view |
+| Reports (`ScreenReports`) | `/reports` | 10 | Implemented (slice 10A, P10-A): period switch, KPIs with comparison, contacts by source, deal outcomes, tasks, appointments, team. Export added (P10-B). Not built: funnel, lead-source costs, first reply, reviews, agency view |
 | Home / Dashboard (`ScreenDashboard`) | `/w/{id}/home` (where a workspace opens) | 4 (4.4, P4-D) | **Implemented (foundations)** — needs-attention strip (overdue tasks, idle deals), Contacts, Open deals, Pipeline value with weighted value, Open tasks, pipeline by stage with forecast, today's appointments, tasks due today with completion in place, recent activity. Not built: agency view, "My day" lens, Customize, setup checklist, deltas, lead trend and sources, conversion, conversations, campaigns and AI cards (P4-D 2) |
 | Agency views: Workspaces, Templates (empty), Team, Billing | none yet | 11 (agency model undecided, P2-B) | Not implemented |
 | Sign-in (account step of `LeadStack Signup.dc.html`, L23-50, L118-125) | `/app` and `/app/invite/{id}` when signed out | 2 (approved 2026-10-24) | **Implemented; compared (§4e)** |
-| Self-service signup (the rest of `LeadStack Signup.dc.html`) | none | P2-C | Not implemented; excluded by P2-C |
-| ⌘K palette (`LeadStack CRM.dc.html` L257-281), toast | frame | 2 | Toast implemented. Palette implemented with page navigation only; **compared (§4b)** |
+| Self-service signup (the rest of `LeadStack Signup.dc.html`) | `/app/create-workspace` | P2-C, S-1 | Implemented by S-1 (`pages/CreateWorkspace.tsx`); off in production |
+| ⌘K palette (`LeadStack CRM.dc.html` L257-281), toast | frame | 2 | Toast implemented. Palette implemented with page navigation and, since 2026-11-06, contact and deal search (five of each, the lists' own search); **compared (§4b)** before the search was added |
 
 ## 2. Recorded gaps and ambiguities in the source
 
@@ -153,17 +153,19 @@ L243-247):
 - **"soon" markers:** shown on every unbuilt module, using the design's
   own `showPreview` marker. They use `#687082` instead of `#8A91A0` for
   4.5:1 contrast, and the accent-ink colour on the active item.
-- **"+ New", Help and profile menu items:** disabled and labelled "Not
-  available yet" where the feature is missing. Search answers with the
+- **"+ New", Help and profile menu items:** every "+ New" item is built
+  (2026-11-06) and is disabled only for a role that may not create it;
+  "Profile & preferences" opens My profile and the avatar shows the
+  member's initials. Help and Security are still disabled and labelled "Not
+  available yet". Search answers with the
   design's toast pattern. The notifications panel shows an empty state
   instead of invented notifications.
-- **Workspace switcher:** shows the current workspace and "Open another
-  workspace". There is no list, because no workspace directory exists
-  (G1/G5).
+- **Workspace switcher:** shows the current workspace and lists the
+  member's other workspaces.
 - **Below 760 px:** search and help are hidden and the switcher is
   tightened, so nothing overflows. The design overflows at that width.
-- **Not built:** the ⌘K palette and the rail shell (the design's
-  alternative).
+- **Not built:** the rail shell (the design's alternative). The ⌘K
+  palette is built (§4b).
 
 ## 4. Settings › Team & roles: comparison evidence
 
@@ -192,7 +194,7 @@ L243-247):
   the design's check, eye and minus marks. Minus uses `#8A91A0` instead
   of `#C2C8D1` for 3:1 non-text contrast.
 - **Other settings sections:** listed and marked "soon".
-- **Invite:** answers that invitations are not available yet (G1/G4).
+- **Invite:** built (`members/Invitations.tsx`): invite dialog, link dialog and the Invitations card.
 
 ## 4a. Settings › My profile: assessment and comparison evidence
 

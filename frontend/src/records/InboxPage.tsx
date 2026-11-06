@@ -86,10 +86,19 @@ function kinds(channel: Channel): MessageKind[] {
 
 export function InboxPage({
   workspaceId,
+  openId = null,
   onOpenContact,
+  startCreate = false,
+  onCreateDone = () => undefined,
 }: {
   workspaceId: string;
+  /** A conversation to open first (`?record=`), e.g. from a contact's drawer. */
+  openId?: string | null;
   onOpenContact: (id: string) => void;
+  /** Open a new conversation (`?create=conversation`, "+ New"), if the caller may. */
+  startCreate?: boolean;
+  /** Called when that dialog closes, to clear the request. */
+  onCreateDone?: () => void;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -108,7 +117,7 @@ export function InboxPage({
   });
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(openId);
   const [composing, setComposing] = useState(false);
   const list = useConversations(workspaceId, { ...filter, q });
   const markRead = useMarkRead(workspaceId);
@@ -290,11 +299,12 @@ export function InboxPage({
           )}
         </section>
       </div>
-      {composing ? (
+      {composing || (startCreate && canReply) ? (
         <NewConversationDialog
           workspaceId={workspaceId}
           onClose={(created) => {
             setComposing(false);
+            if (startCreate) onCreateDone();
             if (created) {
               setFilter({ status: "open", assigned: filter.assigned });
               setSearch("");

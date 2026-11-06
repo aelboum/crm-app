@@ -187,6 +187,19 @@ describe("calendar", () => {
     expect(await accessibilityViolations()).toEqual([]);
   });
 
+  it("opens a new appointment from \"+ New\" (?create=appointment), only for a member who may book", async () => {
+    renderApp(`/w/${WS}/calendar?create=appointment`, workspace(MANAGER));
+    expect(
+      await screen.findByRole("dialog", { name: "New appointment" }),
+    ).toBeInTheDocument();
+  });
+
+  it("ignores ?create=appointment for a Read-only member", async () => {
+    renderApp(`/w/${WS}/calendar?create=appointment`, workspace(READER));
+    await screen.findByRole("heading", { level: 1, name: "Calendar" });
+    expect(screen.queryByRole("dialog", { name: "New appointment" })).toBeNull();
+  });
+
   it("books over a conflict only when asked to, with an idempotency key", async () => {
     const user = userEvent.setup();
     const conflict = {

@@ -69,11 +69,17 @@ export function CalendarPage({
   openId,
   onOpen,
   onOpenContact,
+  startCreate = false,
+  onCreateDone = () => undefined,
 }: {
   workspaceId: string;
   openId: string | null;
   onOpen: (id: string | null) => void;
   onOpenContact: (id: string) => void;
+  /** Open a new appointment (`?create=appointment`, "+ New"), if the caller may book. */
+  startCreate?: boolean;
+  /** Called when that dialog closes, to clear the request. */
+  onCreateDone?: () => void;
 }) {
   const t = useT();
   const intl = useIntl();
@@ -86,6 +92,12 @@ export function CalendarPage({
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [draft, setDraft] = useState<Draft | null>(null);
+  // "+ New" › Appointment starts at the next full hour, fixed when asked.
+  const [requested] = useState(() => {
+    const start = new Date();
+    start.setHours(start.getHours() + 1, 0, 0, 0);
+    return start;
+  });
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [bookingPages, setBookingPages] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -134,6 +146,9 @@ export function CalendarPage({
     setDraft({ start, host });
   };
   const visibleHosts = hosts.filter((h) => !hidden.has(h.id));
+  const activeDraft =
+    draft ??
+    (startCreate && !editing && can("create_appointment") ? { start: requested } : null);
 
   return (
     <div className="records-page calendar-page">
@@ -342,16 +357,17 @@ export function CalendarPage({
           }}
         />
       ) : null}
-      {draft || editing ? (
+      {activeDraft || editing ? (
         <AppointmentDialog
           workspaceId={workspaceId}
           appointment={editing ?? undefined}
-          draft={draft ?? undefined}
+          draft={activeDraft ?? undefined}
           hosts={hosts}
           meId={meId}
           onClose={() => {
             setDraft(null);
             setEditing(null);
+            if (startCreate) onCreateDone();
           }}
           onSaved={(saved) => {
             if (!editing) setAnchor(startOfDay(new Date(saved.starts_at)));

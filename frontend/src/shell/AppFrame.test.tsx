@@ -101,25 +101,20 @@ describe("app frame", () => {
     expect(screen.queryByRole("link", { name: /Companies/ })).toBeNull();
   });
 
-  it("opens a page palette that navigates and never pretends to search records", async () => {
+  it("opens a palette that navigates to pages and shows no record it was not given", async () => {
     const user = userEvent.setup();
     const { router } = renderApp(`/w/${WS}/settings`, signedIn);
     await user.click(
-      await screen.findByRole("button", { name: /Jump to a page/ }),
+      await screen.findByRole("button", { name: /Search or jump to/ }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Go to a page" });
-    expect(
-      within(dialog).getByText(
-        "Searching contacts, deals and other records is not available yet.",
-      ),
-    ).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: "Search and go to" });
     const input = within(dialog).getByRole("searchbox", {
-      name: "Jump to a page…",
+      name: "Search contacts and deals, or jump to a page…",
     });
     expect(input).toHaveFocus();
     await user.type(input, "zzqq");
     expect(
-      within(dialog).getByText("No pages match “zzqq”"),
+      await within(dialog).findByText("Nothing matches “zzqq”"),
     ).toBeInTheDocument();
     await user.clear(input);
     await user.type(input, "my prof");
@@ -127,7 +122,65 @@ describe("app frame", () => {
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ section: "profile" });
     });
-    expect(screen.queryByRole("dialog", { name: "Go to a page" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Search and go to" })).toBeNull();
+  });
+
+  it("searches contacts and deals with the server's search and opens one", async () => {
+    const user = userEvent.setup();
+    const SAM = "d0000000-0000-4000-8000-000000000001";
+    const DEAL = "f0000000-0000-4000-8000-000000000001";
+    const withRecords: Handler = (method, path, body) => {
+      const base = `/v1/workspaces/${WS}`;
+      if (method === "GET" && path.startsWith(`${base}/contacts?`)) {
+        return {
+          status: 200,
+          body: {
+            items: [
+              { id: SAM, first_name: "Sam", last_name: "Jansen", email: "sam@acme.example", company: null },
+            ],
+            next_cursor: null,
+            total: 1,
+            total_capped: false,
+          },
+        };
+      }
+      if (method === "GET" && path.startsWith(`${base}/opportunities?`)) {
+        return {
+          status: 200,
+          body: {
+            items: [
+              { id: DEAL, title: "Website redesign", contact: { id: SAM, name: "Sam Jansen", archived: false }, company: null },
+            ],
+            next_cursor: null,
+            total: 1,
+            total_capped: false,
+          },
+        };
+      }
+      return signedIn(method, path, body);
+    };
+    const { sent, router } = renderApp(`/w/${WS}/settings`, withRecords);
+    await user.keyboard("{Control>}k{/Control}");
+    const dialog = await screen.findByRole("dialog", { name: "Search and go to" });
+    await user.type(within(dialog).getByRole("searchbox"), "sam");
+    const contact = await within(dialog).findByRole("menuitem", { name: /sam@acme.example/ });
+    expect(contact).toHaveTextContent("sam@acme.example");
+    expect(
+      within(dialog).getByRole("menuitem", { name: /Website redesign/ }),
+    ).toBeInTheDocument();
+    const searches = sent.filter((r) => r.method === "GET" && r.path.includes("q=sam"));
+    expect(searches.map((r) => r.path.split("?")[0]).sort()).toEqual([
+      `/v1/workspaces/${WS}/contacts`,
+      `/v1/workspaces/${WS}/opportunities`,
+    ]);
+    // One character does not search.
+    expect(sent.some((r) => r.path.includes("q=s&") || r.path.endsWith("q=s"))).toBe(false);
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(within(dialog).getByRole("menuitem", { name: /Website redesign/ }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/w/${WS}/opportunities`);
+    });
+    expect(router.state.location.search).toEqual({ record: DEAL });
   });
 
   it("toggles the palette with Ctrl+K and closes it with Escape", async () => {
@@ -136,32 +189,63 @@ describe("app frame", () => {
     await screen.findByRole("heading", { name: "Team & roles" });
     await user.keyboard("{Control>}k{/Control}");
     expect(
-      await screen.findByRole("dialog", { name: "Go to a page" }),
+      await screen.findByRole("dialog", { name: "Search and go to" }),
     ).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
     await user.keyboard("{Escape}");
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Go to a page" })).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "Search and go to" })).toBeNull();
     });
   });
 
-  it("lists the design's create actions as not available, none clickable", async () => {
+  it("lists the design's create actions, none clickable without the rights", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/settings`, signedIn);
     await user.click(await screen.findByRole("button", { name: "New" }));
     const menu = await screen.findByRole("menu", { name: "New" });
     const items = within(menu).getAllByRole("menuitem");
     expect(items.map((i) => i.textContent)).toEqual([
-      "ContactNot available yet",
-      "OpportunityNot available yet",
-      "AppointmentNot available yet",
-      "ConversationNot available yet",
-      "TaskNot available yet",
+      "Contact",
+      "Opportunity",
+      "Appointment",
+      "Conversation",
+      "Task",
     ]);
     for (const item of items)
       expect(item).toHaveAttribute("aria-disabled", "true");
     expect(await accessibilityViolations()).toEqual([]);
   });
+
+  it.each([
+    ["Appointment", "create_appointment", "calendar", "appointment"],
+    ["Conversation", "reply_conversations", "inbox", "conversation"],
+  ])(
+    "starts a new %s on its page for a member who may",
+    async (label, action, section, create) => {
+      const user = userEvent.setup();
+      const may: Handler = (method, path, body) =>
+        method === "GET" && path === `/v1/workspaces/${WS}/access`
+          ? {
+              status: 200,
+              body: {
+                membership_id: "m",
+                roles: ["Member"],
+                actions: { read_members: true, [action]: true },
+              },
+            }
+          : signedIn(method, path, body);
+      const { router } = renderApp(`/w/${WS}/settings`, may);
+      await user.click(await screen.findByRole("button", { name: "New" }));
+      const menu = await screen.findByRole("menu", { name: "New" });
+      const item = within(menu).getByRole("menuitem", { name: label });
+      expect(item).not.toHaveAttribute("aria-disabled");
+      await user.click(item);
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe(`/w/${WS}/${section}`);
+      });
+      expect(router.state.location.search).toEqual({ create });
+    },
+  );
 
   it("lets a member who may create contacts start one from the New menu", async () => {
     const user = userEvent.setup();
@@ -242,6 +326,30 @@ describe("app frame", () => {
         "This workspace does not exist, or you are not a member of it.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("shows the member's initials and name, and opens My profile from the account menu", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(`/w/${WS}/contacts`, (method, path, body) => {
+      if (method === "GET" && path === `/v1/workspaces/${WS}/me/profile`) {
+        return { status: 200, body: { user_id: "u", display_name: "Ada Lovelace" } };
+      }
+      return signedIn(method, path, body);
+    });
+    const account = await screen.findByRole("button", { name: "Your account" });
+    await waitFor(() => {
+      expect(account).toHaveTextContent("AL");
+    });
+    await user.click(account);
+    const menu = await screen.findByRole("menu", { name: "Your account" });
+    expect(within(menu).getByText("Ada Lovelace")).toBeInTheDocument();
+    const preferences = within(menu).getByRole("menuitem", { name: "Profile & preferences" });
+    expect(preferences).not.toHaveAttribute("aria-disabled");
+    await user.click(preferences);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/w/${WS}/settings`);
+    });
+    expect(router.state.location.search).toEqual({ section: "profile" });
   });
 
   it("shows My profile with the real role, a display name that saves and the device's time zone", async () => {

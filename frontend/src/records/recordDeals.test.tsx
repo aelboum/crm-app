@@ -339,3 +339,90 @@ describe("a record's opportunities", () => {
     ).toBeNull();
   });
 });
+
+/*
+ * A contact's conversations in its drawer: asked for that contact only,
+ * open and closed, each opening in the Inbox; more than it shows says so.
+ */
+function conversation(id: string, extra: Record<string, unknown> = {}) {
+  return {
+    id,
+    contact_id: SAM,
+    contact_name: "Sam Jansen",
+    channel: "email",
+    subject: "Quote for the redesign",
+    status: "open",
+    assignee_user_id: null,
+    last_message_at: stamp,
+    unread: false,
+    created_at: stamp,
+    ...extra,
+  };
+}
+
+const C1 = "a1000000-0000-4000-8000-000000000001";
+const C2 = "a1000000-0000-4000-8000-000000000002";
+
+function withConversations(
+  items: unknown[],
+  next: string | null = null,
+): Handler {
+  const rest = workspace(WRITER);
+  return (method, path, body) => {
+    if (method === "GET" && path.startsWith(`/v1/workspaces/${WS}/conversations?`)) {
+      return { status: 200, body: { items, next_cursor: next } };
+    }
+    return rest(method, path, body);
+  };
+}
+
+describe("a contact's conversations", () => {
+  it("lists them for that contact only and opens one in the Inbox", async () => {
+    const user = userEvent.setup();
+    const { sent, router } = renderApp(
+      `/w/${WS}/contacts?record=${SAM}`,
+      withConversations([
+        conversation(C1, { unread: true }),
+        conversation(C2, { subject: "", status: "closed" }),
+      ]),
+    );
+    const section = await screen.findByRole("region", { name: "Conversations" });
+    const rows = await within(section).findAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("Quote for the redesign");
+    expect(rows[0]).toHaveTextContent("Open");
+    expect(rows[0]).toHaveTextContent("Unread");
+    expect(rows[1]).toHaveTextContent("(no subject)");
+    expect(rows[1]).toHaveTextContent("Closed");
+    const call = sent.find(
+      (r) => r.method === "GET" && r.path.startsWith(`/v1/workspaces/${WS}/conversations?`),
+    );
+    expect(call?.path).toContain(`contact_id=${SAM}`);
+    expect(call?.path).toContain("status=all");
+    expect(screen.queryByText(/Messages and calls/)).toBeNull();
+    expect(screen.getByText("Calls are not available yet.")).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+
+    await user.click(within(section).getByRole("button", { name: /no subject/ }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/w/${WS}/inbox`);
+    });
+    expect(router.state.location.search).toEqual({ record: C2 });
+  });
+
+  it("says when there are none, and when there are more than it shows", async () => {
+    renderApp(`/w/${WS}/contacts?record=${SAM}`, withConversations([]));
+    const empty = await screen.findByRole("region", { name: "Conversations" });
+    expect(await within(empty).findByText("No conversations yet.")).toBeInTheDocument();
+  });
+
+  it("points to the Inbox when more exist", async () => {
+    renderApp(
+      `/w/${WS}/contacts?record=${SAM}`,
+      withConversations([conversation(C1)], "next-page"),
+    );
+    const section = await screen.findByRole("region", { name: "Conversations" });
+    expect(
+      await within(section).findByText(/Open the Inbox for the rest/),
+    ).toBeInTheDocument();
+  });
+});

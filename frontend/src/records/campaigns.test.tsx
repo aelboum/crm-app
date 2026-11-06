@@ -51,6 +51,8 @@ function campaign(extra: Record<string, unknown> = {}) {
   };
 }
 
+const VIP = "70000000-0000-4000-8000-000000000001";
+
 type Reply = { status: number; body?: unknown } | undefined;
 
 function workspace(
@@ -82,6 +84,26 @@ function workspace(
     }
     if (path === `${base}/campaigns`)
       return { status: 200, body: { items: [item], sending_available: false } };
+    if (path === `${base}/tags`) {
+      return {
+        status: 200,
+        body: {
+          items: [{ id: VIP, name: "VIP", version: 1, created_at: stamp, updated_at: stamp }],
+          max_tags: 500,
+        },
+      };
+    }
+    if (path.startsWith(`${base}/members?`)) {
+      return {
+        status: 200,
+        body: {
+          items: [{ user_id: ME, status: "active", roles: ["Admin"], membership_id: "m1" }],
+          total: 1,
+          limit: 50,
+          offset: 0,
+        },
+      };
+    }
     return undefined;
   };
 }
@@ -186,6 +208,54 @@ describe("campaigns", () => {
     expect(
       await screen.findByText(/withdraws its approval/),
     ).toBeInTheDocument();
+  });
+
+  it("narrows the audience by tag and owner, and keeps company filters", async () => {
+    const user = userEvent.setup();
+    const COMPANY = "e0000000-0000-4000-8000-000000000001";
+    let sentBody: unknown;
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: false },
+        campaign({
+          status: "draft",
+          segment: { stages: ["lead"], tag_ids: [], owner_ids: [], company_ids: [COMPANY], all_contacts: false },
+        }),
+        (method, _path, body) => {
+          if (method === "PATCH") {
+            sentBody = body;
+            return { status: 200, body: campaign() };
+          }
+          return undefined;
+        },
+      ),
+    );
+    const pane = await openCampaign(user);
+    expect(within(pane).getByText(/Lead · 1 company/)).toBeInTheDocument();
+    await user.click(within(pane).getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit campaign" });
+    expect(
+      within(dialog).getByText(/must match every kind of filter/),
+    ).toBeInTheDocument();
+    await user.click(await within(dialog).findByRole("button", { name: "Tags" }));
+    await user.click(await screen.findByRole("menuitemcheckbox", { name: "VIP" }));
+    await user.keyboard("{Escape}");
+    await user.click(within(dialog).getByRole("button", { name: "Owner" }));
+    await user.click(await screen.findByRole("menuitemcheckbox", { name: "You" }));
+    await user.keyboard("{Escape}");
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(sentBody).toBeDefined();
+    });
+    expect((sentBody as { segment: unknown }).segment).toEqual({
+      company_ids: [COMPANY],
+      stages: ["lead"],
+      tag_ids: [VIP],
+      owner_ids: [ME],
+      all_contacts: false,
+    });
   });
 
   it("lets Read-only members read only", async () => {

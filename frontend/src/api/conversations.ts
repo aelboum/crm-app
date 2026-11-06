@@ -56,6 +56,25 @@ const one = (workspaceId: string, id: string) => ({
   conversation_id: id,
 });
 
+/** How many of a contact's conversations its drawer shows. */
+export const CONTACT_CONVERSATIONS = 5;
+
+/** A contact's most recent conversations, open or closed (its drawer). */
+export function useContactConversations(workspaceId: string, contactId: string) {
+  return useQuery({
+    queryKey: [...conversationKeys.lists(workspaceId), "contact", contactId] as const,
+    queryFn: async (): Promise<ConversationPage> =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/conversations", {
+          params: {
+            path: where(workspaceId),
+            query: { status: "all", contact_id: contactId, limit: CONTACT_CONVERSATIONS },
+          },
+        }),
+      ),
+  });
+}
+
 export function useConversations(workspaceId: string, filter: InboxFilter) {
   return useInfiniteQuery({
     queryKey: conversationKeys.list(workspaceId, filter),
