@@ -21,7 +21,7 @@ import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { useMemberNames } from "../members/names";
-import { ownerLabel, When } from "./parts";
+import { entryActor, ownerLabel, When } from "./parts";
 
 /*
  * Notes and history in the contact and company drawers (decision P3-B D1;
@@ -476,7 +476,7 @@ export function ActivitySection({
                     </p>
                   ) : null}
                   <p className="activity-meta">
-                    {entry.actor_user_id ? ownerLabel(t, entry.actor_user_id, meId, names) : t("history.system")}
+                    {entryActor(t, entry, meId, names)}
                     {" · "}
                     <When value={entry.occurred_at} />
                   </p>

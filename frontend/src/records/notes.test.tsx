@@ -76,6 +76,9 @@ function entry(id: string, kind: string, extra: Record<string, unknown> = {}) {
     kind,
     occurred_at: stamp,
     actor_user_id: "u-me",
+    source: null,
+    source_id: null,
+    source_name: null,
     fields: null,
     stage_from: null,
     stage_to: null,
@@ -96,6 +99,28 @@ const history = [
   entry("f3", "updated", { fields: ["email", "city"] }),
   entry("f4", "company_unlinked", { company_id: ACME }),
   entry("f5", "created", { actor_user_id: null }),
+  // Made by a booking page and an automation, not a member (K3.8); the
+  // second automation was deleted since, so it has no name.
+  entry("f6", "updated", {
+    actor_user_id: null,
+    fields: ["tags"],
+    source: "automation",
+    source_id: "a-1",
+    source_name: "Welcome series",
+  }),
+  entry("f7", "created", {
+    actor_user_id: null,
+    source: "booking_page",
+    source_id: "p-1",
+    source_name: "Intro call",
+  }),
+  entry("f8", "updated", {
+    actor_user_id: null,
+    fields: ["tags"],
+    source: "automation",
+    source_id: "a-2",
+    source_name: null,
+  }),
 ];
 
 interface Options {
@@ -162,6 +187,9 @@ describe("notes and activity in the drawer", () => {
     expect(within(activity).getByText("Unlinked from a deleted company")).toBeInTheDocument();
     expect(within(activity).getByText("Note added")).toBeInTheDocument();
     expect(within(activity).getByText(/System/)).toBeInTheDocument();
+    expect(within(activity).getByText(/Automation: Welcome series/)).toBeInTheDocument();
+    expect(within(activity).getByText(/Booking page: Intro call/)).toBeInTheDocument();
+    expect(within(activity).getByText(/^Automation ·/)).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });
 

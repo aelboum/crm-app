@@ -1333,6 +1333,24 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## History sources (decision K3.8, 2026-11-06)
+
+History entries made by a booking page, a form or an automation now name
+that source instead of a member (migration `0036_activity_source`). The Home
+feed and record history show "Booking page: <name>", "Form: <name>" or
+"Automation: <name>". SaaS-OS issues #224 (email headers) and #225 (domain
+management) filed.
+
+| Check | Result |
+| --- | --- |
+| `ruff format --check .` / `ruff check .` / `pyright` / `lint-imports` | Clean / clean / 0 errors / 2 kept |
+| `pytest tests/unit` (no configuration in the environment, as in CI) | 752 passed |
+| `test_booking_page_routes`, `test_form_routes`, `test_automations`, `test_foundation`, `test_note_activity_tables` | 142 passed |
+| Frontend `tsc -b`, `eslint`, `vitest run`, `vite build` | Clean, clean, 314 passed, built |
+
+Not done: a browser check of the feed. The change is one label in two
+existing lists, covered by the component tests.
+
 ## Permission grant migrations, steps A to C (decision K3.7, 2026-11-06)
 
 `crm_app.permission_grants` declares 27 standard and 12 administrative

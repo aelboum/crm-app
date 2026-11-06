@@ -275,6 +275,13 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
                 " AND action NOT LIKE 'crm_app.automation_run.%'"
                 " GROUP BY action ORDER BY action",
             ),
+            # Their history entries name the automation, never the member (K3.8).
+            "history": _q(
+                a.id,
+                "SELECT count(*) AS n, bool_and(actor_user_id IS NULL) AS no_member,"
+                " count(DISTINCT source_id) AS automations"
+                " FROM crm_app.activity WHERE tenant_id = :t AND source = 'automation'",
+            ),
             "member_step_entries": _q(
                 a.id,
                 "SELECT count(*) AS n FROM core.audit_log WHERE tenant_id = :t"

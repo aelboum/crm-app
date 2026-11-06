@@ -138,6 +138,9 @@ class Scope:
     workspace: uuid.UUID
     actor: uuid.UUID
     component: str | None = None
+    # The page's, form's or automation's id when `component` is set: history
+    # entries show it as their source (K3.8).
+    component_ref: uuid.UUID | None = None
 
 
 class RecordError(Exception):
@@ -365,17 +368,34 @@ def _merge_custom_fields(
     return merged
 
 
+# The component acting in a member's scope -> its history source (migration
+# 0036): what the history shows instead of a member.
+HISTORY_SOURCES: Mapping[str, str] = {
+    "crm_app.booking_page": "booking_page",
+    "crm_app.public_form": "public_form",
+    "crm_app.consent_link": "consent_link",
+    "crm_app.automation_run": "automation",
+}
+
+
 def history_entry(
     kind: Kind, scope: Scope, record_id: uuid.UUID, event: str, **payload: Any
 ) -> Activity:
-    """One history entry on a record, by the acting member, now. The
-    database's CHECKs refuse any payload outside decision P3-B D5."""
+    """One history entry on a record, now: by the acting member, or, when a
+    component acts in a member's scope, by that component as its source and
+    no member (K3.8). The database's CHECKs refuse any payload outside
+    decision P3-B D5."""
     parent = {"contact_id": record_id} if kind is CONTACT else {"company_id": record_id}
+    source = HISTORY_SOURCES.get(scope.component) if scope.component else None
+    if scope.component and source is None:
+        raise ValueError(f"no history source for {scope.component}")
     return Activity(
         id=uuid.uuid4(),
         tenant_id=scope.workspace,
         kind=event,
-        actor_user_id=scope.actor,
+        actor_user_id=None if source else scope.actor,
+        source=source,
+        source_id=scope.component_ref if source else None,
         occurred_at=_now(),
         **parent,
         **payload,

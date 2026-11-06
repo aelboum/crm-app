@@ -310,3 +310,12 @@ def test_changes_are_audited_by_id_and_name_the_booking_page_for_the_host(
     ).fetchall()
     assert [action for action, _ in contact_rows] == ["crm_app.contact.created"]
     assert contact_rows[0][1]["booking_page_id"] == probe["page_id"]
+    # The contact's history names the booking page, not the host (K3.8).
+    history = owner_connection.execute(
+        "SELECT kind, actor_user_id, source, source_id FROM crm_app.activity"
+        " WHERE tenant_id = %s AND contact_id = %s",
+        (probe["workspace"], probe["contact_id"]),
+    ).fetchall()
+    assert [(kind, actor, source, str(ref)) for kind, actor, source, ref in history] == [
+        ("created", None, "booking_page", probe["page_id"])
+    ]

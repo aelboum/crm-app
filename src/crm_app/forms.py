@@ -759,7 +759,12 @@ def submit(workspace: uuid.UUID, key: str, submission: Submission, *, idempotenc
         raise AnswersError(exc.errors) from None
     accepted = _Accepted(
         # The visitor submits, not the owner: entries name the form (K3.6).
-        scope=Scope(workspace=workspace, actor=owner, component="crm_app.public_form"),
+        scope=Scope(
+            workspace=workspace,
+            actor=owner,
+            component="crm_app.public_form",
+            component_ref=form_id,
+        ),
         key=key,
         fields=fields,
         answers=given,

@@ -660,7 +660,7 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
         raise TransactionConflictError
     # The visitor books, not the host: entries name the booking page and
     # the host as `on_behalf_of_user_id` (decision K3.6).
-    scope = Scope(workspace=workspace, actor=offer.host, component=_PAGE)
+    scope = Scope(workspace=workspace, actor=offer.host, component=_PAGE, component_ref=page.id)
     starts_at = accepted.starts_at
     ends_at = starts_at + offer.length
     acquire_tenant_advisory_lock(session, workspace, "crm_app.booking.capacity")

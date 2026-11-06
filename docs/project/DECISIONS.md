@@ -340,6 +340,39 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## K3.8 — History entries show the page, form or automation that made them
+
+- **Status:** Approved by the owner, 2026-11-06 (option "C"). It extends
+  K3.6 from the audit log to the history users see: the Home feed and a
+  contact's or company's history.
+- **Decision:** A history entry made in a member's scope by a component
+  (a booking page, a public form, an automation; a consent link is allowed
+  for later use) names no member. Instead it records that component as its
+  `source`, with the page's, form's or automation's id. The screens show
+  "Booking page: Intro call", "Form: Contact us" or "Automation: Welcome
+  series", or just the kind once the page, form or automation is deleted.
+  An entry with neither a member nor a source still shows "System".
+- **Schema:** migration `0036_activity_source` adds the nullable `source`
+  and `source_id` to `crm_app.activity`, with three checks:
+  - a known source;
+  - a source never names a member;
+  - a `source_id` needs a source.
+
+  Additive: existing entries are not rewritten and keep their member.
+  `source_id` is a reference, not a foreign key, so history outlives a
+  deleted page.
+- **API:** history entries gain `source`, `source_id` and `source_name`.
+  The name is the current one, looked up in the same workspace. Every
+  role that reads history can also read pages, forms and automations.
+- **Not changed:** deal events (no component writes them); rows other
+  than history, such as a contact's owner or an appointment's host.
+- **Tests:**
+  - `test_note_activity_tables.py`: refused and accepted sources;
+  - `test_booking_page_routes.py`, `test_form_routes.py` and
+    `test_automations.py`: each entry's source, and no member;
+  - `notes.test.tsx` and `dashboard.test.tsx`: the labels, including a
+    deleted automation.
+
 ## K3.7 — Permission grant migrations declared and trialled locally
 
 - **Status:** Approved by the owner, 2026-11-06 ("Go" on steps A to C of

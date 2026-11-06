@@ -2468,6 +2468,12 @@ export interface components {
             owner_from: string | null;
             /** Owner To */
             owner_to: string | null;
+            /** Source */
+            source: ("booking_page" | "public_form" | "consent_link" | "automation") | null;
+            /** Source Id */
+            source_id: string | null;
+            /** Source Name */
+            source_name: string | null;
             /** Stage From */
             stage_from: string | null;
             /** Stage To */
@@ -4527,6 +4533,12 @@ export interface components {
              * @enum {string}
              */
             record_type: "contact" | "company";
+            /** Source */
+            source: ("booking_page" | "public_form" | "consent_link" | "automation") | null;
+            /** Source Id */
+            source_id: string | null;
+            /** Source Name */
+            source_name: string | null;
             /** Stage From */
             stage_from: string | null;
             /** Stage To */

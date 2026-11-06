@@ -104,6 +104,30 @@ export function ownerLabel(
   return names?.get(ownerId) ?? t("records.owner.member", { id: ownerId.slice(0, 8) });
 }
 
+/** What made a history entry no member made (decision K3.8). */
+export type EntrySource = "booking_page" | "public_form" | "consent_link" | "automation";
+
+/**
+ * Who or what made a history entry: the member (as `ownerLabel`), or the
+ * booking page, form, consent link or automation, with its current name
+ * when it still exists; "System" when neither is known.
+ */
+export function entryActor(
+  t: T,
+  entry: {
+    actor_user_id: string | null;
+    source?: EntrySource | null;
+    source_name?: string | null;
+  },
+  meId: string | undefined,
+  names?: MemberNames,
+): string {
+  if (entry.actor_user_id) return ownerLabel(t, entry.actor_user_id, meId, names);
+  if (!entry.source) return t("history.system");
+  const kind = t(`history.source.${entry.source}`);
+  return entry.source_name ? t("history.source.named", { kind, name: entry.source_name }) : kind;
+}
+
 /** The two letters in a member's dot: from the display name when there is one. */
 function memberInitials(ownerId: string, names: MemberNames): string {
   const words = (names.get(ownerId) ?? "").split(" ").filter(Boolean);

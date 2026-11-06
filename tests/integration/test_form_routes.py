@@ -224,6 +224,14 @@ def test_changes_are_audited_by_id_and_field_name(
     assert actor is None
     assert metadata["system_actor"] == {"kind": "public_link", "name": "crm_app.public_form"}
     assert metadata["on_behalf_of_user_id"] == probe["admin_id"]
+    history = owner_connection.execute(
+        "SELECT kind, actor_user_id, source, source_id FROM crm_app.activity"
+        " WHERE tenant_id = %s AND contact_id = %s",
+        (probe["workspace"], probe["contact_id"]),
+    ).fetchall()
+    assert [(kind, actor, source, str(ref)) for kind, actor, source, ref in history] == [
+        ("created", None, "public_form", probe["form_id"])
+    ]
     text = json.dumps([m for _, m, _ in form_rows + contact_rows])
     for secret in ("Contact us", "Sam", "sam@example.test", "email me"):
         assert secret not in text

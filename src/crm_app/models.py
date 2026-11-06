@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0035_member_profiles` own the
+Migrations `0002_contacts_companies` to `0036_activity_source` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -149,6 +149,9 @@ class Activity(Base):
     company_id: Mapped[uuid.UUID | None] = mapped_column()
     kind: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    # What made the entry when no member did (migration 0036, K3.8).
+    source: Mapped[str | None] = mapped_column(Text)
+    source_id: Mapped[uuid.UUID | None] = mapped_column()
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # Field names only (an allow-list in migration 0003), never values.
     fields: Mapped[list[str] | None] = mapped_column(JSON)

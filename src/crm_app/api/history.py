@@ -53,6 +53,12 @@ class ActivityOut(BaseModel):
     kind: EntryKind
     occurred_at: datetime
     actor_user_id: uuid.UUID | None
+    # What made the entry when no member did (K3.8): then `actor_user_id` is
+    # null. The name is the page's, form's or automation's current one, null
+    # once it is deleted (or for a consent link, which has none).
+    source: Literal["booking_page", "public_form", "consent_link", "automation"] | None
+    source_id: uuid.UUID | None
+    source_name: str | None
     fields: list[str] | None
     stage_from: str | None
     stage_to: str | None

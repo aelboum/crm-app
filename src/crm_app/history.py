@@ -24,7 +24,7 @@ from typing import Any
 from saas_os.infra.db import Session, select, tenant_session_scope
 
 from crm_app.domains import paging
-from crm_app.models import Activity, Company, Contact, Note
+from crm_app.models import Activity, Automation, BookingPage, Company, Contact, Form, Note
 from crm_app.records import CONTACT, Kind, Scope, load_record
 
 ORDER, DIRECTION = "occurred_at", "desc"
@@ -70,7 +70,8 @@ def list_history(
         more = len(rows) > limit
         rows = rows[:limit]
         names = _company_names(session, scope, {entry.company_ref_id for entry, _ in rows})
-        items = [_item(entry, body, names) for entry, body in rows]
+        sources = _source_names(session, scope, [entry for entry, _ in rows])
+        items = [_item(entry, body, names, sources) for entry, body in rows]
         last_key = (rows[-1][0].occurred_at, rows[-1][0].id) if rows else None
     next_cursor = None
     if more and last_key is not None:
@@ -106,9 +107,10 @@ def recent(scope: Scope, *, limit: int) -> list[dict[str, Any]]:
             scope,
             {entry.company_id for entry in rows} | {entry.company_ref_id for entry in rows},
         )
+        sources = _source_names(session, scope, rows)
         return [
             {
-                **_item(entry, None, companies),
+                **_item(entry, None, companies, sources),
                 "record_type": "contact" if entry.contact_id is not None else "company",
                 "record_id": entry.contact_id or entry.company_id,
                 "record_name": (
@@ -139,12 +141,51 @@ def _company_names(
     return dict(session.execute(query).tuples().all())
 
 
-def _item(entry: Activity, body: str | None, names: dict[uuid.UUID, str]) -> dict[str, Any]:
+# A history source -> the model whose current name it shows (K3.8).
+_SOURCE_MODELS: dict[str, Any] = {
+    "booking_page": BookingPage,
+    "public_form": Form,
+    "automation": Automation,
+}
+
+
+def _source_names(
+    session: Session, scope: Scope, entries: list[Activity]
+) -> dict[tuple[str, uuid.UUID], str]:
+    """Current names of the pages, forms and automations that made entries;
+    a deleted one has none. Every role that reads history also reads these
+    (`crm_app.roles`), so a name reveals nothing new."""
+    names: dict[tuple[str, uuid.UUID], str] = {}
+    for source, model in _SOURCE_MODELS.items():
+        wanted = {e.source_id for e in entries if e.source == source and e.source_id}
+        if not wanted:
+            continue
+        query = select(model.id, model.name).where(
+            model.tenant_id == scope.workspace, model.id.in_(wanted)
+        )
+        names.update(((source, row_id), name) for row_id, name in session.execute(query).tuples())
+    return names
+
+
+def _item(
+    entry: Activity,
+    body: str | None,
+    names: dict[uuid.UUID, str],
+    sources: dict[tuple[str, uuid.UUID], str],
+) -> dict[str, Any]:
+    source_name = (
+        sources.get((entry.source, entry.source_id))
+        if entry.source is not None and entry.source_id is not None
+        else None
+    )
     return {
         "id": entry.id,
         "kind": entry.kind,
         "occurred_at": entry.occurred_at,
         "actor_user_id": entry.actor_user_id,
+        "source": entry.source,
+        "source_id": entry.source_id,
+        "source_name": source_name,
         "fields": entry.fields,
         "stage_from": entry.stage_from,
         "stage_to": entry.stage_to,

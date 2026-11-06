@@ -259,6 +259,37 @@ def test_stage_and_company_entries_are_for_contacts_only(
         )
 
 
+@pytest.mark.parametrize(
+    "values",
+    [
+        # A source names no member (migration 0036, K3.8).
+        {"source": "automation", "actor_user_id": uuid.uuid4()},
+        {"source": "anything_else"},
+        {"source_id": uuid.uuid4()},
+    ],
+    ids=["source-with-member", "unknown-source", "ref-without-source"],
+)
+def test_activity_sources_outside_the_rules_are_refused(
+    env: dict[str, str],  # noqa: F811
+    owner_connection: psycopg.Connection,
+    values: dict[str, object],
+) -> None:
+    a = _workspace(env)["tenant"]
+    contact = _contact(owner_connection, a)
+    with pytest.raises(errors.CheckViolation):
+        _activity(owner_connection, a, contact_id=contact, **values)
+
+
+def test_an_entry_made_by_a_source_is_accepted(
+    env: dict[str, str],  # noqa: F811
+    owner_connection: psycopg.Connection,
+) -> None:
+    a = _workspace(env)["tenant"]
+    contact = _contact(owner_connection, a)
+    for source in ("booking_page", "public_form", "consent_link", "automation"):
+        _activity(owner_connection, a, contact_id=contact, source=source, source_id=uuid.uuid4())
+
+
 def test_the_allowed_payloads_are_accepted(
     env: dict[str, str],  # noqa: F811
     owner_connection: psycopg.Connection,

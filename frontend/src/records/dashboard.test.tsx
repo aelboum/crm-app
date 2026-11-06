@@ -87,6 +87,9 @@ const FEED = [
     kind: "created",
     occurred_at: stamp,
     actor_user_id: ME,
+    source: null,
+    source_id: null,
+    source_name: null,
     fields: null,
     stage_from: null,
     stage_to: null,
@@ -100,6 +103,29 @@ const FEED = [
     record_type: "contact",
     record_id: "c1000000-0000-4000-8000-000000000001",
     record_name: "Sam Jansen",
+  },
+  {
+    // A visitor's form submission: the form, not a member, made it (K3.8).
+    id: "e2",
+    kind: "created",
+    occurred_at: stamp,
+    actor_user_id: null,
+    source: "public_form",
+    source_id: "f1000000-0000-4000-8000-000000000001",
+    source_name: "Contact us",
+    fields: null,
+    stage_from: null,
+    stage_to: null,
+    owner_from: null,
+    owner_to: null,
+    company_id: null,
+    company_name: null,
+    note_id: null,
+    note_excerpt: null,
+    note_truncated: false,
+    record_type: "contact",
+    record_id: "c1000000-0000-4000-8000-000000000002",
+    record_name: "Ada Lovelace",
   },
 ];
 
@@ -297,7 +323,8 @@ describe("the Home page", () => {
     expect(
       await within(activity).findByRole("button", { name: "Sam Jansen" }),
     ).toBeInTheDocument();
-    expect(within(activity).getByText(/Created/)).toBeInTheDocument();
+    expect(within(activity).getAllByText(/Created/)).toHaveLength(2);
+    expect(within(activity).getByText(/Form: Contact us/)).toBeInTheDocument();
 
     // Open deals only; the idle count asks for idle deals; tasks due before tomorrow.
     const summaries = sent.filter((r) =>

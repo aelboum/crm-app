@@ -208,6 +208,46 @@
             ],
             "title": "Owner To"
           },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "booking_page",
+                  "public_form",
+                  "consent_link",
+                  "automation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
           "stage_from": {
             "anyOf": [
               {
@@ -236,6 +276,9 @@
           "kind",
           "occurred_at",
           "actor_user_id",
+          "source",
+          "source_id",
+          "source_name",
           "fields",
           "stage_from",
           "stage_to",
@@ -6548,6 +6591,46 @@
             "title": "Record Type",
             "type": "string"
           },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "booking_page",
+                  "public_form",
+                  "consent_link",
+                  "automation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
           "stage_from": {
             "anyOf": [
               {
@@ -6576,6 +6659,9 @@
           "kind",
           "occurred_at",
           "actor_user_id",
+          "source",
+          "source_id",
+          "source_name",
           "fields",
           "stage_from",
           "stage_to",

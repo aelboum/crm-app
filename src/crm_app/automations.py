@@ -667,7 +667,12 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
         if done is None:
             # Steps run with the activating member's rights; the run worker
             # acts, so their entries name it, not the member (K3.6).
-            scope = Scope(workspace=workspace, actor=actor, component="crm_app.automation_run")
+            scope = Scope(
+                workspace=workspace,
+                actor=actor,
+                component="crm_app.automation_run",
+                component_ref=run.automation_id,
+            )
             outcome, detail = _act(session, scope, contact, action, run)
             session.add(
                 AutomationStep(

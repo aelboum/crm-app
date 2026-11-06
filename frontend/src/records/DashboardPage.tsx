@@ -41,7 +41,7 @@ import {
   totalsOf,
 } from "./dealParts";
 import { ACTIVITY_ICONS, useDescribe } from "./NotesSection";
-import { ownerLabel, When } from "./parts";
+import { entryActor, ownerLabel, When } from "./parts";
 import { DueText, taskRefusal } from "./taskParts";
 
 /*
@@ -691,9 +691,7 @@ function ActivityCard({
                     {describe(entry, meId)}
                   </p>
                   <p className="activity-meta">
-                    {entry.actor_user_id
-                      ? ownerLabel(t, entry.actor_user_id, meId, names)
-                      : t("history.system")}
+                    {entryActor(t, entry, meId, names)}
                     {" · "}
                     <When value={entry.occurred_at} />
                   </p>
