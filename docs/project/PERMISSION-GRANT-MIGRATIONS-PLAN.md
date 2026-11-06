@@ -1,8 +1,8 @@
 # Replacing `role_upgrade` with SaaS-OS permission grant migrations
 
-Status: **design for owner review, 2026-11-06. Nothing is built and no
-workspace was touched.** Owner instruction: "Go" on "design first, build
-second". Facts are from SaaS-OS v0.8.0 (`140d9dd`, the pinned release):
+Status: **steps A to C done, 2026-11-06 (decision K3.7; owner: "Go").**
+Steps D to F (production) still need the owner's approval. No real
+workspace was touched. Results are in section 7. Facts are from SaaS-OS v0.8.0 (`140d9dd`, the pinned release):
 ADR 0060, `saas_os.core.permission_grants`, `saas_os.ops.operator_cli`,
 CONSUMER-GUIDE §§ 266-268 and RUNBOOKS "Permission grant migrations".
 
@@ -103,8 +103,9 @@ What this means for crm-app:
 5. **Workspaces without the roles.** PENDING signup tenants and SaaS-OS-only
    tenants without the four roles get a permanent `role_missing` row for
    that migration. For signup tenants this is harmless, because
-   `seed_roles` later grants the full template. Inference, not tested yet:
-   to be confirmed in the local dry run.
+   `seed_roles` later grants the full template. **Verified in step C:** a
+   PENDING tenant recorded `role_missing` and then seeded lacks nothing,
+   administrative permissions included.
 6. **Revoked before the first run.** A grant that `role_upgrade` added and a
    member later revoked would be re-granted by the first migration run (the
    ledger has no record of it). No crm-app role holds `role_permission:*`,
@@ -130,3 +131,44 @@ What this means for crm-app:
    two production runs (E, F). These replace Brief 7.
 3. Accept SaaS-OS's lack of a fingerprint (recommended) or file an
    upstream request for `--expect-digest`.
+
+## 7. Results of steps A to C (2026-11-06)
+
+**Step A, code.**
+- `crm_app.permission_grants`: `PERMISSION_GRANT_MIGRATIONS` (27 entries)
+  and `ADMINISTRATIVE_MIGRATIONS` (12 entries), namespace `crm_app`. One
+  entry per (decision × role), in the order of the commits that added the
+  permissions since `3bce9b6^`.
+- A read-only `--report` command.
+- `tests/unit/test_permission_grants.py` checks:
+  - both lists pass SaaS-OS's validation, with ids unique across both;
+  - no entry is authority-changing;
+  - held-back permissions are only in the administrative list;
+  - every permission is one the product registers;
+  - every role's template equals the frozen `BASELINE` plus its migrations;
+  - every entry's digest is pinned.
+- `tests/integration/test_permission_grants.py`: an old workspace lacks
+  exactly what is declared, a current one nothing, and a bare tenant is
+  `role_missing`.
+- `saas_os.core.permission_grants` was added to the public packages in
+  `tests/unit/test_import_surface.py`.
+
+**Steps B and C, local trial.** Run on a throwaway database
+`crm_app_grants_trial` created for this, then dropped, not on the shared
+test database: the ledger is permanent there, survives purges and blocks a
+schema downgrade. The database held two Phase 2-era workspaces, one
+current, one without roles and one PENDING. A trial platform owner was
+bootstrapped once (a second bootstrap is refused).
+
+| Run | Result |
+| --- | --- |
+| Dry run, standard list | Old: 41 grants each; current: 41 already present; bare and pending: 27 `role_missing`. crm-app's `--report` gives the same 27 migrations and 41 grants |
+| `--apply` | The same counts, now applied; the report then shows 0 needed |
+| Second `--apply` | `unchanged` for all 5; 27 already applied each |
+| A grant revoked (Member `conversation:reply`), then `--apply` | `unchanged`: not restored |
+| PENDING tenant seeded after its `role_missing` rows | Lacks nothing, standard or administrative |
+| Administrative list, dry run, then `--apply` | Old: 12 grants each; current and seeded: 12 already present; bare: 12 `role_missing` |
+| Evidence | 106 `role_permission.grant` rows (41 × 2 + 12 × 2); 10 tenant `permission_grant_migration.apply` rows; 4 started and 4 completed platform rows; ledger 129 `applied` and 66 `role_missing` |
+
+Not done: anything in production (steps D to F), and retiring
+`role_upgrade` (step G, after E).

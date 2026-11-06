@@ -39,6 +39,8 @@ PUBLIC_PACKAGES = frozenset(
         "saas_os.core.webhooks",
         "saas_os.core.usage",
         "saas_os.core.notifications",
+        # Permission grant migrations, public since v0.7.0 (ADR 0060; decision K3.7).
+        "saas_os.core.permission_grants",
         "saas_os.inference",
         "saas_os.contracts",
     }

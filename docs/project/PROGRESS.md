@@ -1333,6 +1333,19 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Permission grant migrations, steps A to C (decision K3.7, 2026-11-06)
+
+`crm_app.permission_grants` declares 27 standard and 12 administrative
+migrations, with a read-only report. SaaS-OS issue #223 filed (gap 14).
+
+| Check | Result |
+| --- | --- |
+| `ruff format --check .` / `ruff check .` | All formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| `pytest tests/unit` | 751 passed (8 new in `test_permission_grants.py`) |
+| `pytest tests/integration/test_permission_grants.py` | 7 passed |
+| Local trial on a throwaway database (`PERMISSION-GRANT-MIGRATIONS-PLAN.md` §7) | Dry run = report; applied once; second run unchanged; revoked grant not restored; database dropped |
+
 ## Visitor and automation-step attribution (decision K3.6, 2026-11-06)
 
 Bookings, visitor cancellations, form submissions, consent confirmations

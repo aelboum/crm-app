@@ -324,7 +324,8 @@ approval), **Superseded**.
     (2026-11-06):** the error classes are not exported from
     `saas_os.core.email`, and importing them from the private module or
     reading their attributes would break K3's public-surface rule;
-    recorded as gap 14 in `saas-os-gaps.md`.
+    recorded as gap 14 in `saas-os-gaps.md` and filed, with the owner's
+    approval, as aelboum/saas-os#223 (2026-11-06).
   - Gap 11 (`saas-os-gaps.md`): `record_system_action_in_transaction`
     with a `SystemActor` now exists, so worker, public-link and inbound
     actions could get tenant audit entries. **Done** for every path that
@@ -338,6 +339,24 @@ approval), **Superseded**.
   migration head and the `.secrets.baseline` hash back. v0.6.0's
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
+
+## K3.7 — Permission grant migrations declared and trialled locally
+
+- **Status:** Approved by the owner, 2026-11-06 ("Go" on steps A to C of
+  `PERMISSION-GRANT-MIGRATIONS-PLAN.md`). Steps D to F (enrolling a
+  production platform operator, then the production runs) are not
+  approved; they replace Brief 7 once approved.
+- **Decision:** New workspaces' permissions added after Phase 2 reach
+  existing workspaces through SaaS-OS's permission grant migrations (ADR
+  0060), declared in `crm_app.permission_grants` (standard and
+  administrative lists, namespace `crm_app`). The declarations are
+  append-only and pinned by digest. A permission added to a role template
+  without a migration fails CI. `crm_app.role_upgrade` stays, unused,
+  until the first production run succeeds (plan step G); P2-G7 is then
+  superseded.
+- **Evidence:** the plan's section 7. In a throwaway database, SaaS-OS's
+  dry run and apply matched crm-app's report: once only, and a revoked
+  grant was not restored. The database was dropped afterwards.
 
 ## K3.6 — Visitor actions and automation steps are audited as system actors
 
