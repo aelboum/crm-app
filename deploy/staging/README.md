@@ -14,18 +14,22 @@ profile, against the managed PostgreSQL and Redis, once the owner chooses.
 ```sh
 uv run python deploy/staging/prepare_local.py      # certificates and secrets in .local/
 docker compose --env-file deploy/staging/.local/compose.env \
-  -f deploy/staging/compose.yaml --profile stateful-local up -d --build
+  -f deploy/staging/compose.yaml --profile stateful-local up -d --build --wait
+uv run python deploy/staging/identity_local.py     # OIDC application in ZITADEL (decision D-STG.1)
 uv run python deploy/staging/verify_local.py       # the exit criteria a local run can prove
 ```
 
-The app answers at `https://leadstack.localhost:8443` (Caddy's local CA;
-`/app` is the frontend). Stop with `... down`; `down -v` also removes the
+The app answers at `https://leadstack.localhost:8443` (a certificate from
+the local CA in `.local/ca.crt`; `/app` is the frontend). ZITADEL's
+administrator is `admin@crm-app-staging.leadstack.localhost`, its password
+`ZITADEL_ADMIN_PASSWORD` in `.local/compose.env`. Stop with `... down`; `down -v` also removes the
 databases. `prepare_local.py --force` replaces the certificates and
 passwords; recreate the databases afterwards (`down -v`).
 
 | Service | Role |
 | --- | --- |
-| `edge` | Caddy 2.11.4: TLS, body caps (6 MB, 64 KB for `/v1/public/*`), `X-Forwarded-For` replaced, admin API off. Only published port: `127.0.0.1:8443` |
+| `edge` | Caddy 2.11.4: TLS, body caps (6 MB, 64 KB for `/v1/public/*`), `X-Forwarded-For` replaced, provider cookies stripped before the app, admin API off. Only published port: `127.0.0.1:8443` |
+| `zitadel`, `zitadel-login` | ZITADEL v4.19.5 and Login V2 on the app's own origin (SaaS-OS ADR-0025); own database over `verify-full` as a non-superuser; internal network only |
 | `app` | the API (`uvicorn crm_app.app:create_app --factory`), read-only filesystem, no capabilities |
 | `worker` | `crm-app-worker`; no route out except `egress-proxy`, own resolver |
 | `migrate` | `crm-app-migrate` before `app` and `worker`; the only service with the migration owner's URL |
@@ -39,7 +43,7 @@ ignores.
 
 ## Not covered yet
 
-Sign-in (ZITADEL in the stack), backups and the restore drill, the
-scheduled maintenance commands, monitoring and alerting: exit criteria E4,
-E5, E8 and E9 in the brief. A real public certificate, DNS and the managed
+A browser sign-in with MFA (the rest of E4), backups and the restore
+drill, the scheduled maintenance commands, monitoring and alerting: exit
+criteria E8 and E9 in the brief. A real public certificate, DNS and the managed
 services' own behaviour can only be proven on the chosen host.

@@ -1336,21 +1336,25 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 ## Local staging rehearsal (decision D-STG, 2026-11-07)
 
 `deploy/staging/`, run locally with the `stateful-local` profile; every
-container healthy. `uv run python deploy/staging/verify_local.py`: **24
-passed, 0 failed**.
+container healthy. `uv run python deploy/staging/verify_local.py`: **35
+passed, 0 failed** (24 at D-STG; 11 identity checks added by D-STG.1, after
+`identity_local.py`).
 
 | Criterion | Checked |
 | --- | --- |
 | E1 | `/healthz`, `/readyz` 200 over HTTPS through Caddy |
 | E2 | start-up refuses `sslmode=disable` and `redis://` |
 | E3 | SaaS-OS `e2b7c4d9a1f6` and product `0039_member_reminders` at head, applied over TLS by an owner that is no superuser and cannot bypass RLS; the app holds no migration or admin credential |
+| E4 (part) | ZITADEL v4.19.5 and Login V2 on the app's origin; the app starts the flow, ZITADEL authenticates the administrator (session and finalised authorization request through its v2 API, as Login V2 does), the callback lands on `/app`; `saas_os_session` is Secure and HttpOnly; `/v1/sign-out-url` continues to `/oidc/v1/end_session`; after `/auth/logout`, `/auth/me` is 401. Not checked: a real browser, MFA, ZITADEL's session ending |
+| E5 | through that session the user's own provisioned workspace answers 200; another owner's workspace and its members answer 404; the directory lists only the user's own |
 | E6 | `EMAIL_SENDING_ENABLED`, the conversation and campaign streams, inbound and customer domains each refused at start-up in production |
 | E7 | the worker's direct connection fails; its proxy allows CONNECT to a public IPv4 on 443 and refuses port 80, a host name, 10.0.0.1 and 172.16.0.10 |
 | E10 | the edge refuses a 7 MB body (connection closed) and a 100 KB public body (413), passes a small public body (422 from the app), and replaces a client's `X-Forwarded-For` |
 
-Not covered yet: E4, E5, E8, E9 (ZITADEL, backups, monitoring). Findings:
-`DECISIONS.md` D-STG (the SaaS-OS proxy healthcheck, strict certificate
-checks, and the RLS risk for data migrations).
+Not covered yet: the browser and MFA parts of E4, E8 and E9 (backups,
+monitoring). Findings: `DECISIONS.md` D-STG (the SaaS-OS proxy healthcheck,
+strict certificate checks, and the RLS risk for data migrations) and
+D-STG.1 (ZITADEL initialises as a non-superuser owner).
 
 ## Production image (decision D-IMG, 2026-11-07)
 

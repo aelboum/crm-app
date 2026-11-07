@@ -7,11 +7,16 @@ Writes, under `deploy/staging/.local/` (ignored by git, never committed):
 - a throwaway certificate authority and server certificates for the
   stand-in PostgreSQL (`postgres`) and Redis (`redis`), so the application
   connects with `sslmode=verify-full` and `rediss://` exactly as it would to
-  a managed service (SaaS-OS ADR-0028);
+  a managed service (SaaS-OS ADR-0028), and for the edge
+  (`leadstack.localhost`), so the app verifies its identity provider's
+  certificate (`OIDC_CA_BUNDLE`) as it would a public one;
 - `compose.env` (the stand-in services' passwords, for `docker compose
   --env-file`), `app.env` (the app's and the worker's settings) and
   `migrate.env` (the migration owner's URL, for `migrate` only), with fresh
-  random passwords.
+  random passwords and ZITADEL's master key.
+
+`OIDC_CLIENT_ID` stays a placeholder until `identity_local.py` creates the
+OIDC application in the stack's ZITADEL and writes its ID into `app.env`.
 
 Run it again with `--force` to replace everything (the stand-in databases
 must then be recreated: `docker compose ... down -v`). Nothing here is for
@@ -35,6 +40,7 @@ HERE = Path(__file__).resolve().parent
 OUT = HERE / ".local"
 DAYS = 30
 ORIGIN = "https://leadstack.localhost:8443"
+EDGE_HOST = "leadstack.localhost"
 
 
 def _key() -> ec.EllipticCurvePrivateKey:
@@ -115,6 +121,7 @@ def _files(passwords: dict[str, str]) -> dict[str, str]:
     app and the worker never see the migration owner's or the database
     admin's credentials."""
     owner, runtime, redis = passwords["owner"], passwords["runtime"], passwords["redis"]
+    zitadel = passwords["zitadel_db"]
     tls = "sslmode=verify-full&sslrootcert=/certs/ca.crt"
     head = "# Local staging only (deploy/staging/prepare_local.py). Never commit.\n"
     compose = [
@@ -124,6 +131,11 @@ def _files(passwords: dict[str, str]) -> dict[str, str]:
         "APP_DB_USER=crm_app_runtime",
         "APP_DB_PASSWORD=" + runtime,
         "REDIS_PASSWORD=" + redis,
+        "ZITADEL_DB_PASSWORD=" + zitadel,
+        # Exactly 32 characters; encrypts ZITADEL's keys at rest.
+        "ZITADEL_MASTERKEY=" + passwords["masterkey"],
+        "ZITADEL_ADMIN_PASSWORD=" + passwords["zitadel_admin"],
+        "ZITADEL_LOGIN_SESSION_COOKIE_SECRET=" + passwords["login_cookie"],
     ]
     app = [
         "ENVIRONMENT=production",
@@ -134,10 +146,14 @@ def _files(passwords: dict[str, str]) -> dict[str, str]:
         # Redis section 4): Python verifies the chain against this file.
         "SSL_CERT_FILE=/certs/ca.crt",
         "PUBLIC_APP_ORIGIN=" + ORIGIN,
-        # Placeholders until ZITADEL runs in the stack: sign-in is not
-        # available in this first slice.
+        # ZITADEL on the app's own origin (SaaS-OS ADR-0025), reached by the
+        # app through the edge and verified against the local CA only.
         "OIDC_ISSUER_URL=" + ORIGIN,
+        "OIDC_CA_BUNDLE=/certs/ca.crt",
+        "OIDC_END_SESSION_ENDPOINT=" + ORIGIN + "/oidc/v1/end_session",
+        # Replaced by identity_local.py with the ID ZITADEL assigns.
         "OIDC_CLIENT_ID=staging-placeholder",  # pragma: allowlist secret
+        "AUTH_POST_LOGIN_PATH=/app",
         "TRUST_PROXY_HEADERS=true",
     ]
     migrate = [
@@ -162,12 +178,16 @@ def main(argv: list[str]) -> int:
     now = datetime.now(UTC)
     ca_key, ca = _authority(now)
     (OUT / "ca.crt").write_bytes(ca.public_bytes(serialization.Encoding.PEM))
-    for host in ("postgres", "redis"):
+    for name, host in (("postgres", "postgres"), ("redis", "redis"), ("edge", EDGE_HOST)):
         key, cert = _server(host, ca_key, ca, now)
-        (OUT / f"{host}.crt").write_bytes(cert.public_bytes(serialization.Encoding.PEM))
-        (OUT / f"{host}.key").write_bytes(_pem_key(key))
+        (OUT / f"{name}.crt").write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+        (OUT / f"{name}.key").write_bytes(_pem_key(key))
     # The CA key is not kept: nothing else is ever signed with it.
-    passwords = {name: secrets.token_urlsafe(24) for name in ("admin", "owner", "runtime", "redis")}
+    names = ("admin", "owner", "runtime", "redis", "zitadel_db", "masterkey", "login_cookie")
+    # token_urlsafe(24) is 32 characters: ZITADEL's master key length.
+    passwords = {name: secrets.token_urlsafe(24) for name in names}
+    # ZITADEL's default password policy: upper, lower, digit and symbol.
+    passwords["zitadel_admin"] = "Aa1!" + secrets.token_urlsafe(18)
     for name, text in _files(passwords).items():
         (OUT / name).write_text(text, encoding="utf-8")
     print(f"wrote {OUT} (certificates valid {DAYS} days)")

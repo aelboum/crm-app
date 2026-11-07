@@ -56,7 +56,12 @@ import sys
 import urllib.request
 from pathlib import Path
 
-TOKEN_FILE = Path(__file__).resolve().parent / ".bootstrap" / "bootstrap.pat"
+# The local staging stack's ZITADEL keeps its token elsewhere
+# (deploy/staging/identity_local.py sets ZITADEL_BOOTSTRAP_PAT_PATH).
+TOKEN_FILE = Path(
+    os.environ.get("ZITADEL_BOOTSTRAP_PAT_PATH")
+    or Path(__file__).resolve().parent / ".bootstrap" / "bootstrap.pat"
+)
 
 LOGIN_CHANGES = {
     "allowRegister": False,
@@ -154,9 +159,17 @@ def _call(base: str, token: str, method: str, path: str, body: object = None) ->
         return json.load(response)
 
 
+def is_local_issuer(base: str) -> bool:
+    """Local development, or exactly the local staging rehearsal's issuer
+    (deploy/staging, on `.localhost`): never a real host."""
+    if base == "https://leadstack.localhost:8443":
+        return True
+    return base.startswith(("http://localhost", "http://127.0.0.1"))
+
+
 def main() -> int:
     base = os.environ.get("OIDC_ISSUER_URL", "http://localhost:8000").rstrip("/")
-    if not base.startswith(("http://localhost", "http://127.0.0.1")):
+    if not is_local_issuer(base):
         print(f"refusing: {base} is not a local issuer", file=sys.stderr)
         return 2
     token = TOKEN_FILE.read_text(encoding="utf-8").strip()

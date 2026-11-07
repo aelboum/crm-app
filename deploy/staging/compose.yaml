@@ -21,6 +21,12 @@
 # - `postgres` and `redis` (profile `stateful-local`) stand in for the
 #   managed services, with TLS from the local CA, a non-superuser migration
 #   role, `noeviction` and AOF.
+# - `zitadel` and `zitadel-login` (Login V2) are served by the edge on the
+#   app's own origin (SaaS-OS ADR-0025, as in deploy/local), self-hosted
+#   with their own database on the same PostgreSQL over verify-full. They
+#   sit on the internal `identity` network: no route out, nothing published.
+#   The app reaches the issuer through the edge (alias `leadstack.localhost`)
+#   and trusts only the local CA for it (`OIDC_CA_BUNDLE`).
 # No secret is written here: values come from `.local/` (prepare_local.py).
 # The app and worker get `app.env` only; `migrate` also gets `migrate.env`.
 
@@ -55,6 +61,7 @@ services:
       CRM_APP_OWNER_PASSWORD: ${CRM_APP_OWNER_PASSWORD:?}
       APP_DB_USER: ${APP_DB_USER:?}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+      ZITADEL_DB_PASSWORD: ${ZITADEL_DB_PASSWORD:?}
     # The server key must be owned by postgres with mode 0600, which a
     # bind mount from Windows cannot give: copy it in first.
     entrypoint: ["sh", "-c"]
@@ -158,16 +165,136 @@ services:
   edge:
     image: caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
     ports:
-      - "127.0.0.1:8443:443"
+      - "127.0.0.1:8443:8443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./.local/edge.crt:/certs/edge.crt:ro
+      - ./.local/edge.key:/certs/edge.key:ro
       - caddy-data:/data
       - caddy-config:/config
-    networks: [edge]
+    networks:
+      edge:
+        # The app reaches its issuer (the public origin) here, not through
+        # the host: the same name and certificate the browser sees.
+        aliases: [leadstack.localhost]
+      identity: {}
     restart: unless-stopped
     depends_on:
       app:
         condition: service_healthy
+      zitadel-login:
+        condition: service_healthy
+
+  # ZITADEL's image has no shell and runs as a non-root user, so it cannot
+  # prepare the directory it writes its bootstrap tokens to (as deploy/local).
+  zitadel-bootstrap-dir:
+    image: busybox:1.36.1@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+    command: ["sh", "-c", "mkdir -p /bootstrap && chmod 0777 /bootstrap"]
+    volumes:
+      - ./.local/bootstrap:/bootstrap
+    network_mode: none
+
+  zitadel:
+    # The release deploy/local pins (v4.19.5, past the advisories in
+    # GHSA-x4c7-fpcx-w9q6 and its siblings).
+    image: ghcr.io/zitadel/zitadel:v4.19.5@sha256:a586456a208e0db4c633db0ba43c427c24b37846138b8b13ff16ad8e003a18d3
+    # TLS ends at the edge; ZITADEL is told its public URL is https.
+    command: ["start-from-init", "--masterkeyFromEnv", "--tlsMode", "external"]
+    environment:
+      ZITADEL_MASTERKEY: ${ZITADEL_MASTERKEY:?run prepare_local.py first}
+      ZITADEL_DATABASE_POSTGRES_HOST: postgres
+      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${ZITADEL_DB_PASSWORD:?}
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: verify-full
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_ROOTCERT: /certs/ca.crt
+      # No database administrator: the role and database exist already
+      # (init/01-roles.sh, as an operator would prepare a managed service),
+      # so ZITADEL connects as its own non-superuser owner for init too.
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${ZITADEL_DB_PASSWORD:?}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_EXISTINGDATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: verify-full
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_ROOTCERT: /certs/ca.crt
+      # What browsers see and what appears as the token `iss`: the app's own
+      # origin. Changing it needs a fresh ZITADEL database.
+      ZITADEL_PORT: "8080"
+      ZITADEL_EXTERNALDOMAIN: leadstack.localhost
+      ZITADEL_EXTERNALPORT: "8443"
+      ZITADEL_EXTERNALSECURE: "true"
+      # Also read by `zitadel ready` (the healthcheck), which gets no flags.
+      ZITADEL_TLS_ENABLED: "false"
+      ZITADEL_FIRSTINSTANCE_ORG_NAME: crm-app-staging
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: admin
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:?}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS: admin@leadstack.localhost
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED: "true"
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false" # pragma: allowlist secret
+      # Local rehearsal only: personal access tokens in .local/bootstrap for
+      # identity_local.py and Login V2. A host uses a system-user key
+      # instead (SaaS-OS ADR-0025 section 7).
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: bootstrap
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: bootstrap
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2100-01-01T00:00:00Z"
+      ZITADEL_FIRSTINSTANCE_PATPATH: /bootstrap/bootstrap.pat
+      ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /bootstrap/login-client.pat
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2100-01-01T00:00:00Z"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: https://leadstack.localhost:8443/ui/v2/login/
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: https://leadstack.localhost:8443/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: https://leadstack.localhost:8443/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_SAML_DEFAULTLOGINURLV2: https://leadstack.localhost:8443/ui/v2/login/login?samlRequest=
+    volumes:
+      - ./.local/ca.crt:/certs/ca.crt:ro
+      - ./.local/bootstrap:/bootstrap
+    networks: [internal, identity]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+      zitadel-bootstrap-dir:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/app/zitadel", "ready"]
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 30
+
+  zitadel-login:
+    image: ghcr.io/zitadel/zitadel-login:v4.19.5@sha256:2f8e57672fcd4f9a285d99355fae9f85fd7495768c090c07c3bbc2d84fc06617
+    environment:
+      ZITADEL_API_URL: http://zitadel:8080
+      NEXT_PUBLIC_BASE_PATH: /ui/v2/login
+      ZITADEL_SERVICE_USER_TOKEN_FILE: /bootstrap/login-client.pat
+      ZITADEL_SESSION_COOKIE_SECRET: ${ZITADEL_LOGIN_SESSION_COOKIE_SECRET:?}
+      # ZITADEL picks its instance from Host: the public host.
+      CUSTOM_REQUEST_HEADERS: Host:leadstack.localhost,X-Forwarded-Proto:https
+    volumes:
+      - ./.local/bootstrap:/bootstrap:ro
+    networks: [identity]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      zitadel:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "node /app/healthcheck.mjs http://localhost:3000/ui/v2/login/healthy"]
+      interval: 5s
+      timeout: 10s
+      start_period: 20s
+      retries: 20
 
   egress-proxy:
     image: ubuntu/squid:6.6-24.04_edge@sha256:8a3baed477e2c282ab8aa5edad442f69873246964f225c5c2ae8364b6610963c
@@ -207,6 +334,9 @@ networks:
   egress:
   # No route out.
   internal:
+    internal: true
+  # The edge, ZITADEL and Login V2 only; no route out.
+  identity:
     internal: true
   worker-dns:
     internal: true

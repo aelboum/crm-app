@@ -1,6 +1,10 @@
 # LeadStack's edge (decision D-STG; launch gate 13-H1 F2). The only
-# published service: it terminates TLS and reaches nothing but `app`.
+# published service: it terminates TLS and reaches nothing but `app`,
+# ZITADEL and its Login V2 UI.
 #
+# - One origin for the app and the identity provider (SaaS-OS ADR-0025,
+#   "Topology A"; the same routes as deploy/local/Caddyfile): the browser
+#   never leaves it and no identity-provider hostname is shown.
 # - X-Forwarded-For is replaced with the client's own address, never
 #   appended to: the app (TRUST_PROXY_HEADERS=true) reads its last hop, so a
 #   client-sent value can never be taken for the client.
@@ -8,14 +12,48 @@
 #   where nothing legitimate is larger: 6 MB overall (the 5 MB CSV import
 #   plus its form encoding), 64 KB for public routes (the largest is the
 #   signed provider webhook, 64 KB).
-# - The admin API is off; locally, `.localhost` gets Caddy's own CA.
+# - The admin API is off. Locally the certificate comes from the local CA
+#   (prepare_local.py), which is also the only CA the app trusts for its
+#   issuer (OIDC_CA_BUNDLE); a host uses a public certificate instead.
 {
 	admin off
 	auto_https disable_redirects
 }
 
-leadstack.localhost {
-	tls internal
+# Provider cookies (Login V2's `sessions` cookie holds ZITADEL session
+# tokens) share this host with the application. They must never reach the
+# application (SaaS-OS ADR-0025 section 9).
+(strip_provider_cookies) {
+	route {
+		request_header Cookie "(?:^|;\s*)(?:(?:__Host-|__Secure-)?zitadel\.[^=;]*|sessions|fingerprintId|verificationCheck|NEXT_LOCALE)=[^;]*" ""
+		request_header Cookie "^;\s*" ""
+		@no_cookie_left not header_regexp Cookie \S
+		request_header @no_cookie_left -Cookie
+	}
+}
+
+# ZITADEL and Login V2 read these ahead of Host to choose their instance; a
+# browser must never choose it.
+(drop_client_zitadel_host_headers) {
+	header_up -X-Zitadel-Instance-Host
+	header_up -X-Zitadel-Public-Host
+	header_up -X-Zitadel-Forward-Host
+}
+
+(client_address) {
+	header_up X-Forwarded-For {remote_host}
+	header_up -X-Real-IP
+	header_up -Forwarded
+}
+
+leadstack.localhost:8443 {
+	tls /certs/edge.crt /certs/edge.key
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
 
 	@public path /v1/public/*
 	request_body @public {
@@ -25,9 +63,28 @@ leadstack.localhost {
 		max_size 6MB
 	}
 
-	reverse_proxy app:8000 {
-		header_up X-Forwarded-For {remote_host}
-		header_up -X-Real-IP
-		header_up -Forwarded
+	@login_v2 path /ui/v2/login /ui/v2/login/*
+	handle @login_v2 {
+		reverse_proxy zitadel-login:3000 {
+			import drop_client_zitadel_host_headers
+			import client_address
+		}
+	}
+
+	# ZITADEL v4.19.x's documented public routes (SaaS-OS ADR-0025 section
+	# 5). Re-check when the pinned ZITADEL version changes.
+	@zitadel path /v2/* /v2beta/* /zitadel.* /admin/v1/* /auth/v1/* /management/v1/* /system/v1/* /assets/v1/* /oidc/v1/* /saml/v2/* /oauth/v2/* /device /device/* /.well-known/openid-configuration /.well-known/apple-app-site-association /.well-known/assetlinks.json /openapi/* /idps/callback /idps/callback/* /ui/console /ui/console/* /ui/login /ui/login/*
+	handle @zitadel {
+		reverse_proxy h2c://zitadel:8080 {
+			import drop_client_zitadel_host_headers
+			import client_address
+		}
+	}
+
+	handle {
+		import strip_provider_cookies
+		reverse_proxy app:8000 {
+			import client_address
+		}
 	}
 }

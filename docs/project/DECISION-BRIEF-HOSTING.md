@@ -228,7 +228,9 @@ an enterprise customer's procurement require AWS.
 2. **Done locally 2026-11-07 (decision D-STG; items 2, 3 and 5):**
    `deploy/staging/`: a Compose file shaped on SaaS-OS
    `docker-compose.prod.yml` (Caddy, app, worker, Squid + resolver,
-   ZITADEL + login), with no `db`/`redis` services.
+   ZITADEL + login), with no `db`/`redis` services. ZITADEL and Login V2
+   added locally 2026-11-07 (decision D-STG.1); E4 in part and E5 proven
+   locally.
 3. A production Caddyfile: TLS, request-size cap, `X-Forwarded-For`
    overwritten, only `/` and `/app` routed (13-H1 F2).
 4. systemd units for the product's maintenance commands and SaaS-OS's

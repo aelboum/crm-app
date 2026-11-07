@@ -340,6 +340,35 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## D-STG.1 — ZITADEL in the local staging stack (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner: "Keep going",
+  2026-11-07). Local only; it does not choose self-hosted ZITADEL over
+  ZITADEL Cloud, which stays an owner decision (brief H).
+- **What:** `zitadel` (v4.19.5) and `zitadel-login` (Login V2) in
+  `deploy/staging/compose.yaml`, on an internal `identity` network with no
+  route out and nothing published. The edge serves them on the app's own
+  origin with the same routes as `deploy/local/Caddyfile` (SaaS-OS
+  ADR-0025), strips provider cookies before the app, and now uses a
+  certificate from the local CA. The app reaches its issuer through the
+  edge (network alias `leadstack.localhost`) and trusts only the local CA
+  for it (`OIDC_CA_BUNDLE`). `identity_local.py` creates the OIDC
+  application (`saas-os-local-identity`) and applies the sign-in settings
+  (`deploy/local/configure-zitadel.py`, whose local-issuer guard now also
+  accepts exactly `https://leadstack.localhost:8443`, with a unit test).
+- **Database:** ZITADEL has its own database on the same PostgreSQL over
+  `verify-full`, owned by a `zitadel` role that is not a superuser and has
+  no CREATEDB or CREATEROLE; the role and database are prepared first, as an
+  operator would on a managed service. ZITADEL's `start-from-init`
+  completed with that role as its "admin": no superuser credential is
+  needed for a managed PostgreSQL.
+- **Verified locally:** `verify_local.py` 35 of 35, adding E4 in part and
+  E5 (details in `PROGRESS.md`).
+- **Not covered:** the browser sign-in, MFA, and sign-out ending ZITADEL's
+  session (the rest of E4; a browser cannot trust the local CA without
+  installing it); a system-user key instead of bootstrap tokens for Login
+  V2 (SaaS-OS ADR-0025 section 7), which belongs to the host's deployment.
+
 ## D-STG — Production-shaped staging stack, rehearsed locally (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "cant we just

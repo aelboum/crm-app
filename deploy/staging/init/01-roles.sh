@@ -11,16 +11,21 @@
 # - `saas_os_platform_config`: created NOLOGIN here so the owner needs no
 #   CREATEROLE (SaaS-OS RUNBOOKS, platform configuration role); its URL is
 #   never given to the app or the worker.
+# - `zitadel`: owns the separate `zitadel` database (ZITADEL keeps its own,
+#   SaaS-OS ADR-0023), NOT a superuser; ZITADEL's init finds its role and
+#   database already there and only creates its schemas.
 # - Only TLS connections are accepted from the network.
 set -eu
 
 : "${CRM_APP_OWNER_PASSWORD:?}"
 : "${APP_DB_USER:?}"
 : "${APP_DB_PASSWORD:?}"
+: "${ZITADEL_DB_PASSWORD:?}"
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
     -v owner_password="$CRM_APP_OWNER_PASSWORD" \
-    -v app_user="$APP_DB_USER" -v app_password="$APP_DB_PASSWORD" <<'SQL'
+    -v app_user="$APP_DB_USER" -v app_password="$APP_DB_PASSWORD" \
+    -v zitadel_password="$ZITADEL_DB_PASSWORD" <<'SQL'
 SELECT format(
     'CREATE ROLE crm_app_owner LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION',
     :'owner_password')
@@ -34,6 +39,13 @@ CREATE DATABASE crm_app OWNER crm_app_owner;
 REVOKE CONNECT ON DATABASE crm_app FROM PUBLIC;
 SELECT format('GRANT CONNECT ON DATABASE crm_app TO %I', :'app_user')
 \gexec
+SELECT format(
+    'CREATE ROLE zitadel LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION',
+    :'zitadel_password')
+\gexec
+CREATE DATABASE zitadel OWNER zitadel;
+REVOKE CONNECT ON DATABASE zitadel FROM PUBLIC;
+GRANT CONNECT ON DATABASE zitadel TO zitadel;
 SQL
 
 # Network clients must use TLS; the image's default rule allows plain TCP.

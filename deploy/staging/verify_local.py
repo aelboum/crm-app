@@ -14,11 +14,26 @@ fails. Covers what a local run can prove (decision D-STG):
 - E6  every email switch refused at start-up in production.
 - E7  the worker has no direct route out; its proxy allows CONNECT to a
       public IPv4 address on 443 only.
+- E4  sign-in through the stack's ZITADEL on the app's own origin: the
+      app starts the flow, ZITADEL authenticates, the app's callback issues
+      a Secure, HttpOnly session; the app verified its issuer against the
+      local CA only; sign-out ends the session and continues to ZITADEL's
+      end-session endpoint. Not the brief's whole E4: no browser, no MFA.
+- E5  through that signed-in session, the user's own workspace answers and
+      another owner's workspace is refused, and the directory lists only
+      the user's own.
 - E10 the edge caps request bodies and replaces X-Forwarded-For.
 
-E4 (sign-in), E5 (cross-workspace refusal through a signed-in session),
-E8 (backup and restore) and E9 (alerting) need ZITADEL, the backup timers
-and monitoring in the stack; they are not checked here yet.
+E4 and E5 need `identity_local.py` to have run. ZITADEL's Login V2 pages
+are a JavaScript application, so the sign-in does what those pages do on
+the server side, as tests/identity/test_oidc_login.py does: a ZITADEL
+session with the user and password checks, then the authorization request
+finalised with it (the login client's token from `.local/bootstrap/`).
+The two workspaces are provisioned with `crm_app.provision`, as an operator
+would, and found again on later runs.
+
+E8 (backup and restore) and E9 (alerting) need the backup timers and
+monitoring in the stack; they are not checked here yet.
 
 Every command run here is a fixed `docker` invocation built in this file;
 every URL is the fixed local origin.
@@ -37,6 +52,9 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
+
+import httpx
 
 HERE = Path(__file__).resolve().parent
 LOCAL = HERE / ".local"
@@ -142,10 +160,8 @@ def settings() -> dict[str, str]:
 
 
 def edge_context() -> ssl.SSLContext:
-    """Trust Caddy's local root, copied out of the edge container."""
-    target = Path(tempfile.mkdtemp()) / "root.crt"
-    compose("cp", "edge:/data/caddy/pki/authorities/local/root.crt", str(target))
-    return ssl.create_default_context(cafile=str(target))
+    """Trust only the local CA, which issued the edge's certificate."""
+    return ssl.create_default_context(cafile=str(LOCAL / "ca.crt"))
 
 
 def fetch(
@@ -237,6 +253,145 @@ def forwarded_for(context: ssl.SSLContext) -> tuple[bool, str]:
     return echo.returncode == 0 and seen != "" and "6.6.6.6" not in seen, seen
 
 
+def _compose_env() -> dict[str, str]:
+    lines = (LOCAL / "compose.env").read_text(encoding="utf-8").splitlines()
+    return dict(line.split("=", 1) for line in lines if "=" in line and not line.startswith("#"))
+
+
+def sign_in(client: httpx.Client) -> tuple[bool, str, str]:
+    """The OIDC sign-in as ZITADEL's administrator; returns (signed in, the
+    user's OIDC subject, detail)."""
+    token = (LOCAL / "bootstrap" / "login-client.pat").read_text(encoding="utf-8").strip()
+    zitadel = {"Authorization": f"Bearer {token}"}
+    started = client.get(f"{ORIGIN}/auth/login")
+    page = urlsplit(str(started.url))
+    if not page.path.startswith("/ui/v2/login"):
+        return False, "", f"not sent to Login V2 ({started.status_code} {page.path})"
+    request_id = parse_qs(page.query)["requestId"][0].removeprefix("oidc_")
+    password = _compose_env()["ZITADEL_ADMIN_PASSWORD"]
+    session = client.post(
+        f"{ORIGIN}/v2/sessions",
+        headers=zitadel,
+        json={
+            "checks": {
+                "user": {"loginName": "admin@crm-app-staging.leadstack.localhost"},
+                "password": {"password": password},
+            }
+        },
+    )
+    if session.status_code not in (200, 201):
+        return False, "", f"session {session.status_code}"
+    created = session.json()
+    detail = client.get(f"{ORIGIN}/v2/sessions/{created['sessionId']}", headers=zitadel)
+    subject = detail.json()["session"]["factors"]["user"]["id"]
+    finalised = client.post(
+        f"{ORIGIN}/v2/oidc/auth_requests/{request_id}",
+        headers=zitadel,
+        json={
+            "session": {"sessionId": created["sessionId"], "sessionToken": created["sessionToken"]}
+        },
+    )
+    if finalised.status_code != 200:
+        return False, subject, f"finalise {finalised.status_code}"
+    landed = client.get(finalised.json()["callbackUrl"])
+    path = urlsplit(str(landed.url)).path
+    return not path.startswith("/auth/callback") and landed.status_code < 400, subject, path
+
+
+def session_cookie_flags(client: httpx.Client) -> str:
+    """The flags on the app's session cookie (SaaS-OS's default name)."""
+    for cookie in client.cookies.jar:
+        if cookie.name.endswith("saas_os_session"):
+            secure = "Secure" if cookie.secure else "not Secure"
+            httponly = "HttpOnly" if cookie.has_nonstandard_attr("HttpOnly") else "not HttpOnly"
+            return f"{cookie.name}: {secure}, {httponly}"
+    return "no app cookie"
+
+
+def provision(name: str, subject: str) -> str:
+    """An operator's `crm_app.provision` in a one-off app container; the
+    workspace's ID."""
+    done = compose(
+        "run",
+        "--rm",
+        "--no-deps",
+        "-T",
+        "app",
+        "python",
+        "-m",
+        "crm_app.provision",
+        "--name",
+        name,
+        "--owner-issuer",
+        ORIGIN,
+        "--owner-subject",
+        subject,
+        "--confirm-production",
+    )
+    for line in done.stdout.splitlines():
+        if line.startswith("workspace id:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+
+def identity_checks() -> None:
+    if "staging-placeholder" in settings().get("OIDC_CLIENT_ID", "staging-placeholder"):
+        check("E4 sign-in (run identity_local.py first)", False)
+        return
+    with httpx.Client(
+        verify=ssl.create_default_context(cafile=str(LOCAL / "ca.crt")),
+        follow_redirects=True,
+        timeout=30,
+        trust_env=False,
+    ) as client:
+        check(
+            "E4 signed out, /auth/me is refused", client.get(f"{ORIGIN}/auth/me").status_code == 401
+        )
+        ok, subject, detail = sign_in(client)
+        check("E4 sign-in through ZITADEL on the app's origin", ok, detail)
+        me = client.get(f"{ORIGIN}/auth/me")
+        check("E4 signed in, /auth/me answers", me.status_code == 200, str(me.status_code))
+        flags = session_cookie_flags(client)
+        check(
+            "E4 the session cookie is Secure and HttpOnly",
+            "not" not in flags and ":" in flags,
+            flags,
+        )
+        if not ok:
+            return
+
+        own = provision("Staging check: own", subject)
+        other = provision("Staging check: other owner", "staging-check-nobody")
+        check("E5 two workspaces provisioned", bool(own and other), f"{own} {other}")
+        answered = client.get(f"{ORIGIN}/v1/workspaces/{own}")
+        check(
+            "E5 the user's own workspace answers",
+            answered.status_code == 200,
+            str(answered.status_code),
+        )
+        for path in (f"/v1/workspaces/{other}", f"/v1/workspaces/{other}/members"):
+            refused = client.get(ORIGIN + path)
+            check(
+                f"E5 another owner's workspace is refused ({path.rsplit('/', 1)[-1][:8]})",
+                refused.status_code in (403, 404),
+                str(refused.status_code),
+            )
+        listed = client.get(f"{ORIGIN}/v1/workspaces").text
+        check("E5 the directory lists only the user's own", own in listed and other not in listed)
+
+        # Sign-out: the app's session ends, and the address the frontend
+        # sends the browser to next is ZITADEL's own end-session endpoint.
+        sign_out = client.get(f"{ORIGIN}/v1/sign-out-url").json().get("url") or ""
+        check(
+            "E4 sign-out continues to ZITADEL's end-session endpoint",
+            sign_out.startswith(f"{ORIGIN}/oidc/v1/end_session"),
+            sign_out.split("?", 1)[0],
+        )
+        ended = client.post(f"{ORIGIN}/auth/logout", headers={"Origin": ORIGIN})
+        after = client.get(f"{ORIGIN}/auth/me").status_code
+        check("E4 signed out, the session is gone", ended.status_code < 400 and after == 401)
+
+
 def main() -> int:
     if not (LOCAL / "app.env").exists():
         print("run prepare_local.py and start the stack first", file=sys.stderr)
@@ -263,6 +418,8 @@ def main() -> int:
     check("E3 the owner's connection uses TLS", parts[4:5] == ["True"])
     held = compose("exec", "-T", "app", "python", "-", stdin=_CREDENTIALS).stdout.strip()
     check("E3 the app holds no migration or admin credential", held == "[]", held)
+
+    identity_checks()
 
     # With a sender set, so the only reason left to refuse is production.
     sender = {"EMAIL_DEFAULT_SENDER": "team@mail.example.test"}
