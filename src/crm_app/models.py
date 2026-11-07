@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0041_saved_views` own the
+Migrations `0002_contacts_companies` to `0042_round_robin` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -1270,3 +1270,17 @@ class SavedView(Base):
     filters: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AutomationRotation(Base):
+    """How many contacts one round-robin step of an automation has handed
+    out (migration 0042, decision P8-R)."""
+
+    __tablename__ = "automation_rotation"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    automation_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    branch: Mapped[str] = mapped_column(Text, primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    handed_out: Mapped[int] = mapped_column(Integer)

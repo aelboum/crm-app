@@ -51,6 +51,7 @@ from crm_app.domains.records import InvalidValue
 from crm_app.models import (
     Automation,
     AutomationDue,
+    AutomationRotation,
     AutomationRun,
     AutomationStep,
     AutomationVersion,
@@ -583,6 +584,8 @@ def _act(  # noqa: PLR0911 - one answer per action
         return "done", None
     if action.type == "notify_member":
         return _notice(session, scope, contact, args)
+    if action.type == "assign_round_robin":
+        return _round_robin(session, scope, contact, run, args["user_ids"])
     # wait: the caller sets the run waiting.
     return "done", None
 
@@ -612,6 +615,48 @@ def _notice(
         note=args["message"],
     )
     return "done", None
+
+
+def _round_robin(
+    session: Session,
+    scope: Scope,
+    contact: Contact,
+    run: AutomationRun,
+    user_ids: list[str],
+) -> tuple[str, str | None]:
+    """`assign_round_robin` (P8-R): the contact goes to the next active member
+    in the list. The step's counter is advanced under a row lock in the
+    step's transaction, so parallel runs never take the same turn and a
+    retried step (which finds its step row) never advances it twice. A
+    member who left is passed over; with none left the step is skipped."""
+    branch, position = run.branch or "yes", run.next_step
+    rotation = session.execute(
+        select(AutomationRotation)
+        .where(
+            AutomationRotation.tenant_id == scope.workspace,
+            AutomationRotation.automation_id == run.automation_id,
+            AutomationRotation.branch == branch,
+            AutomationRotation.position == position,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if rotation is None:
+        rotation = AutomationRotation(
+            tenant_id=scope.workspace,
+            automation_id=run.automation_id,
+            branch=branch,
+            position=position,
+            handed_out=0,
+        )
+        session.add(rotation)
+        session.flush()
+    for offset in range(len(user_ids)):
+        candidate = uuid.UUID(user_ids[(rotation.handed_out + offset) % len(user_ids)])
+        if _active_member(scope.workspace, candidate):
+            rotation.handed_out += offset + 1
+            records.assign_owner_in(session, scope, contact.id, candidate)
+            return "done", None
+    return "skipped", "no_member"
 
 
 def advance(workspace: uuid.UUID, run_id: uuid.UUID) -> str:

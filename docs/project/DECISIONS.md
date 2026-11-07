@@ -340,6 +340,21 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P8-R — Round-robin assignment in automations (2026-11-08)
+
+- **Status:** Backend done under the autonomous mandate (the owner:
+  "Proceed", 2026-11-08); the automation editor's screen for it is next.
+- **What:** a new action `assign_round_robin` lists 2 to 20 members; each
+  run makes the contact's owner the next active member in turn. The turn is
+  a counter per automation step (`crm_app.automation_rotation`, migration
+  `0042_round_robin`, forced RLS, removed with its automation and in the
+  purge), advanced under a row lock in the step's own transaction: parallel
+  runs never take the same turn, a retried step never advances it, a member
+  who left is passed over, and with nobody left the step is skipped
+  (`no_member`). Named members must be active when the automation is
+  activated, as for `assign_owner`.
+- **Tests:** `tests/integration/test_round_robin.py` (3).
+
 ## P3-SV — Saved views of the contacts and deals lists (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Go" on the

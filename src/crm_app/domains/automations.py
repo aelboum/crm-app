@@ -61,6 +61,7 @@ ACTIONS = (
     "set_lifecycle_stage",
     "create_task",
     "notify_member",
+    "assign_round_robin",
     "wait",
 )
 PRIORITIES = ("high", "medium", "low")
@@ -71,6 +72,8 @@ TASK_TITLE_MAX = 200
 # The fixed text of a `notify_member` step (P8-N): written by whoever edits
 # the automation, never filled in from the contact.
 NOTICE_MAX = 200
+# A round-robin step's members (P8-R): at least two, so it is a rotation.
+ROTATION_MIN, ROTATION_MAX = 2, 20
 MINUTES_MAX = 30 * 24 * 60
 MAX_VALUES = 20
 
@@ -163,6 +166,17 @@ def _notice(raw: Mapping[str, Any], where: str) -> Action:
     return Action("notify_member", {"recipient": recipient, "message": message})
 
 
+def _rotation(raw: Mapping[str, Any], where: str) -> Action:
+    _keys(raw, {"type", "user_ids"}, where)
+    given = raw.get("user_ids")
+    if not isinstance(given, list):
+        raise InvalidValue(f"{where}.user_ids: a list")
+    users = list(dict.fromkeys(_uuid(u, f"{where}.user_ids") for u in given))
+    if not ROTATION_MIN <= len(users) <= ROTATION_MAX:
+        raise InvalidValue(f"{where}.user_ids: {ROTATION_MIN} to {ROTATION_MAX} members")
+    return Action("assign_round_robin", {"user_ids": users})
+
+
 def _action(raw: object, where: str) -> Action:
     if not isinstance(raw, Mapping):
         raise InvalidValue(f"{where}: an object")
@@ -183,10 +197,9 @@ def _action(raw: object, where: str) -> Action:
         _keys(raw, {"type", "minutes"}, where)
         minutes = _minutes(raw.get("minutes"), f"{where}.minutes", lowest=1)
         return Action(kind, {"minutes": minutes})
-    if kind == "create_task":
-        return _task(raw, where)
-    if kind == "notify_member":
-        return _notice(raw, where)
+    builder = {"create_task": _task, "notify_member": _notice, "assign_round_robin": _rotation}
+    if isinstance(kind, str) and kind in builder:
+        return builder[kind](raw, where)
     raise InvalidValue(f"{where}.type: one of {', '.join(ACTIONS)}")
 
 
@@ -323,4 +336,6 @@ def referenced(given: Definition) -> tuple[set[str], set[str]]:
             users.add(step.args["assignee"])
         elif step.type == "notify_member" and step.args["recipient"] != "contact_owner":
             users.add(step.args["recipient"])
+        elif step.type == "assign_round_robin":
+            users.update(step.args["user_ids"])
     return tags, users

@@ -139,6 +139,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "member_reminder_workspace",
         # P3-SV (saved views of the lists).
         "saved_view",
+        # P8-R (round-robin counters).
+        "automation_rotation",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
