@@ -3,9 +3,13 @@ import { useState } from "react";
 import { ApiError } from "../api/client";
 import {
   type ContactViewFilters,
+  type DealViewFilters,
   useContactViews,
+  useDealViews,
   useDeleteContactView,
+  useDeleteDealView,
   useSaveContactView,
+  useSaveDealView,
 } from "../api/savedViews";
 import { Button } from "../components/ui/Button";
 import type { MessageId } from "../i18n/en";
@@ -25,23 +29,35 @@ function failure(error: unknown): MessageId {
   return "views.error.generic";
 }
 
-export function ContactViews({
-  workspaceId,
+interface Saved<F> {
+  id: string;
+  name: string;
+  filters: F;
+}
+
+interface Mutation<A, R> {
+  mutate: (args: A, options?: { onSuccess?: (result: R) => void }) => void;
+  isPending: boolean;
+  error: unknown;
+}
+
+function SavedViewsMenu<F>({
+  items,
   current,
   onApply,
+  save,
+  remove,
 }: {
-  workspaceId: string;
-  current: ContactViewFilters;
-  onApply: (filters: ContactViewFilters) => void;
+  items: Saved<F>[];
+  current: F;
+  onApply: (filters: F) => void;
+  save: Mutation<{ name: string; filters: F }, Saved<F>>;
+  remove: Mutation<{ id: string }, null>;
 }) {
   const t = useT();
-  const views = useContactViews(workspaceId);
-  const save = useSaveContactView(workspaceId);
-  const remove = useDeleteContactView(workspaceId);
   const [chosen, setChosen] = useState("");
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
-  const items = views.data?.items ?? [];
   const problem = save.error ?? remove.error;
 
   return (
@@ -130,5 +146,51 @@ export function ContactViews({
         </span>
       ) : null}
     </div>
+  );
+}
+
+export function ContactViews({
+  workspaceId,
+  current,
+  onApply,
+}: {
+  workspaceId: string;
+  current: ContactViewFilters;
+  onApply: (filters: ContactViewFilters) => void;
+}) {
+  const views = useContactViews(workspaceId);
+  const save = useSaveContactView(workspaceId);
+  const remove = useDeleteContactView(workspaceId);
+  return (
+    <SavedViewsMenu
+      items={views.data?.items ?? []}
+      current={current}
+      onApply={onApply}
+      save={save}
+      remove={remove}
+    />
+  );
+}
+
+export function DealViews({
+  workspaceId,
+  current,
+  onApply,
+}: {
+  workspaceId: string;
+  current: DealViewFilters;
+  onApply: (filters: DealViewFilters) => void;
+}) {
+  const views = useDealViews(workspaceId);
+  const save = useSaveDealView(workspaceId);
+  const remove = useDeleteDealView(workspaceId);
+  return (
+    <SavedViewsMenu
+      items={views.data?.items ?? []}
+      current={current}
+      onApply={onApply}
+      save={save}
+      remove={remove}
+    />
   );
 }

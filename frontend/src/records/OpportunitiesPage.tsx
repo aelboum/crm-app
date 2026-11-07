@@ -20,6 +20,7 @@ import { Button } from "../components/ui/Button";
 import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
+import { DealViews } from "./ContactViews";
 import { DealDialog, refusalOf } from "./DealDialog";
 import { DealDrawer } from "./DealDrawer";
 import { daysInStage, formatMoney, isIdle, Money, moneyTotal, stageShade, totalsOf } from "./dealParts";
@@ -227,6 +228,25 @@ export function OpportunitiesPage({
             {t("records.clear")}
           </AriaButton>
         ) : null}
+        <DealViews
+          workspaceId={workspaceId}
+          current={{
+            q: search.trim() || null,
+            owner: owners,
+            outcome: outcome === "all" ? [] : [outcome],
+            idle,
+            sort,
+            direction,
+          }}
+          onApply={(saved) => {
+            setSearch(saved.q ?? "");
+            setOwners(saved.owner ?? []);
+            setOutcome(saved.outcome?.[0] ?? "all");
+            setIdle(saved.idle);
+            setSort(saved.sort);
+            setDirection(saved.direction);
+          }}
+        />
         <span className="records-meta">
           {first
             ? t("records.shown", {

@@ -65,3 +65,57 @@ export function useDeleteContactView(workspaceId: string) {
     onSettled: () => refresh(),
   });
 }
+
+export type DealView = components["schemas"]["DealViewOut"];
+export type DealViewFilters = components["schemas"]["DealViewFilters"];
+
+const dealKey = (workspaceId: string) =>
+  ["workspace", workspaceId, "saved-views", "opportunities"] as const;
+
+export function useDealViews(workspaceId: string) {
+  return useQuery({
+    queryKey: dealKey(workspaceId),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/saved-views/opportunities", {
+          params: { path: where(workspaceId) },
+        }),
+      ),
+  });
+}
+
+export function useSaveDealView(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation<
+    DealView,
+    ApiError,
+    { name: string; filters: DealViewFilters }
+  >({
+    mutationFn: async (body) =>
+      unwrapWrite(
+        await api.POST("/v1/workspaces/{tenant_id}/saved-views/opportunities", {
+          params: { path: where(workspaceId) },
+          body,
+        }),
+      ),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: dealKey(workspaceId) }),
+  });
+}
+
+export function useDeleteDealView(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation<null, ApiError, { id: string }>({
+    mutationFn: async ({ id }) =>
+      expectNoContent(
+        (
+          await api.DELETE(
+            "/v1/workspaces/{tenant_id}/saved-views/opportunities/{view_id}",
+            { params: { path: { tenant_id: workspaceId, view_id: id } } },
+          )
+        ).response,
+      ),
+    onSettled: () =>
+      client.invalidateQueries({ queryKey: dealKey(workspaceId) }),
+  });
+}
