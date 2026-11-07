@@ -137,6 +137,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         # N-2 (hosts' in-app appointment reminders).
         "appointment_member_reminder",
         "member_reminder_workspace",
+        # P3-SV (saved views of the lists).
+        "saved_view",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",

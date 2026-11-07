@@ -775,3 +775,10 @@ _add_routes(CONTACT, "contacts", ContactCreate, ContactUpdate, ContactOut)
 _add_routes(COMPANY, "companies", CompanyCreate, CompanyUpdate, CompanyOut)
 _add_tag_route(CONTACT, "contacts", ContactOut)
 _add_tag_route(COMPANY, "companies", CompanyOut)
+
+
+# The lists' saved views (decision P3-SV) are registered with the records
+# routes, from one import in the app.
+from crm_app.api.saved_views import router as _saved_views_router  # noqa: E402
+
+routers = (router, _saved_views_router)

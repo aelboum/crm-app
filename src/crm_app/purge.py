@@ -90,6 +90,8 @@ PURGE_TABLES: tuple[str, ...] = (
     "task",
     "appointment_reminder",
     "appointment_member_reminder",
+    # P3-SV: members' saved views of the lists.
+    "saved_view",
     "appointment",
     "opportunity_event",
     "opportunity",

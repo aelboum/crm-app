@@ -340,6 +340,24 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P3-SV — Saved views of the contacts and deals lists (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner: "Go" on the
+  recommended saved views, 2026-11-07). Backend first; screens follow.
+- **What:** a member saves named sets of list filters for Contacts and for
+  Deals, private to them (shared views would need rules on who may change
+  them: a later decision). Table `crm_app.saved_view` (migration
+  `0041_saved_views`, forced RLS, in the purge); at most 20 per member and
+  list; names unique per member and list, ignoring case.
+- **Safety:** every read and change names the member from the validated
+  request, so another member's or workspace's view answers 404. Filters
+  are checked against each list's own allow-list (search, stage, owner,
+  tag, archived, order for contacts; search, owner, outcome, idle, order
+  for deals) and nothing else is stored. Routes need the list's own read
+  permission, so a Read-only member saves views too.
+- **Tests:** `tests/integration/test_saved_views.py` (3); routes pinned in
+  `tests/unit/test_routes.py`.
+
 ## P3-BK — Bulk actions on contacts (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Go" on the

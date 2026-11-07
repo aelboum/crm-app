@@ -311,6 +311,16 @@ RECORDS |= {
 }
 # A contact's consent records (P7-A 10): a contact read.
 RECORDS["GET /v1/workspaces/{tenant_id}/contacts/{record_id}/consent"] = "crm_app.contact:read"
+# Saved views (decision P3-SV): the list's own read permission.
+for _list, _permission in (
+    ("contacts", "crm_app.contact:read"),
+    ("opportunities", "crm_app.opportunity:read"),
+):
+    _views = f"/v1/workspaces/{{tenant_id}}/saved-views/{_list}"
+    RECORDS[f"GET {_views}"] = _permission
+    RECORDS[f"POST {_views}"] = _permission
+    RECORDS[f"PATCH {_views}/{{view_id}}"] = _permission
+    RECORDS[f"DELETE {_views}/{{view_id}}"] = _permission
 # Bulk actions on contacts (decision P3-BK): a member's session, `update`.
 RECORDS["POST /v1/workspaces/{tenant_id}/contacts/bulk"] = "crm_app.contact:update"
 

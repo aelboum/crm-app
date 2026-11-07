@@ -2267,6 +2267,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/saved-views/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contact Views */
+        get: operations["list_contact_views_v1_workspaces__tenant_id__saved_views_contacts_get"];
+        put?: never;
+        /** Save Contact View */
+        post: operations["save_contact_view_v1_workspaces__tenant_id__saved_views_contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/saved-views/contacts/{view_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Contact View */
+        delete: operations["delete_contact_view_v1_workspaces__tenant_id__saved_views_contacts__view_id__delete"];
+        options?: never;
+        head?: never;
+        /** Change Contact View */
+        patch: operations["change_contact_view_v1_workspaces__tenant_id__saved_views_contacts__view_id__patch"];
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/saved-views/opportunities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Deal Views */
+        get: operations["list_deal_views_v1_workspaces__tenant_id__saved_views_opportunities_get"];
+        put?: never;
+        /** Save Deal View */
+        post: operations["save_deal_view_v1_workspaces__tenant_id__saved_views_opportunities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/saved-views/opportunities/{view_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Deal View */
+        delete: operations["delete_deal_view_v1_workspaces__tenant_id__saved_views_opportunities__view_id__delete"];
+        options?: never;
+        head?: never;
+        /** Change Deal View */
+        patch: operations["change_deal_view_v1_workspaces__tenant_id__saved_views_opportunities__view_id__patch"];
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/sender-identities/{identity_id}": {
         parameters: {
             query?: never;
@@ -3590,6 +3662,76 @@ export interface components {
             /** Source */
             source?: string | null;
         };
+        /**
+         * ContactViewFilters
+         * @description What the contacts list filters by (its own parameters).
+         */
+        ContactViewFilters: {
+            /**
+             * Archived
+             * @default false
+             * @enum {string}
+             */
+            archived: "false" | "true" | "all";
+            /**
+             * Direction
+             * @default asc
+             * @enum {string}
+             */
+            direction: "asc" | "desc";
+            /** Lifecycle Stage */
+            lifecycle_stage?: ("lead" | "prospect" | "customer" | "inactive")[];
+            /** Owner */
+            owner?: string[];
+            /** Q */
+            q?: string | null;
+            /**
+             * Sort
+             * @default name
+             * @enum {string}
+             */
+            sort: "name" | "created_at" | "updated_at";
+            /** Tag Id */
+            tag_id?: string[];
+        };
+        /** ContactViewIn */
+        ContactViewIn: {
+            filters: components["schemas"]["ContactViewFilters"];
+            /** Name */
+            name: string;
+        };
+        /** ContactViewList */
+        ContactViewList: {
+            /** Items */
+            items: components["schemas"]["ContactViewOut"][];
+        };
+        /** ContactViewOut */
+        ContactViewOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            filters: components["schemas"]["ContactViewFilters"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ContactViewPatch */
+        ContactViewPatch: {
+            filters?: components["schemas"]["ContactViewFilters"] | null;
+            /** Name */
+            name?: string | null;
+        };
         /** ConversationIn */
         ConversationIn: {
             /** Body */
@@ -3934,6 +4076,73 @@ export interface components {
             stages: components["schemas"]["StageSummary"][];
             /** Total Capped */
             total_capped: boolean;
+        };
+        /**
+         * DealViewFilters
+         * @description What the deals list filters by (its own parameters).
+         */
+        DealViewFilters: {
+            /**
+             * Direction
+             * @default desc
+             * @enum {string}
+             */
+            direction: "asc" | "desc";
+            /**
+             * Idle
+             * @default false
+             */
+            idle: boolean;
+            /** Outcome */
+            outcome?: ("open" | "won" | "lost")[];
+            /** Owner */
+            owner?: string[];
+            /** Q */
+            q?: string | null;
+            /**
+             * Sort
+             * @default updated_at
+             * @enum {string}
+             */
+            sort: "updated_at" | "created_at" | "title" | "amount" | "expected_close_date";
+        };
+        /** DealViewIn */
+        DealViewIn: {
+            filters: components["schemas"]["DealViewFilters"];
+            /** Name */
+            name: string;
+        };
+        /** DealViewList */
+        DealViewList: {
+            /** Items */
+            items: components["schemas"]["DealViewOut"][];
+        };
+        /** DealViewOut */
+        DealViewOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            filters: components["schemas"]["DealViewFilters"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DealViewPatch */
+        DealViewPatch: {
+            filters?: components["schemas"]["DealViewFilters"] | null;
+            /** Name */
+            name?: string | null;
         };
         /** DefinitionCreate */
         DefinitionCreate: {
@@ -11864,6 +12073,286 @@ export interface operations {
                 };
                 content: {
                     "text/csv": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contact_views_v1_workspaces__tenant_id__saved_views_contacts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactViewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_contact_view_v1_workspaces__tenant_id__saved_views_contacts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactViewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactViewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_contact_view_v1_workspaces__tenant_id__saved_views_contacts__view_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                view_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_contact_view_v1_workspaces__tenant_id__saved_views_contacts__view_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                view_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactViewPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactViewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deal_views_v1_workspaces__tenant_id__saved_views_opportunities_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealViewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_deal_view_v1_workspaces__tenant_id__saved_views_opportunities_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealViewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealViewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_deal_view_v1_workspaces__tenant_id__saved_views_opportunities__view_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                view_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_deal_view_v1_workspaces__tenant_id__saved_views_opportunities__view_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                view_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealViewPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealViewOut"];
                 };
             };
             /** @description Validation Error */

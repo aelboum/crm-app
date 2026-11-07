@@ -3281,6 +3281,186 @@
         "title": "ContactUpdate",
         "type": "object"
       },
+      "ContactViewFilters": {
+        "additionalProperties": false,
+        "description": "What the contacts list filters by (its own parameters).",
+        "properties": {
+          "archived": {
+            "default": "false",
+            "enum": [
+              "false",
+              "true",
+              "all"
+            ],
+            "title": "Archived",
+            "type": "string"
+          },
+          "direction": {
+            "default": "asc",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "lifecycle_stage": {
+            "items": {
+              "enum": [
+                "lead",
+                "prospect",
+                "customer",
+                "inactive"
+              ],
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Lifecycle Stage",
+            "type": "array"
+          },
+          "owner": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Owner",
+            "type": "array"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q"
+          },
+          "sort": {
+            "default": "name",
+            "enum": [
+              "name",
+              "created_at",
+              "updated_at"
+            ],
+            "title": "Sort",
+            "type": "string"
+          },
+          "tag_id": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Tag Id",
+            "type": "array"
+          }
+        },
+        "title": "ContactViewFilters",
+        "type": "object"
+      },
+      "ContactViewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/ContactViewFilters"
+          },
+          "name": {
+            "maxLength": 240,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "filters"
+        ],
+        "title": "ContactViewIn",
+        "type": "object"
+      },
+      "ContactViewList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContactViewOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ContactViewList",
+        "type": "object"
+      },
+      "ContactViewOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/ContactViewFilters"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "filters",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ContactViewOut",
+        "type": "object"
+      },
+      "ContactViewPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactViewFilters"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "ContactViewPatch",
+        "type": "object"
+      },
       "ConversationIn": {
         "additionalProperties": false,
         "properties": {
@@ -4437,6 +4617,173 @@
           "total_capped"
         ],
         "title": "DealSummary",
+        "type": "object"
+      },
+      "DealViewFilters": {
+        "additionalProperties": false,
+        "description": "What the deals list filters by (its own parameters).",
+        "properties": {
+          "direction": {
+            "default": "desc",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "idle": {
+            "default": false,
+            "title": "Idle",
+            "type": "boolean"
+          },
+          "outcome": {
+            "items": {
+              "enum": [
+                "open",
+                "won",
+                "lost"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Outcome",
+            "type": "array"
+          },
+          "owner": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Owner",
+            "type": "array"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q"
+          },
+          "sort": {
+            "default": "updated_at",
+            "enum": [
+              "updated_at",
+              "created_at",
+              "title",
+              "amount",
+              "expected_close_date"
+            ],
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "title": "DealViewFilters",
+        "type": "object"
+      },
+      "DealViewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/DealViewFilters"
+          },
+          "name": {
+            "maxLength": 240,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "filters"
+        ],
+        "title": "DealViewIn",
+        "type": "object"
+      },
+      "DealViewList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DealViewOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DealViewList",
+        "type": "object"
+      },
+      "DealViewOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/DealViewFilters"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "filters",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DealViewOut",
+        "type": "object"
+      },
+      "DealViewPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DealViewFilters"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "DealViewPatch",
         "type": "object"
       },
       "DefinitionCreate": {
@@ -23440,6 +23787,536 @@
         "summary": "Export Report Tasks",
         "tags": [
           "reports"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/saved-views/contacts": {
+      "get": {
+        "operationId": "list_contact_views_v1_workspaces__tenant_id__saved_views_contacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactViewList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Contact Views",
+        "tags": [
+          "saved views"
+        ]
+      },
+      "post": {
+        "operationId": "save_contact_view_v1_workspaces__tenant_id__saved_views_contacts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactViewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactViewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Contact View",
+        "tags": [
+          "saved views"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/saved-views/contacts/{view_id}": {
+      "delete": {
+        "operationId": "delete_contact_view_v1_workspaces__tenant_id__saved_views_contacts__view_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "View Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Contact View",
+        "tags": [
+          "saved views"
+        ]
+      },
+      "patch": {
+        "operationId": "change_contact_view_v1_workspaces__tenant_id__saved_views_contacts__view_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "View Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactViewPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactViewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Contact View",
+        "tags": [
+          "saved views"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/saved-views/opportunities": {
+      "get": {
+        "operationId": "list_deal_views_v1_workspaces__tenant_id__saved_views_opportunities_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealViewList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Deal Views",
+        "tags": [
+          "saved views"
+        ]
+      },
+      "post": {
+        "operationId": "save_deal_view_v1_workspaces__tenant_id__saved_views_opportunities_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealViewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealViewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Deal View",
+        "tags": [
+          "saved views"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/saved-views/opportunities/{view_id}": {
+      "delete": {
+        "operationId": "delete_deal_view_v1_workspaces__tenant_id__saved_views_opportunities__view_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "View Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Deal View",
+        "tags": [
+          "saved views"
+        ]
+      },
+      "patch": {
+        "operationId": "change_deal_view_v1_workspaces__tenant_id__saved_views_opportunities__view_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "View Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealViewPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealViewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Deal View",
+        "tags": [
+          "saved views"
         ]
       }
     },

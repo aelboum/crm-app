@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0040_automation_notice` own the
+Migrations `0002_contacts_companies` to `0041_saved_views` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -1253,3 +1253,20 @@ class SenderIdentity(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)
+
+
+class SavedView(Base):
+    """One member's named set of list filters for `contacts` or
+    `opportunities` (migration 0041, decision P3-SV)."""
+
+    __tablename__ = "saved_view"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column()
+    kind: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    filters: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
