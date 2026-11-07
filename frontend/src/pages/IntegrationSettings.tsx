@@ -57,11 +57,11 @@ function IssuedSecret({
   const t = useT();
   return (
     <div className="notice integration-secret" role="status">
-      <p>{t("integrations.secretOnce", { name: issued.key.name })}</p>
+      <p>{t("integrations.shownOnce", { name: issued.key.name })}</p>
       <p className="mono integration-secret-value">{issued.secret}</p>
-      <p className="muted">{t("integrations.secretHow")}</p>
+      <p className="muted">{t("integrations.howToSend")}</p>
       <Button size="sm" onPress={onDone}>
-        {t("integrations.secretDone")}
+        {t("integrations.copiedIt")}
       </Button>
     </div>
   );
