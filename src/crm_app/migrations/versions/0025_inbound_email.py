@@ -38,6 +38,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_context_exclusion_statements, tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0025_inbound_email"
 down_revision: str | Sequence[str] | None = "0024_email_streams"
 branch_labels: str | Sequence[str] | None = None
@@ -193,7 +195,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(f"DELETE FROM {SCHEMA}.conversation_message WHERE inbound_email_id IS NOT NULL")
+    with all_rows(f"{SCHEMA}.conversation_message"):
+        op.execute(f"DELETE FROM {SCHEMA}.conversation_message WHERE inbound_email_id IS NOT NULL")
     op.execute(f"DROP INDEX {SCHEMA}.conversation_message_inbound_key")
     op.execute(
         f"ALTER TABLE {SCHEMA}.conversation_message"

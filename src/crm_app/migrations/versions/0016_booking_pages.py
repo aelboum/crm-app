@@ -40,6 +40,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0016_booking_pages"
 down_revision: str | Sequence[str] | None = "0015_business_hours"
 branch_labels: str | Sequence[str] | None = None
@@ -192,10 +194,11 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(f"DROP TABLE {SCHEMA}.booking")
     op.execute(f"DROP TABLE {SCHEMA}.booking_page")
-    op.execute(f"UPDATE {SCHEMA}.contact SET source = 'other' WHERE source = 'booking'")
-    op.execute(
-        f"UPDATE {SCHEMA}.appointment SET cancelled_by_user_id = host_user_id"
-        " WHERE cancelled_at IS NOT NULL AND cancelled_by_user_id IS NULL"
-    )
+    with all_rows(f"{SCHEMA}.contact", f"{SCHEMA}.appointment"):
+        op.execute(f"UPDATE {SCHEMA}.contact SET source = 'other' WHERE source = 'booking'")
+        op.execute(
+            f"UPDATE {SCHEMA}.appointment SET cancelled_by_user_id = host_user_id"
+            " WHERE cancelled_at IS NOT NULL AND cancelled_by_user_id IS NULL"
+        )
     _replace_check("contact", "contact_source_check", f"source IN ({_in(SOURCES_BEFORE)})")
     _replace_check("appointment", "appointment_cancelled_check", CANCELLED_BEFORE)

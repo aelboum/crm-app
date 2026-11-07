@@ -30,6 +30,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_context_exclusion_statements, tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0031_appointment_reminders"
 down_revision: str | Sequence[str] | None = "0030_domain_claims"
 branch_labels: str | Sequence[str] | None = None
@@ -129,7 +131,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'appointment_reminder'")
+    with all_rows(f"{SCHEMA}.email_message"):
+        op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'appointment_reminder'")
     _purpose_check(_PURPOSES_BEFORE)
     op.execute(f"DROP TABLE {SCHEMA}.reminder_workspace")
     op.execute(f"DROP TABLE {SCHEMA}.appointment_reminder")

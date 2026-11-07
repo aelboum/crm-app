@@ -29,6 +29,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0026_campaigns"
 down_revision: str | Sequence[str] | None = "0025_inbound_email"
 branch_labels: str | Sequence[str] | None = None
@@ -185,7 +187,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(f"DROP TABLE {SCHEMA}.campaign_recipient")
     op.execute(f"DROP TABLE {SCHEMA}.campaign")
-    op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'campaign'")
+    with all_rows(f"{SCHEMA}.email_message"):
+        op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'campaign'")
     _purpose_check(_PURPOSES_BEFORE)
-    op.execute(f"DELETE FROM {SCHEMA}.consent_record WHERE method = 'unsubscribe_link'")
+    with all_rows(f"{SCHEMA}.consent_record"):
+        op.execute(f"DELETE FROM {SCHEMA}.consent_record WHERE method = 'unsubscribe_link'")
     _method_check(_METHODS_BEFORE)

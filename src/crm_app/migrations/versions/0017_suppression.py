@@ -29,6 +29,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0017_suppression"
 down_revision: str | Sequence[str] | None = "0016_booking_pages"
 branch_labels: str | Sequence[str] | None = None
@@ -122,9 +124,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute(f"DROP TABLE {SCHEMA}.suppression")
-    op.execute(
-        f"DELETE FROM {SCHEMA}.consent_record WHERE status <> 'granted' OR method <> 'web_form'"
-    )
+    with all_rows(f"{SCHEMA}.consent_record"):
+        op.execute(
+            f"DELETE FROM {SCHEMA}.consent_record WHERE status <> 'granted' OR method <> 'web_form'"
+        )
     _replace_check("consent_record_status_check", "status IN ('granted')")
     _replace_check("consent_record_method_check", "method IN ('web_form')")
     _replace_check("consent_record_wording_check", _message("wording"))

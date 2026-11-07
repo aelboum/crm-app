@@ -29,6 +29,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_context_exclusion_statements, tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0039_member_reminders"
 down_revision: str | Sequence[str] | None = "0038_email_outcome_unknown"
 branch_labels: str | Sequence[str] | None = None
@@ -104,7 +106,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(f"DELETE FROM {SCHEMA}.member_notification WHERE kind = 'appointment_upcoming'")
+    with all_rows(f"{SCHEMA}.member_notification"):
+        op.execute(f"DELETE FROM {SCHEMA}.member_notification WHERE kind = 'appointment_upcoming'")
     _kind_check(_APPOINTMENT_KINDS_BEFORE)
     op.execute(f"DROP TABLE {SCHEMA}.member_reminder_workspace")
     op.execute(f"DROP TABLE {SCHEMA}.appointment_member_reminder")

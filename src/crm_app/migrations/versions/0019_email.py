@@ -32,6 +32,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_context_exclusion_statements, tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0019_email"
 down_revision: str | Sequence[str] | None = "0018_report_indexes"
 branch_labels: str | Sequence[str] | None = None
@@ -199,7 +201,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(f"DELETE FROM {SCHEMA}.suppression WHERE origin = 'provider'")
+    with all_rows(f"{SCHEMA}.suppression"):
+        op.execute(f"DELETE FROM {SCHEMA}.suppression WHERE origin = 'provider'")
     _origin_check(_ORIGINS_BEFORE)
     op.execute(f"DROP TABLE {SCHEMA}.email_index")
     op.execute(f"DROP TABLE {SCHEMA}.email_event")

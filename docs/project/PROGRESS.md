@@ -1333,6 +1333,16 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Data changes in migrations under forced RLS (decision M-RLS, 2026-11-07)
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/unit/test_migration_data_writes.py` | 2 passed; on the code before the change it reports all 20 unwrapped data changes |
+| `uv run pytest tests/integration/test_migrations_as_owner.py` (local PostgreSQL 16) | 3 passed: both histories applied by a NOSUPERUSER NOBYPASSRLS owner; a bare `UPDATE` changes 0 rows, inside `all_rows` 2, RLS forced again; product downgrade to base and upgrade again as that owner |
+| Existing migration round trips (`test_foundation`, `test_suppression_tables`, `test_booking_page_tables`, `test_crm_tables`, `test_emails`) | 99 passed |
+| `uv run pytest tests/unit` | 756 passed |
+| ruff, ruff format, pyright, lint-imports | clean |
+
 ## Local staging rehearsal (decision D-STG, 2026-11-07)
 
 `deploy/staging/`, run locally with the `stateful-local` profile; every
@@ -1353,7 +1363,8 @@ passed, 0 failed** (24 at D-STG; 11 identity checks added by D-STG.1, after
 
 Not covered yet: the browser and MFA parts of E4, E8 and E9 (backups,
 monitoring). Findings: `DECISIONS.md` D-STG (the SaaS-OS proxy healthcheck,
-strict certificate checks, and the RLS risk for data migrations) and
+strict certificate checks, and the RLS risk for data migrations, since
+resolved by M-RLS) and
 D-STG.1 (ZITADEL initialises as a non-superuser owner).
 
 ## Production image (decision D-IMG, 2026-11-07)

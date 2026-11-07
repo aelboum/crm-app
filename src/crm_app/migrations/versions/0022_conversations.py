@@ -32,6 +32,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0022_conversations"
 down_revision: str | Sequence[str] | None = "0021_automations"
 branch_labels: str | Sequence[str] | None = None
@@ -160,5 +162,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     for table in ("conversation_read", "conversation_message", "conversation"):
         op.execute(f"DROP TABLE {SCHEMA}.{table}")
-    op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'conversation_reply'")
+    with all_rows(f"{SCHEMA}.email_message"):
+        op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'conversation_reply'")
     _purpose_check(_PURPOSES_BEFORE)

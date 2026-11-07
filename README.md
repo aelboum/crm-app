@@ -245,7 +245,8 @@ deployed. Where it runs is undecided: `docs/project/DECISION-BRIEF-HOSTING.md`.
 ```text
 Dockerfile          the production image (API, worker, migrations)
 src/crm_app/        application, worker and migration entrypoints; settings
-src/crm_app/migrations/   this product's Alembic history (schema crm_app)
+src/crm_app/migrations/   this product's Alembic history (schema crm_app); a data
+                          change on a tenant table goes inside `all_rows` (decision M-RLS)
 src/crm_app/domains/      pure product rules (no database or framework)
 tests/unit/         no services needed
 tests/integration/  PostgreSQL and Redis

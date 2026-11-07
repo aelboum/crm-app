@@ -22,6 +22,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0024_email_streams"
 down_revision: str | Sequence[str] | None = "0023_conversation_search"
 branch_labels: str | Sequence[str] | None = None
@@ -68,11 +70,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(f"DELETE FROM {SCHEMA}.email_event WHERE type IN ('failed', 'suppressed')")
-    # A rejected email was accepted (it has sent_at); as `failed` it must not.
-    op.execute(
-        f"UPDATE {SCHEMA}.email_message SET status = 'failed', sent_at = NULL"
-        " WHERE status = 'rejected'"
-    )
+    with all_rows(f"{SCHEMA}.email_event", f"{SCHEMA}.email_message"):
+        op.execute(f"DELETE FROM {SCHEMA}.email_event WHERE type IN ('failed', 'suppressed')")
+        # A rejected email was accepted (it has sent_at); as `failed` it must not.
+        op.execute(
+            f"UPDATE {SCHEMA}.email_message SET status = 'failed', sent_at = NULL"
+            " WHERE status = 'rejected'"
+        )
     _checks(_BEFORE, _EVENTS_BEFORE)
     op.execute(f"ALTER TABLE {SCHEMA}.email_message DROP COLUMN next_attempt_at")

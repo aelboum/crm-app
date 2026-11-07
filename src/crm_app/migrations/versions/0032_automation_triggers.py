@@ -15,6 +15,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0032_automation_triggers"
 down_revision: str | Sequence[str] | None = "0031_appointment_reminders"
 branch_labels: str | Sequence[str] | None = None
@@ -46,10 +48,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(f"DELETE FROM {SCHEMA}.automation WHERE trigger_type <> 'contact_created'")
-    op.execute(
-        f"DELETE FROM {SCHEMA}.automation_step"
-        " WHERE action IN ('remove_tag', 'set_lifecycle_stage')"
-    )
+    with all_rows(f"{SCHEMA}.automation", f"{SCHEMA}.automation_step"):
+        op.execute(f"DELETE FROM {SCHEMA}.automation WHERE trigger_type <> 'contact_created'")
+        op.execute(
+            f"DELETE FROM {SCHEMA}.automation_step"
+            " WHERE action IN ('remove_tag', 'set_lifecycle_stage')"
+        )
     _check("automation", "automation_trigger_check", _BEFORE)
     _check("automation_step", "automation_step_action_check", _ACTIONS_BEFORE)

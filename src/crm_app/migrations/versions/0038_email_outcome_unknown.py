@@ -26,6 +26,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0038_email_outcome_unknown"
 down_revision: str | Sequence[str] | None = "0037_member_notifications"
 branch_labels: str | Sequence[str] | None = None
@@ -72,17 +74,19 @@ def _checks(statuses: Sequence[str], unsent: Sequence[str]) -> None:
 def upgrade() -> None:
     table = f"{SCHEMA}.email_message"
     op.execute(f"ALTER TABLE {table} ADD COLUMN first_attempt_at timestamptz")
-    op.execute(f"UPDATE {table} SET first_attempt_at = created_at WHERE attempts > 0")
+    with all_rows(table):
+        op.execute(f"UPDATE {table} SET first_attempt_at = created_at WHERE attempts > 0")
     op.execute(f"ALTER TABLE {table} ADD COLUMN retry_safe_until timestamptz")
     _checks(_AFTER, _UNSENT_AFTER)
 
 
 def downgrade() -> None:
     table = f"{SCHEMA}.email_message"
-    op.execute(
-        f"UPDATE {table} SET status = 'failed', last_error = 'outcome_unknown'"
-        " WHERE status = 'outcome_unknown'"
-    )
+    with all_rows(table):
+        op.execute(
+            f"UPDATE {table} SET status = 'failed', last_error = 'outcome_unknown'"
+            " WHERE status = 'outcome_unknown'"
+        )
     _checks(_BEFORE, _UNSENT_BEFORE)
     op.execute(f"ALTER TABLE {table} DROP COLUMN retry_safe_until")
     op.execute(f"ALTER TABLE {table} DROP COLUMN first_attempt_at")

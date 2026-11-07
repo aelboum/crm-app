@@ -22,6 +22,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0030_domain_claims"
 down_revision: str | Sequence[str] | None = "0029_sending_domains"
 branch_labels: str | Sequence[str] | None = None
@@ -49,9 +51,10 @@ def upgrade() -> None:
         " ADD COLUMN verified_at timestamptz,"
         " ADD COLUMN event_at timestamptz"
     )
-    op.execute(
-        f"UPDATE {SCHEMA}.sending_domain SET verified_at = updated_at WHERE status = 'verified'"
-    )
+    with all_rows(f"{SCHEMA}.sending_domain"):
+        op.execute(
+            f"UPDATE {SCHEMA}.sending_domain SET verified_at = updated_at WHERE status = 'verified'"
+        )
     _status_check(_AFTER)
     op.execute(
         f"ALTER TABLE {SCHEMA}.sending_domain_index"
@@ -66,8 +69,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(f"DROP INDEX {SCHEMA}.sending_domain_index_claimed_idx")
     op.execute(f"ALTER TABLE {SCHEMA}.sending_domain_index DROP COLUMN claimed_at")
-    op.execute(
-        f"UPDATE {SCHEMA}.sending_domain SET status = 'not_registered' WHERE status = 'expired'"
-    )
+    with all_rows(f"{SCHEMA}.sending_domain"):
+        op.execute(
+            f"UPDATE {SCHEMA}.sending_domain SET status = 'not_registered' WHERE status = 'expired'"
+        )
     _status_check(_BEFORE)
     op.execute(f"ALTER TABLE {SCHEMA}.sending_domain DROP COLUMN event_at, DROP COLUMN verified_at")

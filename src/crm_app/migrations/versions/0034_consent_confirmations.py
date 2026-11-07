@@ -23,6 +23,8 @@ from collections.abc import Sequence
 from alembic import op
 from saas_os.infra.db import tenant_rls_statements
 
+from crm_app.migrations.all_rows import all_rows
+
 revision: str = "0034_consent_confirmations"
 down_revision: str | Sequence[str] | None = "0033_email_templates"
 branch_labels: str | Sequence[str] | None = None
@@ -100,8 +102,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(f"DELETE FROM {SCHEMA}.consent_record WHERE method = 'email_confirmation'")
+    with all_rows(f"{SCHEMA}.consent_record"):
+        op.execute(f"DELETE FROM {SCHEMA}.consent_record WHERE method = 'email_confirmation'")
     _check("consent_record", "consent_record_method_check", _METHODS_BEFORE)
-    op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'consent_confirmation'")
+    with all_rows(f"{SCHEMA}.email_message"):
+        op.execute(f"DELETE FROM {SCHEMA}.email_message WHERE purpose = 'consent_confirmation'")
     _check("email_message", "email_message_purpose_check", _PURPOSES_BEFORE)
     op.execute(f"DROP TABLE {SCHEMA}.consent_confirmation")

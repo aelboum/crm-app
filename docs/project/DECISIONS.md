@@ -340,6 +340,49 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## M-RLS — Data changes in migrations under forced RLS (2026-11-07)
+
+- **Status:** Approved by the owner ("approve the alternative", 2026-11-07)
+  in place of the maintenance role first recommended; built and tested.
+- **Problem (from D-STG):** every tenant table forces Row-Level Security,
+  which applies to the table owner. On a managed PostgreSQL the migration
+  owner is no superuser and cannot bypass RLS, so an `UPDATE`,
+  `INSERT ... SELECT` or `DELETE` on a tenant table without a tenant
+  context silently changes no rows. Local development and CI migrate as a
+  superuser and hid it. Affected: the upgrades of `0030` and `0038`, and the
+  downgrades of `0016`, `0017`, `0019`, `0022`, `0024`, `0025`, `0026`,
+  `0030`, `0031`, `0032`, `0034`, `0038` and `0039` (20 statements). `0003`
+  was listed in D-STG by mistake: its back-fill already loops per workspace
+  with `app.tenant_id` and works.
+- **Rejected: a maintenance role with BYPASSRLS.** Tested on PostgreSQL 16:
+  an admin with CREATEROLE but without BYPASSRLS, as managed services
+  usually give, cannot create one ("Only roles with the BYPASSRLS attribute
+  may create roles with the BYPASSRLS attribute").
+- **Decision:** `crm_app.migrations.all_rows.all_rows(*tables)`. Inside the
+  block the migration turns `FORCE ROW LEVEL SECURITY` off for the named
+  tables and on again afterwards. RLS stays enabled, so it still applies to
+  every role that does not own the table, the application included.
+  `ALTER TABLE` holds an ACCESS EXCLUSIVE lock to the end of the
+  transaction, and all migrations run in one transaction, so nothing else
+  touches the tables meanwhile and a failure rolls the setting back. The
+  helper refuses a table that does not force RLS, and only the table's
+  owner can use it. A per-workspace loop (`0003`) stays a valid alternative.
+- **Guards:** `tests/unit/test_migration_data_writes.py` fails on any data
+  change in a migration that is not inside `all_rows` for its table, not a
+  per-workspace loop, and not on a global table; it reports all 20
+  statements on the code before this change. The integration test
+  `tests/integration/test_migrations_as_owner.py` creates a database owned
+  by a NOSUPERUSER NOBYPASSRLS role and, as that role, applies both
+  histories, shows a bare `UPDATE` changing 0 rows and the same one inside
+  `all_rows` changing 2 (RLS forced again afterwards), then downgrades the
+  product history to its base and applies it again. It runs in CI's
+  integration job.
+- **Rule for new migrations:** a data change on a tenant table goes inside
+  `with all_rows(...)` (or loops per workspace). The unit guard enforces it.
+- **Not covered:** the round trip proves every migration runs as the owner,
+  but a missing `all_rows` would still pass it silently; that case is
+  caught by the unit guard, not by the database.
+
 ## D-STG.1 — ZITADEL in the local staging stack (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Keep going",
@@ -401,12 +444,10 @@ approval), **Superseded**.
   3. **Risk for future data migrations:** every tenant table forces RLS, so
      a back-fill (`UPDATE`/`INSERT ... SELECT`) run by a non-superuser owner
      without a tenant context changes no rows, silently. Local development
-     and CI migrate as a superuser and hide this. Migrations `0003`, `0016`,
-     `0024`, `0030` and `0038` change data; with no production data today
-     nothing is lost, but before the first deployment with data, data
-     migrations need either a tenant-context loop or a documented
-     maintenance role, and a CI job that migrates as a non-superuser.
-     **Not decided here.**
+     and CI migrate as a superuser and hide this. **Resolved by decision
+     M-RLS** (`all_rows`, a unit guard, and a CI test that migrates as a
+     non-superuser owner); the list of affected migrations there corrects
+     the one first given here.
 - **Not covered:** ZITADEL in the stack (sign-in, E4/E5), backups and the
   restore drill (E8), scheduled maintenance commands, monitoring (E9).
 
