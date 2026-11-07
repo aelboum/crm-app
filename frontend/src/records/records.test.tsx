@@ -782,4 +782,42 @@ describe("narrow screens", () => {
     );
     expect(await screen.findByRole("button", { name: "Client workspace" })).toBeInTheDocument();
   });
+
+  it("selects contacts and assigns them an owner in bulk", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/contacts`,
+      crm(OWNER_ACTIONS, (method, path) =>
+        method === "POST" && path === `/v1/workspaces/${WS}/contacts/bulk`
+          ? { status: 200, body: { done: 1, unchanged: 1, skipped: [] } }
+          : undefined,
+      ),
+    );
+    await screen.findByRole("table", { name: "Contacts" });
+    expect(screen.queryByRole("region", { name: /Bulk action/ })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "Select all shown contacts" }));
+    const bar = await screen.findByRole("region", { name: "Bulk action on 2 contacts" });
+    expect(within(bar).getByText("2 selected")).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "Select Ria Jansen" }));
+    expect(within(bar).getByText("1 selected")).toBeInTheDocument();
+    await user.selectOptions(within(bar).getByLabelText("New owner"), "u-2");
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(within(bar).getByRole("button", { name: "Apply" }));
+    expect(await within(bar).findByRole("status")).toHaveTextContent(
+      "1 changed, 1 already so, 0 skipped",
+    );
+    expect(sent).toContainEqual({
+      method: "POST",
+      path: `/v1/workspaces/${WS}/contacts/bulk`,
+      body: { contact_ids: [SAM], action: "assign_owner", owner_user_id: "u-2" },
+    });
+    await user.click(within(bar).getByRole("button", { name: "Clear selection" }));
+    expect(screen.queryByRole("region", { name: /Bulk action/ })).toBeNull();
+  });
+
+  it("gives a read-only member no selection", async () => {
+    renderApp(`/w/${WS}/contacts`, crm(READ_ONLY));
+    await screen.findByRole("table", { name: "Contacts" });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
 });

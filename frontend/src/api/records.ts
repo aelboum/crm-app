@@ -226,6 +226,24 @@ export function useRefresh(workspaceId: string) {
     ]);
 }
 
+export type BulkAction = components["schemas"]["ContactBulkIn"]["action"];
+export type BulkResult = components["schemas"]["ContactBulkOut"];
+
+/** One action on the selected contacts (decision P3-BK). */
+export function useBulkContacts(workspaceId: string) {
+  const refresh = useRefresh(workspaceId);
+  return useMutation<BulkResult, ApiError, components["schemas"]["ContactBulkIn"]>({
+    mutationFn: async (body) =>
+      unwrapWrite(
+        await api.POST("/v1/workspaces/{tenant_id}/contacts/bulk", {
+          params: { path: where(workspaceId) },
+          body,
+        }),
+      ),
+    onSettled: () => refresh(),
+  });
+}
+
 /** A key per create attempt; retrying the same attempt reuses it (crm_app.records.create). */
 export function newIdempotencyKey(): string {
   return globalThis.crypto.randomUUID().replaceAll("-", "");

@@ -311,6 +311,8 @@ RECORDS |= {
 }
 # A contact's consent records (P7-A 10): a contact read.
 RECORDS["GET /v1/workspaces/{tenant_id}/contacts/{record_id}/consent"] = "crm_app.contact:read"
+# Bulk actions on contacts (decision P3-BK): a member's session, `update`.
+RECORDS["POST /v1/workspaces/{tenant_id}/contacts/bulk"] = "crm_app.contact:update"
 
 # CSV import (decision P3-F 1): Owner and Admin only, through the
 # catalogue's `crm_data:import`.

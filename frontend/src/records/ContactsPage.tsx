@@ -25,6 +25,7 @@ import { useToast } from "../components/ui/Toast";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { useMemberNames } from "../members/names";
+import { ContactBulkBar } from "./ContactBulkBar";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
 import { CustomFieldsSection } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
@@ -122,6 +123,8 @@ export function ContactsPage({
   const [sort, setSort] = useState<Sort>("name");
   const [direction, setDirection] = useState<Direction>("asc");
   const [dialog, setDialog] = useState<{ contact: Contact | null } | null>(null);
+  // The bulk bar's selection (decision P3-BK), for members who may update.
+  const [selected, setSelected] = useState<string[]>([]);
   const q = useDebounced(search);
   const can = (action: string) => access.data?.actions[action] === true;
   const exporting = useRecordExport("contacts", workspaceId);
@@ -147,6 +150,8 @@ export function ContactsPage({
   const items = (list.data?.pages ?? []).flatMap((page) => page.items);
   const first = list.data?.pages[0];
   const filtered = search !== "" || stages.length > 0 || owners.length > 0 || tagIds.length > 0;
+  const canBulk = can("update_contact");
+  const allShown = items.length > 0 && items.every((c) => selected.includes(c.id));
 
   function toggleSort(next: Sort) {
     if (next === sort) {
@@ -258,6 +263,17 @@ export function ContactsPage({
       </div>
 
       <div className="records-card">
+        {canBulk && selected.length > 0 ? (
+          <ContactBulkBar
+            workspaceId={workspaceId}
+            selected={selected}
+            archivedView={view === "archived"}
+            onDone={() => undefined}
+            onClear={() => {
+              setSelected([]);
+            }}
+          />
+        ) : null}
         {list.isPending ? (
           <Loading />
         ) : list.isError ? (
@@ -277,6 +293,18 @@ export function ContactsPage({
               <caption className="sr-only">{t("nav.contacts")}</caption>
               <thead>
                 <tr>
+                  {canBulk ? (
+                    <th scope="col" className="check-col">
+                      <input
+                        type="checkbox"
+                        aria-label={t("bulk.selectAll")}
+                        checked={allShown}
+                        onChange={() => {
+                          setSelected(allShown ? [] : items.map((c) => c.id));
+                        }}
+                      />
+                    </th>
+                  ) : null}
                   <th scope="col" aria-sort={sort === "name" ? (direction === "asc" ? "ascending" : "descending") : undefined}>
                     <SortHeader label={t("records.col.name")} active={sort === "name"} direction={direction} onSort={() => { toggleSort("name"); }} />
                   </th>
@@ -299,6 +327,27 @@ export function ContactsPage({
                     className={contact.id === openId ? "selected" : undefined}
                     onClick={() => { onOpen(contact.id); }}
                   >
+                    {canBulk ? (
+                      <td
+                        className="check-col"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          aria-label={t("bulk.selectOne", { name: fullName(contact) })}
+                          checked={selected.includes(contact.id)}
+                          onChange={() => {
+                            setSelected((current) =>
+                              current.includes(contact.id)
+                                ? current.filter((id) => id !== contact.id)
+                                : [...current, contact.id],
+                            );
+                          }}
+                        />
+                      </td>
+                    ) : null}
                     <td>
                       <span className="name-cell">
                         <Avatar id={contact.id} label={initials(contact.first_name, contact.last_name)} />

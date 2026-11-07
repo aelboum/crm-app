@@ -1621,6 +1621,25 @@
         "title": "BookingView",
         "type": "object"
       },
+      "BulkSkipped": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason"
+        ],
+        "title": "BulkSkipped",
+        "type": "object"
+      },
       "CampaignIn": {
         "additionalProperties": false,
         "properties": {
@@ -2579,6 +2598,101 @@
           "recorded_at"
         ],
         "title": "ConsentOut",
+        "type": "object"
+      },
+      "ContactBulkIn": {
+        "additionalProperties": false,
+        "description": "One action on up to `records.BULK_MAX` contacts (the bulk bar).",
+        "properties": {
+          "action": {
+            "enum": [
+              "assign_owner",
+              "add_tag",
+              "remove_tag",
+              "set_stage",
+              "archive",
+              "restore"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "contact_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Contact Ids",
+            "type": "array"
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "tag_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Id"
+          }
+        },
+        "required": [
+          "contact_ids",
+          "action"
+        ],
+        "title": "ContactBulkIn",
+        "type": "object"
+      },
+      "ContactBulkOut": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/BulkSkipped"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "done",
+          "unchanged",
+          "skipped"
+        ],
+        "title": "ContactBulkOut",
         "type": "object"
       },
       "ContactCreate": {
@@ -15485,6 +15599,76 @@
           }
         },
         "summary": "Create Contact",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/contacts/bulk": {
+      "post": {
+        "description": "Each contact changes on its own, exactly as one change would; the\nanswer says how many changed and which were skipped, and why.",
+        "operationId": "bulk_update_contacts_v1_workspaces__tenant_id__contacts_bulk_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactBulkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactBulkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bulk Update Contacts",
         "tags": [
           "contacts"
         ]

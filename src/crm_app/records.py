@@ -50,7 +50,7 @@ from crm_app import system_audit
 from crm_app.domains import custom_fields as field_rules
 from crm_app.domains import paging
 from crm_app.domains.membership import ACTIVE
-from crm_app.domains.records import InvalidValue
+from crm_app.domains.records import STAGES, InvalidValue
 from crm_app.models import (
     Activity,
     Company,
@@ -190,6 +190,16 @@ class InvalidReferenceError(RecordError):
 
 class TooManyTagsError(RecordError):
     status, code = 422, "too_many_tags"
+
+
+class InvalidBulkActionError(RecordError):
+    """A bulk action the rules refuse; `field` names what is wrong."""
+
+    status, code = 422, "invalid_bulk_action"
+
+    def __init__(self, field: str) -> None:
+        super().__init__(field)
+        self.field = field
 
 
 class CustomFieldValueError(RecordError):
@@ -1106,6 +1116,7 @@ def assign_owner_in(
     session.flush()
     session.add_all(_change_history(CONTACT, scope, row, before))
     _audit(session, CONTACT, scope, _Event("updated", contact_id, {"fields": ["owner_user_id"]}))
+    _contact_changed(session, scope, row, ["owner_user_id"])
     return True
 
 
@@ -1192,7 +1203,111 @@ def set_stage_in(session: Session, scope: Scope, contact_id: uuid.UUID, stage: s
     session.flush()
     session.add_all(_change_history(CONTACT, scope, row, before))
     _audit(session, CONTACT, scope, _Event("updated", contact_id, {"fields": ["lifecycle_stage"]}))
+    _contact_changed(session, scope, row, ["lifecycle_stage"])
     return True
+
+
+def _contact_changed(session: Session, scope: Scope, row: Any, changed: list[str]) -> None:
+    """Customers' webhooks hear of an owner or stage changed by an
+    automation step or a bulk action, as of any other change (P12-H)."""
+    from crm_app import webhooks  # noqa: PLC0415 - webhooks imports this module
+
+    data = {**webhooks.contact_data(row), "changed": sorted(changed)}
+    webhooks.emit(session, scope.workspace, "contact.updated", data)
+
+
+BULK_MAX = 100
+BULK_ACTIONS = ("assign_owner", "add_tag", "remove_tag", "set_stage", "archive", "restore")
+
+
+def _bulk_one(  # noqa: PLR0913, PLR0917 - one contact, the action and its one value
+    session: Session,
+    scope: Scope,
+    contact_id: uuid.UUID,
+    action: str,
+    owner_user_id: uuid.UUID | None,
+    tag_id: uuid.UUID | None,
+    stage: str | None,
+) -> str:
+    """One contact's change in its transaction: `done`, `same` or a reason."""
+    if action == "assign_owner" and owner_user_id is not None:
+        return "done" if assign_owner_in(session, scope, contact_id, owner_user_id) else "same"
+    if action == "set_stage" and stage is not None:
+        return "done" if set_stage_in(session, scope, contact_id, stage) else "same"
+    if action == "add_tag" and tag_id is not None:
+        result = add_tag_in(session, scope, contact_id, tag_id)
+        return {"added": "done", "present": "same"}.get(result, result)
+    if action == "remove_tag" and tag_id is not None:
+        return "done" if remove_tag_in(session, scope, contact_id, tag_id) == "removed" else "same"
+    return "same"
+
+
+def _check_bulk(
+    scope: Scope,
+    action: str,
+    owner_user_id: uuid.UUID | None,
+    tag_id: uuid.UUID | None,
+    stage: str | None,
+) -> None:
+    if action not in BULK_ACTIONS:
+        raise InvalidBulkActionError("action")
+    if action == "assign_owner":
+        if owner_user_id is None:
+            raise InvalidBulkActionError("owner_user_id")
+        check_owner(scope, owner_user_id)
+    if action in ("add_tag", "remove_tag") and tag_id is None:
+        raise InvalidBulkActionError("tag_id")
+    if action == "set_stage" and stage not in STAGES:
+        raise InvalidBulkActionError("stage")
+
+
+def bulk_update_contacts(  # noqa: PLR0913 - which contacts, what to do, and its one value
+    scope: Scope,
+    contact_ids: Sequence[uuid.UUID],
+    action: str,
+    *,
+    owner_user_id: uuid.UUID | None = None,
+    tag_id: uuid.UUID | None = None,
+    stage: str | None = None,
+) -> dict[str, Any]:
+    """One action on up to `BULK_MAX` contacts (the contacts list's bulk
+    bar). Each contact changes in its own transaction through the same
+    functions as a single change, so history, audit, automations and
+    webhooks are the same, and one contact failing never undoes the
+    others. Returns how many changed, how many already were so, and the
+    contacts skipped with a reason (`not_found`, `tag_gone`, `too_many`,
+    `duplicate`)."""
+    _check_bulk(scope, action, owner_user_id, tag_id, stage)
+    ids = list(dict.fromkeys(contact_ids))
+    if not 1 <= len(ids) <= BULK_MAX:
+        raise InvalidBulkActionError("contact_ids")
+    done, unchanged = 0, 0
+    skipped: list[dict[str, str]] = []
+    for contact_id in ids:
+        try:
+            if action in ("archive", "restore"):
+                set_archived(CONTACT, scope, contact_id, archived=action == "archive")
+                outcome = "done"
+            else:
+                outcome = _write(
+                    CONTACT,
+                    scope,
+                    lambda: None,
+                    lambda s, c=contact_id: _bulk_one(
+                        s, scope, c, action, owner_user_id, tag_id, stage
+                    ),
+                )
+        except RecordNotFoundError:
+            outcome = "not_found"
+        except DuplicateRecordError:
+            outcome = "duplicate"
+        if outcome == "done":
+            done += 1
+        elif outcome == "same":
+            unchanged += 1
+        else:
+            skipped.append({"id": str(contact_id), "reason": outcome})
+    return {"done": done, "unchanged": unchanged, "skipped": skipped}
 
 
 def set_archived(kind: Kind, scope: Scope, record_id: uuid.UUID, *, archived: bool) -> Record:

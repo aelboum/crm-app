@@ -1587,3 +1587,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .sending-flags legend { padding: 0; margin-bottom: 4px; font-size: 12.5px; font-weight: 600; }
 .profile-name-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .profile-name-row .field-input { flex: 1; min-width: 200px; }
+
+/* The contacts list's bulk bar and selection column (decision P3-BK). */
+.bulk-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); background: #f8fafc; }
+.bulk-count { font-weight: 600; }
+.bulk-result { color: var(--ink-2); }
+.records-table .check-col { width: 32px; }

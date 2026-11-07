@@ -406,7 +406,7 @@ messages; the design's validation texts.
   the progress. Members and Read-only users see Import disabled, named
   "Import (Only Owners and Admins can import)". Companies gain the same
   Import button. *Not built, shown honestly:* quick actions (Message, Call, Book, Deal), the
-  bulk bar, the columns picker, opportunities, pipeline and "Won" are left
+  columns picker, opportunities, pipeline and "Won" are left
   out, and the drawer says what is not available.
 - *Export (slices 3E1 and 3E2, decisions P3-E1 and P3-E2):* Export works on
   both Contacts and Companies and downloads a CSV of the current search,
@@ -414,7 +414,12 @@ messages; the design's validation texts.
   secondary button. Members and Read-only users see it disabled, named
   "Export (Only Owners and Admins can export …)"; while it runs it reads
   "Exporting…" with a spinner, and a refusal shows an inline error message
-  under the header. The bulk bar's "Export" stays out (no bulk bar).
+  under the header. The bulk bar's "Export" stays out: Export follows the list's
+  filters.
+- *Bulk bar (decision P3-BK):* a selection column and the bar on Contacts:
+  assign owner, add or remove a tag, set the stage, archive or restore, on
+  up to 100 contacts; the result says how many changed, already were so,
+  or were skipped. "Add to automation" is not built.
 - *Paging:* "Load more" by cursor instead of page numbers (the API pages
   by keyset cursor); the count reads "N of M" up to 10,000, then "10,000+".
 - *Columns:* contacts show Name (with email or phone), Stage, Owner,

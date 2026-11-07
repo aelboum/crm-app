@@ -340,6 +340,31 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P3-BK — Bulk actions on contacts (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner: "Go" on the
+  recommended bulk actions, 2026-11-07).
+- **What:** the contacts list gains a selection column and the design's
+  bulk bar, for members who may update contacts (Owner, Admin, Member).
+  On up to 100 selected contacts at once: assign an owner (any active
+  member), add or remove a tag, set the lifecycle stage, archive (or, in
+  the Archived view, restore). `POST /v1/workspaces/{id}/contacts/bulk`,
+  `crm_app.contact:update`, a member's session only (no API key).
+- **How:** each contact changes in its own transaction through the same
+  functions as a single change (`records.bulk_update_contacts`), so its
+  history, audit entry, automations and webhooks are those of a single
+  change, and one contact failing never undoes the others. The answer says
+  how many changed, how many already were so, and which were skipped and
+  why (`not_found` covers another workspace's contacts too). An owner or
+  stage changed by an automation step or a bulk action now sends
+  `contact.updated` to customers' webhooks, as any other change does.
+- **Not built:** the design's "Add to automation" (automations start from
+  their triggers; a "started by hand" trigger would be a new decision) and
+  "Export" in the bar (Export follows the list's filters); bulk actions on
+  companies and deals.
+- **Tests:** `tests/integration/test_bulk_actions.py` (4),
+  `frontend/src/records/records.test.tsx` (2 new).
+
 ## D-STG.4 — Settings template and staging runbook (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Procees there

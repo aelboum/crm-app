@@ -544,6 +544,58 @@ def _page(kind: Kind, context: RequestContext, query: records.ListQuery) -> reco
         raise HTTPException(400, detail={"code": "invalid_cursor"}) from None
 
 
+class ContactBulkIn(BaseModel):
+    """One action on up to `records.BULK_MAX` contacts (the bulk bar)."""
+
+    model_config = ConfigDict(extra="forbid")
+    contact_ids: list[uuid.UUID] = Field(min_length=1, max_length=records.BULK_MAX)
+    action: Literal["assign_owner", "add_tag", "remove_tag", "set_stage", "archive", "restore"]
+    owner_user_id: uuid.UUID | None = None
+    tag_id: uuid.UUID | None = None
+    stage: str | None = None
+
+
+class BulkSkipped(BaseModel):
+    id: uuid.UUID
+    # not_found, tag_gone, too_many or duplicate.
+    reason: str
+
+
+class ContactBulkOut(BaseModel):
+    done: int
+    unchanged: int
+    skipped: list[BulkSkipped]
+
+
+@router.post(
+    "/{tenant_id}/contacts/bulk",
+    response_model=ContactBulkOut,
+    tags=["contacts"],
+    name="bulk_update_contacts",
+)
+def bulk_update_contacts(
+    body: ContactBulkIn,
+    context: Annotated[RequestContext, Depends(require_permission(CONTACT.resource, "update"))],
+) -> Any:
+    """Each contact changes on its own, exactly as one change would; the
+    answer says how many changed and which were skipped, and why."""
+    try:
+        return records.bulk_update_contacts(
+            _scope(context),
+            body.contact_ids,
+            body.action,
+            owner_user_id=body.owner_user_id,
+            tag_id=body.tag_id,
+            stage=body.stage,
+        )
+    except records.InvalidBulkActionError as exc:
+        raise HTTPException(
+            status_code=exc.status, detail={"code": exc.code, "field": exc.field}
+        ) from None
+    except RecordError as exc:
+        raise _http(exc) from None
+
+
 @router.get("/{tenant_id}/contacts", response_model=ContactPage, tags=["contacts"])
 def list_contacts(
     context: Annotated[

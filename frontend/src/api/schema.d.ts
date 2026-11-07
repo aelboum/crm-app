@@ -987,6 +987,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/contacts/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Update Contacts
+         * @description Each contact changes on its own, exactly as one change would; the
+         *     answer says how many changed and which were skipped, and why.
+         */
+        post: operations["bulk_update_contacts_v1_workspaces__tenant_id__contacts_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/contacts/export.csv": {
         parameters: {
             query?: never;
@@ -3097,6 +3118,16 @@ export interface components {
              */
             starts_at: string;
         };
+        /** BulkSkipped */
+        BulkSkipped: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason: string;
+        };
         /** CampaignIn */
         CampaignIn: {
             /** Body */
@@ -3379,6 +3410,34 @@ export interface components {
             status: "granted" | "withdrawn";
             /** Wording */
             wording: string | null;
+        };
+        /**
+         * ContactBulkIn
+         * @description One action on up to `records.BULK_MAX` contacts (the bulk bar).
+         */
+        ContactBulkIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "assign_owner" | "add_tag" | "remove_tag" | "set_stage" | "archive" | "restore";
+            /** Contact Ids */
+            contact_ids: string[];
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Stage */
+            stage?: string | null;
+            /** Tag Id */
+            tag_id?: string | null;
+        };
+        /** ContactBulkOut */
+        ContactBulkOut: {
+            /** Done */
+            done: number;
+            /** Skipped */
+            skipped: components["schemas"]["BulkSkipped"][];
+            /** Unchanged */
+            unchanged: number;
         };
         /** ContactCreate */
         ContactCreate: {
@@ -8367,6 +8426,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_update_contacts_v1_workspaces__tenant_id__contacts_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactBulkOut"];
                 };
             };
             /** @description Validation Error */

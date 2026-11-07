@@ -1333,6 +1333,14 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Bulk actions on contacts (decision P3-BK, 2026-11-07)
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_bulk_actions.py` | 4 passed: assign to 3 contacts (an unknown and another workspace's skipped as `not_found`, the other untouched), repeating changes nothing; tags added and removed, stage set, archive and restore; each contact's own history and audit; outsider owner, bad stage, no tag, 101 or 0 contacts, unknown action and Read-only refused |
+| `uv run pytest tests/unit` | 774 passed |
+| Frontend `records.test.tsx`; typecheck; lint | 33 passed; clean |
+
 ## Customers' webhooks (decision P12-H, 2026-11-07)
 
 | Check | Result |
