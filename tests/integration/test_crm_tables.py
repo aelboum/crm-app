@@ -383,4 +383,6 @@ def test_the_migration_rolls_back_and_forward(
         "sender_identity",
         "appointment_reminder",
         "reminder_workspace",
+        "appointment_member_reminder",
+        "member_reminder_workspace",
     }
