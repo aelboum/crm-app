@@ -1333,6 +1333,24 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Unknown send outcomes (decision E-R1, 2026-11-07)
+
+Migration `0038_email_outcome_unknown`; `crm_app.emails` stops retrying an
+email whose outcome is unknown unless the provider de-duplicates the
+repeat, and then only inside its window. Locally on Windows:
+
+| Check | Result |
+| --- | --- |
+| `ruff format --check .` / `ruff check .` | 364 files formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| `pytest tests/unit` | 753 passed |
+| `pytest` on the 12 email, booking, reminder, campaign, consent, conversation and inbound integration files, `.env.test` | 138 passed (includes the four new E-R1 tests; the probe's own-row count moved from 8 to 15) |
+| `pytest tests/integration/test_foundation.py` | passed; product head `0038_email_outcome_unknown` |
+| Frontend `typecheck`, `lint` | clean |
+| Frontend `npm test` | 330 passed and 3 failed in the full parallel run (`forms`, `opportunities`, `pipelineSettings`); the three files pass alone (29 of 29). Load on this machine, not this change: none of them renders an email status |
+
+Not run locally: the full integration suite (CI).
+
 ## SaaS-OS upgrade to v0.10.0 (decision K3.9, 2026-11-07)
 
 On the new pin `0f9bf4d` (v0.10.0, from v0.8.0 `140d9dd`; v0.9.0

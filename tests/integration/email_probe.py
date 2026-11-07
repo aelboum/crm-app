@@ -18,11 +18,17 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
-from saas_os.core.email import EmailMessage, EmailProviderError, EmailSendResult
+from saas_os.core.email import (
+    EmailMessage,
+    EmailNotSentError,
+    EmailOutcomeUnknownError,
+    EmailProviderError,
+    EmailSendResult,
+)
 from saas_os.infra.db import session_scope, tenant_session_scope
 from saas_os.infra.secrets import get_secrets_provider
 from sqlalchemy import text
@@ -58,6 +64,19 @@ class Recorder:
             )
         if self.mode == "permanent":
             raise EmailProviderError("send", "validation_error", permanent=True, reply_code=422)
+        # Unknown outcomes (decision E-R1): SMTP gives no window, Resend 24 h.
+        if self.mode == "unknown":
+            raise EmailOutcomeUnknownError("send", "connection_lost", phase="data")
+        if self.mode == "unknown_window":
+            raise EmailOutcomeUnknownError(
+                "send", "read_timeout", phase="response", retry_within=timedelta(hours=24)
+            )
+        if self.mode == "unknown_short":
+            raise EmailOutcomeUnknownError(
+                "send", "read_timeout", phase="response", retry_within=timedelta(minutes=5)
+            )
+        if self.mode == "not_sent":
+            raise EmailNotSentError("send", "connection_refused")
         with self.lock:
             self.sent.append(message)
             return EmailSendResult(accepted=True, provider_message_id=f"re_{uuid.uuid4().hex}")
@@ -67,7 +86,10 @@ def _row(workspace: uuid.UUID, email_id: uuid.UUID) -> dict[str, Any]:
     with tenant_session_scope(workspace) as session:
         row = session.execute(
             text(
-                "SELECT status, attempts, last_error, provider, provider_message_id"
+                "SELECT status, attempts, last_error, provider, provider_message_id,"
+                " sent_at IS NOT NULL AS has_sent_at,"
+                " round(extract(epoch FROM retry_safe_until - first_attempt_at) / 60)::int"
+                " AS safe_minutes"
                 " FROM crm_app.email_message WHERE tenant_id = :t AND id = :id"
             ),
             {"t": workspace, "id": email_id},
@@ -188,6 +210,86 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             {"t": a.id, "id": tired},
         )
     result["exhausted"] = [send(tired), _row(a.id, tired)["last_error"]]
+
+    # --- Unknown outcomes: never retried blindly (decision E-R1) ----------------------------
+    def tries(email_id: uuid.UUID) -> int:
+        return sum(1 for m in provider.sent if str(email_id) in (m.message_id or ""))
+
+    def set_row(email_id: uuid.UUID, sql: str) -> None:
+        with tenant_session_scope(a.id) as session:
+            session.execute(
+                # The SET clauses are this script's own constants.
+                text(f"UPDATE crm_app.email_message SET {sql} WHERE tenant_id = :t AND id = :id"),  # noqa: S608
+                {"t": a.id, "id": email_id},
+            )
+
+    # No window (SMTP after DATA): final at once; a replayed job sends nothing.
+    lost = queue()
+    provider.mode = "unknown"
+    lost_answer = send(lost)
+    provider.mode = "ok"
+    result["unknown"] = [lost_answer, _row(a.id, lost), _index(lost), send(lost), tries(lost)]
+    # A window (Resend): retried inside it, then sent.
+    timed_out = queue()
+    provider.mode = "unknown_window"
+    window_answer = send(timed_out)
+    window_row = _row(a.id, timed_out)
+    provider.mode = "ok"
+    _due_now(a.id, timed_out)
+    result["unknown_window"] = [window_answer, window_row, send(timed_out), tries(timed_out)]
+    # A later try past the window is never made, whatever failed in between.
+    stale = queue()
+    provider.mode = "unknown_window"
+    send(stale)
+    _due_now(a.id, stale)
+    provider.mode = "not_sent"
+    between = send(stale)
+    provider.mode = "ok"
+    set_row(stale, "retry_safe_until = now() - interval '1 second'")
+    _due_now(a.id, stale)
+    result["unknown_expired"] = [between, send(stale), _row(a.id, stale)["status"], tries(stale)]
+    # A window shorter than the next backoff: final at once.
+    short = queue()
+    provider.mode = "unknown_short"
+    result["unknown_short"] = [send(short), _row(a.id, short)["status"]]
+    provider.mode = "ok"
+    # After an unknown outcome, running out of tries or a suppression never
+    # reports the email as not sent.
+    spent = queue()
+    provider.mode = "unknown_window"
+    send(spent)
+    provider.mode = "ok"
+    set_row(spent, "attempts = 5")
+    _due_now(a.id, spent)
+    result["unknown_exhausted"] = [send(spent), _row(a.id, spent)["status"]]
+    opted_out = queue("opted-out@example.test")
+    provider.mode = "unknown_window"
+    send(opted_out)
+    provider.mode = "ok"
+    suppression.add(scope, ["opted-out@example.test"], reason="manual", note=None)
+    _due_now(a.id, opted_out)
+    result["unknown_suppressed"] = [send(opted_out), _row(a.id, opted_out)["status"]]
+    # Nothing was sent: an ordinary retry.
+    refused_conn = queue()
+    provider.mode = "not_sent"
+    not_sent_answer = send(refused_conn)
+    provider.mode = "ok"
+    not_sent_row = _row(a.id, refused_conn)
+    _due_now(a.id, refused_conn)
+    result["not_sent"] = [
+        not_sent_answer,
+        not_sent_row["status"],
+        not_sent_row["safe_minutes"],
+        send(refused_conn),
+    ]
+    with tenant_session_scope(a.id) as session:
+        result["unknown_audit"] = session.execute(
+            text(
+                "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"
+                " AND action = 'crm_app.email.outcome_unknown' AND resource_id = :e"
+            ),
+            {"t": a.id, "e": str(lost)},
+        ).scalar_one()
 
     # --- Retry-After: never sooner than the provider asks (decision P6-S) ----------------
     patient = queue()

@@ -195,6 +195,7 @@ export const en = {
   "inbox.delivery.complained": "Marked as spam",
   "inbox.delivery.failed": "Not sent: failed",
   "inbox.delivery.suppressed": "Not sent: address suppressed",
+  "inbox.delivery.outcome_unknown": "Delivery unknown: may have been sent, not retried",
   "inbox.field.contact": "Contact",
   "inbox.field.channel": "Channel",
   "inbox.field.subject": "Subject",

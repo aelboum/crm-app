@@ -68,6 +68,18 @@ def test_retries_back_off_exponentially_with_bounded_jitter() -> None:
     assert rules.retry_delay(1, None, 0.99) < 30 * 1.25
 
 
+def test_an_unknown_outcome_is_final_and_retried_only_inside_the_window() -> None:
+    # Decision E-R1.
+    assert "outcome_unknown" in rules.FINAL
+    day = timedelta(hours=24)
+    assert rules.retry_safe_until(NOW, day, None) == NOW + day - rules.UNKNOWN_RETRY_MARGIN
+    # An earlier limit is never extended by a later unknown outcome.
+    earlier = NOW + timedelta(hours=1)
+    assert rules.retry_safe_until(NOW, day, earlier) == earlier
+    # A window no longer than the margin leaves no time for another try.
+    assert rules.retry_safe_until(NOW, timedelta(minutes=5), None) < NOW
+
+
 def test_a_retry_is_never_sooner_than_the_providers_retry_after() -> None:
     assert rules.retry_delay(1, 600, 0.0) == 600
     assert rules.retry_delay(1, 5, 0.0) == 30

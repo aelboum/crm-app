@@ -11,7 +11,9 @@
   ambiguous failure is not a second email within Resend's 24 hours. An
   address on the workspace's suppression list is never sent to. A
   permanent refusal fails the email; anything else is retried, at most
-  `MAX_ATTEMPTS` times.
+  `MAX_ATTEMPTS` times, except an unknown outcome (decision E-R1): the
+  message may have been handed over, so it is tried again only inside the
+  provider's de-duplication window, and otherwise ends `outcome_unknown`.
 - `apply_event` records a provider's delivery event once per provider
   event id and moves the status forward only; a bounce or a complaint
   suppresses the address (origin `provider`).
@@ -42,6 +44,7 @@ from saas_os.core.email import (
     EmailMessage as OutgoingEmail,
 )
 from saas_os.core.email import (
+    EmailOutcomeUnknownError,
     EmailProvider,
     EmailProviderError,
     InvalidEmailAddressError,
@@ -288,9 +291,19 @@ def _claim(  # noqa: PLR0911, PLR0912 - one answer per state
             # Another try is under way; a stale one (its process died) is
             # taken over by the sweeper's job after `RETRY_DELAY`.
             return "sending"
+        # After an unknown outcome an earlier try may have been delivered, so
+        # the email never ends as not sent (E-R1).
+        unsure = row.retry_safe_until is not None
+        if row.retry_safe_until is not None and now >= row.retry_safe_until:
+            # The provider no longer de-duplicates a repeat: never try again.
+            _mark_unknown(session, row, now)
+            return "outcome_unknown"
         # Timely mail that can no longer be useful is never sent late, even
         # if sending is switched on long after it was queued (13-H5).
         late = _no_longer_due(session, workspace, row, now)
+        if late is not None and unsure:
+            _mark_unknown(session, row, now)
+            return "outcome_unknown"
         if late is not None:
             row.status, row.last_error, row.updated_at = "failed", late, now
             _audit(session, row, "failed", error=late)
@@ -306,9 +319,15 @@ def _claim(  # noqa: PLR0911, PLR0912 - one answer per state
         if not suppression.may_send(
             session, workspace, row.to_email, row.contact_id, marketing=marketing
         ):
+            if unsure:
+                _mark_unknown(session, row, now)
+                return "outcome_unknown"
             row.status, row.updated_at = "suppressed", now
             _audit(session, row, "suppressed")
             return "suppressed"
+        if row.attempts >= rules.MAX_ATTEMPTS and unsure:
+            _mark_unknown(session, row, now)
+            return "outcome_unknown"
         if row.attempts >= rules.MAX_ATTEMPTS:
             row.status, row.updated_at = "failed", now
             row.last_error = row.last_error or "attempts_exhausted"
@@ -338,6 +357,7 @@ def _claim(  # noqa: PLR0911, PLR0912 - one answer per state
             row.next_attempt_at, row.last_error, row.updated_at = until, "rate_limited", now
             return _Wait(until, "rate_limited")
         row.status, row.attempts, row.updated_at = "sending", row.attempts + 1, now
+        row.first_attempt_at = row.first_attempt_at or now
         reply_to = (
             _reply_to(session, workspace, row) if stream is streams.Stream.CONVERSATION else None
         )
@@ -442,6 +462,13 @@ def send(
     provider_id: str | None = None
     try:
         provider_id = send_email(outgoing, provider=provider).provider_message_id
+    except EmailOutcomeUnknownError as exc:
+        # Before `EmailProviderError`, its parent: may have been handed over.
+        delay = rules.retry_delay(claim.attempts, None, _jitter())
+        if not _retry_unknown(workspace, email_id, exc.retry_within, delay):
+            _index(email_id, retry_at=None)
+            return "outcome_unknown"
+        raise EmailSendDeferredError("outcome_unknown") from None
     except EmailProviderError as exc:
         failure = exc
     except InvalidEmailAddressError:
@@ -480,6 +507,41 @@ def _fail(workspace: uuid.UUID, email_id: uuid.UUID, code: str) -> None:
         _audit(session, row, "failed", error=code)
 
     _finish(workspace, email_id, failed)
+
+
+def _mark_unknown(session: Session, row: EmailMessage, now: datetime) -> None:
+    row.status, row.last_error, row.updated_at = "outcome_unknown", "outcome_unknown", now
+    row.next_attempt_at = None
+    _audit(session, row, "outcome_unknown")
+
+
+def _retry_unknown(
+    workspace: uuid.UUID, email_id: uuid.UUID, retry_within: timedelta | None, delay: float
+) -> bool:
+    """After a try whose outcome is unknown: back to `queued` when the next
+    try, `delay` seconds from now, still starts inside the provider's
+    de-duplication window (`True`); otherwise final `outcome_unknown`. No
+    window (`None`) means a repeat may deliver twice: never retried."""
+    now = _now()
+    until = now + timedelta(seconds=delay)
+    released = False
+
+    def apply(session: Session, row: EmailMessage) -> None:
+        nonlocal released
+        if retry_within is not None and row.first_attempt_at is not None:
+            safe = rules.retry_safe_until(row.first_attempt_at, retry_within, row.retry_safe_until)
+            row.retry_safe_until = safe
+            if until < safe:
+                row.status, row.last_error, row.updated_at = "queued", "outcome_unknown", now
+                row.next_attempt_at = until
+                released = True
+                return
+        _mark_unknown(session, row, now)
+
+    _finish(workspace, email_id, apply)
+    if released:
+        _index(email_id, retry_at=until)
+    return released
 
 
 def _release(workspace: uuid.UUID, email_id: uuid.UUID, code: str, delay: float) -> None:

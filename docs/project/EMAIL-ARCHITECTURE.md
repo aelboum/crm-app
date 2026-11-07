@@ -90,7 +90,9 @@ the existing one.
 `rejected` is Resend's `email.failed` or `email.suppressed` after
 acceptance), or `failed` (never accepted: a permanent refusal or
 `MAX_ATTEMPTS` tries) or `suppressed` (never handed over: the address is
-suppressed).
+suppressed), or `outcome_unknown` (decision E-R1: the transport failed after
+the message may have been handed over, so it may or may not have arrived;
+never retried again).
 
 - A draft is not an email: nothing is queued until a member sends a reply
   or a flow queues a confirmation.
@@ -104,6 +106,17 @@ suppressed).
   that arrives early only records the wait; the sweeper
   (`python -m crm_app.email_maintenance`) enqueues it when due, which also
   recovers emails whose worker died mid-try.
+- Unknown outcomes (decision E-R1): SaaS-OS raises
+  `EmailOutcomeUnknownError` when a message may already have been handed
+  over. With no `retry_within` (SMTP after the server invited the data), a
+  repeat could deliver twice, so the email ends `outcome_unknown` at once.
+  With a window (Resend: 24 hours under one idempotency key), another try
+  starts only before `retry_safe_until` = first try + window − 15 minutes;
+  past it the email ends `outcome_unknown`. Once an outcome was unknown,
+  the email never ends `failed` or `suppressed`: it may have arrived.
+  `EmailNotSentError` (nothing left) is retried as usual. Not covered: a
+  worker that dies mid-try is taken over after `RETRY_DELAY` with the same
+  `Message-ID`; Resend de-duplicates that, SMTP does not.
 - Delivery events move a status forward only and are recorded once per
   provider event id; bounces and complaints suppress the address.
 - Logs, audit entries and errors carry ids and codes, never addresses,

@@ -66,6 +66,7 @@ const DELIVERY_TONE: Record<string, Tone> = {
   suppressed: "neutral",
   delivery_delayed: "pending",
   rejected: "risk",
+  outcome_unknown: "risk",
 };
 
 function failure(error: unknown): MessageId {

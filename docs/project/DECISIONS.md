@@ -340,6 +340,48 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## E-R1 — An email whose send outcome is unknown is not retried blindly
+
+- **Status:** Done under the autonomous mandate, 2026-11-07 (the owner's
+  "Proceed with: The email retry fix"). It closes the K3.4 follow-up that
+  gap 14 blocked; SaaS-OS v0.9.0 exports the error classes (K3.9).
+  Production sending stays off.
+- **Problem:** `crm_app.emails` retried every non-permanent failure up to
+  `MAX_ATTEMPTS`. A send that failed after the message may have been handed
+  over (SMTP: the connection lost after `DATA`) could reach the recipient
+  twice.
+- **Decision:**
+  1. `EmailOutcomeUnknownError` is caught before its parent
+     `EmailProviderError`. With `retry_within` `None` the email ends in a new
+     final status, `outcome_unknown`, at once.
+  2. With a window (Resend's idempotency key, 24 hours), another try may
+     start only before `retry_safe_until` = `first_attempt_at` + window − 15
+     minutes (`UNKNOWN_RETRY_MARGIN`, for a late or long try). It is checked
+     when the try is planned and again when it is claimed, since the sweeper
+     may run late. A later unknown outcome never moves it later.
+  3. Once an outcome was unknown, the email never ends `failed` or
+     `suppressed` (running out of tries, a late reminder, a new
+     suppression): it ends `outcome_unknown`, because it may have arrived.
+     A permanent refusal on a repeat still ends `failed`: under the same
+     idempotency key the provider answers for the original request.
+  4. `EmailNotSentError` (nothing was handed over) keeps the ordinary retry.
+  5. `outcome_unknown` has no `sent_at` and no provider id; it is audited as
+     `crm_app.email.outcome_unknown` (codes only). The Inbox shows "Delivery
+     unknown: may have been sent, not retried" in the risk tone.
+- **Schema:** migration `0038_email_outcome_unknown` adds the status to the
+  status and sent checks, and the columns `first_attempt_at` (back-filled
+  from `created_at` for tried rows, which can only shorten a window) and
+  `retry_safe_until`. Run on local and test databases only.
+- **Not covered:** a worker that dies mid-try is taken over after
+  `RETRY_DELAY` with the same `Message-ID`. Resend de-duplicates that;
+  SMTP does not. The provider would have to say that the earlier try
+  started, which nothing records yet. No member is told about an
+  `outcome_unknown` email beyond its Inbox badge.
+- **Tests:** `tests/unit/test_email_rules.py`
+  (`test_an_unknown_outcome_is_final_and_retried_only_inside_the_window`);
+  `tests/integration/test_emails.py` (four tests: no window, window and
+  expiry, never ends as not sent, `EmailNotSentError` retried).
+
 ## K3.9 — SaaS-OS pin moved to v0.10.0
 
 - **Status:** Approved by the owner, 2026-11-07 ("saas-os is updated to

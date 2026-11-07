@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0037_member_notifications` own the
+Migrations `0002_contacts_companies` to `0038_email_outcome_unknown` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -799,6 +799,10 @@ class EmailMessage(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When the first try started (migration 0038, E-R1).
+    first_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # No try starts at or after this (an unknown outcome; migration 0038).
+    retry_safe_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # The workspace's own sender, when one was chosen (migration 0029, P6-D).
     sender_identity_id: Mapped[uuid.UUID | None] = mapped_column()
     sender_address: Mapped[str | None] = mapped_column(Text)

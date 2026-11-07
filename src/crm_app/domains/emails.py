@@ -2,6 +2,8 @@
 
 - What an email may hold (`content`), its `Message-ID`, and how far a
   delivery event may move its status (`after_event`).
+- When a try whose outcome is unknown may be followed by another
+  (`retry_safe_until`, decision E-R1).
 - Resend's webhooks are signed the Svix way: the signed content is
   `"{id}.{timestamp}.{body}"`, HMAC-SHA256 with the base64 key after the
   secret's `whsec_` prefix, sent as space-separated `v1,<base64>` values.
@@ -17,7 +19,7 @@ import hashlib
 import hmac
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from crm_app.domains.records import InvalidValue, email
 
@@ -40,7 +42,9 @@ _TIMESTAMP = re.compile(r"[0-9]{1,12}")
 WEBHOOK_BODY_MAX = 64 * 1024
 
 # Final statuses: nothing is sent again. `failed`: never accepted by the
-# provider; `rejected`: accepted, then reported as not sent (P6-S).
+# provider; `rejected`: accepted, then reported as not sent (P6-S);
+# `outcome_unknown`: may have been handed over, and another try could
+# deliver it twice (E-R1).
 FINAL = (
     "sent",
     "delivery_delayed",
@@ -50,7 +54,11 @@ FINAL = (
     "failed",
     "suppressed",
     "rejected",
+    "outcome_unknown",
 )
+# Kept clear of the end of a provider's de-duplication window, for a try
+# that starts late or runs long (E-R1).
+UNKNOWN_RETRY_MARGIN = timedelta(minutes=15)
 
 # A provider's event moves a sent email forward, never back; a bounce, a
 # rejection or a complaint is final. `delivery_delayed` after `delivered`
@@ -136,6 +144,17 @@ def retry_delay(attempts: int, retry_after: float | None, jitter: float) -> floa
     if retry_after is not None and retry_after > 0:
         delay = max(delay, min(retry_after, BACKOFF_MAX_SECONDS))
     return min(delay, BACKOFF_MAX_SECONDS * (1 + BACKOFF_JITTER))
+
+
+def retry_safe_until(
+    first_attempt_at: datetime, retry_within: timedelta, earlier: datetime | None
+) -> datetime:
+    """The last moment another try may start after an unknown outcome that
+    the provider de-duplicates for `retry_within` from the first request
+    (decision E-R1): that window less `UNKNOWN_RETRY_MARGIN`, never later
+    than an `earlier` limit."""
+    until = first_attempt_at + retry_within - UNKNOWN_RETRY_MARGIN
+    return until if earlier is None else min(until, earlier)
 
 
 @dataclass(frozen=True)

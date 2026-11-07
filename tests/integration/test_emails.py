@@ -92,6 +92,44 @@ def test_suppressed_addresses_are_never_sent_to_and_tries_are_bounded(probe: Pro
     assert probe["exhausted"] == ["failed", "attempts_exhausted"]
 
 
+def test_an_unknown_outcome_without_a_window_is_final_and_never_resent(probe: Probe) -> None:
+    answer, row, index, replay, tries = probe["unknown"]
+    assert answer == "outcome_unknown"
+    assert (row["status"], row["attempts"], row["last_error"]) == (
+        "outcome_unknown",
+        1,
+        "outcome_unknown",
+    )
+    # Nothing says the provider accepted it.
+    assert row["has_sent_at"] is False
+    assert row["provider_message_id"] is None
+    assert index == {"provider_message_id": None, "retry_at": False}
+    assert (replay, tries) == ("outcome_unknown", 0)
+    assert probe["unknown_audit"] == 1
+
+
+def test_an_unknown_outcome_is_retried_only_inside_the_providers_window(probe: Probe) -> None:
+    answer, row, after, tries = probe["unknown_window"]
+    assert answer == "deferred:outcome_unknown"
+    assert (row["status"], row["last_error"]) == ("queued", "outcome_unknown")
+    # 24 hours less the 15-minute margin, from the first try.
+    assert row["safe_minutes"] == 24 * 60 - 15
+    assert (after, tries) == ("sent", 1)
+    between, final, status, stale_tries = probe["unknown_expired"]
+    assert between == "deferred:connection_refused"
+    assert (final, status, stale_tries) == ("outcome_unknown", "outcome_unknown", 0)
+    assert probe["unknown_short"] == ["outcome_unknown", "outcome_unknown"]
+
+
+def test_an_uncertain_email_never_ends_as_not_sent(probe: Probe) -> None:
+    assert probe["unknown_exhausted"] == ["outcome_unknown", "outcome_unknown"]
+    assert probe["unknown_suppressed"] == ["outcome_unknown", "outcome_unknown"]
+
+
+def test_a_send_that_never_left_is_retried_as_usual(probe: Probe) -> None:
+    assert probe["not_sent"] == ["deferred:connection_refused", "queued", None, "sent"]
+
+
 def test_a_rolled_back_email_leaves_no_index_row(probe: Probe) -> None:
     assert probe["orphan"] == [True, None, False]
 
@@ -115,7 +153,7 @@ def test_delivery_events_are_recorded_once_and_move_forward_only(probe: Probe) -
 
 
 def test_another_workspace_sees_none_of_it(probe: Probe) -> None:
-    assert probe["own_rows"] == 8
+    assert probe["own_rows"] == 15
     assert probe["other_workspace_rows"] == 0
     assert probe["other_workspace_events"] == 0
 
