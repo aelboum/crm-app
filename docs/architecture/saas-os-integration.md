@@ -3,19 +3,20 @@
 ## Pin
 
 ```text
-saas-os @ git+https://github.com/aelboum/saas-os@140d9dd2e724357cf54e74fb3be9dadb8943a238
+saas-os @ git+https://github.com/aelboum/saas-os@0f9bf4d67e13aff284af9f30505b7f256ea49801
 ```
 
-- **Release:** v0.8.0. The tag is annotated and signed with the owner's
-  key (`git tag -v v0.8.0`: good ED25519 signature) and resolved to this
-  commit, the merge commit of release pull request #219, on 2026-11-06.
+- **Release:** v0.10.0. The tag is annotated and signed with the owner's
+  key (`git tag -v v0.10.0`: good ED25519 signature) and resolved to this
+  commit, the merge commit of release pull request #234, on 2026-11-07.
 - **Platform migration head:** `e2b7c4d9a1f6` (was `b3d5f7a9c2e4` at
-  v0.6.0; v0.7.0 added seven revisions, v0.8.0 one). They only add
-  tables, columns and checks.
+  v0.6.0; v0.7.0 added seven revisions, v0.8.0 one, v0.9.0 and v0.10.0
+  none). They only add tables, columns and checks.
 - **Approval:** decision K3, moved from v0.1.2 (`b0809ee`) by decision
   K3.1, from v0.3.0 (`5905156`) by decision K3.2, from v0.5.0
-  (`b03d87a`) by decision K3.3 and from v0.6.0 (`d980e73`) by decision
-  K3.4. The pin is fixed until a further approved decision.
+  (`b03d87a`) by decision K3.3, from v0.6.0 (`d980e73`) by decision
+  K3.4 and from v0.8.0 (`140d9dd`) by decision K3.9. The pin is fixed
+  until a further approved decision.
 - **Guard:** `tests/unit/test_dependency_pin.py` checks the manifest, the
   `uv.lock` source, the installed `direct_url.json` commit, that the
   install is non-editable, and that no URL carries credentials.

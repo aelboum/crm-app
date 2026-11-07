@@ -340,6 +340,60 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## K3.9 — SaaS-OS pin moved to v0.10.0
+
+- **Status:** Approved by the owner, 2026-11-07 ("saas-os is updated to
+  0.10.0 please upgrade"). Supersedes the commit named in K3.4; every
+  other part of K3 stands. The pin stays fixed until a further approved
+  decision.
+- **Decision:** Exactly one SaaS-OS dependency:
+  `saas-os @ git+https://github.com/aelboum/saas-os@0f9bf4d67e13aff284af9f30505b7f256ea49801`
+  (v0.10.0, the latest release; v0.9.0 `fb08e47` is skipped as an
+  intermediate step).
+- **Evidence (verified 2026-11-07):**
+  - The tag `v0.10.0` resolves to `0f9bf4d…`, the merge commit of release
+    pull request #234; `git tag -v v0.10.0` reports a good ED25519
+    signature by the owner's key.
+  - No migration in either release: the platform head stays
+    `e2b7c4d9a1f6`. No new setting. The public API snapshot only grew,
+    by five names: `EmailOutcomeUnknownError` and `EmailNotSentError`
+    exported (v0.9.0); `StrictEgressClient.get`, four `EmailMessage`
+    fields (`list_unsubscribe`, `list_unsubscribe_post`, `in_reply_to`,
+    `references`) and `InvalidEmailHeaderError` (v0.10.0).
+  - CONSUMER-GUIDE §14, v0.8.0 → v0.9.0 and v0.9.0 → v0.10.0, against
+    this product:
+    1. Permission grant register audit rows now carry `user_subject_ref`
+       instead of `subject_user_id`: this product neither reads nor
+       writes `core.platform_audit_log` and nothing reads
+       `subject_user_id`.
+    2. `EmailMessage` is built by keyword and sets none of the four new
+       fields, so SMTP and Resend output is unchanged.
+       `InvalidEmailHeaderError` subclasses `InvalidEmailAddressError`,
+       which `crm_app.emails` maps to `invalid_address`; it cannot be
+       raised while the fields stay unset.
+    3. `StrictEgressClient` is constructed as before in
+       `crm_app.sending_domains` and `crm_app.custom_domains`; `post` is
+       unchanged and `get` is not called.
+  - Every SaaS-OS import is still a public export
+    (`tests/unit/test_import_surface.py`).
+  - `uv lock --upgrade-package saas-os` changed only the saas-os entry.
+  - `saas-os-update check` was not run for this move; SaaS-OS records
+    `REVIEW_REQUIRED` for both steps in CONSUMER-GUIDE §14, and the
+    review is the list above.
+- **Follow-ups unblocked upstream (each needs its own slice; none is done
+  in this move):**
+  - Gap 14: `crm_app.emails` can now catch the public
+    `EmailOutcomeUnknownError` before `EmailProviderError` and stop
+    retrying when `retry_within` is `None` (the blocked K3.4 follow-up).
+  - Gaps 1 and 5: campaign unsubscribe headers and reply threading
+    headers. Production sending stays unauthorized.
+  - Gap 2: `StrictEgressClient.get` for Resend's receiving API. Inbound
+    receiving stays unauthorized. `delete` and the domains interface
+    (gap 3) are not shipped.
+- **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
+  `.secrets.baseline` hash back to `140d9dd`. There is no schema change
+  to undo.
+
 ## UI-Q1 — Quick wins on built features (2026-11-06, owner: "Yes")
 
 - **Status:** Done under the autonomous mandate, frontend only. No API,

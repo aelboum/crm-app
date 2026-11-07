@@ -1333,6 +1333,27 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## SaaS-OS upgrade to v0.10.0 (decision K3.9, 2026-11-07)
+
+On the new pin `0f9bf4d` (v0.10.0, from v0.8.0 `140d9dd`; v0.9.0
+skipped), locally on Windows, on `main`:
+
+| Check | Result |
+| --- | --- |
+| Tag | `v0.10.0` resolves to `0f9bf4d…`; `git tag -v v0.10.0`: good ED25519 signature by the owner's key |
+| `uv lock --upgrade-package saas-os`, `uv lock --check`, `uv sync --frozen` | Only the saas-os entry changed (0.8.0 → 0.10.0); installed `saas-os` 0.10.0 from commit `0f9bf4d…` |
+| `ruff format --check .` / `ruff check .` | 363 files already formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| detect-secrets hook over tracked files | Exit 0, after replacing the audited false-positive hash of the pin SHA in `.secrets.baseline` |
+| `pytest tests/unit` | 752 passed; includes the pin test, now asserting `0f9bf4d` |
+| `pytest` on the integration files this move can affect (`test_foundation`, `test_emails`, `test_booking_emails`, `test_email_templates`, `test_inbound_email`, `test_permission_grants`, `test_sending_domains`, `test_custom_domains`, `test_history`), `.env.test` | 85 passed |
+| `npm run gen:api` | `frontend/src/api/schema.d.ts` unchanged |
+
+No product code changed (K3.9). The migration head is unchanged
+(`e2b7c4d9a1f6`). Not run locally: the full integration suite (left to
+CI), `tests/identity` (opt-in, needs the local ZITADEL) and the other
+frontend checks (no frontend file changed).
+
 ## In-app notifications (decision N-1, 2026-11-06)
 
 Members get notifications in the header bell when someone else assigns

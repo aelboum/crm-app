@@ -15,7 +15,7 @@ dependencies = [
     # branch or a tag, never an editable or local-path install. Changing it
     # requires a new approved decision; tests/unit/test_dependency_pin.py
     # asserts the manifest, the lockfile and the installed commit.
-    "saas-os @ git+https://github.com/aelboum/saas-os@140d9dd2e724357cf54e74fb3be9dadb8943a238",
+    "saas-os @ git+https://github.com/aelboum/saas-os@0f9bf4d67e13aff284af9f30505b7f256ea49801",
 ]
 
 [project.scripts]
