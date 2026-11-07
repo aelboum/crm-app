@@ -1,0 +1,221 @@
+# LeadStack's production-shaped stack (decision brief H, section 7.1; decision
+# D-STG). Locally it is the staging rehearsal; on a host it is the stack the
+# brief describes, without the `stateful-local` profile (the host uses the
+# managed PostgreSQL and Redis instead).
+#
+# Local run (no account, nothing leaves the machine except the worker's
+# proxied HTTPS):
+#   uv run python deploy/staging/prepare_local.py
+#   docker compose --env-file deploy/staging/.local/compose.env \
+#     -f deploy/staging/compose.yaml --profile stateful-local up -d --build
+# Then https://leadstack.localhost:8443 (Caddy's local CA).
+#
+# Shape (SaaS-OS ADR-0010, ADR-0024, ADR-0028, ADR-0059):
+# - `edge` is the only published service; it reaches only `app`.
+# - `app`, `worker` and `migrate` run the one product image with
+#   ENVIRONMENT=production and reach PostgreSQL with verify-full and Redis
+#   over TLS.
+# - The worker has no route to the Internet: it sits on internal networks
+#   only and leaves through `egress-proxy` (CONNECT to port 443, public IPv4
+#   literals only) with its own resolver.
+# - `postgres` and `redis` (profile `stateful-local`) stand in for the
+#   managed services, with TLS from the local CA, a non-superuser migration
+#   role, `noeviction` and AOF.
+# No secret is written here: values come from `.local/` (prepare_local.py).
+# The app and worker get `app.env` only; `migrate` also gets `migrate.env`.
+
+name: crm-app-staging
+
+x-app: &app
+  image: crm-app:staging
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+  env_file:
+    - .local/app.env
+  volumes:
+    - ./.local/ca.crt:/certs/ca.crt:ro
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  postgres:
+    profiles: ["stateful-local"]
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run prepare_local.py first}
+      POSTGRES_DB: postgres
+      CRM_APP_OWNER_PASSWORD: ${CRM_APP_OWNER_PASSWORD:?}
+      APP_DB_USER: ${APP_DB_USER:?}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+    # The server key must be owned by postgres with mode 0600, which a
+    # bind mount from Windows cannot give: copy it in first.
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        install -m 600 -o postgres -g postgres /certs/postgres.key /var/lib/postgresql/server.key &&
+        install -m 644 -o postgres -g postgres /certs/postgres.crt /var/lib/postgresql/server.crt &&
+        exec docker-entrypoint.sh postgres
+        -c ssl=on
+        -c ssl_cert_file=/var/lib/postgresql/server.crt
+        -c ssl_key_file=/var/lib/postgresql/server.key
+        -c ssl_min_protocol_version=TLSv1.2
+    volumes:
+      - ./.local/postgres.crt:/certs/postgres.crt:ro
+      - ./.local/postgres.key:/certs/postgres.key:ro
+      - ./init/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+      - postgres-data:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crm_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    profiles: ["stateful-local"]
+    image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?run prepare_local.py first}
+    command:
+      - sh
+      - -c
+      - >-
+        exec redis-server --port 0 --tls-port 6380
+        --tls-cert-file /certs/redis.crt --tls-key-file /certs/redis.key
+        --tls-ca-cert-file /certs/ca.crt --tls-auth-clients no
+        --requirepass "$$REDIS_PASSWORD"
+        --appendonly yes --maxmemory-policy noeviction
+    volumes:
+      - ./.local/redis.crt:/certs/redis.crt:ro
+      - ./.local/redis.key:/certs/redis.key:ro
+      - ./.local/ca.crt:/certs/ca.crt:ro
+      - redis-data:/data
+    networks: [internal]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli --tls --cacert /certs/ca.crt -h redis -p 6380 --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep -q PONG
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    <<: *app
+    command: ["crm-app-migrate"]
+    env_file:
+      - .local/app.env
+      - .local/migrate.env
+    restart: "no"
+    networks: [internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+
+  app:
+    <<: *app
+    networks: [internal, edge]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+        required: false
+
+  worker:
+    <<: *app
+    command: ["crm-app-worker"]
+    environment:
+      EGRESS_PROXY_URL: http://egress-proxy:3128
+    dns:
+      - 172.31.54.2
+    networks: [internal, worker-dns]
+    healthcheck:
+      test: ["CMD", "crm-app-worker", "--check"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+        required: false
+      egress-proxy:
+        condition: service_healthy
+      dns-resolver:
+        condition: service_healthy
+
+  edge:
+    image: caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
+    ports:
+      - "127.0.0.1:8443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+
+  egress-proxy:
+    image: ubuntu/squid:6.6-24.04_edge@sha256:8a3baed477e2c282ab8aa5edad442f69873246964f225c5c2ae8364b6610963c
+    volumes:
+      - ./egress/squid.conf:/etc/squid/squid.conf:ro
+    tmpfs:
+      - /var/log/squid:uid=13,gid=13
+      - /var/spool/squid:uid=13,gid=13
+    networks: [internal, egress]
+    restart: unless-stopped
+    healthcheck:
+      # bash, not sh: the image's /bin/sh (dash) has no /dev/tcp.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3128"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dns-resolver:
+    image: alpinelinux/unbound:latest@sha256:cd8dcbcaa7b6f223fe154be07f17c13006149be7f56d50c5664f46181e8d5e1b
+    volumes:
+      - ./egress/unbound.conf:/etc/unbound/unbound.conf:ro
+    networks:
+      worker-dns:
+        ipv4_address: 172.31.54.2
+      egress: {}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nslookup", "health.resolver.check", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  # Reaches the Internet: the edge's clients, and the proxy's and
+  # resolver's upstreams. The app needs it later for ZITADEL and providers.
+  edge:
+  egress:
+  # No route out.
+  internal:
+    internal: true
+  worker-dns:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.54.0/28
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

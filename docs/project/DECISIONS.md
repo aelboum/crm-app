@@ -340,6 +340,47 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## D-STG — Production-shaped staging stack, rehearsed locally (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner: "cant we just
+  proceed locally", 2026-11-07). Brief H section 7.1 items 2, 3 and 5 for
+  the parts a local run can prove. No provider chosen, no account, nothing
+  deployed.
+- **What:** `deploy/staging/` (`compose.yaml`, `Caddyfile`,
+  `egress/squid.conf`, `egress/unbound.conf`, `init/01-roles.sh`,
+  `prepare_local.py`, `verify_local.py`, `README.md`). The product image
+  runs with `ENVIRONMENT=production`; PostgreSQL (`verify-full`, hostssl
+  only) and Redis (`rediss://`, `noeviction`, AOF) are TLS stand-ins for the
+  managed services under the `stateful-local` profile. The configs are
+  written for this product to SaaS-OS's documented rules (ADR-0024,
+  ADR-0028, ADR-0059), not copied from SaaS-OS.
+- **Least privilege:** the migration owner is not a superuser and cannot
+  bypass RLS, as on a managed service; the app and worker get only
+  `app.env`, never the owner's or the admin's credentials; app containers
+  run read-only with no capabilities.
+- **Verified locally** (`verify_local.py`, 24 of 24): E1, E2, E3, E6, E7,
+  E10 of the brief (details in `PROGRESS.md`).
+- **Found on the way:**
+  1. SaaS-OS v0.10.0's `docker-compose.prod.yml` checks the egress proxy
+     with `CMD-SHELL exec 3<>/dev/tcp/...`; the Squid image's `/bin/sh` is
+     dash, which has no `/dev/tcp`, so that check can never pass. This stack
+     uses bash. Recorded in `saas-os-gaps.md` (gap 16); not filed upstream.
+  2. Python 3.13 verifies certificates strictly: a private CA must carry a
+     subject key identifier and its certificates an authority key
+     identifier, or Redis TLS fails with "Missing Authority Key
+     Identifier". Matters if a managed Redis uses a private CA (brief V3).
+  3. **Risk for future data migrations:** every tenant table forces RLS, so
+     a back-fill (`UPDATE`/`INSERT ... SELECT`) run by a non-superuser owner
+     without a tenant context changes no rows, silently. Local development
+     and CI migrate as a superuser and hide this. Migrations `0003`, `0016`,
+     `0024`, `0030` and `0038` change data; with no production data today
+     nothing is lost, but before the first deployment with data, data
+     migrations need either a tenant-context loop or a documented
+     maintenance role, and a CI job that migrates as a non-superuser.
+     **Not decided here.**
+- **Not covered:** ZITADEL in the stack (sign-in, E4/E5), backups and the
+  restore drill (E8), scheduled maintenance commands, monitoring (E9).
+
 ## D-IMG — Production container image (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (brief H, section 7.1 item

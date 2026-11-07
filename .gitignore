@@ -30,3 +30,6 @@ Thumbs.db
 node_modules/
 frontend/coverage/
 *.tsbuildinfo
+
+# Local staging rehearsal: certificates and secrets (decision D-STG)
+deploy/staging/.local/

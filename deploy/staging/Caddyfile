@@ -1,0 +1,33 @@
+# LeadStack's edge (decision D-STG; launch gate 13-H1 F2). The only
+# published service: it terminates TLS and reaches nothing but `app`.
+#
+# - X-Forwarded-For is replaced with the client's own address, never
+#   appended to: the app (TRUST_PROXY_HEADERS=true) reads its last hop, so a
+#   client-sent value can never be taken for the client.
+# - Request bodies are capped at the edge, below the app's own limits only
+#   where nothing legitimate is larger: 6 MB overall (the 5 MB CSV import
+#   plus its form encoding), 64 KB for public routes (the largest is the
+#   signed provider webhook, 64 KB).
+# - The admin API is off; locally, `.localhost` gets Caddy's own CA.
+{
+	admin off
+	auto_https disable_redirects
+}
+
+leadstack.localhost {
+	tls internal
+
+	@public path /v1/public/*
+	request_body @public {
+		max_size 64KB
+	}
+	request_body {
+		max_size 6MB
+	}
+
+	reverse_proxy app:8000 {
+		header_up X-Forwarded-For {remote_host}
+		header_up -X-Real-IP
+		header_up -Forwarded
+	}
+}

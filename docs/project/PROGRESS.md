@@ -1333,6 +1333,25 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Local staging rehearsal (decision D-STG, 2026-11-07)
+
+`deploy/staging/`, run locally with the `stateful-local` profile; every
+container healthy. `uv run python deploy/staging/verify_local.py`: **24
+passed, 0 failed**.
+
+| Criterion | Checked |
+| --- | --- |
+| E1 | `/healthz`, `/readyz` 200 over HTTPS through Caddy |
+| E2 | start-up refuses `sslmode=disable` and `redis://` |
+| E3 | SaaS-OS `e2b7c4d9a1f6` and product `0039_member_reminders` at head, applied over TLS by an owner that is no superuser and cannot bypass RLS; the app holds no migration or admin credential |
+| E6 | `EMAIL_SENDING_ENABLED`, the conversation and campaign streams, inbound and customer domains each refused at start-up in production |
+| E7 | the worker's direct connection fails; its proxy allows CONNECT to a public IPv4 on 443 and refuses port 80, a host name, 10.0.0.1 and 172.16.0.10 |
+| E10 | the edge refuses a 7 MB body (connection closed) and a 100 KB public body (413), passes a small public body (422 from the app), and replaces a client's `X-Forwarded-For` |
+
+Not covered yet: E4, E5, E8, E9 (ZITADEL, backups, monitoring). Findings:
+`DECISIONS.md` D-STG (the SaaS-OS proxy healthcheck, strict certificate
+checks, and the RLS risk for data migrations).
+
 ## Production image (decision D-IMG, 2026-11-07)
 
 | Check | Result |

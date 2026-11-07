@@ -225,7 +225,8 @@ an enterprise customer's procurement require AWS.
 1. A production image for the app and worker (multi-stage: frontend
    build, then Python with the locked dependencies, non-root user).
    **Done 2026-11-07** (`Dockerfile`, decision D-IMG; built in CI).
-2. `deploy/staging/`: a Compose file shaped on SaaS-OS
+2. **Done locally 2026-11-07 (decision D-STG; items 2, 3 and 5):**
+   `deploy/staging/`: a Compose file shaped on SaaS-OS
    `docker-compose.prod.yml` (Caddy, app, worker, Squid + resolver,
    ZITADEL + login), with no `db`/`redis` services.
 3. A production Caddyfile: TLS, request-size cap, `X-Forwarded-For`
