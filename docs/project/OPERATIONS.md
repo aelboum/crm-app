@@ -24,7 +24,7 @@ periodic work runs as commands from the deployment's scheduler (gap 9 in
 
 | Command | Every | Does | If it stops |
 | --- | --- | --- | --- |
-| `python -m crm_app.email_maintenance` | 1–5 minutes | Queues due reminders (P5-D); retries lost or deferred email (P6-E); processes received mail (P6-I); re-checks custom domains daily (P12-D); releases unverified sending-domain claims after 7 days (13-H3) | Reminders and retries stop, received mail waits, domains are not re-checked |
+| `python -m crm_app.email_maintenance` | 1–5 minutes | Queues due reminders (P5-D); reminds hosts in the app 30 minutes before their appointments (N-2); retries lost or deferred email (P6-E); processes received mail (P6-I); re-checks custom domains daily (P12-D); releases unverified sending-domain claims after 7 days (13-H3) | Reminders (email and in-app) and retries stop, received mail waits, domains are not re-checked |
 | `python -m crm_app.automation_maintenance` | 1 minute | Enqueues automation runs that are due, including after waits (P8-A) | Automations stall after their first step or wait |
 | `python -m crm_app.signup_maintenance` | a few minutes | Signup housekeeping (S-1; signup is off in production) | Pending signups are not cleaned up |
 | `python -m crm_app.import_maintenance` | about hourly | Deletes CSV import staging rows 7 days after an import (P3-F 7) | Staged personal data is kept longer than promised |

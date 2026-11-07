@@ -1,8 +1,9 @@
 """In-app notifications for members (decision N-1).
 
 A notification tells one member that something happened to them: someone
-else assigned them a task, a conversation or an appointment, or a visitor
-booked or cancelled on one of their booking pages. Rows live in
+else assigned them a task, a conversation or an appointment, a visitor
+booked or cancelled on one of their booking pages, or an appointment they
+host starts soon (`crm_app.member_reminders`, decision N-2). Rows live in
 `crm_app.member_notification` (forced RLS) and are written by `notify()`
 inside the same transaction as the change they describe, so a rolled-back
 change notifies nobody and an idempotent replay (which skips the business
@@ -45,6 +46,8 @@ KINDS: Mapping[str, str] = {
     "appointment_assigned": "appointment",
     "booking_received": "appointment",
     "booking_cancelled": "appointment",
+    # The host's appointment starts soon (N-2); no member acted.
+    "appointment_upcoming": "appointment",
 }
 RETENTION = timedelta(days=90)
 DEFAULT_LIMIT = 20

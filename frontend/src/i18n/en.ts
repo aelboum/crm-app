@@ -411,6 +411,7 @@ export const en = {
   "notif.kind.appointment_assigned": "{actor} made you the host of an appointment",
   "notif.kind.booking_received": "New booking on your booking page",
   "notif.kind.booking_cancelled": "A visitor cancelled their booking",
+  "notif.kind.appointment_upcoming": "Your appointment starts soon",
   "help.button": "Help",
   "help.center": "Help center",
   "profile.button": "Your account",

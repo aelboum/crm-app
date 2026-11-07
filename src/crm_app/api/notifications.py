@@ -36,6 +36,7 @@ Kind = Literal[
     "appointment_assigned",
     "booking_received",
     "booking_cancelled",
+    "appointment_upcoming",
 ]
 SubjectType = Literal["task", "conversation", "appointment"]
 

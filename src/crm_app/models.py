@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0038_email_outcome_unknown` own the
+Migrations `0002_contacts_companies` to `0039_member_reminders` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -583,6 +583,30 @@ class ReminderWorkspace(Base):
     workspace_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     lead_minutes: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AppointmentMemberReminder(Base):
+    """An appointment and start time its host was reminded of in the app
+    (migration 0039, N-2): one per start time."""
+
+    __tablename__ = "appointment_member_reminder"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    appointment_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MemberReminderWorkspace(Base):
+    """A workspace with an appointment starting up to `until` (global, for
+    the maintenance run; migration 0039, N-2)."""
+
+    __tablename__ = "member_reminder_workspace"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Form(Base):

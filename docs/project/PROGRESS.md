@@ -1333,6 +1333,30 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Hosts' in-app appointment reminders (decision N-2, 2026-11-07)
+
+Migration `0039_member_reminders`; `crm_app.member_reminders`, run by
+`crm_app.email_maintenance`. Locally on Windows:
+
+| Check | Result |
+| --- | --- |
+| `ruff format --check .` / `ruff check .` / `pyright` / `lint-imports` | clean / clean / 0 errors / 2 kept |
+| `pytest tests/unit` | 753 passed |
+| `pytest` on the 13 member-reminder, notification, reminder, booking, appointment, email, purge, table-guard and foundation integration files, `.env.test` | 167 passed |
+| `crm_app.openapi` and `npm run gen:api` | `frontend/openapi.json` and `schema.d.ts` regenerated (the new kind) |
+| Frontend `typecheck`, `lint`, `src/shell` tests | clean; 22 passed |
+
+Found and fixed on the way: the first revision id was 33 characters,
+longer than Alembic's `varchar(32)`; renamed to `0039_member_reminders`.
+Not run locally: the full integration suite and the full frontend suite
+(CI).
+
+## Hosting decision brief (2026-11-07)
+
+`DECISION-BRIEF-HOSTING.md`: three architectures compared against SaaS-OS
+v0.10.0's deployment requirements, with costs, risks, a staging plan and
+the owner's decisions. Nothing selected, bought or deployed.
+
 ## Unknown send outcomes (decision E-R1, 2026-11-07)
 
 Migration `0038_email_outcome_unknown`; `crm_app.emails` stops retrying an

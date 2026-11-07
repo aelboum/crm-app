@@ -51,7 +51,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import appointments, emails, notifications, system_audit
+from crm_app import appointments, emails, member_reminders, notifications, system_audit
 from crm_app.domains import appointments as appointment_rules
 from crm_app.domains import booking_pages as rules
 from crm_app.domains.records import InvalidValue
@@ -650,6 +650,19 @@ def _over_capacity(session: Session, workspace: uuid.UUID, capacity: int, now: d
     return len(rows) >= capacity
 
 
+def _tell_host(
+    session: Session,
+    workspace: uuid.UUID,
+    host: uuid.UUID,
+    appointment_id: uuid.UUID,
+    starts_at: datetime,
+) -> None:
+    """Notify the host of a visitor's booking (N-1), and remind them of it
+    in the app before it starts (N-2)."""
+    notifications.notify(session, workspace, host, "booking_received", appointment_id, actor=None)
+    member_reminders.register(workspace, starts_at)
+
+
 def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     """The booking's whole effect, in the idempotency transaction."""
     workspace, offer = accepted.workspace, accepted.offer
@@ -742,9 +755,7 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             "by": "visitor",
         },
     )
-    notifications.notify(
-        session, workspace, offer.host, "booking_received", appointment_id, actor=None
-    )
+    _tell_host(session, workspace, offer.host, appointment_id, starts_at)
     session.add(
         Booking(
             id=uuid.uuid4(),

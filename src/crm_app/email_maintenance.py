@@ -14,7 +14,8 @@ decides whether to send (only while `EMAIL_SENDING_ENABLED` is on, never
 twice, at most `MAX_ATTEMPTS` tries). Received emails that are due
 (decision P6-I) are processed in this run, which also recovers any whose
 worker died. Custom domains (decision P12-D) are checked again daily and
-expired claims removed. It prints counts only.
+expired claims removed. Hosts of appointments starting within 30 minutes
+are reminded in the app (decision N-2). It prints counts only.
 """
 
 from __future__ import annotations
@@ -40,13 +41,18 @@ async def _enqueue_all(pairs: list[tuple[uuid.UUID, uuid.UUID]]) -> tuple[int, i
 
 
 def maintain() -> dict[str, int]:
-    from crm_app import emails, reminders  # noqa: PLC0415
+    from crm_app import emails, member_reminders, reminders  # noqa: PLC0415
 
     # First, so the reminders it queues are handed over in this same run.
     try:
         reminded = reminders.run_due()
     except Exception:  # noqa: BLE001 - reminders never stop email delivery (13-H5)
         reminded = {"queued": 0, "skipped": 0}
+    # Hosts' in-app reminders (N-2): nothing is sent, so nothing waits on it.
+    try:
+        hosts = member_reminders.run_due()
+    except Exception:  # noqa: BLE001 - member reminders never stop email delivery
+        hosts = {"notified": 0}
     orphans = 0
     pending: list[tuple[uuid.UUID, uuid.UUID]] = []
     for workspace, email_id in emails.due():
@@ -69,6 +75,7 @@ def maintain() -> dict[str, int]:
         "sending_claims_released": released,
         "reminders_queued": reminded["queued"],
         "reminders_skipped": reminded["skipped"],
+        "hosts_reminded": hosts["notified"],
         "domains_lapsed": domains["lapsed"],
         "domain_claims_expired": domains["expired"],
         "queued": queued,
@@ -88,7 +95,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"emails: queued {report['queued']}, queue unreachable {report['unreachable']},"
         f" orphan entries removed {report['orphans']}; inbound processed {report['inbound']};"
         f" domains lapsed {report['domains_lapsed']},"
-        f" expired domain claims removed {report['domain_claims_expired']}"
+        f" expired domain claims removed {report['domain_claims_expired']};"
+        f" hosts reminded in the app {report['hosts_reminded']}"
     )
     return 1 if report["unreachable"] else 0
 

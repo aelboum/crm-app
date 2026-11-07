@@ -45,7 +45,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import notifications
+from crm_app import member_reminders, notifications
 from crm_app.domains import appointments as rules
 from crm_app.domains import settings as setting_values
 from crm_app.domains.records import InvalidValue
@@ -495,6 +495,7 @@ def create(
         given = sorted(name for name in FIELDS if values.get(name) is not None)
         _audit(session, scope, "created", appointment_id, fields=given, status=status)
         _notify_host(session, scope, host, appointment_id)
+        member_reminders.register(scope.workspace, values["starts_at"])
         return {"id": str(appointment_id)}
 
     replay = False
@@ -576,6 +577,8 @@ def update(
         _audit_update(session, scope, row.id, changed, (old_status, status))
         if "host_user_id" in changed and row.status != "cancelled":
             _notify_host(session, scope, row.host_user_id, row.id)
+        if "starts_at" in changed and row.status != "cancelled":
+            member_reminders.register(scope.workspace, row.starts_at)
 
     _transaction(scope, apply)
     return get(scope, appointment_id)

@@ -340,6 +340,48 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## N-2 — Hosts are reminded in the app before their appointments (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner's "Proceed
+  with: … In-app appointment reminders", 2026-11-07). It builds the
+  "upcoming-appointment reminders" N-1 left out. Nothing is emailed or
+  pushed.
+- **What:**
+  1. A new notification kind, `appointment_upcoming`, about an
+     appointment, for its host. No member acted, so the host is notified
+     about their own appointments too.
+  2. 30 minutes before the start (`member_reminders.LEAD`, fixed; the
+     contact email's `reminder_lead_minutes` is a separate setting), for
+     appointments that are pending or confirmed, not cancelled, and were
+     made before their reminder time. A host who books something less
+     than 30 minutes ahead is not reminded of it.
+  3. One reminder per appointment and start time:
+     `appointment_member_reminder` (tenant-owned, forced RLS,
+     append-only) has that primary key and is written in the notification's
+     transaction, so a retried or concurrent run notifies once and a
+     rescheduled appointment is reminded of again.
+  4. The run is part of `crm_app.email_maintenance` (every 1–5 minutes).
+     It finds workspaces through the global `member_reminder_workspace`
+     (workspace id and the latest known start time), which appointment
+     creation, rescheduling and visitor bookings update in their own
+     transaction; a row whose time has passed is removed. A workspace
+     that fails is left for the next run; the log names its id and the
+     error type only.
+  5. The purge participant removes a workspace's registry row; the tenant
+     table is in `PURGE_TABLES`.
+- **Schema:** migration `0039_member_reminders` (the two tables and the
+  notification kind check). Run on local and test databases only. No
+  back-fill: an appointment made earlier is reminded of once it is made
+  or moved again; no deployment has data.
+- **Not done:** per-member preferences or lead times (Settings ›
+  Notifications stays "soon"); overdue-task reminders; email or push
+  delivery.
+- **Tests:** `tests/integration/test_member_reminders.py` (registration,
+  once within the lead time, short notice and cancelled skipped,
+  rescheduled reminded again, two runs at once, nobody else and no other
+  workspace, registry cleared and purged); the table guard
+  (`tests/support.py` lists); `tests/unit/test_purge.py`.
+
 ## E-R1 — An email whose send outcome is unknown is not retried blindly
 
 - **Status:** Done under the autonomous mandate, 2026-11-07 (the owner's

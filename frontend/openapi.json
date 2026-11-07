@@ -6090,7 +6090,8 @@
               "conversation_assigned",
               "appointment_assigned",
               "booking_received",
-              "booking_cancelled"
+              "booking_cancelled",
+              "appointment_upcoming"
             ],
             "title": "Kind",
             "type": "string"

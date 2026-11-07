@@ -4408,7 +4408,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "task_assigned" | "conversation_assigned" | "appointment_assigned" | "booking_received" | "booking_cancelled";
+            kind: "task_assigned" | "conversation_assigned" | "appointment_assigned" | "booking_received" | "booking_cancelled" | "appointment_upcoming";
             /** Read At */
             read_at: string | null;
             /**

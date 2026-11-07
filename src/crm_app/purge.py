@@ -89,6 +89,7 @@ PURGE_TABLES: tuple[str, ...] = (
     "company_tag",
     "task",
     "appointment_reminder",
+    "appointment_member_reminder",
     "appointment",
     "opportunity_event",
     "opportunity",
@@ -117,6 +118,8 @@ _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 # `automation_due` (migration 0021) schedules a workspace's automation runs.
 # `inbound_email` and `conversation_route_index` (migration 0025) hold a
 # routed email's state and the hashes of a workspace's routing tokens.
+# `member_reminder_workspace` (migration 0039) says up to when a workspace
+# has appointments to remind their hosts of.
 PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
     "signup",
     "import_expiry",
@@ -127,6 +130,7 @@ PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
     "custom_domain_index",
     "sending_domain_index",
     "reminder_workspace",
+    "member_reminder_workspace",
 )
 
 
@@ -188,6 +192,13 @@ def _forget_reminders(tenant_id: uuid.UUID) -> None:
 
     if not reminders.forget_workspace(tenant_id):
         raise PurgeIncompleteError("Rows remain in: reminder_workspace")
+
+
+def _forget_member_reminders(tenant_id: uuid.UUID) -> None:
+    from crm_app import member_reminders  # noqa: PLC0415
+
+    if not member_reminders.forget_workspace(tenant_id):
+        raise PurgeIncompleteError("Rows remain in: member_reminder_workspace")
 
 
 def _forget_sending_domains(tenant_id: uuid.UUID) -> None:
@@ -289,6 +300,8 @@ class CrmDataPurgeParticipant:
             _forget_sending_domains(tenant_id)
         if "reminder_workspace" in self._global_references:
             _forget_reminders(tenant_id)
+        if "member_reminder_workspace" in self._global_references:
+            _forget_member_reminders(tenant_id)
 
     def _table(self, table: str) -> Any:  # a SQLAlchemy Table; typed loosely to keep SQLAlchemy out
         from saas_os.infra.db import Base  # noqa: PLC0415
