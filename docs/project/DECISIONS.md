@@ -343,7 +343,9 @@ approval), **Superseded**.
 ## P3-SV — Saved views of the contacts and deals lists (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Go" on the
-  recommended saved views, 2026-11-07). Backend first; screens follow.
+  recommended saved views, 2026-11-07). Contacts: backend and screen
+  (a "Saved views" menu: apply, save the current filters, delete). Deals:
+  backend only so far; its screen is next.
 - **What:** a member saves named sets of list filters for Contacts and for
   Deals, private to them (shared views would need rules on who may change
   them: a later decision). Table `crm_app.saved_view` (migration

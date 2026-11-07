@@ -1593,3 +1593,4 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .bulk-count { font-weight: 600; }
 .bulk-result { color: var(--ink-2); }
 .records-table .check-col { width: 32px; }
+.saved-views { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

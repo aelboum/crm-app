@@ -27,6 +27,7 @@ import { useT } from "../i18n/useT";
 import { useMemberNames } from "../members/names";
 import { ContactBulkBar } from "./ContactBulkBar";
 import { ContactDialog, sourceLabel } from "./ContactDialog";
+import { ContactViews } from "./ContactViews";
 import { CustomFieldsSection } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
 import { AppointmentsSection } from "./AppointmentsSection";
@@ -257,6 +258,27 @@ export function ContactsPage({
             {t("records.clear")}
           </AriaButton>
         ) : null}
+        <ContactViews
+          workspaceId={workspaceId}
+          current={{
+            q: search.trim() || null,
+            lifecycle_stage: stages,
+            owner: owners,
+            tag_id: tagIds,
+            archived: view === "archived" ? "true" : "false",
+            sort,
+            direction,
+          }}
+          onApply={(saved) => {
+            setView(saved.archived === "true" ? "archived" : "all");
+            setSearch(saved.q ?? "");
+            setStages(saved.lifecycle_stage ?? []);
+            setOwners(saved.owner ?? []);
+            setTagIds(saved.tag_id ?? []);
+            setSort(saved.sort);
+            setDirection(saved.direction);
+          }}
+        />
         <span className="records-meta">
           {first ? t("records.shown", { shown: items.length, total }) : null}
         </span>

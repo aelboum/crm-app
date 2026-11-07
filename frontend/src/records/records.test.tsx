@@ -820,4 +820,66 @@ describe("narrow screens", () => {
     await screen.findByRole("table", { name: "Contacts" });
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
+
+  it("applies a saved view and saves the current filters as one", async () => {
+    const user = userEvent.setup();
+    const saved = {
+      id: "v1",
+      name: "Customers",
+      filters: {
+        q: null,
+        lifecycle_stage: ["customer"],
+        owner: [],
+        tag_id: [],
+        archived: "false",
+        sort: "updated_at",
+        direction: "desc",
+      },
+      created_at: stamp,
+      updated_at: stamp,
+    };
+    const { sent } = renderApp(
+      `/w/${WS}/contacts`,
+      crm(OWNER_ACTIONS, (method, path) => {
+        if (path === `/v1/workspaces/${WS}/saved-views/contacts`) {
+          return method === "GET"
+            ? { status: 200, body: { items: [saved] } }
+            : { status: 201, body: { ...saved, id: "v2", name: "Mine" } };
+        }
+        return undefined;
+      }),
+    );
+    await screen.findByRole("table", { name: "Contacts" });
+    const views = screen.getByRole("group", { name: "Saved views" });
+    await user.selectOptions(within(views).getByLabelText("Saved view"), "v1");
+    await waitFor(() => {
+      expect(
+        listRequests(sent, "contacts").some(
+          (r) => r.path.includes("lifecycle_stage=customer") && r.path.includes("sort=updated_at"),
+        ),
+      ).toBe(true);
+    });
+    await user.click(within(views).getByRole("button", { name: "Save view" }));
+    await user.type(within(views).getByLabelText("View name"), "Mine");
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(within(views).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(sent).toContainEqual({
+        method: "POST",
+        path: `/v1/workspaces/${WS}/saved-views/contacts`,
+        body: {
+          name: "Mine",
+          filters: {
+            q: null,
+            lifecycle_stage: ["customer"],
+            owner: [],
+            tag_id: [],
+            archived: "false",
+            sort: "updated_at",
+            direction: "desc",
+          },
+        },
+      });
+    });
+  });
 });
