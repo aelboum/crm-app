@@ -253,6 +253,10 @@ INTEGRATIONS = {
     f"POST {_INTEGRATION}/disable": "crm_app.integration:manage",
     f"POST {_INTEGRATION}/keys": "crm_app.integration:manage",
     f"POST {_INTEGRATION}/keys/{{key_id}}/revoke": "crm_app.integration:manage",
+    # Webhook endpoints (decision P12-H).
+    "GET /v1/workspaces/{tenant_id}/webhooks": "crm_app.integration:manage",
+    "POST /v1/workspaces/{tenant_id}/webhooks": "crm_app.integration:manage",
+    "DELETE /v1/workspaces/{tenant_id}/webhooks/{endpoint_id}": "crm_app.integration:manage",
 }
 # Conversations (decision P6-C): every role reads; Owner, Admin and Member
 # reply, log messages, add notes, assign and close.

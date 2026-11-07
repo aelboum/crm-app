@@ -237,6 +237,14 @@ reads, creates and updates contacts, companies, deals and tasks, and
 nothing else (`tests/unit/test_routes.py`, `API_KEY_ROUTES`). Revoking a
 key or disabling the integration stops it on the next request.
 
+Webhooks (decision P12-H): an Owner or Admin adds an `https://` address
+there and copies its signing key, shown once. Each message is JSON
+(`event_id`, `event_type`, `data`) with `X-Webhook-Timestamp` and
+`X-Webhook-Signature: sha256=<hex>`, the HMAC-SHA256 with that key of
+`<timestamp>.<body>`. Verify it, and refuse old timestamps and repeated
+`event_id`s. Every address receives `contact.created`, `contact.updated`,
+`deal.stage_changed`, `form.submitted` and `appointment.booked`.
+
 ## Production image
 
 `Dockerfile` builds one image for the API, the worker and the migrations

@@ -45,7 +45,18 @@ waste.
 | `python -m crm_app.provision` | Create a workspace with its roles and first Owner | `--dry-run`; `--confirm-production` |
 | `python -m crm_app.role_upgrade` | Grant older workspaces new template permissions | Dry run by default; production needs `--confirm-production` and `--expect` (`ROLE-UPGRADE-RUNBOOK.md`) |
 
+## Settings the app and worker both need
+
+- `FIELD_ENCRYPTION_ACTIVE_KEY_VERSION` and `FIELD_ENCRYPTION_KEY_<VERSION>`
+  (decision P12-H): SaaS-OS keeps customers' webhook signing keys
+  encrypted with it. Without it no webhook address can be added; if it is
+  lost, existing addresses can no longer be signed for and must be added
+  again. Keep it with the other offline secrets.
+
 ## Health to watch
+
+- **Webhook deliveries** that give up show as "Gave up" in Settings ›
+  Integrations › Webhooks (SaaS-OS dead-letters them after its retries).
 
 - **Command exit codes:** non-zero means it did not finish. Any command failing
   twice in a row needs attention.

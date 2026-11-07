@@ -755,8 +755,24 @@ def update(
 
 def _moved(session: Session, scope: Scope, row: Opportunity, *, moved: bool) -> None:
     """A member's move starts the deal's contact's automations in the same
-    transaction (decision P8-B); a stage removal's move does not."""
-    if not moved or row.contact_id is None:
+    transaction (decision P8-B); a stage removal's move does not. Customers'
+    webhooks hear of every member's move, with or without a contact (P12-H)."""
+    if not moved:
+        return
+    from crm_app import webhooks  # noqa: PLC0415 - webhooks imports records
+
+    webhooks.emit(
+        session,
+        scope.workspace,
+        "deal.stage_changed",
+        {
+            "id": row.id,
+            "pipeline_id": row.pipeline_id,
+            "stage_id": row.stage_id,
+            "contact_id": row.contact_id,
+        },
+    )
+    if row.contact_id is None:
         return
     from crm_app import automations  # noqa: PLC0415 - automations imports records
 

@@ -26,6 +26,7 @@ services and its secrets from the secret store (DECISION-BRIEF-HOSTING.md).
 
 from __future__ import annotations
 
+import base64
 import secrets
 import sys
 from datetime import UTC, datetime, timedelta
@@ -155,6 +156,10 @@ def _files(passwords: dict[str, str]) -> dict[str, str]:
         "OIDC_CLIENT_ID=staging-placeholder",  # pragma: allowlist secret
         "AUTH_POST_LOGIN_PATH=/app",
         "TRUST_PROXY_HEADERS=true",
+        # SaaS-OS keeps webhook signing secrets encrypted with this key
+        # (decision P12-H); on a host it comes from the secret store.
+        "FIELD_ENCRYPTION_ACTIVE_KEY_VERSION=v1",
+        "FIELD_ENCRYPTION_KEY_V1=" + passwords["field_key"],
     ]
     migrate = [
         f"MIGRATIONS_DATABASE_URL=postgresql+psycopg://crm_app_owner:{owner}@postgres:5432/crm_app?{tls}",
@@ -188,6 +193,8 @@ def main(argv: list[str]) -> int:
     passwords = {name: secrets.token_urlsafe(24) for name in names}
     # ZITADEL's default password policy: upper, lower, digit and symbol.
     passwords["zitadel_admin"] = "Aa1!" + secrets.token_urlsafe(18)
+    # 32 random bytes, standard base64: SaaS-OS's field-encryption key format.
+    passwords["field_key"] = base64.b64encode(secrets.token_bytes(32)).decode("ascii")
     for name, text in _files(passwords).items():
         (OUT / name).write_text(text, encoding="utf-8")
     print(f"wrote {OUT} (certificates valid {DAYS} days)")

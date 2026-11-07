@@ -2476,6 +2476,41 @@ export interface paths {
         patch: operations["update_task_v1_workspaces__tenant_id__tasks__task_id__patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Webhooks */
+        get: operations["list_webhooks_v1_workspaces__tenant_id__webhooks_get"];
+        put?: never;
+        /** Add Webhook */
+        post: operations["add_webhook_v1_workspaces__tenant_id__webhooks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/webhooks/{endpoint_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Webhook */
+        delete: operations["remove_webhook_v1_workspaces__tenant_id__webhooks__endpoint_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/websites": {
         parameters: {
             query?: never;
@@ -2612,6 +2647,12 @@ export interface components {
             added: number;
             /** Already Suppressed */
             already_suppressed: number;
+        };
+        /** AddedEndpoint */
+        AddedEndpoint: {
+            endpoint: components["schemas"]["EndpointOut"];
+            /** Signing Secret */
+            signing_secret: string;
         };
         /** Amount */
         Amount: {
@@ -3915,6 +3956,29 @@ export interface components {
             /** Position */
             position?: number | null;
         };
+        /** DeliveryOut */
+        DeliveryOut: {
+            /** Attempts */
+            attempts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Event */
+            event: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Published At */
+            published_at: string | null;
+            /** Status */
+            status: string;
+        };
         /** Directory */
         Directory: {
             /** Items */
@@ -3984,6 +4048,35 @@ export interface components {
             /** Marketing Allowed */
             marketing_allowed: boolean;
             suppression: components["schemas"]["SuppressionRef"] | null;
+        };
+        /** EndpointIn */
+        EndpointIn: {
+            /** Url */
+            url: string;
+        };
+        /** EndpointList */
+        EndpointList: {
+            /** Events */
+            events: string[];
+            /** Items */
+            items: components["schemas"]["EndpointOut"][];
+        };
+        /** EndpointOut */
+        EndpointOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deliveries */
+            deliveries: components["schemas"]["DeliveryOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Url */
+            url: string;
         };
         /** Estimate */
         Estimate: {
@@ -12469,6 +12562,108 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TaskOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_webhooks_v1_workspaces__tenant_id__webhooks_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_webhook_v1_workspaces__tenant_id__webhooks_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndpointIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddedEndpoint"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_webhook_v1_workspaces__tenant_id__webhooks__endpoint_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+                endpoint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

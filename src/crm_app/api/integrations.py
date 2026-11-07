@@ -26,9 +26,13 @@ from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
 
 from crm_app import integrations
+from crm_app.api.webhooks import router as webhooks_router
 from crm_app.records import RecordError, Scope
 
 router = APIRouter(prefix="/v1/workspaces", tags=["integrations"])
+# Webhook endpoints sit in Settings > Integrations too (P12-H); exported here
+# so the app registers both from one import (`routers`).
+__all__ = ["router", "routers"]
 
 Manage = Annotated[RequestContext, Depends(require_permission("crm_app.integration", "manage"))]
 
@@ -147,3 +151,6 @@ def revoke_key(
     except RecordError as exc:
         raise _http(exc) from None
     return Response(status_code=204)
+
+
+routers = (router, webhooks_router)

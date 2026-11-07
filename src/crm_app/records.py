@@ -902,6 +902,12 @@ def insert_record(  # noqa: PLR0913 - the record, then how it came to be
 
         source = str(values.get("source") or "manual")  # the column's default
         automations.on_contact_created(session, scope, record_id, source)
+        if source != "import":
+            # Customers' webhooks, in the same transaction (P12-H); an import
+            # sends none, as it starts no automation.
+            from crm_app import webhooks  # noqa: PLC0415 - webhooks imports this module
+
+            webhooks.emit(session, scope.workspace, "contact.created", webhooks.contact_data(row))
 
 
 def create(
@@ -999,6 +1005,12 @@ def update(
         if custom_keys:
             metadata["custom_field_keys"] = custom_keys
         _audit(session, kind, scope, _Event("updated", record_id, metadata))
+        if kind is CONTACT:
+            # Customers' webhooks (P12-H): which fields changed, not their values.
+            from crm_app import webhooks  # noqa: PLC0415 - webhooks imports this module
+
+            data = {**webhooks.contact_data(row), "changed": sorted(changed)}
+            webhooks.emit(session, scope.workspace, "contact.updated", data)
 
     _write(kind, scope, lambda: unique.get("value"), apply)
     return get(kind, scope, record_id)

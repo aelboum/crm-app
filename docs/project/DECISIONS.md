@@ -387,7 +387,7 @@ approval), **Superseded**.
   `tests/unit/test_permission_grants.py` (the new check),
   `frontend/src/pages/integrationSettings.test.tsx` (4).
 
-## P12-H — Outbound webhooks (approved 2026-11-07; to build)
+## P12-H — Outbound webhooks (approved and built 2026-11-07)
 
 - **Approved:** Owners and Admins add HTTPS endpoint URLs and see the
   signing secret once (SaaS-OS `core.webhooks`: HMAC with a timestamp,
@@ -399,6 +399,36 @@ approval), **Superseded**.
   address the Owner or Admin chose (decision C). Delivery history from
   SaaS-OS's outbox. Every endpoint receives every event until SaaS-OS
   filters per subscription (gap 19, recorded only; decision D).
+- **Built (slice 12H):**
+  1. Settings › Integrations › Webhooks: up to 10 `https://` addresses
+     without credentials in them (plain `http://` refused by LeadStack as
+     well as SaaS-OS); the signing key is shown once in an uncached
+     response; the list never shows an address's query string, which may
+     carry the receiver's token. Removing is repeatable. Routes need
+     `crm_app.integration:manage` and a member's session; SaaS-OS checks
+     `webhook_subscription:create`/`:delete` too.
+  2. `crm_app.webhooks.emit` records the event with SaaS-OS's
+     `trigger_event` in the change's own transaction, where automations
+     start for the same moment: `contact.created` (not for an import),
+     `contact.updated` (changed field names only), `deal.stage_changed`
+     (every member's move, with or without a contact), `form.submitted`
+     and `appointment.booked` (IDs only). Contacts carry id, first and
+     last name, email, lifecycle stage and source; nothing else.
+  3. Delivery history: the endpoint's last 20 outbox rows (event, status,
+     attempts, times, last error up to 200 characters), never the payload.
+  4. **New deployment secret:** SaaS-OS keeps each signing key encrypted
+     and needs `FIELD_ENCRYPTION_ACTIVE_KEY_VERSION` and
+     `FIELD_ENCRYPTION_KEY_<VERSION>` (32 random bytes, base64) in the app's
+     and the worker's environment. Without them adding an address answers
+     `webhooks_not_configured`; the staging rehearsal's `prepare_local.py`
+     now generates one. Losing the key makes existing endpoints unusable
+     (their keys cannot be read to sign), so it belongs with the other
+     secrets kept offline (brief H section 6).
+- **Not tested end to end:** `appointment.booked` with an endpoint (the
+  booking suites run the emit without one), and a real delivery leaving
+  through the egress proxy (SaaS-OS's own tests; staging, once hosted).
+- **Tests:** `tests/integration/test_webhooks.py` (7),
+  `frontend/src/pages/integrationSettings.test.tsx` (the webhook case).
 
 ## P8-N — The automation notify action (2026-11-07)
 

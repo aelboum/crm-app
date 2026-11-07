@@ -41,6 +41,8 @@ PUBLIC_PACKAGES = frozenset(
         "saas_os.core.notifications",
         # Integrations' service-account keys (decision P12-K).
         "saas_os.core.api_keys",
+        # Webhook delivery history, read from the outbox's public model (P12-H).
+        "saas_os.core.outbox",
         # Permission grant migrations, public since v0.7.0 (ADR 0060; decision K3.7).
         "saas_os.core.permission_grants",
         "saas_os.inference",

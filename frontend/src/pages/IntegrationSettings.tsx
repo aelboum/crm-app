@@ -19,6 +19,7 @@ import { Button } from "../components/ui/Button";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { When } from "../records/parts";
+import { WebhookSettings } from "./WebhookSettings";
 
 /*
  * Settings › Integrations (decision P12-K). An integration lets another
@@ -333,6 +334,7 @@ export function IntegrationSettings({
           {t(failure(create.error))}
         </p>
       ) : null}
+      <WebhookSettings workspaceId={workspaceId} />
     </section>
   );
 }

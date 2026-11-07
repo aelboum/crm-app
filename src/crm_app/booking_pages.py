@@ -663,6 +663,31 @@ def _tell_host(
     member_reminders.register(workspace, starts_at)
 
 
+def _announce_booking(  # noqa: PLR0913 - the booking's identity
+    session: Session,
+    scope: Scope,
+    appointment_id: uuid.UUID,
+    page_id: uuid.UUID,
+    contact_id: uuid.UUID,
+    *,
+    matched: bool,
+) -> None:
+    """Automations start in the same transaction (decision P8-B), unless the
+    contact was matched only by the email typed: an unverified claim keeps
+    the booking but starts no automation (decision P7-V). Customers'
+    webhooks hear of every online booking, with IDs only (P12-H)."""
+    from crm_app import automations, webhooks  # noqa: PLC0415 - both import records
+
+    if not matched:
+        automations.on_event(session, scope, "appointment_booked", contact_id, page_id)
+    webhooks.emit(
+        session,
+        scope.workspace,
+        "appointment.booked",
+        {"id": appointment_id, "booking_page_id": page_id, "contact_id": contact_id},
+    )
+
+
 def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
     """The booking's whole effect, in the idempotency transaction."""
     workspace, offer = accepted.workspace, accepted.offer
@@ -796,13 +821,9 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
             text_body=body,
             contact_id=contact_id,
         )
-    # Automations start in the same transaction (decision P8-B).
-    from crm_app import automations  # noqa: PLC0415 - automations imports records
-
-    if outcome != "matched":
-        # A contact matched only by the email typed is an unverified claim:
-        # the booking is kept, but it starts no automation (decision P7-V).
-        automations.on_event(session, scope, "appointment_booked", contact_id, page.id)
+    _announce_booking(
+        session, scope, appointment_id, page.id, contact_id, matched=outcome == "matched"
+    )
     return {
         "appointment_id": str(appointment_id),
         "email_id": str(email_id) if email_id else None,

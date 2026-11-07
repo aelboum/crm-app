@@ -742,6 +742,15 @@ def _record(session: Session, accepted: _Accepted) -> dict[str, object]:
         if tagged and form.tag_id is not None:
             automations.on_event(session, accepted.scope, "tag_added", contact_id, form.tag_id)
         automations.on_event(session, accepted.scope, "form_submitted", contact_id, form.id)
+    # Customers' webhooks hear of every submission, with IDs only (P12-H).
+    from crm_app import webhooks  # noqa: PLC0415 - webhooks imports records
+
+    webhooks.emit(
+        session,
+        accepted.scope.workspace,
+        "form.submitted",
+        {"id": submission_id, "form_id": form.id, "contact_id": contact_id},
+    )
     return {"id": str(submission_id)}
 
 

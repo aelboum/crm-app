@@ -971,7 +971,7 @@ Do not grant paid entitlements solely because a checkout flow was initiated.
 
 # 17. Phase 12 — Integrations and API Platform
 
-**Status:** In progress. Slice 12W (decision P12-W): external websites (allowed origins) may embed the workspace's published forms through the public form API with CORS, lead attribution and embed code. Slice 12D (decision P12-D): custom domains for hosted pages, verified by DNS TXT record, mapped by Host for verified domains only, re-checked daily against takeover (DNS lookups and edge TLS wait on owner decisions). Slice 12K (decision P12-K, 2026-11-07): integrations with API keys, as Member or Read-only, reading, creating and updating contacts, companies, deals and tasks. Webhooks for customers approved (P12-H), to build. Not yet: a tracking script.
+**Status:** In progress. Slice 12W (decision P12-W): external websites (allowed origins) may embed the workspace's published forms through the public form API with CORS, lead attribution and embed code. Slice 12D (decision P12-D): custom domains for hosted pages, verified by DNS TXT record, mapped by Host for verified domains only, re-checked daily against takeover (DNS lookups and edge TLS wait on owner decisions). Slice 12K (decision P12-K, 2026-11-07): integrations with API keys, as Member or Read-only, reading, creating and updating contacts, companies, deals and tasks. Slice 12H (decision P12-H, 2026-11-07): signed webhooks for customers on five events, with delivery history. Not yet: a tracking script.
 
 ## Objectives
 

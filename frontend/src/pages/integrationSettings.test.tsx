@@ -39,6 +39,44 @@ const INTEGRATION = {
   ],
 };
 
+const HOOK = "c1000000-0000-4000-8000-000000000001";
+const WEBHOOKS = {
+  events: [
+    "contact.created",
+    "contact.updated",
+    "deal.stage_changed",
+    "form.submitted",
+    "appointment.booked",
+  ],
+  items: [
+    {
+      id: HOOK,
+      url: "https://hooks.example.org/in",
+      created_at: stamp,
+      deliveries: [
+        {
+          id: "d1",
+          event: "contact.created",
+          status: "published",
+          attempts: 1,
+          created_at: stamp,
+          published_at: stamp,
+          last_error: null,
+        },
+        {
+          id: "d2",
+          event: "deal.stage_changed",
+          status: "dead_lettered",
+          attempts: 8,
+          created_at: stamp,
+          published_at: null,
+          last_error: "status 500",
+        },
+      ],
+    },
+  ],
+};
+
 type Reply = { status: number; body?: unknown } | undefined;
 
 function workspace(
@@ -69,6 +107,9 @@ function workspace(
     }
     if (path === `${base}/integrations`) {
       return { status: 200, body: { items: [INTEGRATION] } };
+    }
+    if (path === `${base}/webhooks`) {
+      return { status: 200, body: WEBHOOKS };
     }
     return undefined;
   };
@@ -183,5 +224,62 @@ describe("integration settings", () => {
       within(card).getByText("Only Owners and Admins can manage integrations."),
     ).toBeInTheDocument();
     expect(within(card).queryByRole("button")).toBeNull();
+  });
+
+  it("lists webhook deliveries and adds an address with its key once", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      URL,
+      workspace(true, (method, path) =>
+        method === "POST" && path.endsWith("/webhooks")
+          ? {
+              status: 201,
+              body: {
+                endpoint: { ...WEBHOOKS.items[0], deliveries: [] },
+                signing_secret: SECRET,
+              },
+            }
+          : method === "DELETE"
+            ? { status: 204 }
+            : undefined,
+      ),
+    );
+    const hooks = await screen.findByRole("region", { name: "Webhooks" });
+    const list = await within(hooks).findByRole("list", {
+      name: "Recent deliveries to https://hooks.example.org/in",
+    });
+    expect(list).toHaveTextContent("contact.createdDelivered");
+    expect(list).toHaveTextContent("Gave up");
+    expect(list).toHaveTextContent("8 attempts");
+    expect(list).toHaveTextContent("status 500");
+    expect(hooks).toHaveTextContent("appointment.booked");
+    await user.type(
+      within(hooks).getByLabelText("HTTPS address"),
+      "https://hooks.example.org/two",
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(hooks).getByRole("button", { name: "Add address" }),
+    );
+    const shown = await within(hooks).findByRole("status");
+    expect(shown).toHaveTextContent(SECRET);
+    expect(shown).toHaveTextContent("X-Webhook-Signature");
+    expect(sent).toContainEqual({
+      method: "POST",
+      path: `/v1/workspaces/${WS}/webhooks`,
+      body: { url: "https://hooks.example.org/two" },
+    });
+    await user.click(
+      within(hooks).getByRole("button", {
+        name: "Remove webhook https://hooks.example.org/in",
+      }),
+    );
+    await waitFor(() => {
+      expect(sent).toContainEqual({
+        method: "DELETE",
+        path: `/v1/workspaces/${WS}/webhooks/${HOOK}`,
+        body: undefined,
+      });
+    });
   });
 });

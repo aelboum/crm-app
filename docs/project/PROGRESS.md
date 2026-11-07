@@ -1333,6 +1333,18 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Customers' webhooks (decision P12-H, 2026-11-07)
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_webhooks.py` | 7 passed: `http://`, other schemes, credentials in the address and a Member refused; the key shown once, `no-store`, the query string never shown; nothing recorded without an address; a contact created and updated, a deal moved and a form submitted each record one delivery for this workspace's address and none for another's; data is the agreed set, `contact.updated` without values; history without payloads; removal repeatable and final |
+| Affected integration suites (automations, booking pages and emails, consent, forms, history, imports, integrations, deals, records) | 142 passed |
+| `uv run pytest tests/unit` | 769 passed |
+| Frontend `integrationSettings.test.tsx`; typecheck; lint | 5 passed; clean |
+
+Not tested end to end: `appointment.booked` with an address attached, and
+a real delivery through the egress proxy.
+
 ## Integrations and API keys (decision P12-K, 2026-11-07)
 
 | Check | Result |
