@@ -45,7 +45,7 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import records, system_audit, tasks
+from crm_app import notifications, records, system_audit, tasks
 from crm_app.domains import automations as rules
 from crm_app.domains.records import InvalidValue
 from crm_app.models import (
@@ -581,7 +581,36 @@ def _act(  # noqa: PLR0911 - one answer per action
         }
         tasks.create_in(session, scope, values, automation_id=str(run.automation_id))
         return "done", None
+    if action.type == "notify_member":
+        return _notice(session, scope, contact, args)
     # wait: the caller sets the run waiting.
+    return "done", None
+
+
+def _notice(
+    session: Session, scope: Scope, contact: Contact, args: Mapping[str, Any]
+) -> tuple[str, str | None]:
+    """`notify_member` (P8-N): one in-app notification about the contact, in
+    the step's transaction, so a retried step never notifies twice. The
+    automation acted, so no member is named as the actor, and the member
+    who activated it is notified like anyone else."""
+    if args["recipient"] == "contact_owner":
+        recipient = contact.owner_user_id
+        if recipient is None:
+            return "skipped", "no_owner"
+    else:
+        recipient = uuid.UUID(args["recipient"])
+    if not _active_member(scope.workspace, recipient):
+        return "skipped", "member_gone"
+    notifications.notify(
+        session,
+        scope.workspace,
+        recipient,
+        "automation_notice",
+        contact.id,
+        actor=None,
+        note=args["message"],
+    )
     return "done", None
 
 

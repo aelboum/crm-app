@@ -4408,7 +4408,9 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "task_assigned" | "conversation_assigned" | "appointment_assigned" | "booking_received" | "booking_cancelled" | "appointment_upcoming";
+            kind: "task_assigned" | "conversation_assigned" | "appointment_assigned" | "booking_received" | "booking_cancelled" | "appointment_upcoming" | "automation_notice";
+            /** Note */
+            note: string | null;
             /** Read At */
             read_at: string | null;
             /**
@@ -4422,7 +4424,7 @@ export interface components {
              * Subject Type
              * @enum {string}
              */
-            subject_type: "task" | "conversation" | "appointment";
+            subject_type: "task" | "conversation" | "appointment" | "contact";
         };
         /** NotificationPage */
         NotificationPage: {

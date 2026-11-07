@@ -78,6 +78,12 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
         {"trigger": {"type": "appointment_booked", "booking_page_id": TAG, "x": 1}},
         {"yes": [{"type": "set_lifecycle_stage", "stage": "royalty"}]},
         {"yes": [{"type": "remove_tag"}]},
+        # P8-N
+        {"yes": [{"type": "notify_member", "message": ""}]},
+        {"yes": [{"type": "notify_member", "message": "\u200b"}]},
+        {"yes": [{"type": "notify_member", "message": "x" * (rules.NOTICE_MAX + 1)}]},
+        {"yes": [{"type": "notify_member", "message": "Hi", "recipient": "everyone"}]},
+        {"yes": [{"type": "notify_member", "message": "Hi", "subject": "x"}]},
     ],
 )
 def test_anything_outside_the_rules_is_refused(changes: dict[str, Any]) -> None:
@@ -157,3 +163,21 @@ def test_activation_needs_an_action_and_names_what_it_uses() -> None:
     )
     rules.activatable(given)
     assert rules.referenced(given) == ({TAG}, {USER})
+
+
+def test_the_notify_action_is_plain_data_and_names_its_member() -> None:
+    """P8-N: a fixed message, whitespace folded, to the contact's owner by
+    default or to a named member, who must then be checked at activation."""
+    given = rules.definition(
+        _base(
+            yes=[
+                {"type": "notify_member", "message": "  Hot   lead "},
+                {"type": "notify_member", "message": "Call", "recipient": USER.upper()},
+            ]
+        )
+    )
+    assert given.as_json()["yes"] == [
+        {"type": "notify_member", "recipient": "contact_owner", "message": "Hot lead"},
+        {"type": "notify_member", "recipient": USER, "message": "Call"},
+    ]
+    assert rules.referenced(given)[1] == {USER}

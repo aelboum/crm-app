@@ -3,7 +3,9 @@
 A notification tells one member that something happened to them: someone
 else assigned them a task, a conversation or an appointment, a visitor
 booked or cancelled on one of their booking pages, or an appointment they
-host starts soon (`crm_app.member_reminders`, decision N-2). Rows live in
+host starts soon (`crm_app.member_reminders`, decision N-2), or an
+automation step tells them about a contact (`notify_member`, decision P8-N).
+Rows live in
 `crm_app.member_notification` (forced RLS) and are written by `notify()`
 inside the same transaction as the change they describe, so a rolled-back
 change notifies nobody and an idempotent replay (which skips the business
@@ -15,7 +17,9 @@ function) notifies nobody twice.
 - A row names its record by type and ID only. The list reads the record's
   current name, and only when the reader may read that kind of record; a
   deleted record shows as unavailable. No record content is copied, so
-  nothing personal outlives the record here.
+  nothing personal outlives the record here. The one text a row may carry
+  is an automation's `note`: the fixed message its author wrote in the
+  definition, never filled in from the record.
 - Rows older than `RETENTION` are deleted for a recipient whenever a new one
   is written for them, so the table stays bounded without a scheduled job.
 
@@ -37,7 +41,7 @@ from saas_os.core.rbac import can
 from saas_os.infra.db import Session, delete, now, select, tenant_session_scope, update
 
 from crm_app.domains import paging
-from crm_app.models import Appointment, Conversation, MemberNotification, Task
+from crm_app.models import Appointment, Contact, Conversation, MemberNotification, Task
 from crm_app.records import Scope, _after, _OrderKey
 
 KINDS: Mapping[str, str] = {
@@ -48,19 +52,25 @@ KINDS: Mapping[str, str] = {
     "booking_cancelled": "appointment",
     # The host's appointment starts soon (N-2); no member acted.
     "appointment_upcoming": "appointment",
+    # An automation step about the run's contact, with its note (P8-N).
+    "automation_notice": "contact",
 }
+# Kinds that carry the automation author's note; no other kind has one.
+NOTE_KINDS = frozenset({"automation_notice"})
 RETENTION = timedelta(days=90)
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 50
 # The unread badge stops counting here ("99+").
 UNREAD_CAP = 99
 
-# The record each subject type names, its label column and the permission
-# that lets the reader see that label.
-_SUBJECTS: Mapping[str, tuple[Any, Any, str]] = {
-    "task": (Task, Task.title, "crm_app.task"),
-    "conversation": (Conversation, Conversation.subject, "crm_app.conversation"),
-    "appointment": (Appointment, Appointment.title, "crm_app.appointment"),
+# The record each subject type names, the columns of its label (joined with
+# spaces, empty parts left out) and the permission that lets the reader see
+# that label.
+_SUBJECTS: Mapping[str, tuple[Any, tuple[Any, ...], str]] = {
+    "task": (Task, (Task.title,), "crm_app.task"),
+    "conversation": (Conversation, (Conversation.subject,), "crm_app.conversation"),
+    "appointment": (Appointment, (Appointment.title,), "crm_app.appointment"),
+    "contact": (Contact, (Contact.first_name, Contact.last_name), "crm_app.contact"),
 }
 
 
@@ -82,11 +92,15 @@ def notify(  # noqa: PLR0913 - who, what, which record and who acted
     subject_id: uuid.UUID,
     *,
     actor: uuid.UUID | None,
+    note: str | None = None,
 ) -> bool:
     """Record one notification in the caller's transaction (`session` is
     the caller's tenant session for `workspace`). `actor` is the member who
-    acted, or None for a visitor. Returns whether a row was written: never
-    for no recipient or for the actor themselves."""
+    acted, or None for a visitor or an automation. `note` is required for
+    the kinds in `NOTE_KINDS` and refused for every other. Returns whether a
+    row was written: never for no recipient or for the actor themselves."""
+    if (kind in NOTE_KINDS) != (note is not None):
+        raise ValueError(f"{kind}: a note exactly when the kind carries one")
     if recipient is None or recipient == actor:
         return False
     subject_type = KINDS[kind]
@@ -110,6 +124,7 @@ def notify(  # noqa: PLR0913 - who, what, which record and who acted
             # holds whatever the application servers' clocks say.
             created_at=now(),
             read_at=None,
+            note=note,
         )
     )
     return True
@@ -140,14 +155,14 @@ def _labels(
         wanted.setdefault(row.subject_type, set()).add(row.subject_id)
     labels: dict[tuple[str, uuid.UUID], str] = {}
     for subject_type, ids in wanted.items():
-        model, label, resource = _SUBJECTS[subject_type]
+        model, columns, resource = _SUBJECTS[subject_type]
         if not can(actor_id=reader, tenant_id=workspace, action="read", resource=resource):
             continue
         found = session.execute(
-            select(model.id, label).where(model.tenant_id == workspace, model.id.in_(ids))
+            select(model.id, *columns).where(model.tenant_id == workspace, model.id.in_(ids))
         )
-        for record_id, name in found.tuples():
-            labels[(subject_type, record_id)] = name
+        for record_id, *parts in found.tuples():
+            labels[(subject_type, record_id)] = " ".join(str(p) for p in parts if p)
     return labels
 
 
@@ -198,6 +213,7 @@ def list_own(
                 "subject_id": row.subject_id,
                 "subject_label": labels.get((row.subject_type, row.subject_id)),
                 "actor_user_id": row.actor_user_id,
+                "note": row.note,
                 "created_at": row.created_at,
                 "read_at": row.read_at,
             }

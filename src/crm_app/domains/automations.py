@@ -23,8 +23,10 @@ the trigger, so automations that trigger one another always stop.
 Actions: `add_tag` and `remove_tag` (`tag_id`), `assign_owner`
 (`user_id`), `set_lifecycle_stage` (`stage`), `create_task` (`title`,
 `priority`, `due_minutes` or null, `assignee`: `contact_owner`, `none` or a
-member's id) and `wait` (`minutes`). Contacts created by an import never
-start an automation.
+member's id), `notify_member` (`recipient`: `contact_owner` or a member's
+id, and a fixed `message` the definition's author writes; decision P8-N) and
+`wait` (`minutes`). Contacts created by an import never start an
+automation.
 """
 
 from __future__ import annotations
@@ -58,6 +60,7 @@ ACTIONS = (
     "assign_owner",
     "set_lifecycle_stage",
     "create_task",
+    "notify_member",
     "wait",
 )
 PRIORITIES = ("high", "medium", "low")
@@ -65,6 +68,9 @@ MAX_ACTIONS = 10
 MAX_AUTOMATIONS = 20
 NAME_MAX = 100
 TASK_TITLE_MAX = 200
+# The fixed text of a `notify_member` step (P8-N): written by whoever edits
+# the automation, never filled in from the contact.
+NOTICE_MAX = 200
 MINUTES_MAX = 30 * 24 * 60
 MAX_VALUES = 20
 
@@ -146,6 +152,17 @@ def _task(raw: Mapping[str, Any], where: str) -> Action:
     return Action("create_task", args)
 
 
+def _notice(raw: Mapping[str, Any], where: str) -> Action:
+    _keys(raw, {"type", "recipient", "message"}, where)
+    message = " ".join(str(raw.get("message", "")).split())
+    if not 1 <= len(message) <= NOTICE_MAX or not visible_text(message):
+        raise InvalidValue(f"{where}.message: 1 to {NOTICE_MAX} visible characters")
+    recipient = raw.get("recipient", "contact_owner")
+    if recipient != "contact_owner":
+        recipient = _uuid(recipient, f"{where}.recipient")
+    return Action("notify_member", {"recipient": recipient, "message": message})
+
+
 def _action(raw: object, where: str) -> Action:
     if not isinstance(raw, Mapping):
         raise InvalidValue(f"{where}: an object")
@@ -168,6 +185,8 @@ def _action(raw: object, where: str) -> Action:
         return Action(kind, {"minutes": minutes})
     if kind == "create_task":
         return _task(raw, where)
+    if kind == "notify_member":
+        return _notice(raw, where)
     raise InvalidValue(f"{where}.type: one of {', '.join(ACTIONS)}")
 
 
@@ -302,4 +321,6 @@ def referenced(given: Definition) -> tuple[set[str], set[str]]:
             users.add(step.args["user_id"])
         elif step.type == "create_task" and step.args["assignee"] not in ("contact_owner", "none"):
             users.add(step.args["assignee"])
+        elif step.type == "notify_member" and step.args["recipient"] != "contact_owner":
+            users.add(step.args["recipient"])
     return tags, users

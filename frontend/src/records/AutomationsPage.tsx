@@ -10,6 +10,7 @@ import {
   type Definition,
   EMPTY_DEFINITION,
   MAX_ACTIONS,
+  NOTICE_MAX,
   type Source,
   type Trigger,
   TRIGGER_SOURCES,
@@ -428,6 +429,8 @@ function newAction(
   if (type === "set_lifecycle_stage") return { type, stage: "customer" };
   if (type === "assign_owner") return { type, user_id: members[0]?.id ?? "" };
   if (type === "wait") return { type, minutes: 60 };
+  if (type === "notify_member")
+    return { type, recipient: "contact_owner", message: "" };
   return {
     type,
     title: "",
@@ -934,6 +937,9 @@ function Branch({
             <option value="set_lifecycle_stage">
               {t("automations.action.set_lifecycle_stage")}
             </option>
+            <option value="notify_member">
+              {t("automations.action.notify_member")}
+            </option>
             <option value="wait">{t("automations.action.wait")}</option>
           </select>
           <Button
@@ -1034,6 +1040,40 @@ function ActionEditor({
             </option>
           ))}
         </select>
+      </div>
+    );
+  }
+  if (action.type === "notify_member") {
+    return (
+      <div className="automation-step-body">
+        <span className="automation-step-kind">{kind}</span>
+        <select
+          className="form-input"
+          aria-label={label("automations.field.recipient")}
+          value={action.recipient}
+          onChange={(event) => {
+            onChange({ ...action, recipient: event.target.value });
+          }}
+        >
+          <option value="contact_owner">
+            {t("automations.assignee.owner")}
+          </option>
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.label}
+            </option>
+          ))}
+        </select>
+        <input
+          className="form-input"
+          aria-label={label("automations.field.message")}
+          placeholder={t("automations.messagePlaceholder")}
+          value={action.message}
+          maxLength={NOTICE_MAX}
+          onChange={(event) => {
+            onChange({ ...action, message: event.target.value });
+          }}
+        />
       </div>
     );
   }

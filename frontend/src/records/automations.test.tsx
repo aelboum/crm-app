@@ -206,6 +206,7 @@ describe("automations", () => {
       "Remove tag",
       "Assign owner",
       "Set lifecycle stage",
+      "Notify a team member",
       "Wait",
     ]);
     expect(await accessibilityViolations()).toEqual([]);
@@ -273,6 +274,59 @@ describe("automations", () => {
           trigger: { type: "tag_added", tag_id: TAG },
           condition: null,
           yes: [{ type: "set_lifecycle_stage", stage: "customer" }],
+          no: [],
+        },
+      });
+    });
+  });
+
+  it("notifies a team member with the author's own message", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Hot leads");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "notify_member",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    expect(
+      within(dialog).getByLabelText("Notify, step 1 of Steps"),
+    ).toHaveValue("contact_owner");
+    await user.type(
+      within(dialog).getByLabelText("Message, step 1 of Steps"),
+      "New lead, call today",
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toEqual({
+        name: "Hot leads",
+        definition: {
+          trigger: { type: "contact_created", sources: [] },
+          condition: null,
+          yes: [
+            {
+              type: "notify_member",
+              recipient: "contact_owner",
+              message: "New lead, call today",
+            },
+          ],
           no: [],
         },
       });

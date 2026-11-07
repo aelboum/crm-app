@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0039_member_reminders` own the
+Migrations `0002_contacts_companies` to `0040_automation_notice` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -674,7 +674,8 @@ class MemberProfile(Base):
 class MemberNotification(Base):
     """One in-app notification for a member (migration 0037, decision N-1):
     what happened (`kind`), to which record (`subject_type`, `subject_id`),
-    who did it (`actor_user_id`, none for a visitor) and when it was read."""
+    who did it (`actor_user_id`, none for a visitor or an automation), when
+    it was read, and an automation's fixed `note` (migration 0040, P8-N)."""
 
     __tablename__ = "member_notification"
     __table_args__ = ({"schema": SCHEMA},)
@@ -688,6 +689,7 @@ class MemberNotification(Base):
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)
 
 
 class ConsentConfirmation(Base):

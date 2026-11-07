@@ -408,7 +408,8 @@ function notificationText(
   const actor = item.actor_user_id
     ? ownerLabel(t, item.actor_user_id, meId, names)
     : t("notif.actor.automation");
-  return t(`notif.kind.${item.kind}`, { actor });
+  // An automation's own message (P8-N), shown as its author wrote it.
+  return t(`notif.kind.${item.kind}`, { actor, note: item.note ?? "" });
 }
 
 function Notifications({ workspaceId }: { workspaceId: string }) {

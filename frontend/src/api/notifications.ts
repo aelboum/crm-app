@@ -68,11 +68,16 @@ export function useMarkAllNotificationsRead(workspaceId: string) {
 }
 
 /** Where a notification's record opens. */
+const SECTIONS = {
+  task: "tasks",
+  conversation: "inbox",
+  appointment: "calendar",
+  contact: "contacts",
+} as const;
+
 export function notificationTarget(item: Notification): {
-  section: "tasks" | "inbox" | "calendar";
+  section: (typeof SECTIONS)[keyof typeof SECTIONS];
   record: string;
 } {
-  const section =
-    item.subject_type === "task" ? "tasks" : item.subject_type === "conversation" ? "inbox" : "calendar";
-  return { section, record: item.subject_id };
+  return { section: SECTIONS[item.subject_type], record: item.subject_id };
 }

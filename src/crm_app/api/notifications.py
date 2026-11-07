@@ -37,8 +37,9 @@ Kind = Literal[
     "booking_received",
     "booking_cancelled",
     "appointment_upcoming",
+    "automation_notice",
 ]
-SubjectType = Literal["task", "conversation", "appointment"]
+SubjectType = Literal["task", "conversation", "appointment", "contact"]
 
 
 class NotificationOut(BaseModel):
@@ -51,6 +52,9 @@ class NotificationOut(BaseModel):
     subject_label: str | None
     # The member who acted; null for a visitor or an automation.
     actor_user_id: uuid.UUID | None
+    # An automation's fixed message (`automation_notice` only), as its
+    # author wrote it in the definition; null for every other kind.
+    note: str | None
     created_at: datetime
     read_at: datetime | None
 

@@ -340,6 +340,42 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P8-N — The automation notify action (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner: "Go" on the
+  recommended Phase 8 notify action, 2026-11-07). In-app only: nothing is
+  emailed, pushed or sent to the contact.
+- **What:**
+  1. A new action, `notify_member`: one in-app notification about the
+     run's contact, to the contact's owner (the default) or to a named
+     member, with a fixed message of 1 to 200 visible characters that the
+     automation's author writes. The message is stored as written and never
+     filled in from the contact, so no personal data is copied into the
+     notification; the list shows the contact's current name only to a
+     reader allowed to read contacts (as N-1).
+  2. A new notification kind, `automation_notice`, about a contact, with
+     the message in a new `note` column that only this kind may carry
+     (migration `0040_automation_notice`, a check constraint both ways).
+     The automation acted, so no member is named as the actor, and the
+     member who activated it is notified like anyone else.
+  3. **Once only:** the notification is written in the step's own
+     transaction with its `automation_step` row, so a retried or parallel
+     run never notifies twice (as every action, P8-A).
+  4. **Skips:** a contact without an owner skips the step (`no_owner`); a
+     recipient who left or was suspended skips it (`member_gone`). A named
+     recipient must be an active member when the automation is activated,
+     as for `assign_owner`.
+  5. **Screens:** the automation editor offers "Notify a team member" with
+     the recipient and the message; the notifications panel shows
+     "An automation: <message>" with the contact's name and opens the
+     contact.
+- **Still not built:** send email or SMS and AI actions (unchanged from
+  P8-A 5), round-robin and business-hours waits.
+- **Tests:** `tests/integration/test_automation_notify.py` (5),
+  `tests/unit/test_automation_rules.py`,
+  `frontend/src/records/automations.test.tsx`,
+  `frontend/src/shell/AppFrame.test.tsx`.
+
 ## D-STG.3 — Scheduled commands and the monitoring heartbeat (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Proceed",

@@ -401,6 +401,48 @@ describe("app frame", () => {
     });
   });
 
+  it("shows an automation's message and opens its contact", async () => {
+    const user = userEvent.setup();
+    const contact = "dddddddd-1111-4222-8333-444444444444";
+    const notice: Handler = (method, path, body) => {
+      if (path === `/v1/workspaces/${WS}/me/notifications`) {
+        return {
+          status: 200,
+          body: {
+            items: [
+              {
+                id: "n3",
+                kind: "automation_notice",
+                subject_type: "contact",
+                subject_id: contact,
+                subject_label: "Ann Lee",
+                actor_user_id: null,
+                note: "New lead, call today",
+                created_at: new Date().toISOString(),
+                read_at: new Date().toISOString(),
+              },
+            ],
+            next_cursor: null,
+            unread: 0,
+            unread_capped: false,
+          },
+        };
+      }
+      return signedIn(method, path, body);
+    };
+    const { router } = renderApp(`/w/${WS}/settings`, notice);
+    await user.click(await screen.findByRole("button", { name: "Notifications" }));
+    const list = await screen.findByRole("list", { name: "Notifications" });
+    const item = within(list).getByRole("button");
+    expect(item).toHaveTextContent("An automation: New lead, call today");
+    expect(item).toHaveTextContent("Ann Lee");
+    await user.click(item);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/w/${WS}/contacts`);
+    });
+    expect(router.state.location.search).toEqual({ record: contact });
+  });
+
   it("marks every notification read", async () => {
     const user = userEvent.setup();
     const { sent } = renderApp(`/w/${WS}/settings`, notified);

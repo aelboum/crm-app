@@ -1333,6 +1333,16 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Automation notify action (decision P8-N, 2026-11-07)
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_automation_notify.py` | 5 passed: a bad message and a recipient from another workspace refused; the owner and a named member notified with the message, no actor; a retried step notifies nobody twice; the list shows the note and "Ann Lee"; no owner and a departed member skip with `no_owner` / `member_gone` |
+| Related integration suites (notifications, automations, triggers, foundation head `0040_automation_notice`, migrations as the non-superuser owner, member reminders) | 46 passed |
+| `uv run pytest tests/unit` | 767 passed |
+| Frontend: `npm run typecheck`, `npm run lint`; `automations.test.tsx` and `AppFrame.test.tsx` | clean; 30 passed |
+| Full frontend suite locally | 332 of 335; the 3 failures (`pipelineSettings`, `bookingPages`, `companyExport`) pass alone, the known local load timing |
+
 ## Scheduled commands and heartbeat (decision D-STG.3, 2026-11-07)
 
 | Check | Result |

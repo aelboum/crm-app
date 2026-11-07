@@ -23,6 +23,7 @@ export const TRIGGER_SOURCES: Source[] = [
   "other",
 ];
 export const MAX_ACTIONS = 10;
+export const NOTICE_MAX = 200;
 
 export type Action =
   | { type: "add_tag"; tag_id: string }
@@ -36,6 +37,8 @@ export type Action =
       due_minutes: number | null;
       assignee: string;
     }
+  // P8-N: an in-app notification about the contact, with a fixed message.
+  | { type: "notify_member"; recipient: string; message: string }
   | { type: "wait"; minutes: number };
 
 export type Condition =

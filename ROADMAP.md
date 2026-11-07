@@ -563,7 +563,7 @@ Only show metrics whose definitions are documented and whose calculations are co
 
 # 10. Phase 5 — Calendar and Appointment Booking
 
-**Status:** In progress (decision P5-A, started by the owner on 2026-10-28). Slice 5A built: appointments, views, status, cancel, rescheduling, conflict detection, time zones, contact association, team assignment. Slice 5B built: business hours, availability, the outside-hours warning (decision P5-B). Slice 5C built: public booking pages with the visitor's own link to cancel (decision P5-C). Slice 5D built: appointment reminder emails to contacts, automatic at a chosen lead time and on request (decision P5-D; queued only while sending is off). In-app notifications for team members built (decision N-1, 2026-11-06): the host hears of appointments someone else gives them and of visitor bookings and cancellations; reminders before an appointment are not built.
+**Status:** In progress (decision P5-A, started by the owner on 2026-10-28). Slice 5A built: appointments, views, status, cancel, rescheduling, conflict detection, time zones, contact association, team assignment. Slice 5B built: business hours, availability, the outside-hours warning (decision P5-B). Slice 5C built: public booking pages with the visitor's own link to cancel (decision P5-C). Slice 5D built: appointment reminder emails to contacts, automatic at a chosen lead time and on request (decision P5-D; queued only while sending is off). In-app notifications for team members built (decision N-1, 2026-11-06): the host hears of appointments someone else gives them and of visitor bookings and cancellations. In-app reminders for hosts 30 minutes before their appointments built (decision N-2, 2026-11-07).
 
 ## Objectives
 
@@ -730,7 +730,7 @@ A limited initial form or landing-page experience may be more appropriate than r
 
 # 13. Phase 8 — Marketing Automation
 
-**Status:** In progress. Slice 8A (decision P8-A, 2026-11-01): definitions with versions, activation and pausing, the contact-created trigger, conditions, add tag, assign owner, create task and wait actions, a durable step-by-step execution that never acts twice, run history. Slice 8B (decision P8-B, 2026-11-02): triggers for a tag added, a form submitted, an online booking and a deal moved into a stage; remove tag and set lifecycle stage actions; each automation still runs at most once per contact. Not yet: email, SMS, AI and notify actions.
+**Status:** In progress. Slice 8A (decision P8-A, 2026-11-01): definitions with versions, activation and pausing, the contact-created trigger, conditions, add tag, assign owner, create task and wait actions, a durable step-by-step execution that never acts twice, run history. Slice 8B (decision P8-B, 2026-11-02): triggers for a tag added, a form submitted, an online booking and a deal moved into a stage; remove tag and set lifecycle stage actions; each automation still runs at most once per contact. Notify action (decision P8-N, 2026-11-07): an in-app notification about the contact to its owner or a named member, with the author's fixed message. Not yet: email, SMS and AI actions.
 
 ## Objectives
 
