@@ -340,6 +340,27 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## D-STG.4 — Settings template and staging runbook (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner: "Procees there
+  os no hosting provider,no domain name", 2026-11-07). Provider-neutral;
+  nothing chosen, bought or deployed.
+- **What:** `deploy/staging/env.template` names every setting and secret a
+  host needs, grouped by process, marking secrets and the ones kept offline
+  (ZITADEL master key, field-encryption key, backup identity), with `<...>`
+  placeholders for the provider, domain and accounts. Every email switch and
+  signup is off. `tests/unit/test_env_template.py` fails when a required
+  setting, or one the local rehearsal writes, has no line, or a secret has a
+  value. `docs/project/STAGING-RUNBOOK.md`: first deployment, updates,
+  rollback, rotation of each secret, backup and restore, and what to check
+  when something goes wrong; every step marked "rehearsed" (locally, by
+  D-STG to D-STG.3) or "not yet run".
+- **Found:** rolling back a release with a migration means restoring the
+  backup taken before it: migrations are forward-only outside development.
+  Rotating the field-encryption key needs the old key kept while any
+  webhook address added before exists (no re-encryption to a new key
+  version is verified here).
+
 ## P12-K — Integrations and API keys (2026-11-07)
 
 - **Status:** Approved by the owner ("Follow you recommendations" on

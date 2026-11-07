@@ -38,6 +38,10 @@ passwords; recreate the databases afterwards (`down -v`).
 | `egress-proxy`, `dns-resolver` | Squid (CONNECT to public IPv4 on 443 only) and Unbound |
 | `postgres`, `redis` (`stateful-local`) | stand-ins for the managed services: TLS from the local CA, hostssl only, a non-superuser owner, `noeviction`, AOF |
 
+Every setting a host needs is named, without values, in `env.template`;
+the steps to deploy, update, roll back, rotate secrets and restore are in
+`docs/project/STAGING-RUNBOOK.md` (decision D-STG.4).
+
 Settings are split so each process holds only what it needs:
 `compose.env` (stand-in passwords), `app.env` (app and worker),
 `migrate.env` (migration owner URL). All three are in `.local/`, which git

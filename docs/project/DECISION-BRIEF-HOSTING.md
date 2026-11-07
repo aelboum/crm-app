@@ -243,8 +243,12 @@ an enterprise customer's procurement require AWS.
    provider (SaaS-OS gaps 17 and 18).
 5. An environment template listing every setting and secret by name, with
    no values, and a role-provisioning script for an external PostgreSQL
-   (S4).
-6. A staging runbook: deploy, roll back, rotate secrets, restore.
+   (S4). **Done 2026-11-07** (decision D-STG.4): `deploy/staging/env.template`
+   (checked by `tests/unit/test_env_template.py`); the roles follow
+   `deploy/staging/init/01-roles.sh`.
+6. A staging runbook: deploy, roll back, rotate secrets, restore. **Done
+   2026-11-07**: `docs/project/STAGING-RUNBOOK.md`, provider-neutral, each
+   step marked rehearsed or not yet run.
 
 All of this is checked locally (image builds, Compose config validates,
 the stack starts against local PostgreSQL and Redis with TLS).
