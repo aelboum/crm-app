@@ -139,3 +139,27 @@ jobs:
       - name: Secret scan
         run: |
           git ls-files -z | xargs -0 uv run --no-sync detect-secrets-hook --baseline .secrets.baseline
+
+  image:
+    # The production image (Dockerfile) builds from the locked dependencies.
+    # Built only: nothing is pushed, published or deployed.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build
+        run: docker build --tag crm-app:ci .
+      - name: Check the image
+        # Non-root, the approved SaaS-OS commit, the built frontend, no
+        # build tools left behind.
+        run: |
+          pin="$(grep -o 'saas-os?rev=[0-9a-f]\{40\}' uv.lock | head -n 1 | cut -d= -f2)"
+          test -n "$pin"
+          docker run --rm --env "PIN=$pin" --entrypoint sh crm-app:ci -c '
+            set -e
+            test "$(id -un)" = app
+            if command -v git || command -v uv || command -v pip; then exit 1; fi
+            test -f /app/frontend/dist/index.html
+            python -c "import json, os, importlib.metadata as m; d = m.distribution(\"saas-os\"); assert json.loads(d.read_text(\"direct_url.json\"))[\"vcs_info\"][\"commit_id\"] == os.environ[\"PIN\"]"
+          '

@@ -217,17 +217,36 @@ ZITADEL's, after which the client ID changes.
 | Frontend | `cd frontend && npm ci && npm run typecheck && npm run lint && npm test && npm run build` |
 | API schema for the frontend | `python -m crm_app.openapi frontend/openapi.json`, then `cd frontend && npm run gen:api` (a unit test fails when stale) |
 | Secret scan | `git ls-files -z \| xargs -0 uv run detect-secrets-hook --baseline .secrets.baseline` |
+| Production image | `docker build --tag crm-app:local .` (see below) |
 
 The integration tests use their own database (`crm_app_test`) and Redis
 database 1. CI (`.github/workflows/ci.yml`) runs the same checks on every
 push to `main` and every pull request in `aelboum/crm-app`.
 
+## Production image
+
+`Dockerfile` builds one image for the API, the worker and the migrations
+from `uv.lock` (so it carries exactly the approved SaaS-OS commit) and the
+built frontend. It runs as a non-root user, holds no secret and no build
+tool, and reports healthy only while `/readyz` answers 200.
+
+| Process | Command |
+| --- | --- |
+| API (default) | `uvicorn crm_app.app:create_app --factory` on port 8000 |
+| Worker | `crm-app-worker` (health: `crm-app-worker --check`) |
+| Migrations | `crm-app-migrate`, before the API and worker start |
+
+Settings and secrets come from the environment (`.env.example` lists
+them). CI builds and checks the image on every push; nothing is pushed or
+deployed. Where it runs is undecided: `docs/project/DECISION-BRIEF-HOSTING.md`.
+
 ## Layout
 
 ```text
+Dockerfile          the production image (API, worker, migrations)
 src/crm_app/        application, worker and migration entrypoints; settings
 src/crm_app/migrations/   this product's Alembic history (schema crm_app)
-src/crm_app/domains/      product domain modules (none yet)
+src/crm_app/domains/      pure product rules (no database or framework)
 tests/unit/         no services needed
 tests/integration/  PostgreSQL and Redis
 tests/identity/     opt-in OIDC login against local ZITADEL
@@ -239,8 +258,7 @@ docs/architecture/  platform boundary and integration notes
 
 ## Limitations
 
-- No CRM features and no tenant data tables. The frontend covers sign-in,
-  opening a workspace and managing its members only; members are shown by
-  ID because no member profile is stored yet.
-- No metrics: SaaS-OS v0.8.0 has none. Tracing goes to the console exporter only.
-- No production deployment, hosting or TLS configuration.
+- What is built and verified is recorded in `docs/project/PROGRESS.md`.
+- No metrics: the pinned SaaS-OS has none. Tracing goes to the console exporter only.
+- No deployment, hosting, edge or TLS configuration: only the production
+  image exists. Production email sending and receiving are not authorized.

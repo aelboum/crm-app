@@ -1333,6 +1333,17 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Production image (decision D-IMG, 2026-11-07)
+
+| Check | Result |
+| --- | --- |
+| `docker build --tag crm-app:local-check .` | built, 333 MB |
+| Image contents | user `app`; no git, uv, pip or curl; no `.env` file; SaaS-OS 0.10.0 at `0f9bf4d`; 40 migration files; `frontend/dist` present |
+| `crm-app-migrate` from the image, test database | exit 0 |
+| API from the image | healthy; `/healthz`, `/readyz`, `/app/` 200; `/v1/workspaces` 401 |
+| Worker from the image | `crm-app-worker --check` exit 0 while running |
+| CI `image` job check, locally | passes; fails as intended against a base image that has pip |
+
 ## Hosts' in-app appointment reminders (decision N-2, 2026-11-07)
 
 Migration `0039_member_reminders`; `crm_app.member_reminders`, run by

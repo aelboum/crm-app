@@ -340,6 +340,31 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## D-IMG — Production container image (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (brief H, section 7.1 item
+  1, "can start now"; the owner's "any other independent work that does not
+  require hosting"). It selects no host and deploys nothing.
+- **What:** `Dockerfile` (multi-stage: frontend build on `node:24-slim`, a
+  locked `uv sync --no-dev --no-editable` on `python:3.13-slim`, then a
+  runtime with only the virtual environment and `frontend/dist`) and
+  `.dockerignore`. One image; the command chooses the API (default,
+  `uvicorn crm_app.app:create_app --factory --no-proxy-headers`), the
+  worker or the migrations. Base images and the uv binary are pinned by
+  digest; the Python digest is SaaS-OS v0.10.0's. Non-root, no git, uv or
+  pip, no secret; the healthcheck probes `/readyz`.
+- **CI:** a new `image` job builds it and checks the user, the absence of
+  build tools, the frontend, and that the installed SaaS-OS commit equals
+  the one in `uv.lock`. Nothing is pushed.
+- **Verified locally:** the image built (333 MB); from it, `crm-app-migrate`
+  ran against the test database; the API became healthy and answered
+  `/healthz`, `/readyz` and `/app/` 200 and an unauthenticated API call
+  401; a running worker passed `crm-app-worker --check`.
+- **Open:** uvicorn reaches the product through SaaS-OS's dependencies, not
+  a direct requirement (unchanged from local development). No image scan
+  (SaaS-OS uses one; adding a scanner is a new tool to approve). No
+  registry, signing or SBOM: they belong to the deployment decision.
+
 ## N-2 — Hosts are reminded in the app before their appointments (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner's "Proceed
