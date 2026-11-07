@@ -45,7 +45,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from saas_os.api.context import RequestContext
+from saas_os.api.context import RequestContext, RequestPrincipal
 from saas_os.api.dependencies import get_idempotency_key, require_permission
 from saas_os.api.errors import rate_limited, service_unavailable
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
@@ -308,7 +308,11 @@ def _http(exc: RecordError) -> HTTPException:
 
 def _scope(context: RequestContext) -> Scope:
     """The workspace and actor SaaS-OS validated for this request (§19.3)."""
-    return Scope(workspace=context.tenant_id, actor=context.actor_id)
+    return Scope(
+        workspace=context.tenant_id,
+        actor=context.actor_id,
+        service_account=context.principal is RequestPrincipal.SERVICE_ACCOUNT,
+    )
 
 
 def _version(if_match: str | None) -> int:
@@ -332,9 +336,15 @@ def _add_routes(
     out: type[BaseModel],
 ) -> None:
     resource = kind.resource
-    read = Annotated[RequestContext, Depends(require_permission(resource, "read"))]
-    create = Annotated[RequestContext, Depends(require_permission(resource, "create"))]
-    change = Annotated[RequestContext, Depends(require_permission(resource, "update"))]
+    # An integration's API key may read, create and update (decision P12-K);
+    # deleting stays a member's action.
+    read = Annotated[RequestContext, Depends(require_permission(resource, "read", api_key=True))]
+    create = Annotated[
+        RequestContext, Depends(require_permission(resource, "create", api_key=True))
+    ]
+    change = Annotated[
+        RequestContext, Depends(require_permission(resource, "update", api_key=True))
+    ]
     remove = Annotated[RequestContext, Depends(require_permission(resource, "delete"))]
     collection = f"/{{tenant_id}}/{path}"
     item = f"{collection}/{{record_id}}"
@@ -536,7 +546,9 @@ def _page(kind: Kind, context: RequestContext, query: records.ListQuery) -> reco
 
 @router.get("/{tenant_id}/contacts", response_model=ContactPage, tags=["contacts"])
 def list_contacts(
-    context: Annotated[RequestContext, Depends(require_permission(CONTACT.resource, "read"))],
+    context: Annotated[
+        RequestContext, Depends(require_permission(CONTACT.resource, "read", api_key=True))
+    ],
     params: Annotated[ContactListParams, Query()],
 ) -> Any:
     query = _query(
@@ -550,7 +562,9 @@ def list_contacts(
 
 @router.get("/{tenant_id}/companies", response_model=CompanyPage, tags=["companies"])
 def list_companies(
-    context: Annotated[RequestContext, Depends(require_permission(COMPANY.resource, "read"))],
+    context: Annotated[
+        RequestContext, Depends(require_permission(COMPANY.resource, "read", api_key=True))
+    ],
     params: Annotated[CompanyListParams, Query()],
 ) -> Any:
     return _page(COMPANY, context, _query(params, context))

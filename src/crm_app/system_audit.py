@@ -29,7 +29,12 @@ import uuid
 from collections.abc import Mapping
 
 from saas_os.core.audit_log import record_in_transaction, record_system_action_in_transaction
-from saas_os.core.authority import SystemActor, SystemActorKind, UserCaller
+from saas_os.core.authority import (
+    ServiceAccountCaller,
+    SystemActor,
+    SystemActorKind,
+    UserCaller,
+)
 from saas_os.infra.db import Session
 
 # Component name -> its SaaS-OS kind. A name not listed here is refused, so
@@ -92,16 +97,24 @@ def record_scoped(  # noqa: PLR0913 - one entry's parts, all keyword-only
     resource_type: str,
     resource_id: str | None,
     metadata: Mapping[str, object] | None = None,
+    service_account: bool = False,
 ) -> None:
     """A member's entry when `component` is `None` (the member acted);
     otherwise `component`'s system entry, naming `member`, when there is
-    one, as `on_behalf_of_user_id`."""
+    one, as `on_behalf_of_user_id`. With `service_account`, `member` is an
+    integration's service account acting through its API key (P12-K), and
+    the entry names it as one."""
     if component is None:
         if member is None:
             raise ValueError("a member entry needs a member")
+        caller: UserCaller | ServiceAccountCaller = (
+            ServiceAccountCaller(service_account_id=member, tenant_id=workspace)
+            if service_account
+            else UserCaller(member)
+        )
         record_in_transaction(
             session,
-            caller=UserCaller(member),
+            caller=caller,
             tenant_id=workspace,
             action=action,
             resource_type=resource_type,

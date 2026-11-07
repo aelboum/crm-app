@@ -197,6 +197,8 @@ ADMINISTRATIVE_DIGESTS: tuple[str, ...] = (
     "a203c11cbddf458bdf27f45e9e6b1b4f2adf7c8b18271f47d902717d50fe3921",  # pragma: allowlist secret
     "a236e42a0b2b928e6af8fe0ba53aa02b76b0e7746c49cba090c05d9444c227d2",  # pragma: allowlist secret
     "6e78ea6f7a397e561ef61ca3e093e196a21875f29748b08cc460b238ab3c3320",  # pragma: allowlist secret
+    "0f76f7d48c79b4017f761f905b46201da050b149e3389df1f771afeb5cf608e7",  # pragma: allowlist secret
+    "17d6a9ea00549847ef3985e0210108eef49e265dd71c7d6af64c77cb8fb7e31b",  # pragma: allowlist secret
 )
 
 
@@ -232,9 +234,20 @@ def checks() -> dict[str, list[str]]:
     problems["registered_permissions"] = [
         m.id for m in ALL for key in m.permissions if key not in registered
     ]
+    owner_granted: list[str] = []
+    for entry in pg.OWNER_GRANTED_ADDITIONS:
+        name = f"{entry.role.value} {':'.join(entry.permission)}"
+        if not is_authority_changing(*entry.permission):
+            owner_granted.append(f"{name}: not authority-changing, so it needs a migration")
+        if not entry.decision.strip():
+            owner_granted.append(f"{name}: names no decision")
+        if entry.permission not in ROLE_TEMPLATES[entry.role]:
+            owner_granted.append(f"{name}: not in the template")
+    problems["owner_granted_are_authority_changing"] = owner_granted
     templates: list[str] = []
     for role in Role:
         declared = {key for m in ALL if m.role_name == role.value for key in m.permissions}
+        declared |= {e.permission for e in pg.OWNER_GRANTED_ADDITIONS if e.role is role}
         baseline = BASELINE[role.value]
         if _names(declared) & baseline:
             templates.append(f"{role.value}: a migration repeats a baseline permission")

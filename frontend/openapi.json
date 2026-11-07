@@ -5575,6 +5575,104 @@
         "title": "ImportSummary",
         "type": "object"
       },
+      "IntegrationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 400,
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "Member",
+              "Read-only"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "role"
+        ],
+        "title": "IntegrationIn",
+        "type": "object"
+      },
+      "IntegrationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IntegrationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "IntegrationList",
+        "type": "object"
+      },
+      "IntegrationOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/KeyOut"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "Member",
+                  "Read-only"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "role",
+          "created_at",
+          "keys"
+        ],
+        "title": "IntegrationOut",
+        "type": "object"
+      },
       "InvitationIn": {
         "additionalProperties": false,
         "properties": {
@@ -5710,6 +5808,100 @@
           "accepted_by_user_id"
         ],
         "title": "InvitationOut",
+        "type": "object"
+      },
+      "IssuedKey": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/KeyOut"
+          },
+          "secret": {
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "secret"
+        ],
+        "title": "IssuedKey",
+        "type": "object"
+      },
+      "KeyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In Days"
+          },
+          "name": {
+            "maxLength": 400,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "KeyIn",
+        "type": "object"
+      },
+      "KeyOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "expires_at",
+          "revoked_at"
+        ],
+        "title": "KeyOut",
         "type": "object"
       },
       "LinkRef": {
@@ -13702,6 +13894,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -13755,6 +13963,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -14070,6 +14294,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -14149,6 +14389,22 @@
                 }
               ],
               "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -14326,6 +14582,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -14586,6 +14858,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -14895,6 +15183,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -14948,6 +15252,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -15296,6 +15616,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -15375,6 +15711,22 @@
                 }
               ],
               "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -15552,6 +15904,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -16106,6 +16474,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -19011,6 +19395,352 @@
         ]
       }
     },
+    "/v1/workspaces/{tenant_id}/integrations": {
+      "get": {
+        "operationId": "list_integrations_v1_workspaces__tenant_id__integrations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Integrations",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "post": {
+        "operationId": "create_integration_v1_workspaces__tenant_id__integrations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntegrationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Integration",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/integrations/{integration_id}/disable": {
+      "post": {
+        "operationId": "disable_integration_v1_workspaces__tenant_id__integrations__integration_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "integration_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Integration Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Integration",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/integrations/{integration_id}/keys": {
+      "post": {
+        "operationId": "create_integration_key_v1_workspaces__tenant_id__integrations__integration_id__keys_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "integration_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Integration Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedKey"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Integration Key",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/integrations/{integration_id}/keys/{key_id}/revoke": {
+      "post": {
+        "operationId": "revoke_integration_key_v1_workspaces__tenant_id__integrations__integration_id__keys__key_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "integration_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Integration Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Integration Key",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
     "/v1/workspaces/{tenant_id}/invitations": {
       "get": {
         "operationId": "list_invitations_v1_workspaces__tenant_id__invitations_get",
@@ -20371,6 +21101,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -20424,6 +21170,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -20614,6 +21376,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -20743,6 +21521,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -20822,6 +21616,22 @@
                 }
               ],
               "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -20934,6 +21744,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -21015,6 +21841,22 @@
                 }
               ],
               "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -23621,6 +24463,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -23674,6 +24532,22 @@
               "format": "uuid",
               "title": "Tenant Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -23772,6 +24646,22 @@
               "maxItems": 20,
               "title": "Assignee",
               "type": "array"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {
@@ -23905,6 +24795,22 @@
           },
           {
             "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
             "name": "authorization",
             "required": false,
             "schema": {
@@ -23984,6 +24890,22 @@
                 }
               ],
               "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
             }
           },
           {

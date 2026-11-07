@@ -22,6 +22,7 @@ CHECKS = (
     "administrative_held_back",
     "registered_permissions",
     "templates_are_baseline_plus_migrations",
+    "owner_granted_are_authority_changing",
     "role_names",
     "digests_pinned",
 )

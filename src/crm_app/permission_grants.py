@@ -23,6 +23,12 @@ Rules (enforced by `tests/unit/test_permission_grants.py`):
   SaaS-OS refuses them; such a change goes through a workspace's owner.
 - **Administrative permissions are held back** in `ADMINISTRATIVE_MIGRATIONS`,
   applied only in a separately approved run (Brief 7).
+- **Authority-changing additions** cannot be migrations (SaaS-OS refuses
+  them: such a change goes through a workspace's owner). They are listed in
+  `OWNER_GRANTED_ADDITIONS` instead, each truly authority-changing and named
+  with its decision; new workspaces get them from the templates at
+  provisioning, workspaces created earlier only through their owner (no
+  route yet; decision P12-K).
 
 `python -m crm_app.permission_grants --report` prints, read-only, which
 permissions each migration would add and to how many workspaces: the
@@ -332,6 +338,46 @@ ADMINISTRATIVE_MIGRATIONS: tuple[PermissionGrantMigration, ...] = (
         (("crm_app.campaign", "approve"),),
         "P7-C: Campaigns (Phase 7C)",
     ),
+    _migration(
+        "crm_app.p12k.integrations.administrative.owner",
+        Role.OWNER,
+        (("crm_app.integration", "manage"),),
+        "P12-K: Integrations and API keys (Phase 12K)",
+    ),
+    _migration(
+        "crm_app.p12k.integrations.administrative.admin",
+        Role.ADMIN,
+        (("crm_app.integration", "manage"),),
+        "P12-K: Integrations and API keys (Phase 12K)",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class OwnerGranted:
+    """A permission added to a role template that SaaS-OS counts as
+    authority-changing: never a migration, so workspaces created before the
+    addition get it only through their owner."""
+
+    role: Role
+    permission: Key
+    decision: str
+
+
+_P12 = (
+    ("service_account", "create", "P12-K"),
+    ("service_account", "disable", "P12-K"),
+    ("service_account_role", "create", "P12-K"),
+    ("api_key", "create", "P12-K"),
+    ("api_key", "revoke", "P12-K"),
+    ("webhook_subscription", "create", "P12-H"),
+    ("webhook_subscription", "delete", "P12-H"),
+)
+
+OWNER_GRANTED_ADDITIONS: tuple[OwnerGranted, ...] = tuple(
+    OwnerGranted(role, (resource, action), decision)
+    for role in (Role.OWNER, Role.ADMIN)
+    for resource, action, decision in _P12
 )
 
 

@@ -1333,6 +1333,15 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Integrations and API keys (decision P12-K, 2026-11-07)
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_integrations.py` | 6 passed: Owners and Admins create Member or Read-only integrations (Admin and Owner refused, Members 403); a key shown once, `Cache-Control: no-store`, never listed; a key creates, reads and updates contacts, deals, tasks and companies, audited as `service_account`; deleting, integrations, members, automations, another workspace, key plus session and a wrong key refused; Read-only reads only; a third key 409; revoked and disabled keys 401 at once |
+| Affected integration suites (history, notifications, deals, grants, provisioning, records, role upgrade, tasks, workspace routes) | 112 + 25 passed |
+| `uv run pytest tests/unit` | 769 passed (key routes pinned; Owner and Admin only; owner-granted additions checked) |
+| Frontend `integrationSettings.test.tsx`, `WorkspacePage.test.tsx`; typecheck; lint | 13 passed; clean |
+
 ## Automation notify action (decision P8-N, 2026-11-07)
 
 | Check | Result |

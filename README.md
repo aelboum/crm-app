@@ -223,6 +223,20 @@ The integration tests use their own database (`crm_app_test`) and Redis
 database 1. CI (`.github/workflows/ci.yml`) runs the same checks on every
 push to `main` and every pull request in `aelboum/crm-app`.
 
+## API access for integrations
+
+Owners and Admins add an integration in Settings › Integrations and issue
+it a key (decision P12-K). The key is shown once. Send it as a header:
+
+```bash
+curl -H "X-API-Key: <key>" https://<origin>/v1/workspaces/<workspace id>/contacts
+```
+
+An integration acts as a Member or as Read-only in its own workspace: it
+reads, creates and updates contacts, companies, deals and tasks, and
+nothing else (`tests/unit/test_routes.py`, `API_KEY_ROUTES`). Revoking a
+key or disabling the integration stops it on the next request.
+
 ## Production image
 
 `Dockerfile` builds one image for the API, the worker and the migrations

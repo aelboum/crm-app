@@ -45,6 +45,7 @@ import { BusinessSettings } from "./BusinessSettings";
 import { FieldSettings } from "./FieldSettings";
 import { PipelineSettings } from "./PipelineSettings";
 import { DomainSettings } from "./DomainSettings";
+import { IntegrationSettings } from "./IntegrationSettings";
 import { SendingDomainSettings } from "./SendingDomainSettings";
 import { SuppressionSettings } from "./SuppressionSettings";
 import { TagSettings } from "./TagSettings";
@@ -470,7 +471,8 @@ export type SettingsSection =
   | "pipeline"
   | "suppression"
   | "domains"
-  | "sending";
+  | "sending"
+  | "integrations";
 const BUILT_SECTIONS: readonly string[] = [
   "team",
   "profile",
@@ -481,6 +483,7 @@ const BUILT_SECTIONS: readonly string[] = [
   "suppression",
   "domains",
   "sending",
+  "integrations",
 ];
 
 const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId }> = {
@@ -493,6 +496,7 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
   suppression: { title: "settings.suppression", desc: "settings.suppressionDesc" },
   domains: { title: "settings.domains", desc: "settings.domainsDesc" },
   sending: { title: "settings.sending", desc: "settings.sendingDesc" },
+  integrations: { title: "settings.integrations", desc: "settings.integrationsDesc" },
 };
 
 /**
@@ -768,6 +772,12 @@ export function SettingsPage({
             <SendingDomainSettings
               workspaceId={workspaceId}
               canEdit={access.data.actions.update_workspace === true}
+            />
+          ) : null}
+          {access.data && section === "integrations" ? (
+            <IntegrationSettings
+              workspaceId={workspaceId}
+              canManage={access.data.actions.manage_integrations === true}
             />
           ) : null}
           {access.data && section === "tags" ? (

@@ -93,6 +93,8 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "approve_campaigns": ("crm_app.campaign", "approve"),
     "read_automations": ("crm_app.automation", "read"),
     "manage_automations": ("crm_app.automation", "manage"),
+    # Integrations and API keys (decision P12-K): Owner and Admin.
+    "manage_integrations": ("crm_app.integration", "manage"),
 }
 
 

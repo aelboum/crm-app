@@ -244,6 +244,16 @@ CONFIGURATION |= {
     f"POST {_AUTOMATION}/pause": "crm_app.automation:manage",
     f"GET {_AUTOMATION}/runs": "crm_app.automation:read",
 }
+# Integrations and API keys (decision P12-K): Owner and Admin, by session only.
+_INTEGRATIONS = "/v1/workspaces/{tenant_id}/integrations"
+_INTEGRATION = f"{_INTEGRATIONS}/{{integration_id}}"
+INTEGRATIONS = {
+    f"GET {_INTEGRATIONS}": "crm_app.integration:manage",
+    f"POST {_INTEGRATIONS}": "crm_app.integration:manage",
+    f"POST {_INTEGRATION}/disable": "crm_app.integration:manage",
+    f"POST {_INTEGRATION}/keys": "crm_app.integration:manage",
+    f"POST {_INTEGRATION}/keys/{{key_id}}/revoke": "crm_app.integration:manage",
+}
 # Conversations (decision P6-C): every role reads; Owner, Admin and Member
 # reply, log messages, add notes, assign and close.
 _CONVERSATIONS = "/v1/workspaces/{tenant_id}/conversations"
@@ -353,6 +363,39 @@ def _product_policies(tmp_path: Path) -> dict[str, tuple[str, str, bool]]:
 DIRECTORY = "GET /v1/workspaces"
 
 
+# The only routes an integration's API key reaches (decision P12-K): reading,
+# creating and updating contacts, companies, deals and tasks; archiving and
+# restoring a record and setting a deal's outcome are updates. Never a
+# delete, an export, an import, members, roles, keys or any setting.
+_W = "/v1/workspaces/{tenant_id}"
+API_KEY_ROUTES: set[str] = {
+    f"GET {_W}/companies",
+    f"GET {_W}/companies/{{record_id}}",
+    f"GET {_W}/contacts",
+    f"GET {_W}/contacts/{{record_id}}",
+    f"GET {_W}/opportunities",
+    f"GET {_W}/opportunities/summary",
+    f"GET {_W}/opportunities/{{deal_id}}",
+    f"GET {_W}/opportunities/{{deal_id}}/history",
+    f"GET {_W}/tasks",
+    f"GET {_W}/tasks/counts",
+    f"GET {_W}/tasks/{{task_id}}",
+    f"PATCH {_W}/companies/{{record_id}}",
+    f"PATCH {_W}/contacts/{{record_id}}",
+    f"PATCH {_W}/opportunities/{{deal_id}}",
+    f"PATCH {_W}/tasks/{{task_id}}",
+    f"POST {_W}/companies",
+    f"POST {_W}/companies/{{record_id}}/archive",
+    f"POST {_W}/companies/{{record_id}}/restore",
+    f"POST {_W}/contacts",
+    f"POST {_W}/contacts/{{record_id}}/archive",
+    f"POST {_W}/contacts/{{record_id}}/restore",
+    f"POST {_W}/opportunities",
+    f"POST {_W}/opportunities/{{deal_id}}/outcome",
+    f"POST {_W}/tasks",
+}
+
+
 def test_the_directory_needs_only_a_signed_in_person(tmp_path: Path) -> None:
     kind, _, accepts_api_key = _product_policies(tmp_path)[DIRECTORY]
     assert kind == "authenticated"
@@ -362,21 +405,22 @@ def test_the_directory_needs_only_a_signed_in_person(tmp_path: Path) -> None:
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
     policies = {k: v for k, v in _product_policies(tmp_path).items() if k != DIRECTORY}
     assert {key: detail for key, (_, detail, _) in policies.items()} == (
-        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS
+        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS | INTEGRATIONS
     )
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
-    assert not any(accepts_api_key for _, _, accepts_api_key in policies.values())
+    accepting = {key for key, (_, _, accepts_api_key) in policies.items() if accepts_api_key}
+    assert accepting == API_KEY_ROUTES
     changing = {key for key in policies if not key.startswith("GET ")}
     assert changing == CHANGING | OWN_PROFILE | {
         key
-        for key in RECORDS | INVITATIONS | CONFIGURATION | EXPORTS | SUPPRESSIONS
+        for key in RECORDS | INVITATIONS | CONFIGURATION | EXPORTS | SUPPRESSIONS | INTEGRATIONS
         if not key.startswith("GET ")
     }
 
 
 def test_route_permissions_are_registered() -> None:
     for detail in (
-        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS
+        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS | INTEGRATIONS
     ).values():
         resource, _, action = detail.rpartition(":")
         assert (resource, action) in PERMISSIONS
@@ -515,3 +559,11 @@ def test_public_form_routes_are_the_only_public_api_routes(tmp_path: Path) -> No
     platform = {key for key in public if "/v1/public/" not in key}
     assert public - platform == PUBLIC_FORMS
     assert not any("/v1/workspaces" in key for key in platform)
+
+
+def test_integrations_are_for_owners_and_admins_only() -> None:
+    """P12-K: managing integrations and their keys is Owner and Admin only."""
+    for route, permission in INTEGRATIONS.items():
+        resource, _, action = permission.rpartition(":")
+        holders = {role for role in Role if (resource, action) in ROLE_TEMPLATES[role]}
+        assert holders == {Role.OWNER, Role.ADMIN}, route

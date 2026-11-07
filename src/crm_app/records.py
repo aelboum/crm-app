@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from saas_os.core.audit_log import record_in_transaction
-from saas_os.core.authority import UserCaller
+from saas_os.core.authority import ServiceAccountCaller, UserCaller
 from saas_os.core.idempotency import run_idempotent
 from saas_os.core.identity import get_membership
 from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
@@ -141,6 +141,17 @@ class Scope:
     # The page's, form's or automation's id when `component` is set: history
     # entries show it as their source (K3.8).
     component_ref: uuid.UUID | None = None
+    # `actor` is an integration's service account, authenticated by its API
+    # key (decision P12-K): audit entries name it as a service account.
+    service_account: bool = False
+
+
+def audit_caller(scope: Scope) -> UserCaller | ServiceAccountCaller:
+    """Who an audit entry names for a member's or an integration's own
+    action in `scope`."""
+    if scope.service_account:
+        return ServiceAccountCaller(service_account_id=scope.actor, tenant_id=scope.workspace)
+    return UserCaller(scope.actor)
 
 
 class RecordError(Exception):
@@ -319,6 +330,7 @@ def _audit(session: Session, kind: Kind, scope: Scope, event: _Event) -> None:
         workspace=scope.workspace,
         member=scope.actor,
         component=scope.component,
+        service_account=scope.service_account,
         action=f"{kind.resource}.{event.verb}",
         resource_type=kind.resource,
         resource_id=str(event.record_id),

@@ -32,7 +32,6 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from saas_os.core.audit_log import record_in_transaction
-from saas_os.core.authority import UserCaller
 from saas_os.core.idempotency import run_idempotent
 from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
 from saas_os.infra.db import (
@@ -70,6 +69,7 @@ from crm_app.records import (
     TransactionConflictError,
     _after,
     _OrderKey,
+    audit_caller,
     check_owner,
 )
 
@@ -272,7 +272,7 @@ def _event(scope: Scope, deal_id: uuid.UUID, kind: str, **payload: Any) -> Oppor
 def _audit(session: Session, scope: Scope, verb: str, deal_id: uuid.UUID, **metadata: Any) -> None:
     record_in_transaction(
         session,
-        caller=UserCaller(scope.actor),
+        caller=audit_caller(scope),
         tenant_id=scope.workspace,
         action=f"{RESOURCE}.{verb}",
         resource_type=RESOURCE,

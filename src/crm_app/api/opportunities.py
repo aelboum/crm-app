@@ -29,7 +29,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from saas_os.api.context import RequestContext
+from saas_os.api.context import RequestContext, RequestPrincipal
 from saas_os.api.dependencies import require_permission
 from saas_os.core.idempotency import IdempotencyInProgressError, IdempotencyKeyReusedError
 
@@ -50,9 +50,11 @@ from crm_app.records import RecordError, Scope
 router = APIRouter(prefix="/v1/workspaces", tags=["opportunities"])
 
 RESOURCE = "crm_app.opportunity"
-Read = Annotated[RequestContext, Depends(require_permission(RESOURCE, "read"))]
-Create = Annotated[RequestContext, Depends(require_permission(RESOURCE, "create"))]
-Change = Annotated[RequestContext, Depends(require_permission(RESOURCE, "update"))]
+# An integration's API key may read, create and update (decision P12-K);
+# deleting stays a member's action.
+Read = Annotated[RequestContext, Depends(require_permission(RESOURCE, "read", api_key=True))]
+Create = Annotated[RequestContext, Depends(require_permission(RESOURCE, "create", api_key=True))]
+Change = Annotated[RequestContext, Depends(require_permission(RESOURCE, "update", api_key=True))]
 Remove = Annotated[RequestContext, Depends(require_permission(RESOURCE, "delete"))]
 
 # Ceilings before normalisation, so oversized input is refused early.
@@ -241,7 +243,11 @@ class HistoryParams(BaseModel):
 
 
 def _scope(context: RequestContext) -> Scope:
-    return Scope(workspace=context.tenant_id, actor=context.actor_id)
+    return Scope(
+        workspace=context.tenant_id,
+        actor=context.actor_id,
+        service_account=context.principal is RequestPrincipal.SERVICE_ACCOUNT,
+    )
 
 
 def _etag(response: Response, deal: dict[str, Any]) -> dict[str, Any]:

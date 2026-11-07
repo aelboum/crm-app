@@ -1557,6 +1557,10 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .domain-record dd { margin: 0; }
 .domain-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .domain-form .field { flex: 1 1 260px; }
+.integration-keys { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.integration-key { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.integration-secret { display: grid; gap: 6px; margin: 8px 0; }
+.integration-secret-value { overflow-wrap: anywhere; user-select: all; }
 
 /* Sending domains (P6-D) */
 .sending-domain { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 8px; overflow-wrap: anywhere; }

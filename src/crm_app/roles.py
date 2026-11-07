@@ -108,6 +108,39 @@ PLATFORM_PERMISSIONS: tuple[Permission, ...] = (
     Permission("billing_subscription", "create", Kind.ADMINISTRATIVE, _LATER_PHASE),
     Permission("billing_subscription", "cancel", Kind.ADMINISTRATIVE, _LATER_PHASE),
     Permission("billing_account", "read", Kind.READ),
+    # Decisions P12-K and P12-H (2026-11-07). SaaS-OS checks these inside
+    # its own service-account, API-key and webhook calls; all are
+    # authority-changing, so existing workspaces cannot receive them through
+    # a grant migration (`crm_app.permission_grants.OWNER_GRANTED_ADDITIONS`).
+    Permission(
+        "service_account",
+        "create",
+        Kind.ADMINISTRATIVE,
+        "An integration's key acts as its service account, at most Member (P12-K).",
+    ),
+    Permission(
+        "service_account",
+        "disable",
+        Kind.ADMINISTRATIVE,
+        "An integration's key acts as its service account, at most Member (P12-K).",
+    ),
+    Permission(
+        "service_account_role",
+        "create",
+        Kind.ADMINISTRATIVE,
+        "Only the Member or Read-only role; SaaS-OS refuses a role the caller cannot reach.",
+    ),
+    Permission(
+        "api_key", "create", Kind.ADMINISTRATIVE, "Shown once; only a hash is kept (P12-K)."
+    ),
+    Permission("api_key", "revoke", Kind.ADMINISTRATIVE, "Takes effect on the next request."),
+    Permission(
+        "webhook_subscription",
+        "create",
+        Kind.ADMINISTRATIVE,
+        "Sends workspace events to an HTTPS address an Owner or Admin entered (P12-H).",
+    ),
+    Permission("webhook_subscription", "delete", Kind.ADMINISTRATIVE, "Stops further deliveries."),
 )
 
 PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
@@ -187,6 +220,13 @@ PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
         "manage",
         Kind.ADMINISTRATIVE,
         "Lifting a suppression allows mail a person refused (P7-B).",
+    ),
+    Permission(
+        f"{PREFIX}integration",
+        "manage",
+        Kind.ADMINISTRATIVE,
+        "Integrations, their API keys and webhook endpoints reach workspace data from"
+        " outside (P12-K, P12-H).",
     ),
     Permission(f"{PREFIX}campaign", "read", Kind.READ),
     Permission(f"{PREFIX}campaign", "manage", Kind.UPDATE),
@@ -272,6 +312,15 @@ _ADMIN = _MEMBER | _keys(
     "membership:revoke",
     "membership_role:create",
     "membership_role:delete",
+    # P12-K, P12-H: integrations, API keys and webhooks.
+    f"{PREFIX}integration:manage",
+    "service_account:create",
+    "service_account:disable",
+    "service_account_role:create",
+    "api_key:create",
+    "api_key:revoke",
+    "webhook_subscription:create",
+    "webhook_subscription:delete",
 )
 
 _OWNER = _ADMIN | _keys(

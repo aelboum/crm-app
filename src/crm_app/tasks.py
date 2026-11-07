@@ -177,6 +177,7 @@ def _audit(session: Session, scope: Scope, verb: str, task_id: uuid.UUID, **meta
         workspace=scope.workspace,
         member=scope.actor,
         component=scope.component,
+        service_account=scope.service_account,
         action=f"{RESOURCE}.{verb}",
         resource_type=RESOURCE,
         resource_id=str(task_id),

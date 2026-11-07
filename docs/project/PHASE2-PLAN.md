@@ -217,6 +217,13 @@ check" is enforced by product code in addition to the permission.
 | `billing_subscription:create` | – | – | – | – | A | Not granted (Phase 11) |
 | `billing_subscription:cancel` | – | – | – | – | A | Not granted (Phase 11) |
 | `billing_account:read` | – | – | – | – | R | Not granted (Phase 11) |
+| `service_account:create` | ✓ | ✓ | – | – | A | Create an integration's service account; added by P12-K (authority-changing: new workspaces only) |
+| `service_account:disable` | ✓ | ✓ | – | – | A | Disable an integration; its keys stop at once; added by P12-K |
+| `service_account_role:create` | ✓ | ✓ | – | – | A | Give an integration the Member or Read-only role, never more; added by P12-K |
+| `api_key:create` | ✓ | ✓ | – | – | A | Issue an integration's key, shown once; added by P12-K |
+| `api_key:revoke` | ✓ | ✓ | – | – | A | Revoke an integration's key; added by P12-K |
+| `webhook_subscription:create` | ✓ | ✓ | – | – | A | Add a webhook endpoint; added by P12-H |
+| `webhook_subscription:delete` | ✓ | ✓ | – | – | A | Remove a webhook endpoint; added by P12-H |
 | `crm_app.workspace:read` | ✓ | ✓ | ✓ | ✓ | R | — |
 | `crm_app.workspace:update` | ✓ | ✓ | – | – | U | Ordinary settings: name, locale, time zone, currency |
 | `crm_app.workspace_security:update` | ✓ | – | – | – | A | Re-confirmation; security-sensitive settings only |
@@ -260,6 +267,7 @@ check" is enforced by product code in addition to the permission.
 | `crm_app.campaign:read` | ✓ | ✓ | ✓ | ✓ | R | Campaigns, their audience estimate and preview; added by P7-C |
 | `crm_app.campaign:manage` | ✓ | ✓ | ✓ | – | U | Draft, edit, validate, submit for approval and cancel; added by P7-C |
 | `crm_app.campaign:approve` | ✓ | ✓ | – | – | A | Approve or reject a submitted campaign; the approval binds its content and audience; added by P7-C |
+| `crm_app.integration:manage` | ✓ | ✓ | – | – | A | Integrations, their API keys and webhook endpoints; added by P12-K |
 | `crm_app.automation:read` | ✓ | ✓ | ✓ | ✓ | R | Automations and their runs; added by P8-A |
 | `crm_app.automation:manage` | ✓ | ✓ | – | – | A | An active automation changes contacts and creates tasks without a member acting; added by P8-A |
 | `crm_app.suppression:read` | ✓ | ✓ | ✓ | – | R | The suppression list; added by P7-B |

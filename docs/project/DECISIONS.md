@@ -340,6 +340,66 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P12-K — Integrations and API keys (2026-11-07)
+
+- **Status:** Approved by the owner ("Follow you recommendations" on
+  decisions A, B and D, 2026-11-07; "Approve" on the permission delivery
+  below) and built (slice 12K).
+- **What:**
+  1. An integration is a SaaS-OS service account of the workspace with the
+     product role **Member or Read-only, never Admin or Owner** (decision
+     B), managed in Settings › Integrations by Owners and Admins
+     (`crm_app.integration:manage`; decision A). It has up to 2 live API
+     keys, optionally expiring after 30, 90 or 365 days; a key is shown
+     once, in an uncached response, and SaaS-OS keeps only its hash.
+     Disabling an integration revokes its keys and is final.
+  2. A key, sent as `X-API-Key`, reaches exactly the routes pinned in
+     `tests/unit/test_routes.py` `API_KEY_ROUTES`: reading, creating and
+     updating contacts, companies, deals and tasks, archiving and restoring
+     a record, setting a deal's outcome. Never a delete, an export, an
+     import, members, roles, keys, automations or any setting; SaaS-OS
+     refuses a key on any authority-changing permission (ADR-0047). A
+     request with both a key and a session is refused.
+  3. The key acts with its role's permissions, in its own workspace only;
+     its changes are audited as the service account
+     (`ServiceAccountCaller`, `records.audit_caller`,
+     `system_audit.record_scoped(service_account=True)`).
+- **Permissions:** `crm_app.integration:manage` (an administrative grant
+  migration, held back like the others) and SaaS-OS's
+  `service_account:create`/`:disable`, `service_account_role:create`,
+  `api_key:create`/`:revoke`, `webhook_subscription:create`/`:delete`
+  (for P12-H), all on Owner and Admin. SaaS-OS counts the latter as
+  authority-changing and refuses them in grant migrations, so they are
+  listed in `crm_app.permission_grants.OWNER_GRANTED_ADDITIONS`; the guard
+  test checks each one is authority-changing and names its decision, and
+  still fails any other template addition without a migration. New
+  workspaces get them at provisioning; workspaces created before have no
+  way to receive them until an owner-side route exists (none in
+  production yet). Their Integrations page answers
+  `integrations_unavailable`. `service_account:enable` was left out: no
+  route re-enables an integration.
+- **Known limits:** a notification or history entry made by an
+  integration shows it as an unknown member ("Member 1234abcd"), not by
+  name; there is no per-key usage view or last-used time (SaaS-OS keeps
+  none).
+- **Tests:** `tests/integration/test_integrations.py` (6),
+  `tests/unit/test_routes.py` (the pinned key routes, Owner and Admin only),
+  `tests/unit/test_permission_grants.py` (the new check),
+  `frontend/src/pages/integrationSettings.test.tsx` (4).
+
+## P12-H — Outbound webhooks (approved 2026-11-07; to build)
+
+- **Approved:** Owners and Admins add HTTPS endpoint URLs and see the
+  signing secret once (SaaS-OS `core.webhooks`: HMAC with a timestamp,
+  delivery only through the worker's egress proxy, private addresses
+  refused at every attempt, retries then dead-letter). Events
+  `contact.created`, `contact.updated`, `deal.stage_changed`,
+  `form.submitted`, `appointment.booked`; the payload carries the record's
+  ID, type and a small set of fields (name, email, stage), sent to the
+  address the Owner or Admin chose (decision C). Delivery history from
+  SaaS-OS's outbox. Every endpoint receives every event until SaaS-OS
+  filters per subscription (gap 19, recorded only; decision D).
+
 ## P8-N — The automation notify action (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Go" on the

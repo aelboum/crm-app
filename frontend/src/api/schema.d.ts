@@ -1627,6 +1627,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Integrations */
+        get: operations["list_integrations_v1_workspaces__tenant_id__integrations_get"];
+        put?: never;
+        /** Create Integration */
+        post: operations["create_integration_v1_workspaces__tenant_id__integrations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/integrations/{integration_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable Integration */
+        post: operations["disable_integration_v1_workspaces__tenant_id__integrations__integration_id__disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/integrations/{integration_id}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Integration Key */
+        post: operations["create_integration_key_v1_workspaces__tenant_id__integrations__integration_id__keys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/integrations/{integration_id}/keys/{key_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Integration Key */
+        post: operations["revoke_integration_key_v1_workspaces__tenant_id__integrations__integration_id__keys__key_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/invitations": {
         parameters: {
             query?: never;
@@ -4200,6 +4269,45 @@ export interface components {
             /** Valid Rows */
             valid_rows: number;
         };
+        /** IntegrationIn */
+        IntegrationIn: {
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "Member" | "Read-only";
+        };
+        /** IntegrationList */
+        IntegrationList: {
+            /** Items */
+            items: components["schemas"]["IntegrationOut"][];
+        };
+        /** IntegrationOut */
+        IntegrationOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Keys */
+            keys: components["schemas"]["KeyOut"][];
+            /** Name */
+            name: string;
+            /** Role */
+            role: ("Member" | "Read-only") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "disabled";
+        };
         /** InvitationIn */
         InvitationIn: {
             /** Email */
@@ -4250,6 +4358,38 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "accepted" | "expired" | "revoked";
+        };
+        /** IssuedKey */
+        IssuedKey: {
+            key: components["schemas"]["KeyOut"];
+            /** Secret */
+            secret: string;
+        };
+        /** KeyIn */
+        KeyIn: {
+            /** Expires In Days */
+            expires_in_days?: number | null;
+            /** Name */
+            name: string;
+        };
+        /** KeyOut */
+        KeyOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Revoked At */
+            revoked_at: string | null;
         };
         /** LinkRef */
         LinkRef: {
@@ -7611,6 +7751,7 @@ export interface operations {
                 cursor?: string | null;
             };
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -7644,6 +7785,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
                 "Idempotency-Key"?: string | null;
             };
@@ -7736,6 +7878,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -7803,6 +7946,7 @@ export interface operations {
             query?: never;
             header?: {
                 "If-Match"?: string | null;
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -7878,6 +8022,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -7988,6 +8133,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -8072,6 +8218,7 @@ export interface operations {
                 cursor?: string | null;
             };
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -8105,6 +8252,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
                 "Idempotency-Key"?: string | null;
             };
@@ -8199,6 +8347,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -8266,6 +8415,7 @@ export interface operations {
             query?: never;
             header?: {
                 "If-Match"?: string | null;
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -8341,6 +8491,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -8595,6 +8746,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -9961,6 +10113,181 @@ export interface operations {
             };
         };
     };
+    list_integrations_v1_workspaces__tenant_id__integrations_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_integration_v1_workspaces__tenant_id__integrations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntegrationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_integration_v1_workspaces__tenant_id__integrations__integration_id__disable_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+                integration_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_integration_key_v1_workspaces__tenant_id__integrations__integration_id__keys_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+                integration_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedKey"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_integration_key_v1_workspaces__tenant_id__integrations__integration_id__keys__key_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+                integration_id: string;
+                key_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_invitations_v1_workspaces__tenant_id__invitations_get: {
         parameters: {
             query?: never;
@@ -10549,6 +10876,7 @@ export interface operations {
                 cursor?: string | null;
             };
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -10582,6 +10910,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
                 "Idempotency-Key"?: string | null;
             };
@@ -10628,6 +10957,7 @@ export interface operations {
                 idle?: boolean;
             };
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -10661,6 +10991,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -10728,6 +11059,7 @@ export interface operations {
             query?: never;
             header?: {
                 "If-Match"?: string | null;
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -10769,6 +11101,7 @@ export interface operations {
                 cursor?: string | null;
             };
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -10804,6 +11137,7 @@ export interface operations {
             query?: never;
             header?: {
                 "If-Match"?: string | null;
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -11935,6 +12269,7 @@ export interface operations {
                 cursor?: string | null;
             };
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -11968,6 +12303,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
                 "Idempotency-Key"?: string | null;
             };
@@ -12008,6 +12344,7 @@ export interface operations {
                 assignee?: string[];
             };
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -12041,6 +12378,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
@@ -12108,6 +12446,7 @@ export interface operations {
             query?: never;
             header?: {
                 "If-Match"?: string | null;
+                "X-API-Key"?: string | null;
                 authorization?: string | null;
             };
             path: {
