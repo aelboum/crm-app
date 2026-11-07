@@ -230,7 +230,11 @@ an enterprise customer's procurement require AWS.
    `docker-compose.prod.yml` (Caddy, app, worker, Squid + resolver,
    ZITADEL + login), with no `db`/`redis` services. ZITADEL and Login V2
    added locally 2026-11-07 (decision D-STG.1); E4 in part and E5 proven
-   locally.
+   locally. Backup and restore drill rehearsed locally (decision D-STG.2):
+   E8 except the off-provider copy and the second host. **Provider
+   requirement found:** a logical backup of the app database needs an
+   admin with BYPASSRLS, otherwise the provider's own backups must be
+   exportable for the off-provider copy (SaaS-OS gap 18).
 3. A production Caddyfile: TLS, request-size cap, `X-Forwarded-For`
    overwritten, only `/` and `/app` routed (13-H1 F2).
 4. systemd units for the product's maintenance commands and SaaS-OS's

@@ -17,6 +17,7 @@ docker compose --env-file deploy/staging/.local/compose.env \
   -f deploy/staging/compose.yaml --profile stateful-local up -d --build --wait
 uv run python deploy/staging/identity_local.py     # OIDC application in ZITADEL (decision D-STG.1)
 uv run python deploy/staging/verify_local.py       # the exit criteria a local run can prove
+uv run python deploy/staging/backup_drill.py       # backup, restore drill, checks (D-STG.2; needs age)
 ```
 
 The app answers at `https://leadstack.localhost:8443` (a certificate from
@@ -43,7 +44,9 @@ ignores.
 
 ## Not covered yet
 
-A browser sign-in with MFA (the rest of E4), backups and the restore
-drill, the scheduled maintenance commands, monitoring and alerting: exit
-criteria E8 and E9 in the brief. A real public certificate, DNS and the managed
+A browser sign-in with MFA (the rest of E4), the off-provider backup copy
+and a second host for the restore drill (the rest of E8), the scheduled
+maintenance commands, monitoring and alerting (E9). `backup_drill.py`
+dumps the app database as the stand-in's superuser: a non-superuser owner
+cannot (SaaS-OS gap 18). A real public certificate, DNS and the managed
 services' own behaviour can only be proven on the chosen host.

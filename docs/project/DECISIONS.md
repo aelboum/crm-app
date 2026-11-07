@@ -340,6 +340,54 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## D-STG.2 — Backup and restore drill, rehearsed locally (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner chose
+  "Proceed: recommended", 2026-11-07). Local only; nothing leaves the
+  machine.
+- **What:** `deploy/staging/backup_drill.py`. It backs up the app database
+  and ZITADEL's with SaaS-OS's own production pipeline
+  (`python -m saas_os.infra.db.backup.orchestrator run`, `age`-encrypted,
+  checksummed, retention 7), as its host timers would. It starts a separate,
+  empty PostgreSQL with TLS from the local CA on its own internal network,
+  prepared with the same roles (`init/01-roles.sh`), restores both
+  (`orchestrator restore`) and checks the copies. Afterwards it removes the
+  drill instance; the backups and the `age` key pair stay in
+  `.local/backups/` (git-ignored).
+- **Verified locally:** 15 of 15.
+  - Both artifacts are age ciphertexts.
+  - Both restore into fresh databases.
+  - Every table's exact row count matches: app 125 tables and 739 rows,
+    ZITADEL 144 tables and 2,150 rows.
+  - Both migration versions match.
+  - RLS is identical table by table (105 tables force RLS, 58 of them in
+    `crm_app`), and SaaS-OS's `verify_restored_database` passes.
+  - The app role is still safe.
+  - Through the app role over `verify-full`, one workspace's context sees
+    its own 4 roles and none of the other workspace's.
+  - `saas_os.ops.audit_digest verify --partial` passes against the
+    worker's exported `audit_digest` line.
+- **Production backups (owner's choice, option 1):** the app database is
+  backed up by the managed provider's own backups. Choosing a provider must
+  answer whether its admin has BYPASSRLS. If it does, SaaS-OS's encrypted
+  `pg_dump` pipeline also runs and gives the off-provider copy; if not, the
+  provider's backups must be exportable for that copy.
+- **Found:**
+  1. A logical backup of the app database needs a superuser or a BYPASSRLS
+     role: as the non-superuser migration owner, `pg_dump` fails on the
+     first table that forces RLS (SaaS-OS gap 18). ZITADEL's database dumps
+     fine as its own owner.
+  2. The orchestrator reaches a database only through `docker exec`
+     (SaaS-OS gap 17), so it cannot back up a managed PostgreSQL even with
+     the right role.
+  3. SaaS-OS's decryption expects the identity's key line alone
+     (`AGE-SECRET-KEY-1...`), not the file `age-keygen` writes.
+- **Not covered:** the off-provider copy (needs a bucket); a second host;
+  a restore of a production-sized database (timings are for this small
+  one); the app actually serving from the restored copy; RPO and RTO
+  measured on real infrastructure. Gaps 17 and 18 are recorded, not filed
+  upstream (the owner's choice).
+
 ## M-RLS — Data changes in migrations under forced RLS (2026-11-07)
 
 - **Status:** Approved by the owner ("approve the alternative", 2026-11-07)

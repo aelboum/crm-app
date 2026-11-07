@@ -1333,6 +1333,23 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Backup and restore drill (decision D-STG.2, 2026-11-07)
+
+`uv run python deploy/staging/backup_drill.py` against the local staging
+stand-in: **15 passed, 0 failed**.
+
+| Check | Result |
+| --- | --- |
+| Backups | app and ZITADEL databases through `saas_os.infra.db.backup.orchestrator run`; both artifacts are `age` ciphertexts |
+| Restore | both into fresh databases on a separate PostgreSQL (own internal network, TLS from the local CA) through `orchestrator restore` |
+| Contents | exact row counts match table by table (app 125 tables / 739 rows; ZITADEL 144 / 2,150); both migration versions match |
+| Security | RLS identical table by table (105 tables force RLS, 58 in `crm_app`); `verify_restored_database` passes; the app role is still safe; one workspace's context sees 4 own roles and 0 of the other's |
+| Audit | `saas_os.ops.audit_digest verify --partial` passes against the worker's exported digest line |
+
+Stand-in limits: the app database is dumped as the stand-in's superuser
+(SaaS-OS gap 18); the orchestrator needs a container (gap 17); no
+off-provider copy; same host. Details in `DECISIONS.md` D-STG.2.
+
 ## Data changes in migrations under forced RLS (decision M-RLS, 2026-11-07)
 
 | Check | Result |
