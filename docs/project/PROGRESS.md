@@ -1333,6 +1333,17 @@ The table above records the evidence at `b0809ee`. On the new pin
 
 CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 
+## Scheduled commands and heartbeat (decision D-STG.3, 2026-11-07)
+
+| Check | Result |
+| --- | --- |
+| `uv run python deploy/staging/schedule_local.py` | **11 passed, 0 failed**: the 6 timer commands and `health_check` exit 0 in the production image; the heartbeat pings with the worker running, sends nothing with it stopped, pings again once it is back |
+| `systemd-analyze calendar` / `verify` (Debian 12 container) | every calendar and unit accepted (only the Windows mount's executable bits warned) |
+| `uv run pytest tests/unit/test_staging_timers.py` | 5 passed |
+
+Not covered: a monitoring service raising the alert (not chosen), systemd
+on a real host, audit-digest log shipping.
+
 ## Backup and restore drill (decision D-STG.2, 2026-11-07)
 
 `uv run python deploy/staging/backup_drill.py` against the local staging

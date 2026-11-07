@@ -1,0 +1,13 @@
+# Every 2 minutes: reminders, email retries, received mail, domain checks (decision D-STG.3).
+
+[Unit]
+Description=LeadStack timer: Every 2 minutes: reminders, email retries, received mail, domain checks
+
+[Timer]
+OnCalendar=*:0/2
+Persistent=true
+RandomizedDelaySec=20
+Unit=leadstack-job@crm_app.email_maintenance.service
+
+[Install]
+WantedBy=timers.target

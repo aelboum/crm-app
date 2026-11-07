@@ -29,6 +29,11 @@ periodic work runs as commands from the deployment's scheduler (gap 9 in
 | `python -m crm_app.signup_maintenance` | a few minutes | Signup housekeeping (S-1; signup is off in production) | Pending signups are not cleaned up |
 | `python -m crm_app.import_maintenance` | about hourly | Deletes CSV import staging rows 7 days after an import (P3-F 7) | Staged personal data is kept longer than promised |
 
+On the staging host these run from the timers in
+`deploy/staging/systemd/` (decision D-STG.3), with the heartbeat
+(`deploy/staging/heartbeat.sh`) every 5 minutes; a new scheduled command
+needs a timer there too (`tests/unit/test_staging_timers.py`).
+
 Run each from one scheduler only, or tolerate overlap: every command claims
 its work with row locks or `SKIP LOCKED`, so two at once do no harm, only
 waste.

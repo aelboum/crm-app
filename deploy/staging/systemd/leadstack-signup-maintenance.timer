@@ -1,0 +1,13 @@
+# Every 5 minutes: signup housekeeping (decision D-STG.3).
+
+[Unit]
+Description=LeadStack timer: Every 5 minutes: signup housekeeping
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+RandomizedDelaySec=30
+Unit=leadstack-job@crm_app.signup_maintenance.service
+
+[Install]
+WantedBy=timers.target

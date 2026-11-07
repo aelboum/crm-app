@@ -1,0 +1,13 @@
+# Daily 03:30 UTC: SaaS-OS billing provider event retention (as SaaS-OS's own timer) (decision D-STG.3).
+
+[Unit]
+Description=LeadStack timer: Daily 03:30 UTC: SaaS-OS billing provider event retention (as SaaS-OS's own timer)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=leadstack-job@saas_os.api.billing_event_retention_trigger.service
+
+[Install]
+WantedBy=timers.target

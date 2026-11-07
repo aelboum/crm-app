@@ -1,0 +1,19 @@
+# The monitoring heartbeat (decision D-STG.3; brief H exit criterion E9).
+# heartbeat.sh pings HEARTBEAT_URL only when the worker answers its health
+# probe and no queued work is overdue; the monitoring service (to be chosen
+# by the owner) alerts when the pings stop. HEARTBEAT_URL lives in the
+# environment file, never here.
+
+[Unit]
+Description=LeadStack monitoring heartbeat
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/leadstack/deploy/staging
+EnvironmentFile=/opt/leadstack/deploy/staging/heartbeat.env
+Environment=STACK_DIR=/opt/leadstack/deploy/staging
+Environment=ENV_FILE=/opt/leadstack/deploy/staging/.env
+ExecStart=/bin/sh /opt/leadstack/deploy/staging/heartbeat.sh
+TimeoutStartSec=300

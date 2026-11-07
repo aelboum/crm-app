@@ -1,0 +1,13 @@
+# Hourly: delete CSV import staging rows after 7 days (decision D-STG.3).
+
+[Unit]
+Description=LeadStack timer: Hourly: delete CSV import staging rows after 7 days
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=300
+Unit=leadstack-job@crm_app.import_maintenance.service
+
+[Install]
+WantedBy=timers.target

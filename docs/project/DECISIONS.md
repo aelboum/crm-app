@@ -340,6 +340,43 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## D-STG.3 — Scheduled commands and the monitoring heartbeat (2026-11-07)
+
+- **Status:** Done under the autonomous mandate (the owner: "Proceed",
+  2026-11-07). Local only; no monitoring account, nothing installed on a
+  host.
+- **What:** `deploy/staging/systemd/`, host units in the shape of SaaS-OS's
+  own (`deploy/*.service` at the pinned commit: host-level, so they keep
+  running when the worker does not, and no Docker socket in any container).
+  - One template, `leadstack-job@.service`, runs a module once in the
+    product image: `docker compose run --rm --no-deps -T app python -m %i`.
+  - Its timers: `email_maintenance` every 2 minutes,
+    `automation_maintenance` every minute, `signup_maintenance` every 5
+    minutes, `import_maintenance` hourly, SaaS-OS's session clean-up
+    hourly, and its billing-event retention daily at 03:30 UTC.
+  - `leadstack-heartbeat.timer` runs `heartbeat.sh` every 5 minutes. It
+    pings `HEARTBEAT_URL`, kept in an environment file and never in a
+    unit, only when `crm-app-worker --check` passes (the worker's
+    15-second Redis sentinel) and `crm_app.health_check` finds nothing
+    overdue. A missed ping is what makes the monitoring service alert.
+  - Backup timers are not shipped: on a managed PostgreSQL they wait for
+    the provider (SaaS-OS gaps 17 and 18, decision D-STG.2).
+  - Paths under `/opt/leadstack` are placeholders until a host is chosen.
+- **Verified locally:**
+  - `schedule_local.py`, 11 of 11: every command a timer starts, and
+    `health_check`, runs in the production image against the stack and
+    exits 0. `heartbeat.sh` pings a stand-in monitor while the worker runs;
+    with the worker stopped it exits non-zero and sends nothing; with the
+    worker back it pings again.
+  - `systemd-analyze` (Debian 12, in a throwaway container) accepts every
+    unit and every calendar.
+  - `tests/unit/test_staging_timers.py`, 5 tests, fails if a scheduled
+    command in `OPERATIONS.md` has no timer, a timer starts a missing unit,
+    or a unit holds a secret.
+- **Not covered:** the monitoring service raising the alert (not chosen;
+  brief H section 8, Better Stack recommended); systemd actually firing the
+  timers on a host; log shipping for the audit digests (S11).
+
 ## D-STG.2 — Backup and restore drill, rehearsed locally (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner chose

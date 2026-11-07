@@ -1,0 +1,13 @@
+# Every minute: due automation runs (decision D-STG.3).
+
+[Unit]
+Description=LeadStack timer: Every minute: due automation runs
+
+[Timer]
+OnCalendar=*:*:00
+Persistent=true
+RandomizedDelaySec=10
+Unit=leadstack-job@crm_app.automation_maintenance.service
+
+[Install]
+WantedBy=timers.target

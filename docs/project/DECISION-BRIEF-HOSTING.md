@@ -238,7 +238,9 @@ an enterprise customer's procurement require AWS.
 3. A production Caddyfile: TLS, request-size cap, `X-Forwarded-For`
    overwritten, only `/` and `/app` routed (13-H1 F2).
 4. systemd units for the product's maintenance commands and SaaS-OS's
-   timers (S14).
+   timers (S14). **Done locally 2026-11-07** (decision D-STG.3):
+   `deploy/staging/systemd/` and the heartbeat; backup timers wait for the
+   provider (SaaS-OS gaps 17 and 18).
 5. An environment template listing every setting and secret by name, with
    no values, and a role-provisioning script for an external PostgreSQL
    (S4).

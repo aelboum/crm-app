@@ -1,0 +1,13 @@
+# Hourly: SaaS-OS session-retention cleanup (as SaaS-OS's own timer) (decision D-STG.3).
+
+[Unit]
+Description=LeadStack timer: Hourly: SaaS-OS session-retention cleanup (as SaaS-OS's own timer)
+
+[Timer]
+OnCalendar=*-*-* *:00:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+Unit=leadstack-job@saas_os.api.session_cleanup_trigger.service
+
+[Install]
+WantedBy=timers.target
