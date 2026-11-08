@@ -1353,6 +1353,16 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deploy of P2-BP, P7-FA, P7-CC (`ad247c2`, 2026-11-08)
+
+Migration `0044_business_profile` ran on deploy (the five columns exist; no
+data changed, so no backup was taken first, as the runbook allows). All
+services healthy, `/readyz` 200. Browser, workspace "Staging Alpha": the
+contact fields and "Show these on booking pages" appear under Business
+profile; the campaign editor's audience has the Company search. Nothing
+was saved. Not checked in the browser: a form's automations (staging has
+no form) and a booking page showing the details (none chosen).
+
 ## Companies in a campaign's audience (decision P7-CC, 2026-11-08)
 
 | Check | Result |
