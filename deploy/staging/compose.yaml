@@ -41,6 +41,9 @@ x-app: &app
     - .local/app.env
   volumes:
     - ./.local/ca.crt:/certs/ca.crt:ro
+    # What the app and worker trust (prepare_local.py): the local CA only on
+    # a laptop; the local CA plus the public CAs on a host (D-STG.5).
+    - ./.local/trust.crt:/certs/trust.crt:ro
   restart: unless-stopped
   read_only: true
   tmpfs:
@@ -168,15 +171,23 @@ services:
       - "127.0.0.1:8443:8443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The site's TLS and the extra sites: local (the local CA's
+      # certificate) by default, `host` on a real host (D-STG.5).
+      - ./edge/site-${EDGE_MODE:-local}.caddy:/etc/caddy/site.caddy:ro
+      - ./edge/extra-${EDGE_MODE:-local}.caddy:/etc/caddy/extra.caddy:ro
       - ./.local/edge.crt:/certs/edge.crt:ro
       - ./.local/edge.key:/certs/edge.key:ro
       - caddy-data:/data
       - caddy-config:/config
+    environment:
+      STAGING_SITE: ${STAGING_SITE:-leadstack.localhost:8443}
+      STAGING_HOST: ${STAGING_HOST:-leadstack.localhost}
     networks:
       edge:
         # The app reaches its issuer (the public origin) here, not through
         # the host: the same name and certificate the browser sees.
-        aliases: [leadstack.localhost]
+        aliases:
+          - "${STAGING_HOST:-leadstack.localhost}"
       identity: {}
     restart: unless-stopped
     depends_on:
@@ -220,15 +231,15 @@ services:
       # What browsers see and what appears as the token `iss`: the app's own
       # origin. Changing it needs a fresh ZITADEL database.
       ZITADEL_PORT: "8080"
-      ZITADEL_EXTERNALDOMAIN: leadstack.localhost
-      ZITADEL_EXTERNALPORT: "8443"
+      ZITADEL_EXTERNALDOMAIN: ${STAGING_HOST:-leadstack.localhost}
+      ZITADEL_EXTERNALPORT: "${STAGING_PORT:-8443}"
       ZITADEL_EXTERNALSECURE: "true"
       # Also read by `zitadel ready` (the healthcheck), which gets no flags.
       ZITADEL_TLS_ENABLED: "false"
       ZITADEL_FIRSTINSTANCE_ORG_NAME: crm-app-staging
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: admin
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:?}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS: admin@leadstack.localhost
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS: admin@${STAGING_HOST:-leadstack.localhost}
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED: "true"
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false" # pragma: allowlist secret
       # Local rehearsal only: personal access tokens in .local/bootstrap for
@@ -243,10 +254,10 @@ services:
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: login-client
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2100-01-01T00:00:00Z"
       ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
-      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: https://leadstack.localhost:8443/ui/v2/login/
-      ZITADEL_OIDC_DEFAULTLOGINURLV2: https://leadstack.localhost:8443/ui/v2/login/login?authRequest=
-      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: https://leadstack.localhost:8443/ui/v2/login/logout?post_logout_redirect=
-      ZITADEL_SAML_DEFAULTLOGINURLV2: https://leadstack.localhost:8443/ui/v2/login/login?samlRequest=
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: ${STAGING_ORIGIN:-https://leadstack.localhost:8443}/ui/v2/login/
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: ${STAGING_ORIGIN:-https://leadstack.localhost:8443}/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: ${STAGING_ORIGIN:-https://leadstack.localhost:8443}/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_SAML_DEFAULTLOGINURLV2: ${STAGING_ORIGIN:-https://leadstack.localhost:8443}/ui/v2/login/login?samlRequest=
     volumes:
       - ./.local/ca.crt:/certs/ca.crt:ro
       - ./.local/bootstrap:/bootstrap
@@ -277,7 +288,7 @@ services:
       ZITADEL_SERVICE_USER_TOKEN_FILE: /bootstrap/login-client.pat
       ZITADEL_SESSION_COOKIE_SECRET: ${ZITADEL_LOGIN_SESSION_COOKIE_SECRET:?}
       # ZITADEL picks its instance from Host: the public host.
-      CUSTOM_REQUEST_HEADERS: Host:leadstack.localhost,X-Forwarded-Proto:https
+      CUSTOM_REQUEST_HEADERS: Host:${STAGING_HOST:-leadstack.localhost},X-Forwarded-Proto:https
     volumes:
       - ./.local/bootstrap:/bootstrap:ro
     networks: [identity]
@@ -300,6 +311,12 @@ services:
     image: ubuntu/squid:6.6-24.04_edge@sha256:8a3baed477e2c282ab8aa5edad442f69873246964f225c5c2ae8364b6610963c
     volumes:
       - ./egress/squid.conf:/etc/squid/squid.conf:ro
+    # Squid sizes a table from the open-file limit; where Docker leaves it
+    # unlimited (Debian 13's containerd: ~1 billion) it cannot start.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     tmpfs:
       - /var/log/squid:uid=13,gid=13
       - /var/spool/squid:uid=13,gid=13

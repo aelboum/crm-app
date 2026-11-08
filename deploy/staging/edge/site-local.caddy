@@ -1,0 +1,3 @@
+# Local rehearsal (EDGE_MODE=local): the edge certificate from the local CA
+# (prepare_local.py).
+tls /certs/edge.crt /certs/edge.key

@@ -1,0 +1,5 @@
+# A real host (EDGE_MODE=host, decision D-STG.5): plain HTTP only redirects
+# to HTTPS. Caddy answers the ACME HTTP-01 challenge on port 80 itself.
+http://{$STAGING_HOST} {
+	redir https://{host}{uri} permanent
+}

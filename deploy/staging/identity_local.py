@@ -15,10 +15,15 @@ development, and for the same reason: the stack's ZITADEL starts empty.
 3. The client ID ZITADEL assigned replaces the placeholder in `app.env`,
    and `app` and `worker` are recreated to read it.
 
-Both calls trust only the local CA and use the bootstrap token ZITADEL wrote
-to `.local/bootstrap/` (git-ignored); the token is never printed. Local
-rehearsal only: a host's ZITADEL is configured by its deployment with a
-system-user key (DECISION-BRIEF-HOSTING.md).
+Both calls trust `.local/trust.crt` (the local CA, plus the public CAs on
+a host) and use the bootstrap token ZITADEL wrote to `.local/bootstrap/`
+(git-ignored); the token is never printed.
+
+On the staging VPS (decision D-STG.5) it runs inside the app image, on the
+edge network, with `--origin https://<host> --no-restart`; the host shell
+then recreates `app` and `worker`. The bootstrap token is a staging
+shortcut: production configures ZITADEL with a system-user key (SaaS-OS
+ADR-0025 section 7).
 """
 
 from __future__ import annotations
@@ -43,35 +48,57 @@ def _run(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[st
     )
 
 
-def main() -> int:
+def _options(argv: list[str]) -> tuple[str, bool] | None:
+    """`--origin https://<host>` and `--no-restart` (a host, D-STG.5)."""
+    rest = [a for a in argv if a != "--no-restart"]
+    if not rest:
+        return ORIGIN, "--no-restart" not in argv
+    if len(rest) == 2 and rest[0] == "--origin" and rest[1].startswith("https://"):
+        return rest[1].rstrip("/"), "--no-restart" not in argv
+    return None
+
+
+def main(argv: list[str]) -> int:
+    options = _options(argv)
     pat = LOCAL / "bootstrap" / "bootstrap.pat"
-    if not pat.exists():
-        print("start the stack first (compose.yaml); no bootstrap token yet", file=sys.stderr)
+    if options is None or not pat.exists():
+        print(
+            "usage: identity_local.py [--origin https://<host>] [--no-restart], "
+            "after the stack has started (it writes the bootstrap token)",
+            file=sys.stderr,
+        )
         return 2
+    origin, restart = options
+    trust = LOCAL / "trust.crt"
+    if not trust.exists():
+        trust = LOCAL / "ca.crt"
     env = {
         **os.environ,
-        "OIDC_CA_BUNDLE": str(LOCAL / "ca.crt"),
+        "OIDC_CA_BUNDLE": str(trust),
         # configure-zitadel.py uses urllib's default context.
-        "SSL_CERT_FILE": str(LOCAL / "ca.crt"),
-        "OIDC_ISSUER_URL": ORIGIN,
-        "PUBLIC_APP_ORIGIN": ORIGIN,
+        "SSL_CERT_FILE": str(trust),
+        "OIDC_ISSUER_URL": origin,
+        "PUBLIC_APP_ORIGIN": origin,
+        # configure-zitadel.py refuses any other issuer than a local one or
+        # exactly this named staging host (D-STG.5).
+        "ZITADEL_STAGING_ISSUER": origin,
         "ZITADEL_BOOTSTRAP_PAT_PATH": str(pat),
     }
     created = _run(
         [
             IDENTITY,
             "--zitadel-url",
-            ORIGIN,
+            origin,
             "--pat-path",
             str(pat),
             "--public-app-origin",
-            ORIGIN,
+            origin,
             "--project-name",
             "crm-app",
             "--application-name",
             "crm-app-backend",
             "--login-v2-base-uri",
-            ORIGIN + "/ui/v2/login/",
+            origin + "/ui/v2/login/",
         ],
         env,
     )
@@ -95,6 +122,9 @@ def main() -> int:
     text = app_env.read_text(encoding="utf-8")
     text = re.sub(r"(?m)^OIDC_CLIENT_ID=.*$", f"OIDC_CLIENT_ID={client_id}", text)
     app_env.write_bytes(text.encode("utf-8"))
+    if not restart:
+        print(f"OIDC application ready (client {client_id}); recreate app and worker")
+        return 0
 
     compose = [
         DOCKER,
@@ -115,4 +145,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

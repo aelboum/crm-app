@@ -1,0 +1,12 @@
+# A real host (decision D-STG.5): the edge publishes 80 and 443 instead of
+# the local 127.0.0.1:8443. Used with compose.yaml:
+#   docker compose --env-file deploy/staging/.local/compose.env \
+#     -f deploy/staging/compose.yaml -f deploy/staging/compose.host.yaml \
+#     --profile stateful-local up -d --wait
+# `compose.env` sets STAGING_HOST, STAGING_ORIGIN, STAGING_SITE,
+# STAGING_PORT=443 and EDGE_MODE=host (prepare_local.py --host).
+services:
+  edge:
+    ports: !override
+      - "80:80"
+      - "443:443"

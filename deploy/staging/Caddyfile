@@ -15,10 +15,15 @@
 # - The admin API is off. Locally the certificate comes from the local CA
 #   (prepare_local.py), which is also the only CA the app trusts for its
 #   issuer (OIDC_CA_BUNDLE); a host uses a public certificate instead.
+# - The site's address (`STAGING_SITE`) and its TLS (`edge/site-*.caddy`)
+#   are chosen by compose's `EDGE_MODE`: `local` (default) or `host`
+#   (decision D-STG.5: Let's Encrypt, HSTS, plain HTTP redirected).
 {
 	admin off
 	auto_https disable_redirects
 }
+
+import /etc/caddy/extra.caddy
 
 # Provider cookies (Login V2's `sessions` cookie holds ZITADEL session
 # tokens) share this host with the application. They must never reach the
@@ -46,8 +51,8 @@
 	header_up -Forwarded
 }
 
-leadstack.localhost:8443 {
-	tls /certs/edge.crt /certs/edge.key
+{$STAGING_SITE} {
+	import /etc/caddy/site.caddy
 
 	header {
 		X-Content-Type-Options "nosniff"

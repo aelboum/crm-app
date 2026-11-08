@@ -159,17 +159,21 @@ def _call(base: str, token: str, method: str, path: str, body: object = None) ->
         return json.load(response)
 
 
-def is_local_issuer(base: str) -> bool:
-    """Local development, or exactly the local staging rehearsal's issuer
-    (deploy/staging, on `.localhost`): never a real host."""
+def is_local_issuer(base: str, staging: str = "") -> bool:
+    """Local development, exactly the local staging rehearsal's issuer
+    (deploy/staging, on `.localhost`), or exactly the staging host named in
+    `ZITADEL_STAGING_ISSUER` (an https origin; decision D-STG.5). Never any
+    other real host."""
     if base == "https://leadstack.localhost:8443":
+        return True
+    if staging.startswith("https://") and base == staging.rstrip("/"):
         return True
     return base.startswith(("http://localhost", "http://127.0.0.1"))
 
 
 def main() -> int:
     base = os.environ.get("OIDC_ISSUER_URL", "http://localhost:8000").rstrip("/")
-    if not is_local_issuer(base):
+    if not is_local_issuer(base, os.environ.get("ZITADEL_STAGING_ISSUER", "")):
         print(f"refusing: {base} is not a local issuer", file=sys.stderr)
         return 2
     token = TOKEN_FILE.read_text(encoding="utf-8").strip()

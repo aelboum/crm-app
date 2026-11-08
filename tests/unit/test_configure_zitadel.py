@@ -70,3 +70,20 @@ def test_acts_only_on_a_local_issuer() -> None:
         "https://auth.leadstack.example",
     ):
         assert not script.is_local_issuer(other), other
+
+
+def test_acts_on_exactly_the_named_staging_host() -> None:
+    """Decision D-STG.5: the staging VPS's issuer only when named exactly in
+    `ZITADEL_STAGING_ISSUER`, as an https origin; never a look-alike."""
+    script = _script()
+    staging = "https://crm-staging.example.nl"
+    assert script.is_local_issuer(staging, staging)
+    assert script.is_local_issuer(staging, staging + "/")
+    for other in (
+        "https://crm-staging.example.nl.evil",
+        "https://other.example.nl",
+        "http://crm-staging.example.nl",
+    ):
+        assert not script.is_local_issuer(other, staging), other
+    assert not script.is_local_issuer(staging, "http://crm-staging.example.nl")
+    assert not script.is_local_issuer(staging, "")

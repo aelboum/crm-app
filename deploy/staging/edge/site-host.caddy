@@ -1,0 +1,6 @@
+# A real host (EDGE_MODE=host, decision D-STG.5): a public certificate from
+# Let's Encrypt (HTTP-01 on port 80), and browsers told to use HTTPS only.
+tls {
+	issuer acme
+}
+header Strict-Transport-Security "max-age=31536000"
