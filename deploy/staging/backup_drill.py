@@ -335,6 +335,10 @@ def _verify_app_copy(drill_admin: str, runtime: str) -> None:
     with tempfile.NamedTemporaryFile("w", suffix=".log", delete=False, encoding="utf-8") as handle:
         handle.write("\n".join(lines) + "\n")
         log_path = handle.name
+    # Readable by the image's non-root user: a Linux host keeps the 0600 of
+    # NamedTemporaryFile (Docker Desktop hid it). Digest lines hold hashes
+    # and counts, no secret.
+    Path(log_path).chmod(0o644)
     try:
         digest = run(
             [
