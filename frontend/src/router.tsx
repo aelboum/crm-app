@@ -262,6 +262,8 @@ function SectionPage() {
             search: {
               ...(target.record ? { record: target.record } : {}),
               ...(target.view ? { view: target.view } : {}),
+              ...(target.settings ? { section: target.settings } : {}),
+              ...(target.create ? { create: target.create } : {}),
             },
           });
         }}

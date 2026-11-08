@@ -70,3 +70,22 @@ export function useRecentActivity(workspaceId: string) {
       ),
   });
 }
+
+/*
+ * The setup checklist (decision P4-S): whether each first step exists.
+ * Every role may read it; the Home page shows it to Owners and Admins.
+ */
+export type SetupStep = components["schemas"]["SetupStep"];
+
+export function useSetup(workspaceId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["workspace", workspaceId, "setup"] as const,
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/setup", {
+          params: { path: where(workspaceId) },
+        }),
+      ),
+  });
+}

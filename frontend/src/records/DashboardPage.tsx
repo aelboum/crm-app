@@ -1,5 +1,7 @@
 import {
   ChevronRight,
+  Circle,
+  CircleCheck,
   ClockAlert,
   Hourglass,
   MessageSquare,
@@ -21,12 +23,15 @@ import {
   todayIn,
   useContactReport,
   useContactTrend,
+  useDealReport,
 } from "../api/reports";
 import {
   type RecentEntry,
+  type SetupStep,
   TODAY_TASKS,
   useContactTotal,
   useRecentActivity,
+  useSetup,
   useTasksDueBy,
 } from "../api/dashboard";
 import {
@@ -67,15 +72,30 @@ import { DueText, taskRefusal } from "./taskParts";
  * definition (P4-D 3) and comes from the same endpoint as the page it links
  * to; each card loads and fails on its own. Decision P10-F adds the lead
  * trend with sources, open conversations and conversations waiting for an
- * owner. The design's campaign and AI cards, its deltas and its agency view
- * are not shown: their data does not exist yet.
+ * owner. The Contacts and Open deals tiles say what was added in the last
+ * 30 days against the 30 before, and Owners and Admins see a setup
+ * checklist until every first step is done (decision P4-S). The design's
+ * campaign and AI cards and its agency view are not shown: their data does
+ * not exist yet.
  */
 
 export interface HomeTarget {
   section:
-    "contacts" | "companies" | "opportunities" | "tasks" | "calendar" | "inbox";
+    | "contacts"
+    | "companies"
+    | "opportunities"
+    | "tasks"
+    | "calendar"
+    | "inbox"
+    | "forms"
+    | "automations"
+    | "settings";
   record?: string;
   view?: "overdue" | "idle" | "unassigned";
+  /** A settings section to open (with `section: "settings"`). */
+  settings?: "business";
+  /** A new-record dialog to open. */
+  create?: "contact" | "opportunity";
 }
 
 /** "12", or "100+" when a full page had more after it. */
@@ -160,8 +180,9 @@ export function DashboardPage({
         />
       ) : (
         <>
+          <SetupCard workspaceId={workspaceId} onGo={onGo} />
           <Attention workspaceId={workspaceId} onGo={onGo} />
-          <Headlines workspaceId={workspaceId} onGo={onGo} />
+          <Headlines workspaceId={workspaceId} onGo={onGo} now={day.now} />
           <div className="home-grid">
             <PipelineCard workspaceId={workspaceId} onGo={onGo} />
             <AppointmentsCard
@@ -183,6 +204,121 @@ export function DashboardPage({
         </>
       )}
     </div>
+  );
+}
+
+/*
+ * First steps (decision P4-S), for Owners and Admins until all are done or
+ * they hide the card. Hiding is remembered in this browser only.
+ */
+const SETUP: Record<
+  SetupStep["key"],
+  { label: MessageId; target: HomeTarget }
+> = {
+  business_hours: {
+    label: "dash.setup.businessHours",
+    target: { section: "settings", settings: "business" },
+  },
+  contact: {
+    label: "dash.setup.contact",
+    target: { section: "contacts", create: "contact" },
+  },
+  deal: {
+    label: "dash.setup.deal",
+    target: { section: "opportunities", create: "opportunity" },
+  },
+  form: { label: "dash.setup.form", target: { section: "forms" } },
+  booking_page: {
+    label: "dash.setup.bookingPage",
+    target: { section: "calendar" },
+  },
+  automation: {
+    label: "dash.setup.automation",
+    target: { section: "automations" },
+  },
+  teammate: { label: "dash.setup.teammate", target: { section: "settings" } },
+};
+
+function hiddenKey(workspaceId: string): string {
+  return `leadstack.setup-hidden.${workspaceId}`;
+}
+
+function readHidden(workspaceId: string): boolean {
+  try {
+    return window.localStorage.getItem(hiddenKey(workspaceId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function SetupCard({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
+  const t = useT();
+  const access = useAccess(workspaceId);
+  const canSetUp = access.data?.actions.update_workspace === true;
+  const setup = useSetup(workspaceId, canSetUp);
+  const [hidden, setHidden] = useState(() => readHidden(workspaceId));
+  const steps = setup.data?.steps ?? [];
+  const done = steps.filter((step) => step.done).length;
+  if (!canSetUp || hidden || !setup.data || done === steps.length) return null;
+  return (
+    <section className="home-card home-setup" aria-labelledby="home-setup">
+      <div className="home-card-head">
+        <h2 id="home-setup" className="home-card-title">
+          {t("dash.setup")}
+        </h2>
+        <AriaButton
+          className="home-card-link"
+          onPress={() => {
+            try {
+              window.localStorage.setItem(hiddenKey(workspaceId), "1");
+            } catch {
+              // Not remembered; hidden until the page is opened again.
+            }
+            setHidden(true);
+          }}
+        >
+          {t("dash.setup.hide")}
+        </AriaButton>
+      </div>
+      <p className="home-row-sub">
+        {t("dash.setup.progress", { done, total: steps.length })}
+      </p>
+      <ul className="home-setup-list">
+        {steps.map((step) => {
+          const { label, target } = SETUP[step.key];
+          return (
+            <li
+              key={step.key}
+              className={step.done ? "home-setup-step done" : "home-setup-step"}
+            >
+              {step.done ? (
+                <CircleCheck size={16} aria-hidden="true" />
+              ) : (
+                <Circle size={16} aria-hidden="true" />
+              )}
+              {step.done ? (
+                <span className="home-setup-label">
+                  {t(label)}
+                  <span className="visually-hidden">
+                    {" "}
+                    {t("dash.setup.done")}
+                  </span>
+                </span>
+              ) : (
+                <AriaButton
+                  className="home-record-link"
+                  onPress={() => {
+                    onGo(target);
+                  }}
+                >
+                  {t(label)}
+                </AriaButton>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -316,13 +452,39 @@ function Attention({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
   );
 }
 
-function Headlines({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
+function Headlines({
+  workspaceId,
+  onGo,
+  now,
+}: {
+  workspaceId: string;
+  onGo: Go;
+  now: Date;
+}) {
   const t = useT();
   const intl = useIntl();
   const contacts = useContactTotal(workspaceId);
   const open = useDealSummary(workspaceId, OPEN);
   const counts = useTaskCounts(workspaceId, []);
   const settings = useWorkspaceSettings(workspaceId);
+  // The last 30 days in the workspace's zone, once it is known; the same
+  // query as the sources on the lead card.
+  const today = todayIn(settings.data?.time_zone, now);
+  const recent = { start: daysBefore(today, 29), end: today };
+  const zoneKnown = !settings.isPending;
+  const added = useContactReport(workspaceId, recent, zoneKnown);
+  const created = useDealReport(workspaceId, recent, zoneKnown);
+  const change = (
+    label: MessageId,
+    report: { created: number; created_before: number } | undefined,
+  ) =>
+    report
+      ? t(label, {
+          count: report.created,
+          value: intl.formatNumber(report.created),
+          before: intl.formatNumber(report.created_before),
+        })
+      : null;
   const currency = settings.data?.currency ?? "EUR";
   const totals = open.data ? totalsOf(open.data, currency) : null;
   const number = (value: number) => intl.formatNumber(value);
@@ -350,7 +512,7 @@ function Headlines({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
       value: contacts.data
         ? number(contacts.data.total) + (contacts.data.capped ? "+" : "")
         : null,
-      note: null,
+      note: change("dash.kpi.contactsAdded", added.data),
       failed: contacts.isError,
       go: () => {
         onGo({ section: "contacts" });
@@ -360,7 +522,7 @@ function Headlines({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
       key: "deals",
       label: "dash.kpi.deals",
       value: totals ? number(totals.count) : null,
-      note: null,
+      note: change("dash.kpi.dealsAdded", created.data),
       failed: open.isError,
       go: () => {
         onGo({ section: "opportunities" });

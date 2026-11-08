@@ -1353,6 +1353,17 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Home setup checklist and 30-day tile changes (decision P4-S, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| Integration `test_setup.py`, `test_workspace_settings.py` | 19 passed (new: a new workspace has done nothing; a contact, deal, business hours and a second member tick only their steps; another workspace unaffected; reader 200, other workspace and outsider 404, anonymous 401) |
+| Unit, whole suite (no environment, as CI) | 784 passed; route policy for `/setup` added |
+| Ruff, pyright, import contracts, secret scan | clean |
+| Frontend typecheck, lint, build; full suite `--maxWorkers=6` | clean; 357 passed (new: checklist progress and steps, a step opens its page, Hide remembered, hidden when all done and never requested for Members; tile notes for contacts and deals; axe clean) |
+
+Not verified yet: a browser pass on staging.
+
 ## Conversion funnel, lead trend and Home cards (decision P10-F, 2026-11-08)
 
 | Check | Result |

@@ -34,6 +34,8 @@ EXPECTED = {
         "crm_app.workspace:read"
     ),
     "GET /v1/workspaces/{tenant_id}/access": "crm_app.workspace:read",
+    # Decision P4-S: whether each first step exists, for every role.
+    "GET /v1/workspaces/{tenant_id}/setup": "crm_app.workspace:read",
     # Workspace settings (decision P2-F 1): read for every role, change for
     # Owner and Admin.
     "GET /v1/workspaces/{tenant_id}/settings": "crm_app.workspace:read",

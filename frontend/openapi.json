@@ -8655,6 +8655,49 @@
         "title": "SettingsUpdate",
         "type": "object"
       },
+      "Setup": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/SetupStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "title": "Setup",
+        "type": "object"
+      },
+      "SetupStep": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "key": {
+            "enum": [
+              "business_hours",
+              "contact",
+              "deal",
+              "form",
+              "booking_page",
+              "automation",
+              "teammate"
+            ],
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "done"
+        ],
+        "title": "SetupStep",
+        "type": "object"
+      },
       "SignOutTarget": {
         "properties": {
           "url": {
@@ -25393,6 +25436,66 @@
         },
         "summary": "Update Settings",
         "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/setup": {
+      "get": {
+        "operationId": "workspace_setup_v1_workspaces__tenant_id__setup_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Setup"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Workspace Setup",
+        "tags": [
+          "workspaces",
           "workspaces"
         ]
       }

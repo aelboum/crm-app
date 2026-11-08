@@ -3407,6 +3407,38 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_booking_page_rules.py`,
   `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
 
+## P4-S — Home: setup checklist and 30-day changes on the tiles (2026-11-08)
+
+- **Status:** Decided and built under the autonomous mandate (owner,
+  2026-11-08: "apply 1 and 2", after the recommendation of tile changes
+  and a setup checklist). Closes two items P4-D 2 left out.
+- **Decisions:**
+  1. **Tile changes:** the Contacts tile says how many contacts were added
+     in the last 30 days and how many in the 30 before; the Open deals tile
+     the same for deals created. Both read the existing contacts and deals
+     reports (P10-A) for the last 30 days in the workspace's time zone, so
+     each follows that report's permission and fails alone (the tile keeps
+     its number without the note). Pipeline value and Open tasks keep their
+     notes (weighted value, overdue): a change in a total over time needs
+     history the data does not keep.
+  2. **Setup checklist:** `GET /v1/workspaces/{id}/setup`
+     (`crm_app.workspace:read`, every role) returns seven steps, each done
+     or not: business hours set, a contact, a deal, a form, a booking page,
+     an automation, and more than one active member. Only whether a row
+     exists is read (one row per step, 5-second statement timeout), never
+     its contents. Mounted on the workspace-settings router.
+  3. **Who sees it:** the Home page shows the card to members who may
+     change the workspace (`update_workspace`: Owners and Admins) until
+     every step is done; others never request it. Each step to do is a
+     button to the page where it is done (Settings › Business, a new
+     contact or deal dialog, Forms, Calendar for booking pages,
+     Automations, Settings › Team). "Hide" removes it in this browser only
+     (local storage, per workspace); it is a convenience, not a setting.
+  4. **Not built:** a stored, shared dismissal; steps for email sending or
+     domains (not authorised).
+- **Tests:** `tests/integration/test_setup.py`, `tests/unit/test_routes.py`,
+  `frontend/src/records/dashboard.test.tsx`.
+
 ## P10-F — Conversion funnel, lead trend and Home cards (2026-11-08)
 
 - **Status:** Decided and built under the autonomous mandate (owner,

@@ -2515,6 +2515,23 @@ export interface paths {
         patch: operations["update_settings_v1_workspaces__tenant_id__settings_patch"];
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workspace Setup */
+        get: operations["workspace_setup_v1_workspaces__tenant_id__setup_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/suppressions": {
         parameters: {
             query?: never;
@@ -5555,6 +5572,21 @@ export interface components {
             reminder_lead_minutes?: number | null;
             /** Time Zone */
             time_zone?: string | null;
+        };
+        /** Setup */
+        Setup: {
+            /** Steps */
+            steps: components["schemas"]["SetupStep"][];
+        };
+        /** SetupStep */
+        SetupStep: {
+            /** Done */
+            done: boolean;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "business_hours" | "contact" | "deal" | "form" | "booking_page" | "automation" | "teammate";
         };
         /** SignOutTarget */
         SignOutTarget: {
@@ -12941,6 +12973,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workspace_setup_v1_workspaces__tenant_id__setup_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Setup"];
                 };
             };
             /** @description Validation Error */

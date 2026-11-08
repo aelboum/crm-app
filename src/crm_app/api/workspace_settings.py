@@ -24,6 +24,7 @@ from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
 
 from crm_app import workspace_settings
+from crm_app.api import setup
 from crm_app.api.records import IfMatch, _http, _version
 from crm_app.domains import reminders as reminder_rules
 from crm_app.domains import settings as values
@@ -137,3 +138,7 @@ def update_settings(
     except RecordError as exc:
         raise _http(exc) from None
     return _respond(response, settings)
+
+
+# The Home page's setup checklist (decision P4-S) shares this prefix.
+router.include_router(setup.router)

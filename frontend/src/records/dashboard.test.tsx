@@ -30,6 +30,7 @@ function at(hour: number, minute = 0): string {
 }
 
 const MANAGER = { read_members: true, update_task: true, create_task: true };
+const OWNER = { ...MANAGER, update_workspace: true };
 const READER = { read_members: true, update_task: false };
 
 const STAGES = [
@@ -174,6 +175,7 @@ function workspace(
   options: {
     failFeed?: boolean;
     failTrend?: boolean;
+    setup?: Record<string, boolean>;
     onWrite?: (method: string, path: string, body: unknown) => Reply;
   } = {},
 ): Handler {
@@ -304,6 +306,43 @@ function workspace(
         },
       };
     }
+    if (path === `${base}/setup`) {
+      const done = options.setup ?? { contact: true, deal: true };
+      return {
+        status: 200,
+        body: {
+          steps: [
+            "business_hours",
+            "contact",
+            "deal",
+            "form",
+            "booking_page",
+            "automation",
+            "teammate",
+          ].map((key) => ({ key, done: done[key] ?? false })),
+        },
+      };
+    }
+    if (path.startsWith(`${base}/reports/deals?`)) {
+      return {
+        status: 200,
+        body: {
+          period: { start: "2026-10-10", end: "2026-11-08", days: 30 },
+          capped: false,
+          created: 3,
+          created_before: 1,
+          won: 0,
+          won_before: 0,
+          lost: 0,
+          lost_before: 0,
+          win_rate: null,
+          win_rate_before: null,
+          won_value: [],
+          lost_value: [],
+          owners: [],
+        },
+      };
+    }
     if (path.startsWith(`${base}/reports/contact-trend?`)) {
       return options.failTrend
         ? { status: 403, body: {} }
@@ -359,10 +398,14 @@ describe("the Home page", () => {
 
     const kpis = screen.getByRole("region", { name: "Headline numbers" });
     expect(
-      await within(kpis).findByRole("button", { name: /^Contacts\s*12$/ }),
+      await within(kpis).findByRole("button", {
+        name: /^Contacts\s*12\s*10 added in 30 days \(previous 30: 4\)$/,
+      }),
     ).toBeInTheDocument();
     expect(
-      within(kpis).getByRole("button", { name: /^Open deals\s*5$/ }),
+      await within(kpis).findByRole("button", {
+        name: /^Open deals\s*5\s*3 created in 30 days \(previous 30: 1\)$/,
+      }),
     ).toBeInTheDocument();
     expect(
       within(kpis).getByRole("button", {
@@ -508,6 +551,80 @@ describe("the Home page", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows Owners and Admins the first steps still to do (P4-S)", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/home`, workspace(OWNER));
+    const setup = await screen.findByRole("region", {
+      name: "Set up your workspace",
+    });
+    expect(within(setup).getByText("2 of 7 done")).toBeInTheDocument();
+    // Done steps are text; each step to do is a button that opens its page.
+    expect(within(setup).getByText(/Add your first contact/)).toHaveTextContent(
+      "Add your first contact (done)",
+    );
+    expect(
+      within(setup).queryByRole("button", { name: "Add your first contact" }),
+    ).toBeNull();
+    await user.click(
+      within(setup).getByRole("button", { name: "Build an automation" }),
+    );
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Automations" }),
+    ).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("hides the checklist when asked, and remembers it here", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderApp(`/w/${WS}/home`, workspace(OWNER));
+    const setup = await screen.findByRole("region", {
+      name: "Set up your workspace",
+    });
+    await user.click(within(setup).getByRole("button", { name: "Hide" }));
+    expect(
+      screen.queryByRole("region", { name: "Set up your workspace" }),
+    ).toBeNull();
+    unmount();
+    renderApp(`/w/${WS}/home`, workspace(OWNER));
+    expect(
+      await screen.findByRole("region", { name: "Headline numbers" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Set up your workspace" }),
+    ).toBeNull();
+    window.localStorage.clear();
+  });
+
+  it("shows no checklist once every step is done, nor to Members", async () => {
+    const all = Object.fromEntries(
+      [
+        "business_hours",
+        "contact",
+        "deal",
+        "form",
+        "booking_page",
+        "automation",
+        "teammate",
+      ].map((key) => [key, true]),
+    );
+    const { unmount } = renderApp(
+      `/w/${WS}/home`,
+      workspace(OWNER, { setup: all }),
+    );
+    expect(
+      await screen.findByRole("region", { name: "Headline numbers" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Set up your workspace" }),
+    ).toBeNull();
+    unmount();
+    const { sent } = renderApp(`/w/${WS}/home`, workspace(MANAGER));
+    expect(
+      await screen.findByRole("region", { name: "Headline numbers" }),
+    ).toBeInTheDocument();
+    expect(sent.some((r) => r.path.endsWith("/setup"))).toBe(false);
+  });
+
   it("opens the overdue tasks from the attention strip", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/home`, workspace(MANAGER));
@@ -574,7 +691,7 @@ describe("the Home page", () => {
       "You do not have permission to see this.",
     );
     expect(
-      await screen.findByRole("button", { name: /^Contacts\s*12$/ }),
+      await screen.findByRole("button", { name: /^Contacts\s*12/ }),
     ).toBeInTheDocument();
   });
 

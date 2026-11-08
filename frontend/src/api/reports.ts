@@ -38,9 +38,14 @@ const reportKeys = {
     ] as const,
 };
 
-export function useContactReport(workspaceId: string, period: Period) {
+export function useContactReport(
+  workspaceId: string,
+  period: Period,
+  enabled = true,
+) {
   return useQuery({
     queryKey: reportKeys.one(workspaceId, "contacts", period),
+    enabled,
     queryFn: async () =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/reports/contacts", {
@@ -50,9 +55,14 @@ export function useContactReport(workspaceId: string, period: Period) {
   });
 }
 
-export function useDealReport(workspaceId: string, period: Period) {
+export function useDealReport(
+  workspaceId: string,
+  period: Period,
+  enabled = true,
+) {
   return useQuery({
     queryKey: reportKeys.one(workspaceId, "deals", period),
+    enabled,
     queryFn: async () =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/reports/deals", {
