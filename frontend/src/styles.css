@@ -1417,6 +1417,13 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .home-sources-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .home-sources-list li { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
 .home-row.unread .home-row-title { font-weight: 600; }
+/* The business's contact details (decision P2-BP). */
+.business-contact { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.business-contact textarea.field-input { height: auto; min-height: 72px; padding: 8px 10px; resize: vertical; font: inherit; }
+.business-public { display: flex; align-items: center; gap: 8px; }
+.booking-contact { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; font-style: normal; font-size: 13px; color: var(--ink-2); }
+.booking-contact a { color: var(--accent-ink); overflow-wrap: anywhere; }
+.booking-contact-address { white-space: pre-line; flex-basis: 100%; }
 /* The setup checklist on Home (decision P4-S). */
 .home-setup-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
 .home-setup-step { display: flex; align-items: center; gap: 8px; min-height: 28px; color: var(--muted); }

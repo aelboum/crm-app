@@ -314,6 +314,50 @@ describe("hosted booking page", () => {
     expect(sent.some((r) => r.path === "/auth/me")).toBe(false);
   });
 
+  it("shows the business's contact details only when the page carries them (P2-BP)", async () => {
+    const page = {
+      name: "Intro call",
+      description: null,
+      length_minutes: 30,
+      kind: "video",
+      time_zone: "UTC",
+      horizon_days: 30,
+    };
+    const { unmount } = renderApp(`/b/${WS}/${KEY}`, visitor({ page: { status: 200, body: page } }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Intro call" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Contact details" })).toBeNull();
+    expect(document.querySelector("address")).toBeNull();
+    unmount();
+    renderApp(
+      `/b/${WS}/${KEY}`,
+      visitor({
+        page: {
+          status: 200,
+          body: {
+            ...page,
+            contact: {
+              phone: "+31 (20) 123-4567",
+              email: "hello@example.test",
+              website: "https://www.example.test",
+              address: "Keizersgracht 1\nAmsterdam",
+            },
+          },
+        },
+      }),
+    );
+    expect(await screen.findByRole("link", { name: "+31 (20) 123-4567" })).toHaveAttribute("href", "tel:+31201234567");
+    expect(screen.getByRole("link", { name: "hello@example.test" })).toHaveAttribute(
+      "href",
+      "mailto:hello@example.test",
+    );
+    expect(screen.getByRole("link", { name: "https://www.example.test" })).toHaveAttribute(
+      "rel",
+      "noopener noreferrer nofollow",
+    );
+    expect(screen.getByText(/Keizersgracht 1/)).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
   it("shows refusals next to their fields", async () => {
     const user = userEvent.setup();
     renderApp(

@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0043_business_hours_wait` own the
+Migrations `0002_contacts_companies` to `0044_business_profile` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -334,6 +334,13 @@ class WorkspaceSettings(Base):
     # Minutes before an appointment its contact is reminded; None is off
     # (migration 0031, P5-D).
     reminder_lead_minutes: Mapped[int | None] = mapped_column(Integer)
+    # The business's own contact details and whether booking pages show
+    # them (migration 0044, decision P2-BP).
+    business_phone: Mapped[str | None] = mapped_column(Text)
+    business_email: Mapped[str | None] = mapped_column(Text)
+    business_website: Mapped[str | None] = mapped_column(Text)
+    business_address: Mapped[str | None] = mapped_column(Text)
+    business_contact_public: Mapped[bool] = mapped_column(Boolean, server_default="false")
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     version: Mapped[int] = mapped_column(Integer)

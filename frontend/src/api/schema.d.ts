@@ -3288,6 +3288,21 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * BusinessContact
+         * @description The business's contact details, when the workspace shows them on
+         *     booking pages (decision P2-BP).
+         */
+        BusinessContact: {
+            /** Address */
+            address: string | null;
+            /** Email */
+            email: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Website */
+            website: string | null;
+        };
         /** CampaignIn */
         CampaignIn: {
             /** Body */
@@ -5174,6 +5189,7 @@ export interface components {
         };
         /** PublicBookingPage */
         PublicBookingPage: {
+            contact?: components["schemas"]["BusinessContact"] | null;
             /** Description */
             description: string | null;
             /** Horizon Days */
@@ -5543,8 +5559,18 @@ export interface components {
         };
         /** SettingsOut */
         SettingsOut: {
+            /** Business Address */
+            business_address: string | null;
+            /** Business Contact Public */
+            business_contact_public: boolean;
+            /** Business Email */
+            business_email: string | null;
             /** Business Hours */
             business_hours: (components["schemas"]["DayHours"] | null)[] | null;
+            /** Business Phone */
+            business_phone: string | null;
+            /** Business Website */
+            business_website: string | null;
             /** Currency */
             currency: string;
             /** Locale */
@@ -5562,8 +5588,18 @@ export interface components {
         };
         /** SettingsUpdate */
         SettingsUpdate: {
+            /** Business Address */
+            business_address?: string | null;
+            /** Business Contact Public */
+            business_contact_public?: boolean | null;
+            /** Business Email */
+            business_email?: string | null;
             /** Business Hours */
             business_hours?: (components["schemas"]["DayHours"] | null)[] | null;
+            /** Business Phone */
+            business_phone?: string | null;
+            /** Business Website */
+            business_website?: string | null;
             /** Currency */
             currency?: string | null;
             /** Locale */

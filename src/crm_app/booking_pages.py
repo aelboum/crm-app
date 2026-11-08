@@ -493,10 +493,28 @@ def _offer(row: BookingPage) -> _Offer:
     )
 
 
+def _public_contact(session: Session, workspace: uuid.UUID) -> Item | None:
+    """The business's contact details if the workspace shows them and has
+    at least one (P2-BP); otherwise `None`."""
+    row = session.execute(
+        select(WorkspaceSettings).where(WorkspaceSettings.tenant_id == workspace)
+    ).scalar_one_or_none()
+    if row is None or not row.business_contact_public:
+        return None
+    contact = {
+        "phone": row.business_phone,
+        "email": row.business_email,
+        "website": row.business_website,
+        "address": row.business_address,
+    }
+    return contact if any(contact.values()) else None
+
+
 def public_page(workspace: uuid.UUID, key: str) -> Item:
     """What the hosted page shows before booking: the name, description,
-    length and kind, and the workspace's time zone. The host, the location
-    and the workspace's name are not shown."""
+    length and kind, and the workspace's time zone, and the business's
+    contact details when the workspace chose to show them (P2-BP). The
+    host, the location and the workspace's name are not shown."""
     _open_workspace(workspace)
     with tenant_session_scope(workspace) as session:
         row = _published(session, workspace, key, lock=False)
@@ -508,6 +526,7 @@ def public_page(workspace: uuid.UUID, key: str) -> Item:
             "kind": row.kind,
             "time_zone": zone,
             "horizon_days": row.horizon_days,
+            "contact": _public_contact(session, workspace),
         }
         host = row.host_user_id
     if not _active_member(workspace, host):

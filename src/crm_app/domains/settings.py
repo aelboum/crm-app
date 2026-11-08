@@ -28,6 +28,9 @@ from collections.abc import Mapping, Sequence
 from functools import cache
 
 from crm_app.domains.records import InvalidValue
+from crm_app.domains.records import email as _email
+from crm_app.domains.records import phone as _phone
+from crm_app.domains.records import website as _website
 
 DEFAULT_LOCALE = "en"
 DEFAULT_TIME_ZONE = "Europe/Amsterdam"
@@ -37,6 +40,10 @@ _LOCALE = re.compile(r"([a-z]{2,3})(?:-([a-z]{4}))?(?:-([a-z]{2}|[0-9]{3}))?")
 _RAW_MAX = 64
 _CLOCK = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]")
 DAYS = 7
+# The business's contact details (decision P2-BP).
+ADDRESS_MAX = 300
+ADDRESS_LINES = 6
+_ADDRESS_CONTROL = re.compile(r"[\x00-\x09\x0b-\x1f\x7f]")
 
 # Active ISO 4217 currency codes (fund and precious-metal codes left out).
 CURRENCIES: frozenset[str] = frozenset(
@@ -265,3 +272,39 @@ def business_hours(
             raise InvalidValue("must close after it opens on the same day")
         week.append({"opens": opens, "closes": closes})
     return week
+
+
+# --- The business's contact details (decision P2-BP) --------------------------------
+# Each returns `None` for an empty value, which clears the field.
+
+
+def business_phone(value: str) -> str | None:
+    return _phone(value)
+
+
+def business_email(value: str) -> str | None:
+    return _email(value)
+
+
+def business_website(value: str) -> str | None:
+    return _website(value)
+
+
+def business_address(value: str) -> str | None:
+    """A postal address as entered: line breaks as LF, each line trimmed,
+    empty lines dropped, at most 6 lines and 300 characters, no control
+    characters other than the line breaks."""
+    if "\x00" in value:
+        raise InvalidValue("must not contain control characters")
+    lines = [line.strip() for line in value.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    kept = [line for line in lines if line]
+    if not kept:
+        return None
+    address = "\n".join(kept)
+    if _ADDRESS_CONTROL.search(address):
+        raise InvalidValue("must not contain control characters")
+    if len(kept) > ADDRESS_LINES:
+        raise InvalidValue(f"must be at most {ADDRESS_LINES} lines")
+    if len(address) > ADDRESS_MAX:
+        raise InvalidValue(f"must be at most {ADDRESS_MAX} characters")
+    return address

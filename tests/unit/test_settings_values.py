@@ -108,3 +108,37 @@ def test_business_hours_are_seven_days_monday_first() -> None:
 def test_other_business_hours_are_refused(week: list[dict[str, object] | None]) -> None:
     with pytest.raises(InvalidValue):
         values.business_hours(week)
+
+
+# --- The business's contact details (decision P2-BP) --------------------------------
+
+
+def test_an_address_keeps_its_lines_trimmed_and_drops_empty_ones() -> None:
+    assert (
+        values.business_address("  Keizersgracht 1 \r\n\r\n 1015 CJ Amsterdam ")
+        == "Keizersgracht 1\n1015 CJ Amsterdam"
+    )
+    assert values.business_address(" \n \n") is None
+
+
+@pytest.mark.parametrize(
+    "address",
+    ["\n".join(["line"] * 7), "x" * 301, "tab\there", "nul\x00here", "bell\x07"],
+)
+def test_an_address_outside_the_rules_is_refused(address: str) -> None:
+    with pytest.raises(InvalidValue):
+        values.business_address(address)
+
+
+def test_contact_details_reuse_the_contact_rules() -> None:
+    assert values.business_phone(" +31 6 1234 5678 ") == "+31 6 1234 5678"
+    assert values.business_email(" A@B.TEST ") == "a@b.test"
+    assert values.business_website("https://example.test/") == "https://example.test/"
+    assert values.business_phone("") is None
+    for refused in (
+        lambda: values.business_phone("call"),
+        lambda: values.business_email("x"),
+        lambda: values.business_website("ftp://example.test"),
+    ):
+        with pytest.raises(InvalidValue):
+            refused()

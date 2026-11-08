@@ -6,6 +6,7 @@ import { ApiError } from "../api/client";
 import {
   type Booked,
   managePath,
+  type PublicBookingPage as PublicPage,
   useBook,
   useFreeTimes,
   usePublicBookingPage,
@@ -148,6 +149,7 @@ export function PublicBookingPage({ workspaceId, pageKey }: { workspaceId: strin
           {t("publicBooking.with", { length: page.data.length_minutes, kind: t(KIND_LABEL[page.data.kind]) })}
         </p>
         {page.data.description ? <p className="booking-description">{page.data.description}</p> : null}
+        {page.data.contact ? <BusinessContact contact={page.data.contact} /> : null}
         {book.isError && !(book.error instanceof VisitorRefused) ? (
           <p className="notice error" role="alert">
             {t(failure(book.error))}
@@ -388,5 +390,25 @@ function Confirmation({
         <p className="muted">{t("publicBooking.noLink")}</p>
       )}
     </div>
+  );
+}
+
+/*
+ * The business's contact details, shown only when the workspace chose to
+ * (decision P2-BP). The server accepts only http and https websites.
+ */
+function BusinessContact({ contact }: { contact: NonNullable<PublicPage["contact"]> }) {
+  const t = useT();
+  return (
+    <address className="booking-contact" aria-label={t("publicBooking.contact")}>
+      {contact.phone ? <a href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}>{contact.phone}</a> : null}
+      {contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
+      {contact.website ? (
+        <a href={contact.website} rel="noopener noreferrer nofollow">
+          {contact.website}
+        </a>
+      ) : null}
+      {contact.address ? <span className="booking-contact-address">{contact.address}</span> : null}
+    </address>
   );
 }

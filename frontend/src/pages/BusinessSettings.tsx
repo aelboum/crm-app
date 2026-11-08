@@ -106,6 +106,26 @@ type Draft = Pick<
   | "reminder_lead_minutes"
 >;
 const REMINDER_LEADS = [60, 120, 1440, 2880] as const;
+/** The business's contact details (decision P2-BP); "" clears one. */
+const CONTACT = [
+  "business_phone",
+  "business_email",
+  "business_website",
+  "business_address",
+] as const;
+type ContactField = (typeof CONTACT)[number];
+const INPUT_TYPE: Record<ContactField, string> = {
+  business_phone: "tel",
+  business_email: "email",
+  business_website: "url",
+  business_address: "text",
+};
+const CONTACT_LABEL: Record<ContactField, MessageId> = {
+  business_phone: "business.phone",
+  business_email: "business.email",
+  business_website: "business.website",
+  business_address: "business.address",
+};
 type Week = NonNullable<WorkspaceSettings["business_hours"]>;
 type Day = Week[number];
 
@@ -182,14 +202,34 @@ function SettingsForm({
     business_hours: saved.business_hours,
     reminder_lead_minutes: saved.reminder_lead_minutes,
   });
+  const [contact, setContact] = useState<Record<ContactField, string>>(
+    () =>
+      Object.fromEntries(
+        CONTACT.map((name) => [name, saved[name] ?? ""]),
+      ) as Record<ContactField, string>,
+  );
+  const [contactPublic, setContactPublic] = useState(
+    saved.business_contact_public,
+  );
   const [error, setError] = useState<
     "stale" | "invalid" | "denied" | "generic" | null
   >(null);
-  const changes = Object.fromEntries(
-    (Object.keys(draft) as (keyof Draft)[])
-      .filter((name) => !same(draft[name], saved[name]))
-      .map((name) => [name, draft[name]]),
-  );
+  const changes = {
+    ...Object.fromEntries(
+      (Object.keys(draft) as (keyof Draft)[])
+        .filter((name) => !same(draft[name], saved[name]))
+        .map((name) => [name, draft[name]]),
+    ),
+    // The server trims and normalises; an emptied field is sent as "".
+    ...Object.fromEntries(
+      CONTACT.filter(
+        (name) => contact[name].trim() !== (saved[name] ?? ""),
+      ).map((name) => [name, contact[name].trim()]),
+    ),
+    ...(contactPublic !== saved.business_contact_public
+      ? { business_contact_public: contactPublic }
+      : {}),
+  };
   const hoursValid = (draft.business_hours ?? []).every(validDay);
   const dirty = Object.keys(changes).length > 0;
 
@@ -356,7 +396,61 @@ function SettingsForm({
         </select>
         <p className="profile-note">{t("business.remindersHint")}</p>
       </div>
-      <p className="profile-note">{t("business.notBuilt")}</p>
+      <fieldset className="business-contact">
+        <legend className="field-label">{t("business.contact")}</legend>
+        <div className="business-fields">
+          {CONTACT.map((name) => {
+            const id = `business-${name}`;
+            const change = (value: string) => {
+              setContact((current) => ({ ...current, [name]: value }));
+              setError(null);
+            };
+            return (
+              <div key={name} className="field-stack">
+                <label htmlFor={id} className="field-label">
+                  {t(CONTACT_LABEL[name])}
+                </label>
+                {name === "business_address" ? (
+                  <textarea
+                    id={id}
+                    className="field-input"
+                    rows={3}
+                    value={contact[name]}
+                    disabled={!canEdit}
+                    onChange={(event) => {
+                      change(event.target.value);
+                    }}
+                  />
+                ) : (
+                  <input
+                    id={id}
+                    className="field-input"
+                    type={INPUT_TYPE[name]}
+                    value={contact[name]}
+                    disabled={!canEdit}
+                    onChange={(event) => {
+                      change(event.target.value);
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <label className="business-public">
+          <input
+            type="checkbox"
+            checked={contactPublic}
+            disabled={!canEdit}
+            onChange={(event) => {
+              setContactPublic(event.target.checked);
+              setError(null);
+            }}
+          />
+          {t("business.contactPublic")}
+        </label>
+        <p className="profile-note">{t("business.contactHint")}</p>
+      </fieldset>
       {canEdit ? null : (
         <p className="profile-note">{t("business.readOnly")}</p>
       )}

@@ -1,6 +1,7 @@
 """Workspace settings: locale, time zone and default currency
-(`PHASE2-PLAN.md` S10, decision P2-F 1) and business hours (decision
-P5-B; `None` while not set).
+(`PHASE2-PLAN.md` S10, decision P2-F 1), business hours (decision
+P5-B; `None` while not set) and the business's contact details with
+whether booking pages show them (decision P2-BP).
 
 A workspace without a row has the product defaults
 (`crm_app.domains.settings`) at version 0; the first save inserts the row
@@ -44,7 +45,20 @@ from crm_app.records import (
     TransactionConflictError,
 )
 
-FIELDS = ("locale", "time_zone", "currency", "business_hours", "reminder_lead_minutes")
+FIELDS = (
+    "locale",
+    "time_zone",
+    "currency",
+    "business_hours",
+    "reminder_lead_minutes",
+    "business_phone",
+    "business_email",
+    "business_website",
+    "business_address",
+    "business_contact_public",
+)
+# The business's contact details (decision P2-BP): `None` clears one.
+CONTACT_FIELDS = ("business_phone", "business_email", "business_website", "business_address")
 RESOURCE = "crm_app.workspace_settings"
 _PRIMARY_KEY = "workspace_settings_pkey"
 
@@ -56,6 +70,8 @@ def _defaults() -> dict[str, Any]:
         "currency": values.DEFAULT_CURRENCY,
         "business_hours": None,
         "reminder_lead_minutes": None,
+        **dict.fromkeys(CONTACT_FIELDS),
+        "business_contact_public": False,
         "version": 0,
         "updated_at": None,
         "updated_by_user_id": None,
@@ -69,6 +85,11 @@ def _out(row: WorkspaceSettings) -> dict[str, Any]:
         "currency": row.currency,
         "business_hours": row.business_hours,
         "reminder_lead_minutes": row.reminder_lead_minutes,
+        "business_phone": row.business_phone,
+        "business_email": row.business_email,
+        "business_website": row.business_website,
+        "business_address": row.business_address,
+        "business_contact_public": row.business_contact_public,
         "version": row.version,
         "updated_at": row.updated_at,
         "updated_by_user_id": row.updated_by_user_id,

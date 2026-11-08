@@ -20,6 +20,11 @@ const defaults = {
   currency: "EUR",
   business_hours: null,
   reminder_lead_minutes: null,
+  business_phone: null,
+  business_email: null,
+  business_website: null,
+  business_address: null,
+  business_contact_public: false,
   version: 0,
   updated_at: null,
   updated_by_user_id: null,
@@ -69,9 +74,17 @@ describe("business profile settings", () => {
     expect(within(form).getByLabelText("Default currency")).toHaveValue("EUR");
     expect(within(form).getByLabelText("Workspace name")).toBeDisabled();
     expect(within(form).getByText(/Example:/)).toBeInTheDocument();
+    const contact = within(form).getByRole("group", {
+      name: "Contact details",
+    });
+    for (const name of ["Phone", "Email", "Website", "Address"]) {
+      expect(within(contact).getByLabelText(name)).toHaveValue("");
+    }
     expect(
-      within(form).getByText(/address are not available yet/),
-    ).toBeInTheDocument();
+      within(contact).getByRole("checkbox", {
+        name: "Show these on booking pages",
+      }),
+    ).not.toBeChecked();
     expect(
       within(form).getByText(/No business hours are set/),
     ).toBeInTheDocument();
@@ -110,6 +123,51 @@ describe("business profile settings", () => {
     expect(
       headersSent.find((r) => r.method === "PATCH")?.headers["if-match"],
     ).toBe('"0"');
+  });
+
+  it("saves the contact details trimmed, clears an emptied one and shows them on booking pages (P2-BP)", async () => {
+    const user = userEvent.setup();
+    const stored = {
+      ...defaults,
+      business_email: "hello@example.test",
+      version: 2,
+    };
+    const { sent } = open(
+      app(
+        true,
+        (method, path) =>
+          method === "PATCH" && path === `/v1/workspaces/${WS}/settings`
+            ? { status: 200, body: { ...stored, version: 3 } }
+            : undefined,
+        stored,
+      ),
+    );
+    const form = await screen.findByRole("form", { name: "Business profile" });
+    const contact = within(form).getByRole("group", {
+      name: "Contact details",
+    });
+    await user.type(within(contact).getByLabelText("Phone"), " +31 20 123 ");
+    await user.clear(within(contact).getByLabelText("Email"));
+    await user.type(
+      within(contact).getByLabelText("Address"),
+      "Keizersgracht 1{Enter}Amsterdam",
+    );
+    await user.click(
+      within(contact).getByRole("checkbox", {
+        name: "Show these on booking pages",
+      }),
+    );
+    await user.click(
+      within(form).getByRole("button", { name: "Save changes" }),
+    );
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "PATCH")?.body).toEqual({
+        business_phone: "+31 20 123",
+        business_email: "",
+        business_address: "Keizersgracht 1\nAmsterdam",
+        business_contact_public: true,
+      });
+    });
   });
 
   it("explains a save refused because someone else changed the settings", async () => {

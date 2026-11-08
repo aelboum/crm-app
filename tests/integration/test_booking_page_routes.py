@@ -111,6 +111,8 @@ def test_the_public_page_shows_no_host_location_or_workspace(probe: Probe) -> No
             "kind": "video",
             "time_zone": "UTC",
             "horizon_days": 30,
+            # The workspace has not chosen to show its contact details (P2-BP).
+            "contact": None,
         },
     ]
     assert set(probe["public_not_found"].values()) == {404}

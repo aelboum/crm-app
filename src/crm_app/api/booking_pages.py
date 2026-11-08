@@ -245,6 +245,16 @@ _IDEMPOTENCY_KEY = "Idempotency-Key"
 _TOKEN_MAX = 64
 
 
+class BusinessContact(BaseModel):
+    """The business's contact details, when the workspace shows them on
+    booking pages (decision P2-BP)."""
+
+    phone: str | None
+    email: str | None
+    website: str | None
+    address: str | None
+
+
 class PublicBookingPage(BaseModel):
     name: str
     description: str | None
@@ -252,6 +262,8 @@ class PublicBookingPage(BaseModel):
     kind: Kind
     time_zone: str
     horizon_days: int
+    # `null` unless the workspace chose to show it (P2-BP).
+    contact: BusinessContact | None = None
 
 
 class FreeTimesParams(BaseModel):

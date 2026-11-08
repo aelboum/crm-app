@@ -1353,6 +1353,14 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## The business's contact details (decision P2-BP, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| Integration `test_business_profile.py`, `test_booking_page_routes.py`, `test_workspace_settings.py`, `test_foundation.py`, `test_migrations_as_owner.py` | all passed (new: normalised storage, Member refused, malformed values 422, "" clears and null keeps, booking page shows the details only when chosen and none when all are empty; head `0044_business_profile`) |
+| Unit, whole suite (no environment); pyright; ruff | 791 passed; clean |
+| Frontend typecheck, lint; full suite `--maxWorkers=6` | clean; 360 passed (new: contact fields and switch saved with trimming and clearing; public page shows the links only when present; axe clean) |
+
 ## Home "My day" view (decision P4-M, 2026-11-08)
 
 | Check | Result |

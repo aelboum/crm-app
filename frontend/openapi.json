@@ -1640,6 +1640,63 @@
         "title": "BulkSkipped",
         "type": "object"
       },
+      "BusinessContact": {
+        "description": "The business's contact details, when the workspace shows them on\nbooking pages (decision P2-BP).",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "phone",
+          "email",
+          "website",
+          "address"
+        ],
+        "title": "BusinessContact",
+        "type": "object"
+      },
       "CampaignIn": {
         "additionalProperties": false,
         "properties": {
@@ -7352,6 +7409,16 @@
       },
       "PublicBookingPage": {
         "properties": {
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BusinessContact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "description": {
             "anyOf": [
               {
@@ -8492,6 +8559,32 @@
       },
       "SettingsOut": {
         "properties": {
+          "business_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Address"
+          },
+          "business_contact_public": {
+            "title": "Business Contact Public",
+            "type": "boolean"
+          },
+          "business_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Email"
+          },
           "business_hours": {
             "anyOf": [
               {
@@ -8513,6 +8606,28 @@
               }
             ],
             "title": "Business Hours"
+          },
+          "business_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Phone"
+          },
+          "business_website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Website"
           },
           "currency": {
             "title": "Currency",
@@ -8572,6 +8687,11 @@
           "currency",
           "business_hours",
           "reminder_lead_minutes",
+          "business_phone",
+          "business_email",
+          "business_website",
+          "business_address",
+          "business_contact_public",
           "version",
           "updated_at",
           "updated_by_user_id"
@@ -8582,6 +8702,41 @@
       "SettingsUpdate": {
         "additionalProperties": false,
         "properties": {
+          "business_address": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Address"
+          },
+          "business_contact_public": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Contact Public"
+          },
+          "business_email": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Email"
+          },
           "business_hours": {
             "anyOf": [
               {
@@ -8603,6 +8758,30 @@
               }
             ],
             "title": "Business Hours"
+          },
+          "business_phone": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Phone"
+          },
+          "business_website": {
+            "anyOf": [
+              {
+                "maxLength": 2100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Website"
           },
           "currency": {
             "anyOf": [

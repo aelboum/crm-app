@@ -3407,6 +3407,35 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_booking_page_rules.py`,
   `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
 
+## P2-BP — The business's contact details (2026-11-08)
+
+- **Status:** Decided and built under the autonomous mandate (owner,
+  2026-11-08: "do 1, 2, and 3"; item 1, business profile fields). Replaces
+  the note "Phone, email, website and address are not available yet".
+- **Decisions:**
+  1. Workspace settings gain optional `business_phone`, `business_email`,
+     `business_website` and `business_address` (migration
+     `0044_business_profile`), edited in Settings › Business profile by
+     Owners and Admins (`crm_app.workspace:update`) and read by every
+     role. Phone, email and website follow the contact rules (P3-A:
+     separators kept, email lower-cased, only `http`/`https` websites
+     without credentials); an address keeps up to 6 trimmed lines and 300
+     characters. `""` clears a detail; `null` leaves it.
+  2. **Shown publicly only by choice:** a new `business_contact_public`
+     (default off) adds them to the public booking page as `contact`
+     (P5-C kept the workspace anonymous there; this is the owner's opt-in).
+     Links are `tel:`, `mailto:` and the website with `rel="noopener
+     noreferrer nofollow"`.
+  3. **Not yet:** using them in emails (sending is not authorised), on
+     forms, or as the AI assistant's profile.
+  4. The values are the business's own details, not personal data of
+     contacts; the audit entry names the changed fields only.
+- **Tests:** `tests/integration/test_business_profile.py`,
+  `tests/integration/test_booking_page_routes.py`,
+  `tests/unit/test_settings_values.py`,
+  `frontend/src/pages/BusinessSettings.test.tsx`,
+  `frontend/src/records/bookingPages.test.tsx`.
+
 ## P4-M — Home: the "My day" view (2026-11-08)
 
 - **Status:** Decided and built under the autonomous mandate (owner,

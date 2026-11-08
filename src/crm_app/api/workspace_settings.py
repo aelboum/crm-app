@@ -6,10 +6,11 @@
 The path's `tenant_id` is only the request: `require_permission` admits
 an active member of an open workspace, and the handlers use
 `context.tenant_id` alone. `PATCH` needs `If-Match: <version>` (version 0
-before the first save) and accepts only the four fields, each validated
+before the first save) and accepts only the fields below, each validated
 and normalised by `crm_app.domains.settings`; unknown fields are refused,
 and refusals never echo the value sent. `business_hours: null` clears the
-hours (P5-B 3); `null` for the other fields means "unchanged".
+hours (P5-B 3); for the business's contact details (P2-BP) `""` clears
+one; `null` for the other fields means "unchanged".
 """
 
 from __future__ import annotations
@@ -60,6 +61,13 @@ class SettingsOut(BaseModel):
     # Minutes before an appointment its contact is emailed a reminder;
     # `null` is off (P5-D).
     reminder_lead_minutes: int | None
+    # The business's contact details (P2-BP); `null` while not set.
+    business_phone: str | None
+    business_email: str | None
+    business_website: str | None
+    business_address: str | None
+    # Whether booking pages show them to visitors (default false).
+    business_contact_public: bool
     # 0 until the first save: the product defaults.
     version: int
     updated_at: datetime | None
@@ -75,6 +83,32 @@ class SettingsUpdate(BaseModel):
     business_hours: Week | None = None
     # One of 60, 120, 1440, 2880; `null` turns reminders off.
     reminder_lead_minutes: int | None = None
+    # `""` clears a contact detail (P2-BP).
+    business_phone: str | None = Field(default=None, max_length=64)
+    business_email: str | None = Field(default=None, max_length=400)
+    business_website: str | None = Field(default=None, max_length=2100)
+    business_address: str | None = Field(default=None, max_length=600)
+    business_contact_public: bool | None = None
+
+    @field_validator("business_phone")
+    @classmethod
+    def _business_phone(cls, value: str | None) -> str | None:
+        return None if value is None else values.business_phone(value) or ""
+
+    @field_validator("business_email")
+    @classmethod
+    def _business_email(cls, value: str | None) -> str | None:
+        return None if value is None else values.business_email(value) or ""
+
+    @field_validator("business_website")
+    @classmethod
+    def _business_website(cls, value: str | None) -> str | None:
+        return None if value is None else values.business_website(value) or ""
+
+    @field_validator("business_address")
+    @classmethod
+    def _business_address(cls, value: str | None) -> str | None:
+        return None if value is None else values.business_address(value) or ""
 
     @field_validator("reminder_lead_minutes")
     @classmethod
@@ -129,7 +163,8 @@ def update_settings(
 ) -> Any:
     expected = _version(if_match)
     changes = {
-        name: value
+        # An emptied contact detail is stored as no value (P2-BP).
+        name: None if value == "" and name in workspace_settings.CONTACT_FIELDS else value
         for name, value in body.model_dump(exclude_unset=True).items()
         if value is not None or name in ("business_hours", "reminder_lead_minutes")
     }
