@@ -396,6 +396,7 @@ export const en = {
   "ws.current": "Current workspace",
   "ws.other": "All workspaces",
   "ws.yours": "Your workspaces",
+  "ws.refused.title": "You can't open this workspace",
   "search.placeholder": "Search or jump to…",
   "palette.title": "Search and go to",
   "palette.placeholder": "Search contacts and deals, or jump to a page…",

@@ -163,3 +163,14 @@ jobs:
             test -f /app/frontend/dist/index.html
             python -c "import json, os, importlib.metadata as m; d = m.distribution(\"saas-os\"); assert json.loads(d.read_text(\"direct_url.json\"))[\"vcs_info\"][\"commit_id\"] == os.environ[\"PIN\"]"
           '
+      - name: Scan the image
+        # Fails on a HIGH or CRITICAL advisory that has a fix (staging
+        # finding S-5: the base image's zlib reached staging unnoticed).
+        # Trivy's own image, pinned by digest; it reads the built image
+        # through the Docker socket and downloads only its advisory database.
+        run: |
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock:ro \
+            aquasec/trivy:0.57.1@sha256:5c59e08f980b5d4d503329773480fcea2c9bdad7e381d846fbf9f2ecb8050f6b \
+            image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 1 --no-progress crm-app:ci

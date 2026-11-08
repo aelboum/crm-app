@@ -86,6 +86,25 @@ import /etc/caddy/extra.caddy
 		}
 	}
 
+	# A browser that hits the sign-in rate limit gets a short page instead of
+	# the API's JSON (staging finding S-14); the limit itself is the app's.
+	@auth path /auth/*
+	handle @auth {
+		import strip_provider_cookies
+		reverse_proxy app:8000 {
+			import client_address
+			@limited status 429
+			handle_response @limited {
+				header Content-Type "text/html; charset=utf-8"
+				header Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'"
+				header Retry-After "60"
+				respond <<HTML
+					<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Too many attempts</title><body style="font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem"><h1 style="font-size:1.25rem">Too many sign-in attempts</h1><p>Wait a minute, then try again.</p><p><a href="/app">Back to LeadStack</a></p></body></html>
+					HTML 429
+			}
+		}
+	}
+
 	handle {
 		import strip_provider_cookies
 		reverse_proxy app:8000 {

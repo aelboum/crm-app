@@ -110,12 +110,17 @@ services:
     command:
       - sh
       - -c
+      # Root only to copy the key (a bind mount cannot give it to the redis
+      # user) and to own the data directory; Redis itself runs as `redis`
+      # (staging finding S-12).
       - >-
-        exec redis-server --port 0 --tls-port 6380
-        --tls-cert-file /certs/redis.crt --tls-key-file /certs/redis.key
+        install -m 600 -o redis -g redis /certs/redis.key /tmp/redis.key &&
+        chown -R redis:redis /data &&
+        exec su -s /bin/sh redis -c 'exec redis-server --port 0 --tls-port 6380
+        --tls-cert-file /certs/redis.crt --tls-key-file /tmp/redis.key
         --tls-ca-cert-file /certs/ca.crt --tls-auth-clients no
         --requirepass "$$REDIS_PASSWORD"
-        --appendonly yes --maxmemory-policy noeviction
+        --appendonly yes --maxmemory-policy noeviction'
     volumes:
       - ./.local/redis.crt:/certs/redis.crt:ro
       - ./.local/redis.key:/certs/redis.key:ro
@@ -206,6 +211,13 @@ services:
           - "${STAGING_HOST:-leadstack.localhost}"
       identity: {}
     restart: unless-stopped
+    # Listening on its HTTPS port (8443 locally, 443 on a host); the admin
+    # API is off, so a port check is what there is (staging finding S-12).
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -ltn | grep -qE ':(443|8443) '"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     depends_on:
       app:
         condition: service_healthy

@@ -475,6 +475,32 @@ describe("app frame", () => {
     ).toBeInTheDocument();
   }, 15_000);
 
+  it("shows a refused workspace on a plain page, without its navigation", async () => {
+    renderApp(`/w/${WS}/contacts`, (method, path, body) =>
+      path.startsWith(`/v1/workspaces/${WS}`)
+        ? { status: 404, body: { detail: "Not Found" } }
+        : signedIn(method, path, body),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "You can't open this workspace",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This workspace does not exist, or you are not a member of it.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Your workspaces" }),
+    ).toHaveAttribute("href", "/app/");
+    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Notifications" }),
+    ).toBeNull();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
   it("answers an unknown section like an unknown workspace", async () => {
     renderApp(`/w/${WS}/nonsense`, signedIn);
     expect(

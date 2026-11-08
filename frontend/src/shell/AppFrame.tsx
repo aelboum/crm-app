@@ -53,6 +53,7 @@ import {
   useMarkNotificationRead,
   useNotifications,
 } from "../api/notifications";
+import { ApiError } from "../api/client";
 import { leaveAfterSignOut, signOutTarget } from "../api/signOut";
 import { Loading, LoadError } from "../components/StateNotice";
 import { useT } from "../i18n/useT";
@@ -892,6 +893,15 @@ export function AppFrame({
   const workspace = useWorkspace(workspaceId);
   const [paletteOpen, setPaletteOpen] = useState(false);
   useCommandPaletteShortcut(setPaletteOpen);
+  // Not a member, or no such workspace (staging finding S-15): a plain
+  // page, without this workspace's navigation or controls. An expired
+  // session (401) keeps the frame, whose pages offer "Sign in".
+  if (
+    workspace.error instanceof ApiError &&
+    (workspace.error.status === 404 || workspace.error.status === 403)
+  ) {
+    return <WorkspaceRefused />;
+  }
   return (
     <MemberNamesProvider workspaceId={workspaceId}>
       <div className="frame">
@@ -951,6 +961,29 @@ export function AppFrame({
       </div>
       </div>
     </MemberNamesProvider>
+  );
+}
+
+/** A workspace the person may not open: the message and the way back. */
+function WorkspaceRefused() {
+  const t = useT();
+  return (
+    <>
+      <SkipLink />
+      <header className="app-header">
+        <Brand />
+        <span className="header-fill" />
+      </header>
+      <main id="main" className="plain-main" tabIndex={-1}>
+        <div className="refused-page" role="alert">
+          <h1 className="refused-title">{t("ws.refused.title")}</h1>
+          <p>{t("state.notFound")}</p>
+          <Link to="/" className="btn btn-primary btn-md">
+            {t("ws.yours")}
+          </Link>
+        </div>
+      </main>
+    </>
   );
 }
 

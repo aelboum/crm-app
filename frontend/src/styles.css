@@ -1612,3 +1612,6 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .bulk-result { color: var(--ink-2); }
 .records-table .check-col { width: 32px; }
 .saved-views { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* A workspace the person may not open (staging finding S-15). */
+.refused-page { max-width: 480px; margin: 48px auto; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.refused-title { margin: 0; font-size: 20px; font-weight: 650; }
