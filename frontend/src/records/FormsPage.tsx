@@ -10,6 +10,7 @@ import {
 import { useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 
+import { type Definition, useAutomations } from "../api/automations";
 import { ApiError } from "../api/client";
 import {
   type Answer,
@@ -103,11 +104,14 @@ export function FormsPage({
   formId,
   onOpen,
   onOpenContact,
+  onNewAutomation = () => undefined,
 }: {
   workspaceId: string;
   formId: string | undefined;
   onOpen: (id: string | undefined) => void;
   onOpenContact: (id: string) => void;
+  /** Opens a new automation started by this form (P7-FA). */
+  onNewAutomation?: (formId: string) => void;
 }) {
   const access = useAccess(workspaceId);
   const canManage = access.data?.actions.manage_forms === true;
@@ -121,6 +125,7 @@ export function FormsPage({
           onOpen(undefined);
         }}
         onOpenContact={onOpenContact}
+        onNewAutomation={onNewAutomation}
       />
     );
   }
@@ -268,12 +273,14 @@ function FormEditorLoader({
   canManage,
   onBack,
   onOpenContact,
+  onNewAutomation,
 }: {
   workspaceId: string;
   formId: string;
   canManage: boolean;
   onBack: () => void;
   onOpenContact: (id: string) => void;
+  onNewAutomation: (formId: string) => void;
 }) {
   const form = useForm(workspaceId, formId);
   if (form.isPending) return <Loading />;
@@ -292,6 +299,7 @@ function FormEditorLoader({
       canManage={canManage}
       onBack={onBack}
       onOpenContact={onOpenContact}
+      onNewAutomation={onNewAutomation}
     />
   );
 }
@@ -322,12 +330,14 @@ function FormEditor({
   canManage,
   onBack,
   onOpenContact,
+  onNewAutomation,
 }: {
   workspaceId: string;
   form: Form;
   canManage: boolean;
   onBack: () => void;
   onOpenContact: (id: string) => void;
+  onNewAutomation: (formId: string) => void;
 }) {
   const t = useT();
   const toast = useToast();
@@ -783,6 +793,13 @@ function FormEditor({
               {t("forms.consentHint")}
             </p>
           </div>
+          <FormAutomations
+            workspaceId={workspaceId}
+            formId={form.id}
+            onNew={() => {
+              onNewAutomation(form.id);
+            }}
+          />
           <dl className="form-stats">
             <div>
               <dt>{t("forms.stats.submissions")}</dt>
@@ -1067,5 +1084,74 @@ function Submissions({
         </div>
       ) : null}
     </section>
+  );
+}
+
+/*
+ * The automations this form starts (decision P7-FA): those whose trigger
+ * is "Form submitted" for this form or for any form. A new one opens the
+ * automation editor with that trigger set. Nothing is stored on the form.
+ */
+function FormAutomations({
+  workspaceId,
+  formId,
+  onNew,
+}: {
+  workspaceId: string;
+  formId: string;
+  onNew: () => void;
+}) {
+  const t = useT();
+  const access = useAccess(workspaceId);
+  const canRead = access.data?.actions.read_automations === true;
+  const canManage = access.data?.actions.manage_automations === true;
+  const list = useAutomations(workspaceId, canRead);
+  if (!canRead) return null;
+  const started = (list.data?.items ?? []).filter((item) => {
+    const trigger = (item.definition as unknown as Definition).trigger;
+    return (
+      trigger.type === "form_submitted" &&
+      (trigger.form_id === null || trigger.form_id === formId)
+    );
+  });
+  return (
+    <div className="form-field" role="group" aria-labelledby="form-automations">
+      <p id="form-automations" className="form-label">
+        {t("forms.automations")}
+      </p>
+      {list.isPending ? (
+        <Loading />
+      ) : list.isError ? (
+        <LoadError error={list.error} onRetry={() => void list.refetch()} />
+      ) : started.length === 0 ? (
+        <p className="form-hint">{t("forms.automations.none")}</p>
+      ) : (
+        <ul className="form-automations">
+          {started.map((item) => {
+            const trigger = (item.definition as unknown as Definition).trigger;
+            return (
+              <li key={item.id}>
+                <span>{item.name}</span>
+                <Badge tone={item.status === "active" ? "success" : "neutral"}>
+                  {t(`automations.status.${item.status}` as MessageId)}
+                </Badge>
+                {trigger.type === "form_submitted" &&
+                trigger.form_id === null ? (
+                  <span className="form-hint">
+                    {t("forms.automations.anyForm")}
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {canManage ? (
+        <Button size="sm" onPress={onNew}>
+          {t("forms.automations.new")}
+        </Button>
+      ) : null}
+      <p className="form-hint">{t("forms.automations.hint")}</p>
+    </div>
   );
 }

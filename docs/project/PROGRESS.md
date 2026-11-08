@@ -1353,6 +1353,14 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Starting an automation from a form (decision P7-FA, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| Frontend typecheck, lint; full suite `--maxWorkers=6` | clean; all passed (new: the form lists its own and any-form automations, not another form's; "New automation for this form" opens the editor with the trigger set; hidden without read access; axe clean) |
+
+No backend change.
+
 ## The business's contact details (decision P2-BP, 2026-11-08)
 
 | Check | Result |

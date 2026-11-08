@@ -1424,6 +1424,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .booking-contact { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; font-style: normal; font-size: 13px; color: var(--ink-2); }
 .booking-contact a { color: var(--accent-ink); overflow-wrap: anywhere; }
 .booking-contact-address { white-space: pre-line; flex-basis: 100%; }
+/* Automations started by a form (decision P7-FA). */
+.form-automations { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.form-automations li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 /* The setup checklist on Home (decision P4-S). */
 .home-setup-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
 .home-setup-step { display: flex; align-items: center; gap: 8px; min-height: 28px; color: var(--muted); }

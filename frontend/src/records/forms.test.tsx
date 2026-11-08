@@ -147,6 +147,24 @@ function workspace(
     ) {
       return { status: 200, body: SUBMISSIONS };
     }
+    if (method === "GET" && path === `${base}/automations`) {
+      return { status: 200, body: { items: AUTOMATIONS } };
+    }
+    if (method === "GET" && path === `${base}/settings`) {
+      return {
+        status: 200,
+        body: {
+          locale: "en",
+          time_zone: "UTC",
+          currency: "EUR",
+          business_hours: null,
+          reminder_lead_minutes: null,
+          version: 0,
+          updated_at: null,
+          updated_by_user_id: null,
+        },
+      };
+    }
     if (method === "GET" && path === `${base}/websites`) {
       return { status: 200, body: { items: [SITE] } };
     }
@@ -158,6 +176,45 @@ function workspace(
     return undefined;
   };
 }
+
+// Automations started by forms (P7-FA): this form's, any form's, another's.
+function automation(
+  id: string,
+  name: string,
+  formId: string | null,
+  status = "active",
+) {
+  return {
+    id,
+    name,
+    status,
+    trigger_type: "form_submitted",
+    definition: {
+      trigger: { type: "form_submitted", form_id: formId },
+      condition: null,
+      yes: [{ type: "add_tag", tag_id: "t1" }],
+      no: [],
+    },
+    active_version: status === "active" ? 1 : null,
+    created_at: stamp,
+    updated_at: stamp,
+    version: 1,
+  };
+}
+const AUTOMATIONS = [
+  automation(
+    "a1000000-0000-4000-8000-000000000001",
+    "Welcome quote leads",
+    FORM_ID,
+  ),
+  automation(
+    "a1000000-0000-4000-8000-000000000002",
+    "Every form lead",
+    null,
+    "draft",
+  ),
+  automation("a1000000-0000-4000-8000-000000000003", "Newsletter only", "f2"),
+];
 
 const MANAGER = { read_members: true, read_forms: true, manage_forms: true };
 const READER = { read_members: true, read_forms: true, manage_forms: false };
@@ -240,6 +297,50 @@ describe("forms page", () => {
       headersSent.find((r) => r.method === "PATCH")?.headers["if-match"],
     ).toBe('"3"');
     expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("lists the automations this form starts and opens a new one for it (P7-FA)", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/forms?record=${FORM_ID}`,
+      workspace({
+        ...MANAGER,
+        read_automations: true,
+        manage_automations: true,
+      }),
+    );
+    const started = await screen.findByRole("group", {
+      name: "Automations started by this form",
+    });
+    expect(
+      await within(started).findByText("Welcome quote leads"),
+    ).toBeInTheDocument();
+    expect(within(started).getByText("Every form lead")).toBeInTheDocument();
+    expect(within(started).getByText("(any form)")).toBeInTheDocument();
+    expect(within(started).queryByText("Newsletter only")).toBeNull();
+    expect(await accessibilityViolations()).toEqual([]);
+
+    await user.click(
+      within(started).getByRole("button", {
+        name: "New automation for this form",
+      }),
+    );
+    // The Automations page opens with the editor (a modal) on top of it.
+    const editor = await screen.findByRole("dialog");
+    expect(within(editor).getByLabelText("When this happens")).toHaveValue(
+      "form_submitted",
+    );
+    await waitFor(() => {
+      expect(within(editor).getByLabelText("Form")).toHaveValue(FORM_ID);
+    });
+  });
+
+  it("hides the form's automations from members who may not read them", async () => {
+    renderApp(`/w/${WS}/forms?record=${FORM_ID}`, workspace(MANAGER));
+    expect(await screen.findByLabelText("Form name")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Automations started by this form" }),
+    ).toBeNull();
   });
 
   it("explains a publishing refusal", async () => {

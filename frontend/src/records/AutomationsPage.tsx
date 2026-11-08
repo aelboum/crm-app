@@ -104,14 +104,30 @@ function minutesLabel(t: T, minutes: number): string {
 export function AutomationsPage({
   workspaceId,
   onOpenContact,
+  newForForm = null,
+  onNewDone = () => undefined,
 }: {
   workspaceId: string;
   onOpenContact: (id: string) => void;
+  /** Opens a new automation started by this form (`?create=automation&form=`). */
+  newForForm?: string | null;
+  /** Called when that editor closes, to clear the request. */
+  onNewDone?: () => void;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
   const list = useAutomations(workspaceId);
-  const [editing, setEditing] = useState<Automation | "new" | null>(null);
+  const [editing, setEditing] = useState<Automation | "new" | null>(
+    newForForm ? "new" : null,
+  );
+  const [preset] = useState<Definition | null>(() =>
+    newForForm
+      ? {
+          ...EMPTY_DEFINITION,
+          trigger: { type: "form_submitted", form_id: newForForm },
+        }
+      : null,
+  );
   const [runsOf, setRunsOf] = useState<string | null>(null);
   const canManage = access.data?.actions.manage_automations === true;
   const items = list.data?.items ?? [];
@@ -170,8 +186,10 @@ export function AutomationsPage({
         <AutomationEditor
           workspaceId={workspaceId}
           automation={editing === "new" ? null : editing}
+          initial={editing === "new" ? preset : null}
           onClose={() => {
             setEditing(null);
+            if (newForForm) onNewDone();
           }}
         />
       ) : null}
@@ -621,10 +639,13 @@ function startingCondition(
 function AutomationEditor({
   workspaceId,
   automation,
+  initial = null,
   onClose,
 }: {
   workspaceId: string;
   automation: Automation | null;
+  /** A new automation's starting definition (from a form, P7-FA). */
+  initial?: Definition | null;
   onClose: () => void;
 }) {
   const t = useT();
@@ -643,6 +664,7 @@ function AutomationEditor({
   const [name, setName] = useState(automation?.name ?? "");
   const [definition, setDefinition] = useState<Definition>(
     (automation?.definition as unknown as Definition | undefined) ??
+      initial ??
       EMPTY_DEFINITION,
   );
   const [problem, setProblem] = useState<MessageId | null>(null);

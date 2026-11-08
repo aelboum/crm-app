@@ -3407,6 +3407,27 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_booking_page_rules.py`,
   `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
 
+## P7-FA — Starting an automation from a form (2026-11-08)
+
+- **Status:** Decided and built under the autonomous mandate (owner,
+  2026-11-08: "do 1, 2, and 3"; item 2). The design's form editor has a
+  "Start automation" choice (UI-Q1, deferred until now).
+- **Decisions:**
+  1. Nothing is stored on the form. Automations already start on "Form
+     submitted" for one form or any form (P8-B), so a second link kept on
+     the form would compete with the trigger and could start the same
+     automation twice. The form editor instead lists, under "After
+     submission", the automations whose trigger is this form or any form,
+     with their status, and offers **New automation for this form**, which
+     opens the automation editor with that trigger already chosen
+     (`?create=automation&form=<id>`).
+  2. The list needs `read_automations`; the button `manage_automations`.
+     Without read access the list is not shown.
+  3. The hint repeats P7-V: automations start for contacts the form
+     creates; a submission matched to an existing contact starts none.
+  4. No backend change.
+- **Tests:** `frontend/src/records/forms.test.tsx`.
+
 ## P2-BP — The business's contact details (2026-11-08)
 
 - **Status:** Decided and built under the autonomous mandate (owner,
