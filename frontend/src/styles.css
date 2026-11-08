@@ -1427,6 +1427,12 @@ a.btn-primary:hover { filter: brightness(0.94); }
 /* Automations started by a form (decision P7-FA). */
 .form-automations { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .form-automations li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* Companies in a campaign's audience (decision P7-CC). */
+.campaign-companies { display: flex; flex-direction: column; gap: 8px; }
+.campaign-company-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.campaign-company { display: inline-flex; align-items: center; gap: 4px; }
+.chip-remove { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; }
+.chip-remove:hover { background: var(--hover); color: var(--ink); }
 /* The setup checklist on Home (decision P4-S). */
 .home-setup-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
 .home-setup-step { display: flex; align-items: center; gap: 8px; min-height: 28px; color: var(--muted); }

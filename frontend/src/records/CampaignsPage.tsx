@@ -1,4 +1,4 @@
-import { Plus, Tag, User } from "lucide-react";
+import { Plus, Tag, User, X } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 
 import {
@@ -13,6 +13,7 @@ import {
 } from "../api/campaigns";
 import { ApiError } from "../api/client";
 import { useAccess, useMe, useMembers } from "../api/queries";
+import { useCompany } from "../api/records";
 import { useTags } from "../api/tags";
 import { EmptyState, Loading, LoadError } from "../components/StateNotice";
 import { Badge, type Tone } from "../components/ui/Badge";
@@ -21,6 +22,7 @@ import { Dialog } from "../components/ui/Dialog";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { TemplatePicker, TemplatesPanel } from "./EmailTemplates";
+import { CompanyPicker } from "./CompanyPicker";
 import { FilterMenu, ownerOptions, stageLabel } from "./parts";
 
 /*
@@ -384,15 +386,16 @@ function Editor({
   const [all, setAll] = useState(campaign?.segment.all_contacts ?? false);
   const [tagIds, setTagIds] = useState<string[]>(campaign?.segment.tag_ids ?? []);
   const [ownerIds, setOwnerIds] = useState<string[]>(campaign?.segment.owner_ids ?? []);
+  const [companyIds, setCompanyIds] = useState<string[]>(campaign?.segment.company_ids ?? []);
   const tags = useTags(workspaceId);
   const me = useMe();
   const members = useMembers(workspaceId, 0, true);
   const problem = create.error ?? update.error;
   // Filters combine: a contact must match each kind used, and any one value
-  // within it (the server's rule, decision P7-C). Company filters set before
-  // stay as they are; this dialog does not edit them.
+  // within it (the server's rule, decision P7-C); companies by the contact's
+  // company (P7-CC).
   const segment = {
-    company_ids: campaign?.segment.company_ids ?? [],
+    company_ids: all ? [] : companyIds,
     stages: all ? [] : stages,
     tag_ids: all ? [] : tagIds,
     owner_ids: all ? [] : ownerIds,
@@ -563,6 +566,9 @@ function Editor({
             />
           </div>
         )}
+        {all ? null : (
+          <CompanyFilter workspaceId={workspaceId} selected={companyIds} onChange={setCompanyIds} />
+        )}
         {all ? null : <p className="muted">{t("campaigns.audience.combine")}</p>}
       </fieldset>
       {problem ? (
@@ -571,5 +577,74 @@ function Editor({
         </p>
       ) : null}
     </Dialog>
+  );
+}
+
+/** The most companies one audience may name (the server's FILTER_MAX). */
+const COMPANY_MAX = 50;
+
+/*
+ * Companies for a campaign's audience (decision P7-CC): search to add one,
+ * remove it from its chip. A contact matches when their company is one of
+ * them.
+ */
+function CompanyFilter({
+  workspaceId,
+  selected,
+  onChange,
+}: {
+  workspaceId: string;
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="campaign-companies">
+      <CompanyPicker
+        workspaceId={workspaceId}
+        id="campaign-company"
+        label={t("campaigns.companies.add")}
+        selected={null}
+        onChange={(company) => {
+          if (company && !selected.includes(company.id) && selected.length < COMPANY_MAX) {
+            onChange([...selected, company.id]);
+          }
+        }}
+      />
+      {selected.length ? (
+        <ul className="campaign-company-list" aria-label={t("campaigns.companies.chosen")}>
+          {selected.map((id) => (
+            <CompanyChip
+              key={id}
+              workspaceId={workspaceId}
+              id={id}
+              onRemove={() => {
+                onChange(selected.filter((other) => other !== id));
+              }}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function CompanyChip({ workspaceId, id, onRemove }: { workspaceId: string; id: string; onRemove: () => void }) {
+  const t = useT();
+  const company = useCompany(workspaceId, id);
+  // A company that cannot be read (deleted, or no access) still shows, so it can be removed.
+  const name = company.data?.name ?? (company.isPending ? "…" : t("campaigns.companies.unknown"));
+  return (
+    <li className="chip campaign-company">
+      <span>{name}</span>
+      <button
+        type="button"
+        className="chip-remove"
+        aria-label={t("campaigns.companies.remove", { name })}
+        onClick={onRemove}
+      >
+        <X size={12} aria-hidden="true" />
+      </button>
+    </li>
   );
 }

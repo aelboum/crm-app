@@ -1353,6 +1353,14 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Companies in a campaign's audience (decision P7-CC, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| Frontend typecheck, lint, build; full suite `--maxWorkers=6`; secret scan | clean; 363 passed (new: a chosen company shows by name, is removed from its chip, another is added by search, and the saved segment carries it; axe clean) |
+
+No backend change.
+
 ## Starting an automation from a form (decision P7-FA, 2026-11-08)
 
 | Check | Result |

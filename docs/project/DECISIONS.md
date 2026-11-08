@@ -3407,6 +3407,23 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_booking_page_rules.py`,
   `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
 
+## P7-CC — Companies in a campaign's audience (2026-11-08)
+
+- **Status:** Decided and built under the autonomous mandate (owner,
+  2026-11-08: "do 1, 2, and 3"; item 3). UI-Q1 had deferred it.
+- **Decisions:**
+  1. The server already filtered audiences by `company_ids` (P7-C); the
+     campaign editor now edits them: search for a company to add it (the
+     contact form's company search, active companies, paged), remove one
+     from its chip. At most 50, the server's limit.
+  2. A chosen company the member can no longer read still shows, as "A
+     company you cannot see", so it can be removed.
+  3. Combining is unchanged: a contact matches each kind of filter used
+     and any one value within it. The editor's own rule that a segment
+     names at least one lifecycle stage (unless "all contacts") is kept.
+  4. No backend change.
+- **Tests:** `frontend/src/records/campaigns.test.tsx`.
+
 ## P7-FA — Starting an automation from a form (2026-11-08)
 
 - **Status:** Decided and built under the autonomous mandate (owner,

@@ -258,6 +258,69 @@ describe("campaigns", () => {
     });
   });
 
+  it("chooses the audience's companies: removes one and adds another (P7-CC)", async () => {
+    const user = userEvent.setup();
+    const ACME = "e0000000-0000-4000-8000-000000000001";
+    const ZETA = "e0000000-0000-4000-8000-000000000002";
+    const company = (id: string, name: string) => ({
+      id,
+      name,
+      domain: null,
+      website: null,
+      phone: null,
+      industry: null,
+      city: null,
+      country_code: null,
+      archived: false,
+      version: 1,
+      created_at: stamp,
+      updated_at: stamp,
+    });
+    let sentBody: unknown;
+    const base = workspace(
+      { manage: true, approve: false },
+      campaign({
+        status: "draft",
+        segment: { stages: ["lead"], tag_ids: [], owner_ids: [], company_ids: [ACME], all_contacts: false },
+      }),
+      (method, _path, body) => {
+        if (method === "PATCH") {
+          sentBody = body;
+          return { status: 200, body: campaign() };
+        }
+        return undefined;
+      },
+    );
+    renderApp(`/w/${WS}/campaigns`, (method, path, body) => {
+      if (method === "GET" && path === `/v1/workspaces/${WS}/companies/${ACME}`) {
+        return { status: 200, body: company(ACME, "Acme BV") };
+      }
+      if (method === "GET" && path.startsWith(`/v1/workspaces/${WS}/companies?`)) {
+        return {
+          status: 200,
+          body: { items: [company(ZETA, "Zeta Ltd")], next_cursor: null, total: 1, total_capped: false },
+        };
+      }
+      return base(method, path, body);
+    });
+    const pane = await openCampaign(user);
+    await user.click(within(pane).getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit campaign" });
+    const chosen = await within(dialog).findByRole("list", { name: "Chosen companies" });
+    expect(await within(chosen).findByText("Acme BV")).toBeInTheDocument();
+    await user.click(within(chosen).getByRole("button", { name: "Remove Acme BV" }));
+    expect(within(dialog).queryByRole("list", { name: "Chosen companies" })).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Choose company" }));
+    await user.click(await within(dialog).findByRole("option", { name: /Zeta Ltd/ }));
+    expect(await within(dialog).findByRole("list", { name: "Chosen companies" })).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(sentBody).toBeDefined();
+    });
+    expect((sentBody as { segment: { company_ids: string[] } }).segment.company_ids).toEqual([ZETA]);
+  });
+
   it("lets Read-only members read only", async () => {
     const user = userEvent.setup();
     renderApp(
