@@ -85,9 +85,9 @@ pin or identity architecture changed.
 | S-8 | Medium | Decide MFA policy (at least for the ZITADEL administrator) or restrict `/ui/console` at the edge | Owner |
 | S-9 | Medium | Choose an off-host backup bucket; then a nightly backup timer with local retention and no plaintext copy | Owner, then implementation |
 | S-10 | Medium | Choose a monitoring service for the heartbeat and a log store for audit digests | Owner |
-| S-19 | Medium | Production identity setup with a system-user key; remove the staging bootstrap token after setup | Owner, at production setup |
-| S-12 | Low | Memory limits when the voice PBX plan is known; edge health check; Redis non-root | Implementation |
-| S-13, S-14, S-15, S-21 | Low | Login branding; plain rate-limit page; refusal without the workspace frame; `Server` header on the redirect | Implementation |
+| S-19 | Medium | Staging bootstrap token revoked and deleted (`bf163ea` follow-up); production still needs the system-user key setup | Owner, at production setup |
+| S-12 | Low | Edge health check and Redis as its own user done (`bf163ea`); memory limits when the voice PBX plan is known | Owner (PBX plan) |
+| S-13, S-14, S-15, S-21 | Low | All fixed (ZIT-1, `bf163ea`) | — |
 
 ## 6. Recommended next phase
 

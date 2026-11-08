@@ -107,13 +107,16 @@ fixes), `bb90ab8` (image security updates).
   per minute; lines say `deployment_id: staging, version: <commit>`.
   **Owner decision:** no (an exporter is a later decision, ADR-0009).
 
-### S-12 Low — Edge without a health check, Redis as root, no memory limits (open)
+### S-12 Low — Edge without a health check, Redis as root, no memory limits (partly fixed)
 - `edge` defines no health check; the Redis container runs as root (its
   command bypasses the image's privilege drop); no service has a memory
   limit, which matters if the voice PBX shares the host (owner,
   2026-11-08). **Remediation:** add an edge health check, run Redis as its
   user, set limits once the PBX's needs are known. **Owner decision:** the
   limits, with the PBX plan.
+- **Update (`bf163ea`):** the edge checks its HTTPS port; Redis runs as
+  `redis` (root only copies the key and owns `/data`); both healthy on
+  staging. Memory limits remain open.
 
 ### S-17 Informational — Docker-published ports bypass ufw
 - Docker inserts its own iptables rules, so ufw does not govern published

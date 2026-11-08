@@ -78,7 +78,7 @@ no context sees 0 (`STAGING-BACKUP-RESTORE-REPORT.md`).
 
 ## 5. Findings
 
-### S-15 Low — An inaccessible workspace still shows the full frame
+### S-15 Low — An inaccessible workspace still shows the full frame (fixed, `bf163ea`)
 - The refusal message appears inside the normal frame, with the
   workspace's navigation and disabled Import/Export controls. Remediation:
   show the refusal without the workspace frame. Owner decision: no.

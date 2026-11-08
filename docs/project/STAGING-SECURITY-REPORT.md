@@ -94,7 +94,7 @@ are shared across the staging reports.
   administrator), or restrict `/ui/console` and the admin APIs at the edge
   to an allow-list. **Owner decision: yes** (identity settings).
 
-### S-19 Medium — Bootstrap tokens on the host (open)
+### S-19 Medium — Bootstrap tokens on the host (staging token removed)
 - **Evidence:** the stack's ZITADEL wrote two personal access tokens
   (an instance-administrator machine user and the login client), valid to
   2100, to `.local/bootstrap/`; `identity_local.py` uses the first.
@@ -103,12 +103,19 @@ are shared across the staging reports.
 - **Remediation:** production uses a system-user key (SaaS-OS ADR-0025
   §7); for staging, remove the administrator token after setup.
   **Owner decision:** with the production identity setup.
+- **Update (2026-11-08):** the administrator token revoked itself through
+  ZITADEL's API (the token then got 401) and its file was shredded; the
+  login service's own token stays. Re-running `identity_local.py` or
+  creating test users on staging now needs the ZITADEL administrator's
+  sign-in or a new, short-lived token.
 
-### S-14 Low — The rate limit shows raw JSON in the browser
-- `{"detail":"Rate limit exceeded."}` replaces the page when
-  `/auth/login` is limited. Remediation: a plain page. Owner decision: no.
+### S-14 Low — The rate limit shows raw JSON in the browser (fixed, `bf163ea`)
+- `{"detail":"Rate limit exceeded."}` replaced the page when
+  `/auth/login` was limited. The edge now answers `/auth/*` 429s with a
+  short HTML page (`Retry-After: 60`, `default-src 'none'`); API routes
+  keep JSON. Verified on staging.
 
-### S-21 Low — The HTTP redirect names the server
+### S-21 Low — The HTTP redirect names the server (fixed, `bf163ea`)
 - The `http://` → `https://` redirect carries `Server: Caddy` (the site
   itself removes it). Remediation: remove it in `edge/extra-host.caddy`.
 
