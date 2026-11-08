@@ -39,7 +39,7 @@ empty (no Docker, no LeadStack, no DNS record). With the owner's approval
 | Database and tenant isolation | **Pass** | 39 cross-workspace attempts refused; RLS forced on 60/60 product tables; isolation holds in the restored copy |
 | Email | **Pass for what may be tested** | sending is off; replies stay `queued`; webhooks fail closed; nothing sent; real delivery, signatures and inbound **not tested** (not authorized) |
 | Security | **Conditional** | headers, CSRF, CORS, rate limit, input handling, secrets pass; open: S-6, S-7, S-8, S-19 |
-| Backup and recovery | **Conditional** | encrypted backup and restore: 14 of 15 checks pass, restore ~6 s; open: S-9, and the digest check (S-10) |
+| Backup and recovery | **Conditional** | encrypted backup and restore: 15 of 15 checks pass (15:16 run), restore ~6 s; open: S-9 (local only), S-10 (digests not shipped) |
 | Monitoring | **Fail (owner decision)** | health checks and `/readyz` work; no alerting, no heartbeat monitor, no log shipping |
 | End-to-end workflows | **Pass with exceptions** | steps 3–15 pass; steps 1–2 (signup, email verification) blocked by design |
 
@@ -49,8 +49,8 @@ empty (no Docker, no LeadStack, no DNS record). With the owner's approval
 - **Tested, failed, then fixed and re-verified:** S-1 (databases down
   after reboot), S-2 (resolver address), S-3 (Squid on Debian 13), S-4
   (unbounded logs), S-5 (image zlib CVEs), S-11 (drill file permission).
-- **Tested and still failing:** the audit-digest check of the backup
-  drill (S-10); third-party image scan (S-6).
+- **Tested and still failing:** third-party image scan (S-6, partly fixed). The
+  audit-digest check passed once a digest existed (15:16 run).
 - **Not tested:** signup and email verification, mobile layout in a
   browser, member and role management in the browser, session expiry,
   real email and provider webhooks, file upload on staging, failed

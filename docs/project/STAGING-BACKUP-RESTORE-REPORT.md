@@ -23,14 +23,14 @@ workspaces.
 | `verify_restored_database` | **Pass**: control_plane, core, self_learning |
 | App role still safe | **Pass** |
 | Tenant isolation in the copy, through the app role | **Pass**: `{"workspaces": 2, "own": 4, "foreign": 0, "no_context": 0}` |
-| Audit digest verifies against the copy | **Fail**: no digest record available (S-10) |
+| Audit digest verifies against the copy | **Fail** at 14:31 (no digest record available, S-10); **Pass** at 15:16 once the 14:00–15:00 digest was written: 1 window, no findings |
 | Whole drill | 22 s wall clock (backup, restore, checks, clean-up) |
 
 Recovery time objective as measured: about 6 s to restore both databases,
 22 s including verification, for this data size. The drill instance is
 removed afterwards; the backups stay.
 
-Earlier runs: 13:41 (empty staging) 13 of 15; the isolation check needs
+A fourth run at 15:16 UTC passed all 15 checks. Earlier runs: 13:41 (empty staging) 13 of 15; the isolation check needs
 two workspaces and the digest check failed on a file-permission bug in the
 drill (S-11, fixed in `4470baf`).
 
