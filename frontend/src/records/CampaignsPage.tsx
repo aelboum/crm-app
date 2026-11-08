@@ -604,6 +604,8 @@ function CompanyFilter({
         workspaceId={workspaceId}
         id="campaign-company"
         label={t("campaigns.companies.add")}
+        noneText={t(selected.length ? "campaigns.companies.some" : "campaigns.companies.any")}
+        chooseText={t("campaigns.companies.choose")}
         selected={null}
         onChange={(company) => {
           if (company && !selected.includes(company.id) && selected.length < COMPANY_MAX) {

@@ -66,6 +66,8 @@ export function CompanyPicker({
   onChange,
   errorId,
   kind = "companies",
+  noneText,
+  chooseText,
 }: {
   workspaceId: string;
   /** The id of the control that opens the search; the label points at it. */
@@ -77,6 +79,10 @@ export function CompanyPicker({
   errorId?: string | undefined;
   /** What is picked: a company (the default) or a contact. */
   kind?: PickerKind;
+  /** What shows while nothing is picked, when the default does not fit. */
+  noneText?: string;
+  /** The open-search button's text while nothing is picked. */
+  chooseText?: string;
 }) {
   const t = useT();
   const [searching, setSearching] = useState(false);
@@ -118,7 +124,7 @@ export function CompanyPicker({
       ) : (
         <div className="row picker-current">
           <span className={selected ? "picker-value" : "picker-value muted"}>
-            {selected ? selected.name : t(text(kind, "none"))}
+            {selected ? selected.name : (noneText ?? t(text(kind, "none")))}
             {selected?.archived ? ` · ${t("picker.company.archived")}` : ""}
           </span>
           <Button
@@ -128,7 +134,7 @@ export function CompanyPicker({
             {...(errorId ? { "aria-describedby": errorId } : {})}
             onPress={() => { setSearching(true); }}
           >
-            {selected ? t(text(kind, "change")) : t(text(kind, "choose"))}
+            {selected ? t(text(kind, "change")) : (chooseText ?? t(text(kind, "choose")))}
           </Button>
           {selected ? (
             <Button

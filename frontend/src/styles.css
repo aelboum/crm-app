@@ -1418,7 +1418,11 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .home-sources-list li { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
 .home-row.unread .home-row-title { font-weight: 600; }
 /* The business's contact details (decision P2-BP). */
-.business-contact { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+/* Blocks below the first fields line up with them and the hours (20px in). */
+.business-card > .field-stack { margin: 0 20px 14px; }
+.business-contact { border: 0; margin: 0 20px 14px; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.business-contact > .business-fields { padding: 0; }
+.business-contact > .profile-note { margin: 0; }
 .business-contact textarea.field-input { height: auto; min-height: 72px; padding: 8px 10px; resize: vertical; font: inherit; }
 .business-public { display: flex; align-items: center; gap: 8px; }
 .booking-contact { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; font-style: normal; font-size: 13px; color: var(--ink-2); }

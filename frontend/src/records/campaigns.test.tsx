@@ -310,7 +310,8 @@ describe("campaigns", () => {
     expect(await within(chosen).findByText("Acme BV")).toBeInTheDocument();
     await user.click(within(chosen).getByRole("button", { name: "Remove Acme BV" }));
     expect(within(dialog).queryByRole("list", { name: "Chosen companies" })).toBeNull();
-    await user.click(within(dialog).getByRole("button", { name: "Choose company" }));
+    expect(within(dialog).getByText("Any company")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Add company" }));
     await user.click(await within(dialog).findByRole("option", { name: /Zeta Ltd/ }));
     expect(await within(dialog).findByRole("list", { name: "Chosen companies" })).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
