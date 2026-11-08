@@ -1416,6 +1416,8 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .automation-step-number { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--chip); font-size: 12px; font-weight: 600; margin-top: 4px; }
 .automation-step-body { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .automation-step-kind { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.automation-rotation { border: 0; margin: 0; padding: 0; }
+.automation-rotation > legend { padding: 0; margin-bottom: 6px; }
 .automation-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .automation-add .form-input { width: auto; flex: 1 1 160px; }
 

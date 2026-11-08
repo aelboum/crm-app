@@ -342,8 +342,11 @@ approval), **Superseded**.
 
 ## P8-R — Round-robin assignment in automations (2026-11-08)
 
-- **Status:** Backend done under the autonomous mandate (the owner:
-  "Proceed", 2026-11-08); the automation editor's screen for it is next.
+- **Status:** Done under the autonomous mandate (the owner: "Proceed",
+  2026-11-08): backend `a0d3ffa`, then the editor's step "Assign owner in
+  turn" (a checkbox per active member, the first two ticked to start with;
+  a member who left stays listed as "Former member" until unticked, so an
+  edit never drops them silently; more than 20 cannot be ticked).
 - **What:** a new action `assign_round_robin` lists 2 to 20 members; each
   run makes the contact's owner the next active member in turn. The turn is
   a counter per automation step (`crm_app.automation_rotation`, migration

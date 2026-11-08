@@ -20,6 +20,8 @@ const WS = "11111111-2222-4333-8444-555555555555";
 const ME = "aaaaaaaa-0000-4000-8000-000000000001";
 const AUTO = "a0000000-0000-4000-8000-000000000001";
 const TAG = "b0000000-0000-4000-8000-000000000001";
+const SAM = "aaaaaaaa-0000-4000-8000-000000000002";
+const LEE = "aaaaaaaa-0000-4000-8000-000000000003";
 const CONTACT = "c0000000-0000-4000-8000-000000000001";
 const stamp = "2026-11-01T09:30:00+00:00";
 
@@ -78,6 +80,7 @@ function workspace(
   manage: boolean,
   options: {
     items?: unknown[];
+    members?: unknown[];
     onWrite?: (method: string, path: string, body: unknown) => Reply;
   } = {},
 ): Handler {
@@ -105,8 +108,10 @@ function workspace(
       return {
         status: 200,
         body: {
-          items: [{ user_id: ME, status: "active", roles: ["Owner"] }],
-          total: 1,
+          items: options.members ?? [
+            { user_id: ME, status: "active", roles: ["Owner"] },
+          ],
+          total: (options.members ?? [ME]).length,
           limit: 50,
           offset: 0,
         },
@@ -205,6 +210,7 @@ describe("automations", () => {
       "Add tag",
       "Remove tag",
       "Assign owner",
+      "Assign owner in turn",
       "Set lifecycle stage",
       "Notify a team member",
       "Wait",
@@ -327,6 +333,85 @@ describe("automations", () => {
               message: "New lead, call today",
             },
           ],
+          no: [],
+        },
+      });
+    });
+  });
+
+  it("hands contacts out in turn among the members picked", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        members: [
+          { user_id: ME, status: "active", roles: ["Owner"] },
+          {
+            user_id: SAM,
+            status: "active",
+            roles: ["Member"],
+            display_name: "Sam Reed",
+          },
+          {
+            user_id: LEE,
+            status: "active",
+            roles: ["Member"],
+            display_name: "Lee Park",
+          },
+        ],
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Share leads");
+    // The step starts with the first two members, so wait for the list:
+    // an "Assign owner" step shows it, then goes again.
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "assign_owner",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    await within(dialog).findByRole("option", { name: "Sam Reed" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "Remove step 1 of Steps" }),
+    );
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "assign_round_robin",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    const group = within(dialog).getByRole("group", {
+      name: /Members in turn, step 1 of Steps/,
+    });
+    // The first two members are picked to start with; add a third.
+    expect(
+      within(group).getByRole("checkbox", { name: "Sam Reed" }),
+    ).toBeChecked();
+    expect(
+      within(group).getByRole("checkbox", { name: "Lee Park" }),
+    ).not.toBeChecked();
+    await user.click(within(group).getByRole("checkbox", { name: "Lee Park" }));
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toEqual({
+        name: "Share leads",
+        definition: {
+          trigger: { type: "contact_created", sources: [] },
+          condition: null,
+          yes: [{ type: "assign_round_robin", user_ids: [ME, SAM, LEE] }],
           no: [],
         },
       });

@@ -11,6 +11,8 @@ import {
   EMPTY_DEFINITION,
   MAX_ACTIONS,
   NOTICE_MAX,
+  ROTATION_MAX,
+  ROTATION_MIN,
   type Source,
   type Trigger,
   TRIGGER_SOURCES,
@@ -431,6 +433,11 @@ function newAction(
   if (type === "wait") return { type, minutes: 60 };
   if (type === "notify_member")
     return { type, recipient: "contact_owner", message: "" };
+  if (type === "assign_round_robin")
+    return {
+      type,
+      user_ids: members.slice(0, ROTATION_MIN).map((member) => member.id),
+    };
   return {
     type,
     title: "",
@@ -934,6 +941,9 @@ function Branch({
             <option value="assign_owner">
               {t("automations.action.assign_owner")}
             </option>
+            <option value="assign_round_robin">
+              {t("automations.action.assign_round_robin")}
+            </option>
             <option value="set_lifecycle_stage">
               {t("automations.action.set_lifecycle_stage")}
             </option>
@@ -1041,6 +1051,59 @@ function ActionEditor({
           ))}
         </select>
       </div>
+    );
+  }
+  if (action.type === "assign_round_robin") {
+    // Members no longer listed (they left) stay in the step until unticked,
+    // so an edit never silently drops them; the server passes them over.
+    const known = new Set(members.map((member) => member.id));
+    const gone = members.length
+      ? action.user_ids.filter((id) => !known.has(id))
+      : [];
+    const toggle = (id: string, on: boolean) => {
+      onChange({
+        ...action,
+        user_ids: on
+          ? [...action.user_ids, id]
+          : action.user_ids.filter((current) => current !== id),
+      });
+    };
+    return (
+      <fieldset className="automation-step-body automation-rotation">
+        <legend className="automation-step-kind">
+          {kind}
+          <span className="visually-hidden">
+            {` — ${t("automations.rotationMembers", { branch, number: index + 1 })}`}
+          </span>
+        </legend>
+        <p className="form-hint">
+          {t("automations.rotationHint", {
+            min: ROTATION_MIN,
+            max: ROTATION_MAX,
+          })}
+        </p>
+        <div className="automation-checks">
+          {[
+            ...members,
+            ...gone.map((id) => ({ id, label: t("automations.formerMember") })),
+          ].map((member) => {
+            const checked = action.user_ids.includes(member.id);
+            return (
+              <label key={member.id} className="public-check-label">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={!checked && action.user_ids.length >= ROTATION_MAX}
+                  onChange={(event) => {
+                    toggle(member.id, event.target.checked);
+                  }}
+                />
+                <span>{member.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
     );
   }
   if (action.type === "notify_member") {

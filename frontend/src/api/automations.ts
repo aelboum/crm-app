@@ -24,6 +24,9 @@ export const TRIGGER_SOURCES: Source[] = [
 ];
 export const MAX_ACTIONS = 10;
 export const NOTICE_MAX = 200;
+// P8-R: a round-robin step hands contacts out among 2 to 20 members.
+export const ROTATION_MIN = 2;
+export const ROTATION_MAX = 20;
 
 export type Action =
   | { type: "add_tag"; tag_id: string }
@@ -39,6 +42,8 @@ export type Action =
     }
   // P8-N: an in-app notification about the contact, with a fixed message.
   | { type: "notify_member"; recipient: string; message: string }
+  // P8-R: the contact goes to the next member of the list in turn.
+  | { type: "assign_round_robin"; user_ids: string[] }
   | { type: "wait"; minutes: number };
 
 export type Condition =

@@ -1353,6 +1353,23 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Round-robin assignment in automations (decision P8-R, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| CI on backend commit `a0d3ffa` | quality, frontend, security, image and integration jobs passed (includes `tests/integration/test_round_robin.py`) |
+| Frontend `automations.test.tsx` | 8 passed: the new test adds the step, finds the first two members ticked, ticks a third and sends `assign_round_robin` with all three; axe scan clean |
+| Frontend `npm run typecheck`, `npm run lint`, Prettier on changed files | clean |
+| Full frontend suite, `npx vitest run --maxWorkers=6` | 344 passed (with default workers, 4 known load-timing tests failed and passed alone) |
+| Local dev database | migrated to `0042_round_robin` with `crm-app-migrate` |
+
+| Browser, desktop (local stack, workspace "E2E Automations 8A", one member) | the step shows its hint and one ticked member; saving is refused with the editor's general "Some steps are incomplete" message and nothing is saved. The default fieldset border was removed so it matches other steps |
+
+Not verified: the 390 px width in a browser (the Chrome window could not be
+resized; the step reuses the trigger's wrapping checkbox row); a
+workspace with two or more members in the browser (covered by the
+frontend test).
+
 ## Integrations and API keys (decision P12-K, 2026-11-07)
 
 | Check | Result |
