@@ -92,6 +92,8 @@ services:
       - ./.local/postgres.key:/certs/postgres.key:ro
       - ./init/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
       - postgres-data:/var/lib/postgresql/data
+    # On a single host (D-STG.5) they are the databases: back after a reboot.
+    restart: unless-stopped
     networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d crm_app"]
@@ -119,6 +121,8 @@ services:
       - ./.local/redis.key:/certs/redis.key:ro
       - ./.local/ca.crt:/certs/ca.crt:ro
       - redis-data:/data
+    # On a single host (D-STG.5) they are the databases: back after a reboot.
+    restart: unless-stopped
     networks: [internal]
     healthcheck:
       test:
