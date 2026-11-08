@@ -625,6 +625,79 @@ describe("the Home page", () => {
     expect(sent.some((r) => r.path.endsWith("/setup"))).toBe(false);
   });
 
+  it("switches to My day: only the member's own work, remembered here", async () => {
+    const user = userEvent.setup();
+    const { sent, unmount } = renderApp(`/w/${WS}/home`, workspace(OWNER));
+    const lenses = await screen.findByRole("group", { name: "View" });
+    expect(
+      within(lenses).getByRole("button", { name: "Business overview" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(lenses).getByRole("button", { name: "My day" }));
+
+    expect(
+      await screen.findByText(
+        "Your schedule, tasks and conversations for today.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "My appointments today" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "My tasks due today" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "My conversations" }),
+    ).toBeInTheDocument();
+    // The business cards are left out.
+    for (const name of [
+      "Headline numbers",
+      "Pipeline by stage",
+      "Lead acquisition and conversion",
+      "Activity",
+      "Set up your workspace",
+    ]) {
+      expect(screen.queryByRole("region", { name })).toBeNull();
+    }
+    // Every card asks for the member's own records.
+    await waitFor(() => {
+      const paths = sent.map((r) => decodeURIComponent(r.path));
+      expect(
+        paths.some((p) => p.includes("/tasks?") && p.includes("assignee=me")),
+      ).toBe(true);
+      expect(
+        paths.some(
+          (p) => p.includes("/tasks/counts") && p.includes("assignee=me"),
+        ),
+      ).toBe(true);
+      expect(
+        paths.some(
+          (p) => p.includes("/appointments?") && p.includes("host=me"),
+        ),
+      ).toBe(true);
+      expect(
+        paths.some(
+          (p) => p.includes("/conversations?") && p.includes("assigned=mine"),
+        ),
+      ).toBe(true);
+      expect(
+        paths.some(
+          (p) =>
+            p.includes("/opportunities/summary?") &&
+            p.includes("idle=true") &&
+            p.includes("owner=me"),
+        ),
+      ).toBe(true);
+    });
+    expect(await accessibilityViolations()).toEqual([]);
+
+    unmount();
+    renderApp(`/w/${WS}/home`, workspace(OWNER));
+    expect(
+      await screen.findByRole("button", { name: "My day" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    window.localStorage.clear();
+  });
+
   it("opens the overdue tasks from the attention strip", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/home`, workspace(MANAGER));

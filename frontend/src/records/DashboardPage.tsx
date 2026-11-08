@@ -117,6 +117,38 @@ const OPEN: DealFilters = {
   direction: "desc",
 };
 const IDLE: DealFilters = { ...OPEN, idle: true };
+const MY_IDLE: DealFilters = { ...IDLE, owners: ["me"] };
+
+/*
+ * The two views of Home (design: "Business overview" and "My day"). My day
+ * shows only the signed-in member's own appointments, tasks, conversations
+ * and attention items, through the same endpoints with a "me" filter; the
+ * business cards are left out. The choice is remembered in this browser.
+ */
+type Lens = "overview" | "myday";
+const LENSES: { key: Lens; label: MessageId }[] = [
+  { key: "overview", label: "dash.lens.overview" },
+  { key: "myday", label: "dash.lens.myday" },
+];
+const LENS_KEY = "leadstack.home-lens";
+
+function readLens(): Lens {
+  try {
+    return window.localStorage.getItem(LENS_KEY) === "myday"
+      ? "myday"
+      : "overview";
+  } catch {
+    return "overview";
+  }
+}
+
+function saveLens(lens: Lens): void {
+  try {
+    window.localStorage.setItem(LENS_KEY, lens);
+  } catch {
+    // Not remembered; the page still switches.
+  }
+}
 
 function startOfToday(): Date {
   const day = new Date();
@@ -156,6 +188,8 @@ export function DashboardPage({
     end: endOfToday(),
     now: new Date(),
   }));
+  const [lens, setLens] = useState<Lens>(readLens);
+  const mine = lens === "myday";
 
   return (
     <div className="records-page home-page">
@@ -166,10 +200,27 @@ export function DashboardPage({
           </p>
           <h1 className="records-title">{t(greeting(day.now.getHours()))}</h1>
           <p className="home-subline">
-            {workspace.data
-              ? t("dash.subline", { name: workspace.data.name })
-              : " "}
+            {mine
+              ? t("dash.myday.subline")
+              : workspace.data
+                ? t("dash.subline", { name: workspace.data.name })
+                : " "}
           </p>
+        </div>
+        <div className="segmented" role="group" aria-label={t("dash.lens")}>
+          {LENSES.map(({ key, label }) => (
+            <AriaButton
+              key={key}
+              className={lens === key ? "segment active" : "segment"}
+              aria-pressed={lens === key}
+              onPress={() => {
+                setLens(key);
+                saveLens(key);
+              }}
+            >
+              {t(label)}
+            </AriaButton>
+          ))}
         </div>
       </div>
       {signedOut ? (
@@ -180,26 +231,40 @@ export function DashboardPage({
         />
       ) : (
         <>
-          <SetupCard workspaceId={workspaceId} onGo={onGo} />
-          <Attention workspaceId={workspaceId} onGo={onGo} />
-          <Headlines workspaceId={workspaceId} onGo={onGo} now={day.now} />
+          {mine ? null : <SetupCard workspaceId={workspaceId} onGo={onGo} />}
+          <Attention workspaceId={workspaceId} onGo={onGo} mine={mine} />
+          {mine ? null : (
+            <Headlines workspaceId={workspaceId} onGo={onGo} now={day.now} />
+          )}
           <div className="home-grid">
-            <PipelineCard workspaceId={workspaceId} onGo={onGo} />
+            {mine ? null : (
+              <PipelineCard workspaceId={workspaceId} onGo={onGo} />
+            )}
             <AppointmentsCard
               workspaceId={workspaceId}
               start={day.start}
               end={day.end}
               onGo={onGo}
+              mine={mine}
             />
             <TasksCard
               workspaceId={workspaceId}
               now={day.now}
               end={day.end}
               onGo={onGo}
+              mine={mine}
             />
-            <LeadsCard workspaceId={workspaceId} now={day.now} />
-            <ConversationsCard workspaceId={workspaceId} onGo={onGo} />
-            <ActivityCard workspaceId={workspaceId} onGo={onGo} />
+            {mine ? null : (
+              <LeadsCard workspaceId={workspaceId} now={day.now} />
+            )}
+            <ConversationsCard
+              workspaceId={workspaceId}
+              onGo={onGo}
+              mine={mine}
+            />
+            {mine ? null : (
+              <ActivityCard workspaceId={workspaceId} onGo={onGo} />
+            )}
           </div>
         </>
       )}
@@ -355,12 +420,21 @@ function CardLink({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-function Attention({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
+function Attention({
+  workspaceId,
+  onGo,
+  mine,
+}: {
+  workspaceId: string;
+  onGo: Go;
+  mine: boolean;
+}) {
   const t = useT();
   const intl = useIntl();
-  const counts = useTaskCounts(workspaceId, []);
-  const idle = useDealSummary(workspaceId, IDLE);
-  const open = useOpenConversations(workspaceId, "all");
+  const counts = useTaskCounts(workspaceId, mine ? ["me"] : []);
+  const idle = useDealSummary(workspaceId, mine ? MY_IDLE : IDLE);
+  // Unassigned threads are everyone's queue, so My day keeps that count.
+  const open = useOpenConversations(workspaceId, mine ? "mine" : "all");
   const waiting = useOpenConversations(workspaceId, "unassigned");
   const idleCount = idle.data
     ? idle.data.stages.reduce((sum, stage) => sum + stage.count, 0)
@@ -678,15 +752,17 @@ function AppointmentsCard({
   start,
   end,
   onGo,
+  mine,
 }: {
   workspaceId: string;
   start: Date;
   end: Date;
   onGo: Go;
+  mine: boolean;
 }) {
   const t = useT();
   const intl = useIntl();
-  const range = useAppointments(workspaceId, start, end);
+  const range = useAppointments(workspaceId, start, end, mine ? ["me"] : []);
   const today = (range.data?.items ?? [])
     .filter(
       (item) =>
@@ -696,7 +772,7 @@ function AppointmentsCard({
   return (
     <Card
       id="home-appointments"
-      title={t("dash.appointments")}
+      title={t(mine ? "dash.myday.appointments" : "dash.appointments")}
       action={
         <CardLink
           label={t("nav.calendar")}
@@ -751,23 +827,25 @@ function TasksCard({
   now,
   end,
   onGo,
+  mine,
 }: {
   workspaceId: string;
   now: Date;
   end: Date;
   onGo: Go;
+  mine: boolean;
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
   const me = useMe();
-  const tasks = useTasksDueBy(workspaceId, end);
+  const tasks = useTasksDueBy(workspaceId, end, mine);
   const [refusal, setRefusal] = useState<MessageId | null>(null);
   const canUpdate = access.data?.actions.update_task === true;
   const items = tasks.data?.items ?? [];
   return (
     <Card
       id="home-tasks"
-      title={t("dash.tasks")}
+      title={t(mine ? "dash.myday.tasks" : "dash.tasks")}
       action={
         <CardLink
           label={t("nav.tasks")}
@@ -1077,17 +1155,19 @@ const HOME_THREADS = 5;
 function ConversationsCard({
   workspaceId,
   onGo,
+  mine,
 }: {
   workspaceId: string;
   onGo: Go;
+  mine: boolean;
 }) {
   const t = useT();
-  const open = useOpenConversations(workspaceId, "all");
+  const open = useOpenConversations(workspaceId, mine ? "mine" : "all");
   const items = (open.data?.items ?? []).slice(0, HOME_THREADS);
   return (
     <Card
       id="home-conversations"
-      title={t("dash.conversations")}
+      title={t(mine ? "dash.myday.conversations" : "dash.conversations")}
       action={
         <CardLink
           label={t("nav.inbox")}

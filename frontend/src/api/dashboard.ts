@@ -35,11 +35,14 @@ export function useContactTotal(workspaceId: string) {
   });
 }
 
-/** Open tasks of every assignee due before `dayEnd`, earliest first. */
-export function useTasksDueBy(workspaceId: string, dayEnd: Date) {
+/**
+ * Open tasks due before `dayEnd`, earliest first: of every assignee, or
+ * only the caller's (`mine`, the "My day" view).
+ */
+export function useTasksDueBy(workspaceId: string, dayEnd: Date, mine = false) {
   const to = dayEnd.toISOString();
   return useQuery({
-    queryKey: [...taskKeys.all(workspaceId), "due-by", to] as const,
+    queryKey: [...taskKeys.all(workspaceId), "due-by", to, mine] as const,
     queryFn: async () =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/tasks", {
@@ -51,6 +54,7 @@ export function useTasksDueBy(workspaceId: string, dayEnd: Date) {
               sort: "due_at",
               direction: "asc",
               limit: TODAY_TASKS,
+              ...(mine ? { assignee: ["me"] } : {}),
             },
           },
         }),

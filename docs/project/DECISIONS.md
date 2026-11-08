@@ -3407,6 +3407,27 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_booking_page_rules.py`,
   `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
 
+## P4-M — Home: the "My day" view (2026-11-08)
+
+- **Status:** Decided and built under the autonomous mandate (owner,
+  2026-11-08: "build 1", the recommended "My day" view).
+- **Decisions:**
+  1. Home gets the design's switch between **Business overview** (the page
+     as before) and **My day**, a toggle group in the page header.
+  2. **My day** shows only the signed-in member's own work, through the
+     same endpoints with a "me" filter the API already has: appointments
+     today they host (`host=me`), open tasks due today or overdue assigned
+     to them (`assignee=me`), their open conversations
+     (`assigned=mine`), and in the attention strip their overdue tasks,
+     their idle deals (`owner=me`) and their unread conversations. The
+     count of conversations without an owner stays, since that queue is
+     everyone's. Card titles say "My …".
+  3. The business cards (setup checklist, headline numbers, pipeline, lead
+     trend, activity) are left out of My day, as in the design.
+  4. The choice is remembered in this browser (local storage); Business
+     overview is the default. No backend change, no new permission.
+- **Tests:** `frontend/src/records/dashboard.test.tsx`.
+
 ## P4-S — Home: setup checklist and 30-day changes on the tiles (2026-11-08)
 
 - **Status:** Decided and built under the autonomous mandate (owner,

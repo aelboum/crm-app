@@ -85,7 +85,7 @@ export const HOME_CONVERSATIONS = 100;
  */
 export function useOpenConversations(
   workspaceId: string,
-  assigned: "all" | "unassigned",
+  assigned: "all" | "unassigned" | "mine",
 ) {
   return useQuery({
     queryKey: [...conversationKeys.lists(workspaceId), "home", assigned] as const,

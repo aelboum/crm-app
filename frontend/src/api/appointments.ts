@@ -94,16 +94,31 @@ export const appointmentKeys = {
 };
 
 /** Every appointment overlapping `[start, end)` (at most 42 days), earliest first. */
-export function useAppointments(workspaceId: string, start: Date, end: Date) {
+/** Appointments in a window; `hosts` ("me" or user IDs) narrows them. */
+export function useAppointments(
+  workspaceId: string,
+  start: Date,
+  end: Date,
+  hosts: string[] = [],
+) {
   const from = start.toISOString();
   const to = end.toISOString();
   return useQuery({
-    queryKey: appointmentKeys.range(workspaceId, from, to),
+    queryKey: hosts.length
+      ? [...appointmentKeys.range(workspaceId, from, to), hosts]
+      : appointmentKeys.range(workspaceId, from, to),
     placeholderData: keepPreviousData,
     queryFn: async () =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/appointments", {
-          params: { path: where(workspaceId), query: { start: from, end: to } },
+          params: {
+            path: where(workspaceId),
+            query: {
+              start: from,
+              end: to,
+              ...(hosts.length ? { host: hosts } : {}),
+            },
+          },
         }),
       ),
   });

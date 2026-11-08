@@ -1353,6 +1353,14 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Home "My day" view (decision P4-M, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| Frontend typecheck, lint, build; full suite `--maxWorkers=6` | clean; 358 passed (new: the switch, My day's titles and subline, business cards left out, each card asks with `assignee=me`, `host=me`, `assigned=mine`, `owner=me`, the choice remembered; axe clean) |
+
+No backend change. Not verified yet: a browser pass on staging.
+
 ## Home setup checklist and 30-day tile changes (decision P4-S, 2026-11-08)
 
 | Check | Result |
