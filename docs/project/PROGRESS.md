@@ -1353,6 +1353,23 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Phone-width pass on staging (2026-11-08)
+
+Browser window at 400 CSS px (Chrome's narrowest), staging `ad247c2`,
+workspace "Staging Alpha". A script measured every element of the page
+against the viewport, ignoring content inside its own scrolling container.
+
+| View | Horizontal overflow |
+| --- | --- |
+| Home (Business overview and My day), Reports, Inbox, Business profile, Campaigns, Forms, a form's editor, Contacts, Calendar, Opportunities, Tasks, Automations | none (page width 400 on every one) |
+
+Looked at by eye: the conversion funnel (labels whole, shares beside the
+bars), the 12-week lead trend (12 columns fit, every other week labelled),
+sources, recent conversations, the form's "Automations started by this
+form" section and the contact fields stack in one column. No fix needed.
+Not covered: 375 px exactly (the window does not go below 400), dialogs
+other than the campaign editor's audience, and touch-only behaviour.
+
 ## Staging deploy of P2-BP, P7-FA, P7-CC (`ad247c2`, 2026-11-08)
 
 Migration `0044_business_profile` ran on deploy (the five columns exist; no
