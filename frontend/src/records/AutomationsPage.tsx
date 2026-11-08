@@ -29,7 +29,12 @@ import { useBookingPages } from "../api/bookingPages";
 import { ApiError } from "../api/client";
 import { useForms } from "../api/forms";
 import { usePipelines } from "../api/pipelines";
-import { useAccess, useMe, useMembers } from "../api/queries";
+import {
+  useAccess,
+  useMe,
+  useMembers,
+  useWorkspaceSettings,
+} from "../api/queries";
 import { useTags } from "../api/tags";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState, Loading, LoadError } from "../components/StateNotice";
@@ -431,6 +436,7 @@ function newAction(
   if (type === "set_lifecycle_stage") return { type, stage: "customer" };
   if (type === "assign_owner") return { type, user_id: members[0]?.id ?? "" };
   if (type === "wait") return { type, minutes: 60 };
+  if (type === "wait_for_business_hours") return { type };
   if (type === "notify_member")
     return { type, recipient: "contact_owner", message: "" };
   if (type === "assign_round_robin")
@@ -626,6 +632,12 @@ function AutomationEditor({
   const me = useMe();
   const tagsQuery = useTags(workspaceId);
   const membersQuery = useMembers(workspaceId, 0, true);
+  const settingsQuery = useWorkspaceSettings(workspaceId);
+  // Unknown (undefined) while loading or unreadable: no warning is shown.
+  const hoursSet =
+    settingsQuery.data === undefined
+      ? undefined
+      : settingsQuery.data.business_hours !== null;
   const create = useCreateAutomation(workspaceId);
   const update = useUpdateAutomation(workspaceId);
   const [name, setName] = useState(automation?.name ?? "");
@@ -767,6 +779,7 @@ function AutomationEditor({
           actions={definition.yes}
           tags={tags}
           members={members}
+          hoursSet={hoursSet}
           onChange={(yes) => {
             set({ yes });
           }}
@@ -777,6 +790,7 @@ function AutomationEditor({
             actions={definition.no}
             tags={tags}
             members={members}
+            hoursSet={hoursSet}
             onChange={(no) => {
               set({ no });
             }}
@@ -870,12 +884,14 @@ function Branch({
   actions,
   tags,
   members,
+  hoursSet,
   onChange,
 }: {
   label: string;
   actions: Action[];
   tags: Option[];
   members: Option[];
+  hoursSet: boolean | undefined;
   onChange: (actions: Action[]) => void;
 }) {
   const t = useT();
@@ -896,6 +912,7 @@ function Branch({
                 branch={label}
                 tags={tags}
                 members={members}
+                hoursSet={hoursSet}
                 onChange={(next) => {
                   onChange(
                     actions.map((current, i) => (i === index ? next : current)),
@@ -951,6 +968,9 @@ function Branch({
               {t("automations.action.notify_member")}
             </option>
             <option value="wait">{t("automations.action.wait")}</option>
+            <option value="wait_for_business_hours">
+              {t("automations.action.wait_for_business_hours")}
+            </option>
           </select>
           <Button
             size="sm"
@@ -974,6 +994,7 @@ function ActionEditor({
   branch,
   tags,
   members,
+  hoursSet,
   onChange,
 }: {
   action: Action;
@@ -981,6 +1002,7 @@ function ActionEditor({
   branch: string;
   tags: Option[];
   members: Option[];
+  hoursSet: boolean | undefined;
   onChange: (action: Action) => void;
 }) {
   const t = useT();
@@ -1137,6 +1159,17 @@ function ActionEditor({
             onChange({ ...action, message: event.target.value });
           }}
         />
+      </div>
+    );
+  }
+  if (action.type === "wait_for_business_hours") {
+    return (
+      <div className="automation-step-body">
+        <span className="automation-step-kind">{kind}</span>
+        <p className="form-hint">{t("automations.businessHoursHint")}</p>
+        {hoursSet === false ? (
+          <p className="notice info">{t("automations.businessHoursUnset")}</p>
+        ) : null}
       </div>
     );
   }

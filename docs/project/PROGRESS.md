@@ -1353,6 +1353,22 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Waiting for business hours in automations (decision P8-W, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_business_hours_wait.py` | 4 passed: skipped with `no_hours` while no hours are set, the run going on; at 03:00 the run waits until 09:00 and a retried job changes nothing; at 09:00 it finishes; at midday it goes straight on; an extra key refused (422) |
+| Related integration suites (automations, triggers, notify, rules, round-robin, foundation head `0043_business_hours_wait`, migrations, CRM tables) | 67 passed |
+| `uv run pytest tests/unit` | 779 passed (the next opening, including daylight saving and a closed week) |
+| `ruff format --check`, `ruff check`, `pyright`, `lint-imports` | clean; 2 contracts kept |
+| Frontend typecheck, lint, Prettier; `automations.test.tsx` | clean; 10 passed (the step is sent with no arguments; the warning shows only while hours are not set; axe clean) |
+| Full frontend suite, `--maxWorkers=6` | 346 passed |
+
+| Browser, desktop (local stack, workspace "E2E Automations 8A", no hours set) | the step shows its hint and the "Business hours are not set" notice; nothing was saved |
+
+Not verified: the 390 px width in a browser (the Chrome window cannot be
+resized); a run waiting in the browser (covered by the integration test).
+
 ## Round-robin assignment in automations (decision P8-R, 2026-11-08)
 
 | Check | Result |

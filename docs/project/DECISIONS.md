@@ -340,6 +340,31 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P8-W — Waiting for business hours in automations (2026-11-08)
+
+- **Status:** Done under the autonomous mandate (the owner: "proceed",
+  2026-11-08). Roadmap 8 lists business-hours waits after round-robin.
+- **What:** a new action `wait_for_business_hours`, with no arguments. While
+  the workspace is open (its business hours, decision P5-B, in its time
+  zone) the run goes straight on; otherwise it waits until the next
+  opening, found with the same rules as the calendar, so daylight-saving
+  changes keep the local times. Combined with `wait` it gives "wait an
+  hour, then for business hours".
+- **No hours set:** the step is skipped with `no_hours` and the run goes
+  on; nothing is invented. Activation is not refused, because the hours
+  can be cleared later anyway; the editor says so on the step while the
+  hours are not set. One set of hours per workspace, no holidays (as
+  P5-B 1).
+- **Retries:** the opening is worked out again when a retried job finds
+  the step already done, so a retry never waits twice and the hours as
+  they are then decide.
+- **Storage:** no new table; migration `0043_business_hours_wait` only
+  widens `automation_step.action`'s `CHECK`.
+- **Tests:** `tests/unit/test_appointment_rules.py` (next opening: open
+  now, after hours, the weekend, daylight saving, every day closed),
+  `tests/integration/test_business_hours_wait.py` (4),
+  `frontend/src/records/automations.test.tsx` (2).
+
 ## P8-R — Round-robin assignment in automations (2026-11-08)
 
 - **Status:** Done under the autonomous mandate (the owner: "Proceed",

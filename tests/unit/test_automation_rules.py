@@ -29,6 +29,7 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
             yes=[
                 {"type": "create_task", "title": "  Call   back ", "due_minutes": 0},
                 {"type": "wait", "minutes": 30},
+                {"type": "wait_for_business_hours"},
                 {"type": "assign_owner", "user_id": USER.upper()},
             ]
         )
@@ -45,6 +46,7 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
                 "assignee": "contact_owner",
             },
             {"type": "wait", "minutes": 30},
+            {"type": "wait_for_business_hours"},
             {"type": "assign_owner", "user_id": USER},
         ],
         "no": [],
@@ -60,6 +62,7 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
         {"yes": [{"type": "wait", "minutes": True}]},
         {"yes": [{"type": "wait", "minutes": 0}]},
         {"yes": [{"type": "wait", "minutes": rules.MINUTES_MAX + 1}]},
+        {"yes": [{"type": "wait_for_business_hours", "minutes": 5}]},
         {"yes": [{"type": "add_tag", "tag_id": "not-an-id"}]},
         {"yes": [{"type": "add_tag", "tag_id": TAG, "extra": 1}]},
         {"yes": [{"type": "create_task", "title": "\u200b"}]},

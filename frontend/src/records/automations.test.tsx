@@ -81,6 +81,7 @@ function workspace(
   options: {
     items?: unknown[];
     members?: unknown[];
+    hours?: unknown[] | null;
     onWrite?: (method: string, path: string, body: unknown) => Reply;
   } = {},
 ): Handler {
@@ -114,6 +115,20 @@ function workspace(
           total: (options.members ?? [ME]).length,
           limit: 50,
           offset: 0,
+        },
+      };
+    }
+    if (path === `${base}/settings`) {
+      return {
+        status: 200,
+        body: {
+          locale: "en-GB",
+          time_zone: "Europe/Amsterdam",
+          currency: "EUR",
+          business_hours: options.hours ?? null,
+          reminder_lead_minutes: null,
+          updated_at: null,
+          version: 1,
         },
       };
     }
@@ -214,6 +229,7 @@ describe("automations", () => {
       "Set lifecycle stage",
       "Notify a team member",
       "Wait",
+      "Wait for business hours",
     ]);
     expect(await accessibilityViolations()).toEqual([]);
     await user.click(
@@ -416,6 +432,79 @@ describe("automations", () => {
         },
       });
     });
+  });
+
+  it("waits for business hours and says when they are not set", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Office hours");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "wait_for_business_hours",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    expect(
+      await within(dialog).findByText(/Business hours are not set/),
+    ).toBeVisible();
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toEqual({
+        name: "Office hours",
+        definition: {
+          trigger: { type: "contact_created", sources: [] },
+          condition: null,
+          yes: [{ type: "wait_for_business_hours" }],
+          no: [],
+        },
+      });
+    });
+  });
+
+  it("gives no warning once business hours are set", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        hours: Array.from({ length: 7 }, () => ({
+          opens: "09:00",
+          closes: "17:00",
+        })),
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "wait_for_business_hours",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    expect(
+      within(dialog).getByText(/Goes on at once while the workspace is open/),
+    ).toBeVisible();
+    expect(within(dialog).queryByText(/Business hours are not set/)).toBeNull();
   });
 
   it("activates with the version and says why a refusal happened", async () => {

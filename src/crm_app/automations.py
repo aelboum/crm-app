@@ -12,7 +12,8 @@
 - **Execution:** `advance` takes a run under a row lock and executes its
   steps in order. Each step's effect and its `automation_step` row commit
   together, so a retried job finds the step done and never acts twice. A
-  `wait` sets the run waiting until its time; the sweeper
+  `wait` sets the run waiting until its time, and `wait_for_business_hours`
+  until the workspace's next opening (P8-W); the sweeper
   (`crm_app.automation_maintenance`) enqueues due runs. A missing tag or a
   member who left skips the step with a code; a deleted contact cancels
   the run; anything unexpected raises, the job queue retries, and after
@@ -46,6 +47,8 @@ from saas_os.infra.db import (
 )
 
 from crm_app import notifications, records, system_audit, tasks
+from crm_app.appointments import workspace_hours
+from crm_app.domains import appointments as hours_rules
 from crm_app.domains import automations as rules
 from crm_app.domains.records import InvalidValue
 from crm_app.models import (
@@ -542,7 +545,7 @@ def _facts(session: Session, workspace: uuid.UUID, contact: Contact) -> rules.Fa
     )
 
 
-def _act(  # noqa: PLR0911 - one answer per action
+def _act(  # noqa: PLR0911, PLR0912 - one answer per action
     session: Session, scope: Scope, contact: Contact, action: rules.Action, run: AutomationRun
 ) -> tuple[str, str | None]:
     """One action's effect in the run's transaction: (outcome, detail)."""
@@ -586,6 +589,9 @@ def _act(  # noqa: PLR0911 - one answer per action
         return _notice(session, scope, contact, args)
     if action.type == "assign_round_robin":
         return _round_robin(session, scope, contact, run, args["user_ids"])
+    if action.type == "wait_for_business_hours":
+        opening = _opening(session, scope.workspace, _now())
+        return ("done", None) if opening is not None else ("skipped", "no_hours")
     # wait: the caller sets the run waiting.
     return "done", None
 
@@ -657,6 +663,14 @@ def _round_robin(
             records.assign_owner_in(session, scope, contact.id, candidate)
             return "done", None
     return "skipped", "no_member"
+
+
+def _opening(session: Session, workspace: uuid.UUID, now: datetime) -> datetime | None:
+    """`wait_for_business_hours` (P8-W): `now` while the workspace is open,
+    else its next opening in its time zone; `None` while no hours are set
+    (or every day is closed), and the step is skipped."""
+    hours, zone = workspace_hours(session, workspace)
+    return None if hours is None else hours_rules.next_opening(hours, zone, now)
 
 
 def advance(workspace: uuid.UUID, run_id: uuid.UUID) -> str:
@@ -764,9 +778,15 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
         # transient errors over a long run do not fail it (13-H5).
         run.next_step, run.updated_at, run.last_error = position + 1, now, None
         run.attempts = 0
+        resume_at = None
         if action.type == "wait":
-            run.status = "waiting"
             resume_at = now + timedelta(minutes=action.args["minutes"])
+        elif action.type == "wait_for_business_hours":
+            # Read again on a retry, so the hours as they are now decide.
+            opening = _opening(session, workspace, now)
+            resume_at = opening if opening is not None and opening > now else None
+        if resume_at is not None:
+            run.status = "waiting"
             run.resume_at = resume_at
             session.flush()
             _schedule(run_id, workspace, resume_at)

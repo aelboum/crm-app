@@ -44,7 +44,9 @@ export type Action =
   | { type: "notify_member"; recipient: string; message: string }
   // P8-R: the contact goes to the next member of the list in turn.
   | { type: "assign_round_robin"; user_ids: string[] }
-  | { type: "wait"; minutes: number };
+  | { type: "wait"; minutes: number }
+  // P8-W: on at once while the workspace is open, else at its next opening.
+  | { type: "wait_for_business_hours" };
 
 export type Condition =
   | {

@@ -114,6 +114,18 @@ def open_intervals(
     return found
 
 
+def next_opening(
+    hours: Sequence[dict[str, str] | None], zone_name: str, now: datetime
+) -> datetime | None:
+    """The earliest moment at or after `now` inside the hours: `now` itself
+    while open, else the next opening (P8-W). `None` when every day is
+    closed. A week ahead always holds every weekday once."""
+    for opens, closes in open_intervals(hours, zone_name, now, now + timedelta(days=8)):
+        if closes > now:
+            return max(opens, now)
+    return None
+
+
 def within(intervals: Sequence[tuple[datetime, datetime]], start: datetime, end: datetime) -> bool:
     """Whether `[start, end)` lies inside one open interval."""
     return any(opens <= start and end <= closes for opens, closes in intervals)

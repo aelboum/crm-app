@@ -24,9 +24,10 @@ Actions: `add_tag` and `remove_tag` (`tag_id`), `assign_owner`
 (`user_id`), `set_lifecycle_stage` (`stage`), `create_task` (`title`,
 `priority`, `due_minutes` or null, `assignee`: `contact_owner`, `none` or a
 member's id), `notify_member` (`recipient`: `contact_owner` or a member's
-id, and a fixed `message` the definition's author writes; decision P8-N) and
-`wait` (`minutes`). Contacts created by an import never start an
-automation.
+id, and a fixed `message` the definition's author writes; decision P8-N),
+`assign_round_robin` (`user_ids`, 2 to 20 members; decision P8-R), `wait`
+(`minutes`) and `wait_for_business_hours` (no arguments; decision P8-W).
+Contacts created by an import never start an automation.
 """
 
 from __future__ import annotations
@@ -63,6 +64,7 @@ ACTIONS = (
     "notify_member",
     "assign_round_robin",
     "wait",
+    "wait_for_business_hours",
 )
 PRIORITIES = ("high", "medium", "low")
 MAX_ACTIONS = 10
@@ -197,6 +199,9 @@ def _action(raw: object, where: str) -> Action:
         _keys(raw, {"type", "minutes"}, where)
         minutes = _minutes(raw.get("minutes"), f"{where}.minutes", lowest=1)
         return Action(kind, {"minutes": minutes})
+    if kind == "wait_for_business_hours":
+        _keys(raw, {"type"}, where)
+        return Action(kind, {})
     builder = {"create_task": _task, "notify_member": _notice, "assign_round_robin": _rotation}
     if isinstance(kind, str) and kind in builder:
         return builder[kind](raw, where)

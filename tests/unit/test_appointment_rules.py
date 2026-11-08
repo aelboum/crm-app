@@ -120,3 +120,29 @@ def test_a_time_is_within_hours_only_inside_one_open_interval() -> None:
     assert not rules.within(days, _utc(2026, 10, 19, 8, 30), _utc(2026, 10, 19, 9, 30))
     # Spanning the night between two open days is outside.
     assert not rules.within(days, _utc(2026, 10, 19, 16), _utc(2026, 10, 20, 10))
+
+
+# --- The next opening (decision P8-W) ------------------------------------------------
+
+
+def test_the_next_opening_is_now_while_open() -> None:
+    now = _utc(2026, 10, 19, 10, 15)  # Monday
+    assert rules.next_opening(NINE_TO_FIVE, "UTC", now) == now
+
+
+def test_the_next_opening_after_hours_and_over_the_weekend() -> None:
+    assert rules.next_opening(NINE_TO_FIVE, "UTC", _utc(2026, 10, 19, 6)) == _utc(2026, 10, 19, 9)
+    # Closing time itself is closed: the next day's opening.
+    assert rules.next_opening(NINE_TO_FIVE, "UTC", _utc(2026, 10, 19, 17)) == _utc(2026, 10, 20, 9)
+    # Friday evening waits for Monday.
+    assert rules.next_opening(NINE_TO_FIVE, "UTC", _utc(2026, 10, 23, 18)) == _utc(2026, 10, 26, 9)
+
+
+def test_the_next_opening_keeps_local_hours_over_a_daylight_saving_change() -> None:
+    # Friday evening in Amsterdam; the clocks go back on Sunday 2026-10-25.
+    found = rules.next_opening(NINE_TO_FIVE, "Europe/Amsterdam", _utc(2026, 10, 23, 16))
+    assert found == _utc(2026, 10, 26, 8)
+
+
+def test_a_week_with_every_day_closed_has_no_opening() -> None:
+    assert rules.next_opening([None] * 7, "UTC", _utc(2026, 10, 19)) is None
