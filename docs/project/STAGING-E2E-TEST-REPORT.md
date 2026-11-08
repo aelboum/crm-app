@@ -41,7 +41,7 @@ browser (§4).
 | 12 | Export contacts and companies | **Pass** | both 200, `text/csv`, `Cache-Control: no-store` |
 | 13 | Switch workspaces | **Pass** | alice opening Beta's address in the browser: "This workspace does not exist, or you are not a member of it." (S-15) |
 | 14 | Data isolation | **Pass** | §3 |
-| 15 | Sign out | **Pass** (app), **open** (provider, S-7) | §4 |
+| 15 | Sign out | **Pass** (app and provider, after ZIT-1) | §4 |
 
 ## 3. Cross-workspace isolation (API)
 
@@ -88,10 +88,10 @@ no context sees 0 (`STAGING-BACKUP-RESTORE-REPORT.md`).
   `automation_maintenance` every minute; each sweep starts a fresh
   container, so the first step runs 60–100 s after the trigger.
 
-### S-13 Low — Login pages are unbranded
+### S-13 Low — Login pages are unbranded (fixed, decision ZIT-1)
 - `identity_local.py` does not apply `ZITADEL_LOCAL_BRANDING`; the
-  login shows ZITADEL's default look. Remediation: pass the branding when
-  configuring staging.
+  login showed ZITADEL's default look. Since decision ZIT-1 staging runs
+  LeadStack's login build: its own layout and one-page form.
 
 ## 6. Not tested
 

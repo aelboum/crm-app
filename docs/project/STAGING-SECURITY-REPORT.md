@@ -14,7 +14,7 @@ are shared across the staging reports.
 | Security headers (app) | **Pass** | `Content-Security-Policy` (`default-src 'self'`, `script-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`; `Server` header removed on the site (not on the redirect, S-21) |
 | Cookies | **Pass** | sign-in state cookie `HttpOnly; Secure; SameSite=lax; Path=/auth; Max-Age=600`; session cookie is HttpOnly (not readable by page script) |
 | CSRF | **Pass** | with a valid session cookie: POST from `https://evil.example` 403, POST without `Origin` 403, `text/plain` POST from a foreign origin 403, same-origin POST 201 (SaaS-OS origin check) |
-| Sign-out | **Pass** (app session); **open** (identity-provider session, S-7) | `/auth/logout` 204, then the same cookie → 401 |
+| Sign-out | **Pass** (app and identity-provider sessions, after ZIT-1) | `/auth/logout` 204, then the same cookie → 401 |
 | CORS | **Pass** | foreign `Origin` gets no `Access-Control-Allow-Origin`; preflight to the API 405 |
 | Authentication | **Pass** | no credentials → 401 on product routes; ZITADEL sign-in completes through OIDC (PKCE) on the app's origin |
 | Authorization / tenancy | **Pass** | `STAGING-E2E-TEST-REPORT.md` §3: 30 cross-workspace reads, updates and deletes and 9 cross-workspace lists all refused (404 or 405), search does not leak, the victim's records intact |
@@ -49,7 +49,7 @@ are shared across the staging reports.
   CRITICAL; deployed. **Owner decision:** no. **Follow-up:** add an image
   scan to CI (proposed, not done).
 
-### S-6 High — Fixable HIGH and CRITICAL advisories in third-party images (open)
+### S-6 High — Fixable HIGH and CRITICAL advisories in third-party images (partly fixed)
 - **Evidence:** Trivy, HIGH/CRITICAL with a fix: Caddy 2.11.4 (1 critical,
   31 high across its layers), ZITADEL v4.19.5 (1 critical, 25 high),
   ZITADEL Login v4.19.5 (2 critical, 13 high), Unbound (4 high), Squid
@@ -61,8 +61,13 @@ are shared across the staging reports.
   the staging checks. **Owner decision: yes** for ZITADEL and its login
   (identity, decision D-STG.1); the others can follow in a routine
   dependency slice.
+- **Update, same day (decision ZIT-1):** ZITADEL and the login moved to
+  v4.20.1; staging runs LeadStack's login build. Server 26 → 12 findings,
+  mostly false matches; the real remainder (`go-jose`, `golang.org/x/net`)
+  waits for a ZITADEL release. Caddy, Unbound and Squid remain open for a
+  dependency slice.
 
-### S-7 Medium — Signing out leaves the ZITADEL session alive (open, known)
+### S-7 Medium — Signing out leaves the ZITADEL session alive (fixed, decision ZIT-1)
 - **Evidence:** after "Sign out", ZITADEL's page asks to choose the
   account; without that click, "Sign in" continues as the same person
   without a password (observed in the browser).
@@ -73,6 +78,8 @@ are shared across the staging reports.
 - **Remediation:** merge and publish `crm-app-login`, run it on staging.
   **Owner decision: yes** (merging PR #1 and publishing a login image need
   approval).
+- **Verification (after ZIT-1):** sign-out returns straight to the
+  LeadStack sign-in, which asks for the password again.
 
 ### S-8 Medium — No second factor; ZITADEL console reachable (open)
 - **Evidence:** sign-in asked for a password only; `/ui/console` and the

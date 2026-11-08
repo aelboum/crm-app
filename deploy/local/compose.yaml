@@ -108,7 +108,8 @@ services:
     # the affected ranges of GitHub advisories GHSA-x4c7-fpcx-w9q6,
     # GHSA-jh92-5mrj-p2w2 (fixed in 4.19.2), GHSA-mchc-246r-6m76,
     # GHSA-84fg-x5h4-w8xv and GHSA-qj3q-235g-qr6w (fixed in 4.19.5).
-    image: ghcr.io/zitadel/zitadel:v4.19.5@sha256:a586456a208e0db4c633db0ba43c427c24b37846138b8b13ff16ad8e003a18d3
+    # v4.20.1 since decision ZIT-1 (2026-11-08).
+    image: ghcr.io/zitadel/zitadel:v4.20.1@sha256:4817dbd8896306867f28bba63e7dc3526b2d2646ac7111db9524eb3ab6e82301
     command: start-from-init --masterkey "${ZITADEL_LOCAL_MASTERKEY:?set ZITADEL_LOCAL_MASTERKEY in .env}" --tlsMode disabled
     environment:
       ZITADEL_DATABASE_POSTGRES_HOST: zitadel-db
@@ -174,7 +175,7 @@ services:
     # ZITADEL's published Login V2 by default; ZITADEL_LOGIN_IMAGE selects
     # crm-app's LeadStack-styled build of the same release instead (decision
     # S-2; the crm-app-login repository, README.md "Local identity").
-    image: ${ZITADEL_LOGIN_IMAGE:-ghcr.io/zitadel/zitadel-login:v4.19.5@sha256:2f8e57672fcd4f9a285d99355fae9f85fd7495768c090c07c3bbc2d84fc06617}
+    image: ${ZITADEL_LOGIN_IMAGE:-ghcr.io/zitadel/zitadel-login:v4.20.1@sha256:1508e83275f1471b20ed42b159174e6b3e10e6c2481e64c0aee7ed5bfeeec18b}
     environment:
       ZITADEL_API_URL: http://zitadel:8080
       NEXT_PUBLIC_BASE_PATH: /ui/v2/login

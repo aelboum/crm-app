@@ -31,7 +31,7 @@ passwords; recreate the databases afterwards (`down -v`).
 | Service | Role |
 | --- | --- |
 | `edge` | Caddy 2.11.4: TLS, body caps (6 MB, 64 KB for `/v1/public/*`), `X-Forwarded-For` replaced, provider cookies stripped before the app, admin API off. Only published port: `127.0.0.1:8443` |
-| `zitadel`, `zitadel-login` | ZITADEL v4.19.5 and Login V2 on the app's own origin (SaaS-OS ADR-0025); own database over `verify-full` as a non-superuser; internal network only |
+| `zitadel`, `zitadel-login` | ZITADEL v4.20.1 and Login V2 (LeadStack's build on the staging VPS) on the app's own origin (SaaS-OS ADR-0025); own database over `verify-full` as a non-superuser; internal network only |
 | `app` | the API (`uvicorn crm_app.app:create_app --factory`), read-only filesystem, no capabilities |
 | `worker` | `crm-app-worker`; no route out except `egress-proxy`, own resolver |
 | `migrate` | `crm-app-migrate` before `app` and `worker`; the only service with the migration owner's URL |

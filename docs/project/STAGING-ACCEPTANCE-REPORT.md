@@ -15,8 +15,10 @@ isolation holds under direct API attack, the stack survives a reboot, and
 a backup restores into a separate instance with isolation intact. It is
 not production-ready, and these conditions remain:
 
-1. Third-party images carry fixable HIGH and CRITICAL advisories (S-6).
-2. Signing out leaves the identity-provider session alive (S-7).
+1. Third-party images carry fixable HIGH and CRITICAL advisories (S-6;
+   ZITADEL updated by decision ZIT-1, Caddy, Unbound and Squid remain).
+2. ~~Signing out leaves the identity-provider session alive (S-7)~~: fixed
+   the same day by decision ZIT-1.
 3. No second factor, and the ZITADEL console is public (S-8).
 4. Backups exist only on the same VPS, are not scheduled, and leave
    plaintext copies (S-9).
@@ -78,8 +80,7 @@ pin or identity architecture changed.
 
 | ID | Severity | Action | Who |
 | --- | --- | --- | --- |
-| S-6 | High | Approve refreshing ZITADEL and ZITADEL Login to a patched release; Caddy, Unbound, Squid in a dependency slice | Owner (ZITADEL), then implementation |
-| S-7 | Medium | Approve merging `crm-app-login` (PR #1) and running it on staging | Owner |
+| S-6 | High | ZITADEL done (ZIT-1); refresh Caddy, Unbound and Squid in a dependency slice; take the next ZITADEL release for `go-jose` and `x/net` | Implementation |
 | S-8 | Medium | Decide MFA policy (at least for the ZITADEL administrator) or restrict `/ui/console` at the edge | Owner |
 | S-9 | Medium | Choose an off-host backup bucket; then a nightly backup timer with local retention and no plaintext copy | Owner, then implementation |
 | S-10 | Medium | Choose a monitoring service for the heartbeat and a log store for audit digests | Owner |

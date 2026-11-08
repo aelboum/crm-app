@@ -83,6 +83,13 @@ C="sudo docker compose --env-file deploy/staging/.local/compose.env   -f deploy/
 - **Backup and restore drill:** `sudo .venv/bin/python
   deploy/staging/backup_drill.py` (a project environment in `.venv`, made
   with uv). Backups stay on this host only (no bucket yet).
+- **Login build** (decision ZIT-1): `git archive` the merged
+  `crm-app-login` commit on a trusted machine, copy it to
+  `/srv/leadstack/crm-app-login-<commit>/`, run `scripts/build.sh
+  crm-app-login:<commit>` there (with `sudo docker`), set
+  `ZITADEL_LOGIN_IMAGE=crm-app-login:<commit>` in `.local/compose.env`, then
+  `$C up -d --wait zitadel-login edge`. The VPS has no access to that
+  repository; nothing is published.
 - **Test accounts:** disposable users and their passwords are in
   `.local/test-users.env`; never reuse them anywhere else.
 

@@ -471,6 +471,42 @@ approval), **Superseded**.
 - **Tests:** `tests/integration/test_bulk_actions.py` (4),
   `frontend/src/records/records.test.tsx` (2 new).
 
+## ZIT-1 — ZITADEL v4.20.1 and LeadStack's login build on staging (2026-11-08)
+
+- **Status:** Approved by the owner, 2026-11-08 ("approve the ZITADEL
+  update and merge crm-app-login"), after staging findings S-6 and S-7.
+- **What:**
+  1. ZITADEL and its published Login V2 move from v4.19.5 to **v4.20.1**
+     (2026-11-03, the newest release), pinned by digest in
+     `deploy/local/compose.yaml` and `deploy/staging/compose.yaml`.
+     v4.20.0 was the open pull request's target; v4.20.1 is a bug-fix
+     release on top of it.
+  2. `crm-app-login` pull request #1 was moved to v4.20.1 and merged
+     (`ae70622`). v4.20.1 changed `apps/login/src/i18n/request.ts`, which
+     the overlay replaces: the overlay now uses upstream's new
+     prototype-safe `mergeMessages` instead of `deepmerge` (ZITADEL
+     #13013), and `overlay.lock` holds the new hash. The repository's CI
+     (tests, lock, image) passed on `fd48f9f`.
+  3. Staging runs the LeadStack login build: `ZITADEL_LOGIN_IMAGE` in the
+     staging `compose.env` selects `crm-app-login:<commit>`, built on the
+     VPS from a `git archive` of the merged commit. No image is published
+     and the VPS got no access to the login repository.
+- **Verified on staging:** ZITADEL's setup steps completed on the existing
+  database (backup taken first); issuer unchanged; sign-out from crm-app
+  returns straight to the LeadStack sign-in, which asks for the password
+  again (finding S-7 closed); the login pages carry LeadStack's layout
+  (S-13 closed). Trivy: ZITADEL server 26 → 12 HIGH/CRITICAL findings;
+  published login 15 → 6, none critical. Most of what remains on the
+  server are false matches against old v1/v2 advisories (its module
+  version reads as `v1.80.0-v2.20.0…`); the real ones are Go dependencies
+  (`go-jose` 4.1.4, `golang.org/x/net` 0.61) that only a ZITADEL release
+  can fix.
+- **Not changed:** the identity architecture (same topology, same
+  OIDC application, same settings); SaaS-OS was qualified on v4.19.0, and
+  v4.20.1 is checked here by the staging sign-in and sign-out only.
+- **Production:** still needs the production identity setup (system-user
+  key, S-19); publishing a login image stays a separate approval.
+
 ## D-STG.5 — Staging on one OVHcloud VPS (2026-11-08)
 
 - **Status:** Approved by the owner, 2026-11-08 ("i confirm 1, 3 and 5";

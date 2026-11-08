@@ -1370,8 +1370,10 @@ PASS** (`STAGING-ACCEPTANCE-REPORT.md`); not production approval.
 | Reboot | back in ~32 s after the fixes in `7aeddf6`, `1170b91` |
 
 Fixed during the audit: S-1 to S-5, S-11 (commits `a3685cd` to
-`bb90ab8`). Open, needing owner decisions: S-6 (third-party image
-advisories, ZITADEL), S-7 (provider session after sign-out), S-8 (MFA,
+`bb90ab8`); then S-7 and S-13 and most of S-6 by decision ZIT-1 (ZITADEL
+v4.20.1, `crm-app-login` PR #1 merged as `ae70622` and running on staging).
+Open, needing owner decisions: S-6 remainder (Caddy, Unbound, Squid;
+ZITADEL's Go dependencies), S-8 (MFA,
 public console), S-9 (backups off-host), S-10 (monitoring, log store),
 S-19 (bootstrap tokens). Not tested: signup and email verification, mobile
 layout in a browser, member management in the browser, real email.
