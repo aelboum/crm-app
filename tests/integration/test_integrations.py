@@ -83,3 +83,17 @@ def test_limits_revocation_and_disabling_take_effect_at_once(probe: Probe) -> No
     assert probe["revoked"] == [204, 401, 200]
     assert probe["disabled"] == [200, "disabled", True, 401, 422]
     assert probe["other_workspace_integration"] == 404
+
+
+def test_every_role_reads_integration_names_and_nothing_more(probe: Probe) -> None:
+    """P12-N: a Member reads every integration's ID and name, the disabled
+    one too; a key, another workspace's member and another workspace's
+    list see none of them."""
+    status, listed, fields, has_disabled, by_key, other_list, other_member = probe["names"]
+    assert status == 200
+    assert listed == ["Reader", "Sheets", "Zapier"]
+    assert fields == ["id", "name"]
+    assert has_disabled is True
+    assert by_key == 401
+    assert other_list == []
+    assert other_member in (403, 404)

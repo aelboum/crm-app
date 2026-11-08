@@ -6225,6 +6225,41 @@
         "title": "IntegrationList",
         "type": "object"
       },
+      "IntegrationName": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "IntegrationName",
+        "type": "object"
+      },
+      "IntegrationNameList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IntegrationName"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "IntegrationNameList",
+        "type": "object"
+      },
       "IntegrationOut": {
         "properties": {
           "created_at": {
@@ -20072,6 +20107,66 @@
         "summary": "Resume Import",
         "tags": [
           "imports"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/integration-names": {
+      "get": {
+        "description": "Who made an entry, by name, for every role (P12-N).",
+        "operationId": "list_integration_names_v1_workspaces__tenant_id__integration_names_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationNameList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Integration Names",
+        "tags": [
+          "integrations"
         ]
       }
     },

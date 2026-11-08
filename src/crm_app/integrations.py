@@ -140,6 +140,14 @@ def list_integrations(scope: Scope) -> list[Item]:
     return [_item(account, roles, keys, scope.workspace) for account in accounts]
 
 
+def names(workspace: uuid.UUID) -> list[Item]:
+    """Every integration's ID and name, disabled ones too, so the history and
+    notifications they made show them by name (decision P12-N). Nothing
+    else: no role, status or key."""
+    accounts = sorted(list_service_accounts(workspace), key=lambda a: a.created_at)
+    return [{"id": account.id, "name": account.name} for account in accounts]
+
+
 def _account(scope: Scope, integration_id: uuid.UUID) -> ServiceAccount:
     account = get_service_account(scope.workspace, integration_id)
     if account is None:

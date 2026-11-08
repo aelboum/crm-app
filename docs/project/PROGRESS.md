@@ -1353,6 +1353,18 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Integrations shown by name (decision P12-N, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_integrations.py` | 7 passed (new: a Member reads every integration's ID and name, the disabled one too; an API key 401; another workspace's list is empty and its route refuses this workspace's owner) |
+| `uv run pytest tests/unit` | 779 passed (route policy `membership:read`; OpenAPI schema current) |
+| `ruff format --check`, `ruff check`, `pyright`, `lint-imports` | clean; 2 contracts kept |
+| Frontend typecheck, lint; full suite `--maxWorkers=6` | clean; 346 passed (`notes.test.tsx`: an entry made through a key reads "Zapier (integration)") |
+
+Not verified: a browser check (the local workspace has no integration
+entries; the label path is the one members' names already use).
+
 ## Waiting for business hours in automations (decision P8-W, 2026-11-08)
 
 | Check | Result |

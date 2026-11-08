@@ -1648,6 +1648,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/integration-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Integration Names
+         * @description Who made an entry, by name, for every role (P12-N).
+         */
+        get: operations["list_integration_names_v1_workspaces__tenant_id__integration_names_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/integrations": {
         parameters: {
             query?: never;
@@ -4644,6 +4664,21 @@ export interface components {
         IntegrationList: {
             /** Items */
             items: components["schemas"]["IntegrationOut"][];
+        };
+        /** IntegrationName */
+        IntegrationName: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** IntegrationNameList */
+        IntegrationNameList: {
+            /** Items */
+            items: components["schemas"]["IntegrationName"][];
         };
         /** IntegrationOut */
         IntegrationOut: {
@@ -10498,6 +10533,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_integration_names_v1_workspaces__tenant_id__integration_names_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationNameList"];
                 };
             };
             /** @description Validation Error */

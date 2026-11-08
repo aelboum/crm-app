@@ -121,6 +121,8 @@ const history = [
     source_id: "a-2",
     source_name: null,
   }),
+  // Made through an integration's API key (P12-N): shown by its name.
+  entry("f9", "updated", { actor_user_id: "i-zap", fields: ["phone"] }),
 ];
 
 interface Options {
@@ -142,6 +144,9 @@ function crm({ actions = OWNER_ACTIONS, archived = false, overrides = () => unde
     }
     if (path.startsWith(`/v1/workspaces/${WS}/members?`)) {
       return { status: 200, body: { items: [], total: 0, limit: 50, offset: 0 } };
+    }
+    if (path === `/v1/workspaces/${WS}/integration-names`) {
+      return { status: 200, body: { items: [{ id: "i-zap", name: "Zapier" }] } };
     }
     if (path.startsWith(`/v1/workspaces/${WS}/contacts?`)) {
       return { status: 200, body: { items: [record], next_cursor: null, total: 1, total_capped: false } };
@@ -190,6 +195,7 @@ describe("notes and activity in the drawer", () => {
     expect(within(activity).getByText(/Automation: Welcome series/)).toBeInTheDocument();
     expect(within(activity).getByText(/Booking page: Intro call/)).toBeInTheDocument();
     expect(within(activity).getByText(/^Automation ·/)).toBeInTheDocument();
+    expect(await within(activity).findByText(/Zapier \(integration\)/)).toBeInTheDocument();
     expect(await accessibilityViolations()).toEqual([]);
   });
 

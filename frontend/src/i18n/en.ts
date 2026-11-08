@@ -915,6 +915,7 @@ export const en = {
   "records.owner.me": "You",
   "records.owner.meShort": "Me",
   "records.owner.member": "Member {id}",
+  "members.integrationName": "{name} (integration)",
   "records.filter.many": "{label}: {count} selected",
   "records.close": "Close",
   "records.views": "Views",

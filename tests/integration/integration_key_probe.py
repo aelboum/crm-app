@@ -168,6 +168,21 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             client.get(f"{base}/contacts", headers=key(second.json()["secret"])).status_code,
             issue(zap.json()["id"], "After").status_code,
         ]
+        # --- Names for every role (P12-N) -----------------------------------------------
+        names = f"{base}/integration-names"
+        listed_names = client.get(names, headers=auth("member"))
+        result["names"] = [
+            listed_names.status_code,
+            sorted(item["name"] for item in listed_names.json()["items"]),
+            sorted(listed_names.json()["items"][0]),
+            any(i["id"] == zap.json()["id"] for i in listed_names.json()["items"]),
+            client.get(names, headers=key(reader_secret)).status_code,
+            client.get(
+                f"/v1/workspaces/{b.id}/integration-names",
+                headers={"Authorization": f"Bearer {issue_session(b.owner_id)[1]}"},
+            ).json()["items"],
+            client.get(f"/v1/workspaces/{b.id}/integration-names", headers=auth()).status_code,
+        ]
         result["other_workspace_integration"] = client.post(
             f"/v1/workspaces/{b.id}/integrations/{zap.json()['id']}/disable",
             headers={"Authorization": f"Bearer {issue_session(b.owner_id)[1]}"},

@@ -22,6 +22,8 @@ MEMBER = "/v1/workspaces/{tenant_id}/members/{membership_id}"
 EXPECTED = {
     "GET /v1/workspaces/{tenant_id}": "crm_app.workspace:read",
     "GET /v1/workspaces/{tenant_id}/members": "membership:read",
+    # Decision P12-N: integrations' names (ID and name only) for every role.
+    "GET /v1/workspaces/{tenant_id}/integration-names": "membership:read",
     # Decision M-P1: a member reads and sets only their own display name.
     "GET /v1/workspaces/{tenant_id}/me/profile": "crm_app.member_profile:read",
     "PUT /v1/workspaces/{tenant_id}/me/profile": "crm_app.member_profile:read",

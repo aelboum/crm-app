@@ -340,6 +340,26 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P12-N — Integrations shown by name (2026-11-08)
+
+- **Status:** Done under the autonomous mandate (the owner: "proceed",
+  2026-11-08); closes the P12-K known limit.
+- **What:** `GET /v1/workspaces/{id}/integration-names` returns every
+  integration's ID and name, disabled ones too (their old entries still
+  name them), and nothing else: no role, status or key. It needs
+  `membership:read`, which every role holds, as members' names do; an API
+  key cannot call it. The app's name map adds them, so a history entry,
+  a deal's history or a notification made through a key reads "Zapier
+  (integration)" instead of "Member 1234abcd".
+- **Why every role:** members already see that someone made the change;
+  the integration's name, chosen by an Owner or Admin, is no more
+  sensitive than a member's display name.
+- **Tests:** `tests/integration/test_integrations.py` (a Member reads the
+  names and only the ID and name; the disabled one is listed; a key and
+  another workspace refused, nothing from another workspace),
+  `tests/unit/test_routes.py` (the policy), `notes.test.tsx` (an entry
+  shown by the integration's name).
+
 ## P8-W — Waiting for business hours in automations (2026-11-08)
 
 - **Status:** Done under the autonomous mandate (the owner: "proceed",
@@ -487,10 +507,9 @@ approval), **Superseded**.
   production yet). Their Integrations page answers
   `integrations_unavailable`. `service_account:enable` was left out: no
   route re-enables an integration.
-- **Known limits:** a notification or history entry made by an
-  integration shows it as an unknown member ("Member 1234abcd"), not by
-  name; there is no per-key usage view or last-used time (SaaS-OS keeps
-  none).
+- **Known limits:** there is no per-key usage view or last-used time
+  (SaaS-OS keeps none). Entries made by an integration showed it as an
+  unknown member until P12-N.
 - **Tests:** `tests/integration/test_integrations.py` (6),
   `tests/unit/test_routes.py` (the pinned key routes, Owner and Admin only),
   `tests/unit/test_permission_grants.py` (the new check),

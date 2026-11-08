@@ -20,7 +20,27 @@ export const MAX_KEYS = 2;
 export const integrationKeys = {
   all: (workspaceId: string) =>
     ["workspace", workspaceId, "integrations"] as const,
+  names: (workspaceId: string) =>
+    ["workspace", workspaceId, "integrations", "names"] as const,
 };
+
+/**
+ * Every integration's ID and name, disabled ones too, for every role
+ * (decision P12-N): the history and notifications they made show them by
+ * name.
+ */
+export function useIntegrationNames(workspaceId: string) {
+  return useQuery({
+    queryKey: integrationKeys.names(workspaceId),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/integration-names", {
+          params: { path: where(workspaceId) },
+        }),
+      ),
+  });
+}
 
 const one = (workspaceId: string, id: string) => ({
   tenant_id: workspaceId,

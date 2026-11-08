@@ -35,6 +35,8 @@ router = APIRouter(prefix="/v1/workspaces", tags=["integrations"])
 __all__ = ["router", "routers"]
 
 Manage = Annotated[RequestContext, Depends(require_permission("crm_app.integration", "manage"))]
+# P12-N: every role reads integrations' names, as it reads members' names.
+ReadNames = Annotated[RequestContext, Depends(require_permission("membership", "read"))]
 
 
 class IntegrationIn(BaseModel):
@@ -72,6 +74,15 @@ class IntegrationList(BaseModel):
     items: list[IntegrationOut]
 
 
+class IntegrationName(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
+class IntegrationNameList(BaseModel):
+    items: list[IntegrationName]
+
+
 class IssuedKey(BaseModel):
     key: KeyOut
     # The key itself, shown once: send it as the `X-API-Key` header.
@@ -90,6 +101,16 @@ def _http(exc: RecordError) -> HTTPException:
 
 
 _ITEM = "/{tenant_id}/integrations/{integration_id}"
+
+
+@router.get(
+    "/{tenant_id}/integration-names",
+    response_model=IntegrationNameList,
+    name="list_integration_names",
+)
+def list_integration_names(tenant_id: uuid.UUID, context: ReadNames) -> dict[str, Any]:
+    """Who made an entry, by name, for every role (P12-N)."""
+    return {"items": integrations.names(context.tenant_id)}
 
 
 @router.get("/{tenant_id}/integrations", response_model=IntegrationList, name="list_integrations")
