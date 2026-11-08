@@ -1362,7 +1362,9 @@ a real delivery through the egress proxy.
 | Ruff, pyright, import contracts, secret scan | clean |
 | Frontend typecheck, lint, build; full suite `--maxWorkers=6` | clean; 357 passed (new: checklist progress and steps, a step opens its page, Hide remembered, hidden when all done and never requested for Members; tile notes for contacts and deals; axe clean) |
 
-Not verified yet: a browser pass on staging.
+| Staging (`288412b`), browser at 1280 px, workspace "Staging Alpha" (Owner) | checklist "3 of 7 done" (contact, deal, automation ticked); "Set your business hours" opens Settings › Business profile; tiles "6 added in 30 days (previous 30: 0)" and "2 created in 30 days (previous 30: 0)" |
+
+Not verified: phone widths in a browser; Hide on staging (tested in the suite).
 
 ## Conversion funnel, lead trend and Home cards (decision P10-F, 2026-11-08)
 
