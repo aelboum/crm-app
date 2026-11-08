@@ -14,6 +14,10 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 MAX_DAYS = 366
+# The lead trend (decision P10-F): whole weeks, Monday first.
+TREND_WEEKS = 12
+TREND_MIN_WEEKS = 4
+TREND_MAX_WEEKS = 26
 # A report as CSV (decision P10-B): one row per figure.
 CSV_COLUMNS: tuple[str, ...] = ("section", "item", "value", "previous")
 # What names an entry of a breakdown list, and what it counts, in order.
@@ -110,3 +114,21 @@ def where(instant: datetime | None, chosen: Period) -> str | None:
     if instant is None or instant < chosen.previous_since or instant >= chosen.until:
         return None
     return "current" if instant >= chosen.since else "previous"
+
+
+def trend_start(today: date, weeks: int) -> date:
+    """The Monday that starts a trend of `weeks` whole weeks ending with the
+    week of `today` (decision P10-F); refuses a count outside the limits."""
+    if not TREND_MIN_WEEKS <= weeks <= TREND_MAX_WEEKS:
+        raise InvalidPeriod(f"a trend has {TREND_MIN_WEEKS} to {TREND_MAX_WEEKS} weeks")
+    monday = today - timedelta(days=today.weekday())
+    return monday - timedelta(weeks=weeks - 1)
+
+
+def local_day(instant: datetime, time_zone: str) -> date:
+    """The calendar day of `instant` in `time_zone` (UTC when unknown)."""
+    try:
+        zone = ZoneInfo(time_zone)
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = ZoneInfo("UTC")
+    return instant.astimezone(zone).date()

@@ -2185,6 +2185,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/reports/contact-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Contact Trend */
+        get: operations["report_contact_trend_v1_workspaces__tenant_id__reports_contact_trend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/reports/contacts": {
         parameters: {
             query?: never;
@@ -2245,6 +2262,40 @@ export interface paths {
         };
         /** Export Report Deals */
         get: operations["export_report_deals_v1_workspaces__tenant_id__reports_deals_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/reports/funnel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Funnel */
+        get: operations["report_funnel_v1_workspaces__tenant_id__reports_funnel_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/reports/funnel/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Report Funnel */
+        get: operations["export_report_funnel_v1_workspaces__tenant_id__reports_funnel_export_csv_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3652,6 +3703,13 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["SourceCount"][];
         };
+        /** ContactTrend */
+        ContactTrend: {
+            /** Capped */
+            capped: boolean;
+            /** Weeks */
+            weeks: components["schemas"]["TrendWeek"][];
+        };
         /**
          * ContactUpdate
          * @description Fields left out are unchanged; `null` clears an optional field.
@@ -4510,6 +4568,32 @@ export interface components {
         FreeTimes: {
             /** Times */
             times: string[];
+        };
+        /**
+         * FunnelReport
+         * @description Of the contacts created in the period (and the one before): how many
+         *     have a live appointment, a linked deal and a won deal by now.
+         */
+        FunnelReport: {
+            /** Booked */
+            booked: number;
+            /** Booked Before */
+            booked_before: number;
+            /** Capped */
+            capped: boolean;
+            /** Created */
+            created: number;
+            /** Created Before */
+            created_before: number;
+            period: components["schemas"]["PeriodOut"];
+            /** With Deal */
+            with_deal: number;
+            /** With Deal Before */
+            with_deal_before: number;
+            /** Won */
+            won: number;
+            /** Won Before */
+            won_before: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -5975,6 +6059,18 @@ export interface components {
             name?: string | null;
             /** Subject */
             subject?: string | null;
+        };
+        /** TrendWeek */
+        TrendWeek: {
+            /** Created */
+            created: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Won */
+            won: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -11938,6 +12034,41 @@ export interface operations {
             };
         };
     };
+    report_contact_trend_v1_workspaces__tenant_id__reports_contact_trend_get: {
+        parameters: {
+            query?: {
+                weeks?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactTrend"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     report_contacts_v1_workspaces__tenant_id__reports_contacts_get: {
         parameters: {
             query: {
@@ -12047,6 +12178,78 @@ export interface operations {
         };
     };
     export_report_deals_v1_workspaces__tenant_id__reports_deals_export_csv_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_funnel_v1_workspaces__tenant_id__reports_funnel_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FunnelReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_report_funnel_v1_workspaces__tenant_id__reports_funnel_export_csv_get: {
         parameters: {
             query: {
                 start: string;

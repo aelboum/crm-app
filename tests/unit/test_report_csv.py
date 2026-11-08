@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+
+import pytest
 
 from crm_app.domains import export
 from crm_app.domains import reports as rules
@@ -48,3 +50,27 @@ def test_the_csv_has_the_fixed_columns_and_empty_cells_for_none() -> None:
     assert lines[0] == "section,item,value,previous"
     assert "total,win_rate,,100" in lines
     assert f"owners,{OWNER},1," in lines
+
+
+# --- The lead trend's weeks (decision P10-F) --------------------------------------------
+
+
+def test_a_trend_starts_on_a_monday_and_ends_with_the_week_of_today() -> None:
+
+    # Sunday 8 November 2026: its week starts Monday 2 November.
+    assert rules.trend_start(date(2026, 11, 8), 12) == date(2026, 8, 17)
+    assert rules.trend_start(date(2026, 11, 2), 4) == date(2026, 10, 12)
+
+
+def test_a_trend_has_four_to_twenty_six_weeks() -> None:
+
+    for weeks in (3, 27):
+        with pytest.raises(rules.InvalidPeriod):
+            rules.trend_start(date(2026, 11, 8), weeks)
+
+
+def test_a_local_day_follows_the_time_zone() -> None:
+
+    late = datetime(2026, 10, 31, 23, 30, tzinfo=UTC)
+    assert rules.local_day(late, "Europe/Amsterdam") == date(2026, 11, 1)
+    assert rules.local_day(late, "Not/AZone") == date(2026, 10, 31)

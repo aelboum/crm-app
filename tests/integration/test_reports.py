@@ -100,8 +100,56 @@ def test_appointments_by_status_and_the_no_show_rate(probe: Probe) -> None:
     ]
 
 
+def test_the_funnel_follows_the_periods_contacts_to_appointments_and_deals(
+    probe: Probe,
+) -> None:
+    assert probe["funnel"] == {
+        "period": PERIOD,
+        "capped": False,
+        # C0 and C1 were created in the period, C2 before it.
+        "created": 2,
+        "created_before": 1,
+        # C0's appointment counts; C1's was cancelled.
+        "booked": 1,
+        "booked_before": 0,
+        # C0 (won) and C1 (open) have deals; C2's deal is won.
+        "with_deal": 2,
+        "with_deal_before": 1,
+        "won": 1,
+        "won_before": 1,
+    }
+    assert probe["funnel_refused"] == {"detail": {"code": "invalid_period"}}
+    assert probe["funnel_csv"] == [
+        "total,created,2,1",
+        "total,booked,1,0",
+        "total,with_deal,2,1",
+        "total,won,1,1",
+    ]
+
+
+def test_the_lead_trend_counts_whole_weeks_ending_with_this_one(probe: Probe) -> None:
+    trend = probe["trend"]
+    assert trend["capped"] is False
+    weeks = trend["weeks"]
+    assert len(weeks) == 12
+    # Ninety days ago falls before the first week.
+    assert sum(week["created"] for week in weeks) == 3
+    assert (weeks[-1]["created"], weeks[-1]["won"]) == (1, 0)
+    # Three weeks back (a time-zone change may move it by a week edge).
+    assert sorted((w["created"], w["won"]) for w in weeks[:-1] if w["created"]) == [(2, 1)]
+    starts = [week["start"] for week in weeks]
+    assert starts == sorted(starts)
+    assert len(probe["trend_four"]["weeks"]) == 4
+    assert probe["trend_four"]["weeks"][-1] == weeks[-1]
+
+
+def test_the_lead_trend_is_for_the_workspaces_members_with_bounded_weeks(probe: Probe) -> None:
+    assert probe["trend_access"] == {"owner": 404, "outsider": 404, "anonymous": 401}
+    assert probe["trend_refused"] == [422, 422, 422]
+
+
 def test_every_role_reads_its_workspaces_reports_and_nobody_else_does(probe: Probe) -> None:
-    every = dict.fromkeys(("contacts", "deals", "tasks", "appointments"), 200)
+    every = dict.fromkeys(("contacts", "deals", "tasks", "appointments", "funnel"), 200)
     assert probe["access"]["admin"] == every
     assert probe["access"]["reader"] == every
     for caller in ("other_owner", "outsider"):

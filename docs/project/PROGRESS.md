@@ -1353,6 +1353,19 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Conversion funnel, lead trend and Home cards (decision P10-F, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| Integration `tests/integration/test_reports.py` | 12 passed (new: funnel figures and CSV, the 12-week trend with won contacts, 4-week trend, refused week counts, outsiders) |
+| Unit, whole suite (no environment, as CI) | 784 passed (new: trend start, week limits, local day) |
+| Route policies `tests/unit/test_routes.py` | 13 passed (funnel, trend and funnel CSV guarded by `crm_app.contact:read`) |
+| Ruff format and lint, pyright, secret scan | clean |
+| Frontend typecheck, lint, build; full suite `--maxWorkers=6` | clean; 354 passed (new: funnel steps and shares, empty and refused funnel; Home trend, sources, conversations, attention counts, Inbox opened on "without an owner", refused trend; axe clean) |
+
+Not verified: a browser pass over the new cards; trend figures across a
+daylight-saving change (the integration test avoids week edges).
+
 ## Staging deployed and audited (decision D-STG.5, 2026-11-08)
 
 Staging runs at `https://crm-staging.auravox.nl` on the owner's OVHcloud

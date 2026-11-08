@@ -16,6 +16,8 @@ export type ContactReport = components["schemas"]["ContactReport"];
 export type DealReport = components["schemas"]["DealReport"];
 export type TaskReport = components["schemas"]["TaskReport"];
 export type AppointmentReport = components["schemas"]["AppointmentReport"];
+export type FunnelReport = components["schemas"]["FunnelReport"];
+export type ContactTrend = components["schemas"]["ContactTrend"];
 
 export interface Period {
   start: string;
@@ -85,10 +87,44 @@ export function useAppointmentReport(workspaceId: string, period: Period) {
 }
 
 /*
+ * The funnel (decision P10-F): the period's new contacts followed to
+ * appointments, deals and won deals. Needs contact, deal and appointment
+ * read; refused alone (403) without them.
+ */
+export function useFunnelReport(workspaceId: string, period: Period) {
+  return useQuery({
+    queryKey: reportKeys.one(workspaceId, "funnel", period),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/reports/funnel", {
+          params: { path: where(workspaceId), query: period },
+        }),
+      ),
+  });
+}
+
+/*
+ * New contacts per week, Monday first in the workspace's time zone, ending
+ * with this week, and how many of them won a deal (decision P10-F).
+ */
+export function useContactTrend(workspaceId: string, weeks = 12) {
+  return useQuery({
+    queryKey: ["workspace", workspaceId, "reports", "contact-trend", weeks],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/reports/contact-trend", {
+          params: { path: where(workspaceId), query: { weeks } },
+        }),
+      ),
+  });
+}
+
+/*
  * A report as CSV (decision P10-B): the card's figures as rows, with the
  * report's own permission. Saved through `fileDownload`.
  */
-export type ReportKind = "contacts" | "deals" | "tasks" | "appointments";
+export type ReportKind =
+  "contacts" | "deals" | "tasks" | "appointments" | "funnel";
 
 export async function exportReport(
   workspaceId: string,

@@ -129,12 +129,51 @@ const FEED = [
   },
 ];
 
+// Two open threads: Sam's unread with an owner, an unknown sender's read
+// without one (decision P10-F).
+const THREADS = [
+  {
+    id: "c0000000-0000-4000-8000-000000000001",
+    contact_id: "c1",
+    contact_name: "Sam Jansen",
+    channel: "email",
+    subject: "Quote for the office",
+    status: "open",
+    assignee_user_id: ME,
+    last_message_at: stamp,
+    unread: true,
+    created_at: stamp,
+    version: 1,
+  },
+  {
+    id: "c0000000-0000-4000-8000-000000000002",
+    contact_id: null,
+    contact_name: null,
+    channel: "email",
+    subject: "Opening hours?",
+    status: "open",
+    assignee_user_id: null,
+    last_message_at: stamp,
+    unread: false,
+    created_at: stamp,
+    version: 1,
+  },
+];
+
+// Twelve Mondays; the last week has 4 new contacts, 1 of them won.
+const TREND = Array.from({ length: 12 }, (_, n) => ({
+  start: new Date(Date.UTC(2026, 7, 17 + 7 * n)).toISOString().slice(0, 10),
+  created: n === 11 ? 4 : n,
+  won: n === 11 ? 1 : 0,
+}));
+
 type Reply = { status: number; body?: unknown } | undefined;
 
 function workspace(
   actions: Record<string, boolean>,
   options: {
     failFeed?: boolean;
+    failTrend?: boolean;
     onWrite?: (method: string, path: string, body: unknown) => Reply;
   } = {},
 ): Handler {
@@ -255,6 +294,39 @@ function workspace(
         ? { status: 403, body: {} }
         : { status: 200, body: { items: FEED } };
     }
+    if (path.startsWith(`${base}/conversations?`)) {
+      const waiting = path.includes("assigned=unassigned");
+      return {
+        status: 200,
+        body: {
+          items: waiting ? [THREADS[1]] : THREADS,
+          next_cursor: null,
+        },
+      };
+    }
+    if (path.startsWith(`${base}/reports/contact-trend?`)) {
+      return options.failTrend
+        ? { status: 403, body: {} }
+        : { status: 200, body: { capped: false, weeks: TREND } };
+    }
+    if (path.startsWith(`${base}/reports/contacts?`)) {
+      return {
+        status: 200,
+        body: {
+          period: { start: "2026-10-10", end: "2026-11-08", days: 30 },
+          capped: false,
+          created: 10,
+          created_before: 4,
+          sources: [
+            { source: "form", count: 5 },
+            { source: "manual", count: 3 },
+            { source: "referral", count: 1 },
+            { source: "import", count: 0 },
+            { source: "booking", count: 1 },
+          ],
+        },
+      };
+    }
     return undefined;
   };
 }
@@ -346,6 +418,94 @@ describe("the Home page", () => {
       ),
     ).toBe(true);
     expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("shows the lead trend, sources and open conversations (P10-F)", async () => {
+    renderApp(`/w/${WS}/home`, workspace(MANAGER));
+    const attention = await screen.findByRole("region", {
+      name: "Needs your attention",
+    });
+    expect(
+      await within(attention).findByRole("button", {
+        name: "1 Unread conversations",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      await within(attention).findByRole("button", {
+        name: "1 Conversations without an owner",
+      }),
+    ).toBeInTheDocument();
+
+    const leads = screen.getByRole("region", {
+      name: "Lead acquisition and conversion",
+    });
+    const chart = await within(leads).findByRole("list", {
+      name: /New contacts per week/,
+    });
+    const weeks = within(chart).getAllByRole("listitem");
+    expect(weeks).toHaveLength(12);
+    expect(weeks[11]).toHaveTextContent("Week of Nov 2: 4 new, 1 won a deal");
+    const sources = await within(leads).findByRole("region", {
+      name: "Sources, last 30 days",
+    });
+    // The fifth source joins "Other"; shares are of the 10 new contacts.
+    const shares = within(sources).getAllByRole("listitem");
+    expect(shares.map((item) => item.textContent)).toEqual([
+      "Form50%",
+      "Manual30%",
+      "Referral10%",
+      "Import0%",
+      "Other10%",
+    ]);
+
+    const threads = screen.getByRole("region", {
+      name: "Recent conversations",
+    });
+    expect(
+      await within(threads).findByRole("button", { name: /Sam Jansen/ }),
+    ).toHaveTextContent("Unread");
+    expect(
+      within(threads).getByRole("button", { name: /Opening hours\?/ }),
+    ).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("opens the conversations without an owner from the attention strip", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(`/w/${WS}/home`, workspace(MANAGER));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "1 Conversations without an owner",
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Inbox" }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        sent.some(
+          (r) =>
+            r.path.includes("/conversations?") &&
+            r.path.includes("assigned=unassigned") &&
+            r.path.includes("limit=50"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("keeps the rest of the page when the lead trend is refused", async () => {
+    renderApp(`/w/${WS}/home`, workspace(MANAGER, { failTrend: true }));
+    const leads = await screen.findByRole("region", {
+      name: "Lead acquisition and conversion",
+    });
+    expect(await within(leads).findByRole("alert")).toHaveTextContent(
+      "You do not have permission to see this.",
+    );
+    expect(
+      await within(leads).findByRole("region", {
+        name: "Sources, last 30 days",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("opens the overdue tasks from the attention strip", async () => {

@@ -18,7 +18,7 @@ from __future__ import annotations
 import uuid
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -45,15 +45,20 @@ def _start(session: Session) -> None:
     set_local_statement_timeout(session, _TIMEOUT_MS)
 
 
-def resolve(scope: Scope, start: Any, end: Any) -> rules.Period:
-    """The period in the workspace's time zone (refuses with `InvalidPeriod`)."""
+def time_zone(scope: Scope) -> str:
+    """The workspace's time zone, or the default one."""
     with tenant_session_scope(scope.workspace) as session:
         zone = session.execute(
             select(WorkspaceSettings.time_zone).where(
                 WorkspaceSettings.tenant_id == scope.workspace
             )
         ).scalar_one_or_none()
-    return rules.period(start, end, zone or DEFAULT_TIME_ZONE)
+    return zone or DEFAULT_TIME_ZONE
+
+
+def resolve(scope: Scope, start: Any, end: Any) -> rules.Period:
+    """The period in the workspace's time zone (refuses with `InvalidPeriod`)."""
+    return rules.period(start, end, time_zone(scope))
 
 
 def _capped[T](rows: Sequence[T]) -> tuple[list[T], bool]:
@@ -307,4 +312,125 @@ def appointments(scope: Scope, chosen: rules.Period) -> Item:
         # Of the appointments marked completed or no-show; none when none are marked.
         "no_show_rate": round(100 * statuses["no_show"] / attended) if attended else None,
         "hosts": _people(hosts),
+    }
+
+
+# --- The funnel and the lead trend (decision P10-F) ---------------------------------------
+# Both follow a cohort: the contacts created in a span, and what has
+# happened to them since, as stored now. A contact "booked" when it has an
+# appointment that is not cancelled, "has a deal" when a deal is linked to
+# it, and "won" when one of its deals is won now. The steps are not nested
+# (a deal needs no appointment), so each is a share of the cohort.
+
+_IN_CHUNK = 5_000
+
+
+def _linked(
+    session: Session, scope: Scope, ids: Sequence[uuid.UUID]
+) -> tuple[set[uuid.UUID], set[uuid.UUID], set[uuid.UUID]]:
+    """Of `ids`: the contacts with a live appointment, with a deal, with a won deal."""
+    booked: set[uuid.UUID] = set()
+    dealt: set[uuid.UUID] = set()
+    won: set[uuid.UUID] = set()
+    for at in range(0, len(ids), _IN_CHUNK):
+        chunk = list(ids[at : at + _IN_CHUNK])
+        booked.update(
+            row
+            for row in session.execute(
+                select(Appointment.contact_id)
+                .where(
+                    Appointment.tenant_id == scope.workspace,
+                    Appointment.contact_id.in_(chunk),
+                    Appointment.status != "cancelled",
+                )
+                .distinct()
+            ).scalars()
+            if row is not None
+        )
+        for contact_id, outcome in session.execute(
+            select(Opportunity.contact_id, Opportunity.outcome)
+            .where(
+                Opportunity.tenant_id == scope.workspace,
+                Opportunity.contact_id.in_(chunk),
+            )
+            .distinct()
+        ).all():
+            if contact_id is None:
+                continue
+            dealt.add(contact_id)
+            if outcome == deal_rules.WON:
+                won.add(contact_id)
+    return booked, dealt, won
+
+
+def _cohort(
+    session: Session, scope: Scope, since: datetime, until: datetime
+) -> tuple[list[tuple[uuid.UUID, datetime]], bool]:
+    return _capped(
+        session.execute(
+            select(Contact.id, Contact.created_at)
+            .where(
+                Contact.tenant_id == scope.workspace,
+                Contact.created_at >= since,
+                Contact.created_at < until,
+            )
+            .limit(ROW_CAP + 1)
+        )
+        .tuples()
+        .all()
+    )
+
+
+def funnel(scope: Scope, chosen: rules.Period) -> Item:
+    """The contacts created in the period and in the one before, and how many
+    of each have booked, have a deal and have won one by now."""
+    with tenant_session_scope(scope.workspace) as session:
+        _start(session)
+        rows, capped = _cohort(session, scope, chosen.previous_since, chosen.until)
+        booked, dealt, won = _linked(session, scope, [contact for contact, _ in rows])
+    counts: Counter[tuple[str, str]] = Counter()
+    for contact, created_at in rows:
+        side = rules.where(created_at, chosen)
+        if side is None:
+            continue
+        counts[(side, "created")] += 1
+        counts[(side, "booked")] += contact in booked
+        counts[(side, "with_deal")] += contact in dealt
+        counts[(side, "won")] += contact in won
+    figures: Item = {"period": _period(chosen), "capped": capped}
+    for step in ("created", "booked", "with_deal", "won"):
+        figures[step] = counts[("current", step)]
+        figures[f"{step}_before"] = counts[("previous", step)]
+    return figures
+
+
+def trend(scope: Scope, now: datetime, weeks: int = rules.TREND_WEEKS) -> Item:
+    """New contacts per week, Monday first in the workspace's time zone, for
+    `weeks` weeks ending with this one, and how many of each week's contacts
+    have won a deal by now."""
+    zone = time_zone(scope)
+    today = rules.local_day(now, zone)
+    first = rules.trend_start(today, weeks)
+    span = rules.period(first, today, zone)
+    with tenant_session_scope(scope.workspace) as session:
+        _start(session)
+        rows, capped = _cohort(session, scope, span.since, span.until)
+        _, _, won = _linked(session, scope, [contact for contact, _ in rows])
+    created = [0] * weeks
+    converted = [0] * weeks
+    for contact, created_at in rows:
+        week = (rules.local_day(created_at, zone) - first).days // 7
+        if 0 <= week < weeks:
+            created[week] += 1
+            converted[week] += contact in won
+    return {
+        "capped": capped,
+        "weeks": [
+            {
+                "start": (first + timedelta(weeks=n)).isoformat(),
+                "created": created[n],
+                "won": converted[n],
+            }
+            for n in range(weeks)
+        ],
     }

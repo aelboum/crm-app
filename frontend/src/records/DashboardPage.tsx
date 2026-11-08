@@ -1,4 +1,10 @@
-import { ChevronRight, ClockAlert, Hourglass } from "lucide-react";
+import {
+  ChevronRight,
+  ClockAlert,
+  Hourglass,
+  MessageSquare,
+  UserRoundX,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useIntl } from "react-intl";
@@ -6,6 +12,16 @@ import { Button as AriaButton } from "react-aria-components";
 
 import { useAppointments } from "../api/appointments";
 import { ApiError } from "../api/client";
+import {
+  type ConversationPage,
+  useOpenConversations,
+} from "../api/conversations";
+import {
+  daysBefore,
+  todayIn,
+  useContactReport,
+  useContactTrend,
+} from "../api/reports";
 import {
   type RecentEntry,
   TODAY_TASKS,
@@ -49,15 +65,26 @@ import { DueText, taskRefusal } from "./taskParts";
  * headline numbers, the pipeline by stage, today's appointments and tasks,
  * and recent activity on contacts and companies. Every number has a written
  * definition (P4-D 3) and comes from the same endpoint as the page it links
- * to; each card loads and fails on its own. The design's conversations,
- * campaigns and AI cards, its trend charts and its agency view are not
- * shown: their data does not exist yet.
+ * to; each card loads and fails on its own. Decision P10-F adds the lead
+ * trend with sources, open conversations and conversations waiting for an
+ * owner. The design's campaign and AI cards, its deltas and its agency view
+ * are not shown: their data does not exist yet.
  */
 
 export interface HomeTarget {
-  section: "contacts" | "companies" | "opportunities" | "tasks" | "calendar";
+  section:
+    "contacts" | "companies" | "opportunities" | "tasks" | "calendar" | "inbox";
   record?: string;
-  view?: "overdue" | "idle";
+  view?: "overdue" | "idle" | "unassigned";
+}
+
+/** "12", or "100+" when a full page had more after it. */
+function pageCount(
+  page: ConversationPage,
+  count: number,
+  format: (value: number) => string,
+): string {
+  return format(count) + (page.next_cursor ? "+" : "");
 }
 
 const OPEN: DealFilters = {
@@ -149,6 +176,8 @@ export function DashboardPage({
               end={day.end}
               onGo={onGo}
             />
+            <LeadsCard workspaceId={workspaceId} now={day.now} />
+            <ConversationsCard workspaceId={workspaceId} onGo={onGo} />
             <ActivityCard workspaceId={workspaceId} onGo={onGo} />
           </div>
         </>
@@ -192,15 +221,36 @@ function CardLink({ label, onPress }: { label: string; onPress: () => void }) {
 
 function Attention({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
   const t = useT();
+  const intl = useIntl();
   const counts = useTaskCounts(workspaceId, []);
   const idle = useDealSummary(workspaceId, IDLE);
+  const open = useOpenConversations(workspaceId, "all");
+  const waiting = useOpenConversations(workspaceId, "unassigned");
   const idleCount = idle.data
     ? idle.data.stages.reduce((sum, stage) => sum + stage.count, 0)
     : null;
-  const items = [
+  const format = (value: number) => intl.formatNumber(value);
+  const unread = open.data
+    ? pageCount(
+        open.data,
+        open.data.items.filter((item) => item.unread).length,
+        format,
+      )
+    : null;
+  const unassigned = waiting.data
+    ? pageCount(waiting.data, waiting.data.items.length, format)
+    : null;
+  const items: {
+    key: string;
+    label: MessageId;
+    count: number | string | null;
+    failed: boolean;
+    Icon: typeof ClockAlert;
+    go: () => void;
+  }[] = [
     {
       key: "overdue",
-      label: "dash.attention.overdue" as MessageId,
+      label: "dash.attention.overdue",
       count: counts.data?.overdue ?? null,
       failed: counts.isError,
       Icon: ClockAlert,
@@ -210,12 +260,32 @@ function Attention({ workspaceId, onGo }: { workspaceId: string; onGo: Go }) {
     },
     {
       key: "idle",
-      label: "dash.attention.idle" as MessageId,
+      label: "dash.attention.idle",
       count: idleCount,
       failed: idle.isError,
       Icon: Hourglass,
       go: () => {
         onGo({ section: "opportunities", view: "idle" });
+      },
+    },
+    {
+      key: "unread",
+      label: "dash.attention.unread",
+      count: unread,
+      failed: open.isError,
+      Icon: MessageSquare,
+      go: () => {
+        onGo({ section: "inbox" });
+      },
+    },
+    {
+      key: "unassigned",
+      label: "dash.attention.unassigned",
+      count: unassigned,
+      failed: waiting.isError,
+      Icon: UserRoundX,
+      go: () => {
+        onGo({ section: "inbox", view: "unassigned" });
       },
     },
   ];
@@ -700,6 +770,203 @@ function ActivityCard({
             );
           })}
         </ol>
+      )}
+    </Card>
+  );
+}
+
+/*
+ * New contacts per week for the last 12 weeks and how many of each week's
+ * contacts have won a deal by now, with the last 30 days' sources
+ * (decision P10-F). The bars are drawn for sight only; each week's figures
+ * are also written out for screen readers.
+ */
+function LeadsCard({ workspaceId, now }: { workspaceId: string; now: Date }) {
+  const t = useT();
+  const intl = useIntl();
+  const settings = useWorkspaceSettings(workspaceId);
+  const trend = useContactTrend(workspaceId);
+  const weeks = trend.data?.weeks ?? [];
+  const max = Math.max(1, ...weeks.map((week) => week.created));
+  const height = (value: number) => `${String((value / max) * 100)}%`;
+  const weekOf = (start: string) =>
+    intl.formatDate(new Date(`${start}T00:00:00Z`), {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+  return (
+    <Card id="home-leads" title={t("dash.leads")}>
+      {trend.isPending ? (
+        <Loading />
+      ) : trend.isError ? (
+        <LoadError error={trend.error} onRetry={() => void trend.refetch()} />
+      ) : (
+        <>
+          {trend.data.capped ? (
+            <p className="notice info">{t("reports.capped")}</p>
+          ) : null}
+          <p className="home-trend-legend" aria-hidden="true">
+            <span className="home-trend-key new">{t("dash.leads.new")}</span>
+            <span className="home-trend-key won">{t("dash.leads.won")}</span>
+          </p>
+          <ol className="home-trend" aria-label={t("dash.leads.chart")}>
+            {weeks.map((week, index) => (
+              <li key={week.start} className="home-trend-week">
+                <span className="home-trend-bars" aria-hidden="true">
+                  <span
+                    className="home-trend-bar new"
+                    style={{ height: height(week.created) }}
+                  />
+                  <span
+                    className="home-trend-bar won"
+                    style={{ height: height(week.won) }}
+                  />
+                </span>
+                <span className="home-trend-label" aria-hidden="true">
+                  {index % 2 === 0 ? weekOf(week.start) : ""}
+                </span>
+                <span className="visually-hidden">
+                  {t("dash.leads.week", {
+                    date: weekOf(week.start),
+                    created: intl.formatNumber(week.created),
+                    won: intl.formatNumber(week.won),
+                  })}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      {settings.isPending ? null : (
+        <LeadSources
+          workspaceId={workspaceId}
+          today={todayIn(settings.data?.time_zone, now)}
+        />
+      )}
+      <p className="muted reports-definition">{t("dash.leads.definition")}</p>
+    </Card>
+  );
+}
+
+/** How many sources are named before the rest are summed as "Other". */
+const NAMED_SOURCES = 4;
+
+function LeadSources({
+  workspaceId,
+  today,
+}: {
+  workspaceId: string;
+  today: string;
+}) {
+  const t = useT();
+  const intl = useIntl();
+  const report = useContactReport(workspaceId, {
+    start: daysBefore(today, 29),
+    end: today,
+  });
+  if (report.isPending) return <Loading />;
+  if (report.isError) {
+    return (
+      <LoadError error={report.error} onRetry={() => void report.refetch()} />
+    );
+  }
+  const { created, sources } = report.data;
+  const named = sources.slice(0, NAMED_SOURCES);
+  const rest = sources
+    .slice(NAMED_SOURCES)
+    .reduce((sum, row) => sum + row.count, 0);
+  const rows = [
+    ...named.map((row) => ({
+      key: row.source,
+      label: t(`source.${row.source}` as MessageId),
+      count: row.count,
+    })),
+    ...(rest ? [{ key: "rest", label: t("source.other"), count: rest }] : []),
+  ];
+  return (
+    <section className="home-sources" aria-labelledby="home-sources-title">
+      <h3 id="home-sources-title" className="home-sources-title">
+        {t("dash.leads.sources")}
+      </h3>
+      {created ? (
+        <ul className="home-sources-list">
+          {rows.map((row) => (
+            <li key={row.key}>
+              <span className="home-row-sub">{row.label}</span>
+              <strong>
+                {intl.formatNumber(row.count / created, {
+                  style: "percent",
+                })}
+              </strong>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">{t("dash.leads.noSources")}</p>
+      )}
+    </section>
+  );
+}
+
+/** How many open conversations the card lists. */
+const HOME_THREADS = 5;
+
+function ConversationsCard({
+  workspaceId,
+  onGo,
+}: {
+  workspaceId: string;
+  onGo: Go;
+}) {
+  const t = useT();
+  const open = useOpenConversations(workspaceId, "all");
+  const items = (open.data?.items ?? []).slice(0, HOME_THREADS);
+  return (
+    <Card
+      id="home-conversations"
+      title={t("dash.conversations")}
+      action={
+        <CardLink
+          label={t("nav.inbox")}
+          onPress={() => {
+            onGo({ section: "inbox" });
+          }}
+        />
+      }
+    >
+      {open.isPending ? (
+        <Loading />
+      ) : open.isError ? (
+        <LoadError error={open.error} onRetry={() => void open.refetch()} />
+      ) : items.length === 0 ? (
+        <EmptyState title={t("dash.conversations.none")} />
+      ) : (
+        <ul className="home-list">
+          {items.map((item) => (
+            <li key={item.id}>
+              <AriaButton
+                className={`home-row${item.unread ? " unread" : ""}`}
+                onPress={() => {
+                  onGo({ section: "inbox", record: item.id });
+                }}
+              >
+                <span className="home-row-main">
+                  <span className="home-row-title">
+                    {item.contact_name ?? item.subject}
+                  </span>
+                  <span className="home-row-sub">
+                    {item.contact_name ? `${item.subject} · ` : ""}
+                    <When value={item.last_message_at} />
+                  </span>
+                </span>
+                {item.unread ? (
+                  <Badge tone="info">{t("dash.conversations.unread")}</Badge>
+                ) : null}
+              </AriaButton>
+            </li>
+          ))}
+        </ul>
       )}
     </Card>
   );

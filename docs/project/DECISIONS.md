@@ -3407,6 +3407,57 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   `tests/unit/test_booking_page_rules.py`,
   `frontend/src/records/bookingPages.test.tsx`, `consent.test.tsx`.
 
+## P10-F — Conversion funnel, lead trend and Home cards (2026-11-08)
+
+- **Status:** Decided and built under the autonomous mandate (owner,
+  2026-11-08: "do the Reports funnel and Dashboard cards"). Closes the
+  gaps P10-A 6 (funnel) and P4-D 2 (lead trend and sources, conversation
+  cards) left open, using stored data only.
+- **Why now possible:** P10-A said the funnel needed lead-to-deal
+  attribution. Deals and appointments carry a `contact_id`, so a cohort
+  of contacts can be followed without a new event or table.
+- **Decisions:**
+  1. **Funnel** (Reports, `GET .../reports/funnel?start=&end=`): of the
+     contacts created in the period (archived ones included, as P10-A),
+     how many by now have an appointment that is not cancelled
+     (*booked*), a linked deal (*with a deal*) and a won deal (*won*),
+     with the same figures for the period before. The steps are not
+     nested (a deal needs no appointment), so each is shown as a share of
+     the new contacts, not "of the previous step" as in the design. CSV
+     like every report (P10-B).
+  2. **Lead trend** (Home, `GET .../reports/contact-trend?weeks=`): new
+     contacts per week, Monday first in the workspace's time zone, for 4
+     to 26 weeks (default 12) ending with this week, and how many of each
+     week's contacts have a won deal by now. The design's "converted" is
+     this won count.
+  3. **Lead sources** (Home): the last 30 days of the existing contacts
+     report (P10-A), as shares of the new contacts; four named sources,
+     the rest summed as "Other". No costs (no spend data).
+  4. **Conversations** (Home): "Unread conversations" and "Conversations
+     without an owner" join the attention strip, and a "Recent
+     conversations" card lists the five newest open threads. They read
+     the Inbox's own list (`status=open`, one page of up to 100); a full
+     page shows "100+". "Without an owner" opens the Inbox on that filter
+     (`?view=unassigned`).
+  5. **Permissions:** a SaaS-OS route policy names one permission, so the
+     funnel and trend routes require `crm_app.contact:read` and their
+     handlers also check `crm_app.opportunity:read` (and, for the funnel,
+     `crm_app.appointment:read`) with `saas_os.core.rbac.can`, answering
+     403 `permission_denied` without them. Every role has all three today.
+     No new permission; gate G7 does not apply. Read-only, no audit.
+  6. **Bounds:** as P10-A: at most 20,000 contacts per read with
+     `capped`, 5-second statement timeout (503 `report_timeout`); linked
+     appointments and deals are read by contact id in chunks of 5,000 on
+     the existing `(tenant_id, contact_id)` indexes. No migration.
+  7. **Not built:** deltas on the Home tiles, the "My day" lens,
+     Customize, the setup checklist, campaign and AI cards, lead-source
+     costs, first-reply times, the agency view.
+- **Tests:** `tests/integration/test_reports.py` (funnel figures, CSV,
+  trend weeks relative to now, bounded weeks, outsiders),
+  `tests/unit/test_report_csv.py` (trend weeks, local days),
+  `tests/unit/test_routes.py`, `frontend/src/records/reports.test.tsx`,
+  `frontend/src/records/dashboard.test.tsx`.
+
 ## P10-B — Reports as CSV (2026-11-02, under M1)
 
 - **Status:** Decided and built under M1 (owner, 2026-11-01: "proceed" with

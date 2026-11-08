@@ -34,7 +34,7 @@ def _sql(workspace: uuid.UUID, statement: str, **values: object) -> None:
         session.execute(text(statement), {"tenant": workspace, **values})
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915 - one known dataset, seeded and read in order
     if os.environ.get("ENVIRONMENT") != "test":
         raise SystemExit("report_probe runs only with ENVIRONMENT=test")
     a = _new_workspace("reports-a")
@@ -70,6 +70,7 @@ def main() -> None:
             ("2026-09-30T21:30Z", "manual"),
             ("2026-07-01T10:00Z", "manual"),
         ]
+        contact_ids: list[str] = []
         for n, (when, source) in enumerate(contacts):
             made = post(
                 "contacts", {"first_name": f"C{n}", "email": f"c{n}@example.test", "source": source}
@@ -80,6 +81,7 @@ def main() -> None:
                 at=when,
                 id=made,
             )
+            contact_ids.append(made)
         # Another workspace's contact in the period.
         elsewhere = post(
             "contacts",
@@ -104,8 +106,19 @@ def main() -> None:
             ("2026-09-01T09:00Z", "won", "2026-09-15T09:00Z", "50", "USD", owner),
             ("2026-10-06T09:00Z", "won", "2026-10-20T09:00Z", "300", "USD", admin_id),
         ]
+        # The funnel (P10-F): D0 (won) belongs to C0, D2 (open) to C1, D3 (won,
+        # before the period) to C2.
+        deal_contacts = {0: 0, 2: 1, 3: 2}
         for n, (created, outcome, closed, amount, currency, deal_owner) in enumerate(deals):
             made = post("opportunities", {"title": f"D{n}", "amount": amount})
+            if n in deal_contacts:
+                _sql(
+                    a.id,
+                    "UPDATE crm_app.opportunity SET contact_id = :contact"
+                    " WHERE tenant_id = :tenant AND id = :id",
+                    contact=contact_ids[deal_contacts[n]],
+                    id=made,
+                )
             _sql(
                 a.id,
                 "UPDATE crm_app.opportunity SET created_at = :created, outcome = :outcome,"
@@ -151,6 +164,8 @@ def main() -> None:
             ("2026-10-06T09:00Z", "confirmed", admin_id),
             ("2026-09-20T09:00Z", "completed", owner),
         ]
+        # The funnel: A0 (completed) belongs to C0, A2 (cancelled) to C1.
+        appointment_contacts = {0: 0, 2: 1}
         for n, (starts, status, host) in enumerate(appointments):
             made = post(
                 "appointments",
@@ -174,6 +189,14 @@ def main() -> None:
                 host=host,
                 id=made,
             )
+            if n in appointment_contacts:
+                _sql(
+                    a.id,
+                    "UPDATE crm_app.appointment SET contact_id = :contact"
+                    " WHERE tenant_id = :tenant AND id = :id",
+                    contact=contact_ids[appointment_contacts[n]],
+                    id=made,
+                )
 
         # --- The reports ----------------------------------------------------------------------
         def report(
@@ -183,7 +206,7 @@ def main() -> None:
                 f"{where}/reports/{kind}", params=params or PERIOD, headers=auth(caller)
             )
 
-        for kind in ("contacts", "deals", "tasks", "appointments"):
+        for kind in ("contacts", "deals", "tasks", "appointments", "funnel"):
             result[kind] = report(kind).json()
         result["other_workspace_contacts"] = report(
             "contacts", "other_owner", f"/v1/workspaces/{b.id}"
@@ -191,10 +214,54 @@ def main() -> None:
         result["access"] = {
             caller or "anonymous": {
                 kind: report(kind, caller).status_code
-                for kind in ("contacts", "deals", "tasks", "appointments")
+                for kind in ("contacts", "deals", "tasks", "appointments", "funnel")
             }
             for caller in ("admin", "reader", "other_owner", "outsider", None)
         }
+        result["funnel_refused"] = report("funnel", start="2026-10-31", end="2026-10-01").json()
+
+        # --- The lead trend (P10-F), in a third workspace with times relative
+        # to now, so the expected weeks do not move: one contact now, two
+        # exactly three weeks ago (one of them with a won deal), and one
+        # ninety days ago, before any 12-week trend. --------------------------
+        c = _new_workspace("reports-c")
+        tokens["third_owner"] = issue_session(c.owner_id)[1]
+        third = f"/v1/workspaces/{c.id}"
+        client.get(f"{third}/pipelines", headers=auth("third_owner"))
+        for n, days in enumerate((0, 21, 21, 90)):
+            made = post(
+                "contacts",
+                {"first_name": f"W{n}", "email": f"w{n}@example.test"},
+                "third_owner",
+                third,
+            )
+            _sql(
+                c.id,
+                "UPDATE crm_app.contact SET created_at = now() - make_interval(days => :days)"
+                " WHERE tenant_id = :tenant AND id = :id",
+                days=days,
+                id=made,
+            )
+            if n == 1:
+                deal = post("opportunities", {"title": "Won"}, "third_owner", third)
+                _sql(
+                    c.id,
+                    "UPDATE crm_app.opportunity SET outcome = 'won', closed_at = now(),"
+                    " contact_id = :contact WHERE tenant_id = :tenant AND id = :id",
+                    contact=made,
+                    id=deal,
+                )
+
+        def trend(caller: str | None = "third_owner", **params: str) -> Any:
+            return client.get(f"{third}/reports/contact-trend", params=params, headers=auth(caller))
+
+        result["trend"] = trend().json()
+        result["trend_four"] = trend(weeks="4").json()
+        result["trend_access"] = {
+            caller or "anonymous": trend(caller).status_code
+            for caller in ("owner", "outsider", None)
+        }
+        result["trend_refused"] = [trend(weeks=w).status_code for w in ("3", "27", "x")]
         result["refusals"] = {
             "end_before_start": report("deals", start="2026-10-31", end="2026-10-01").json(),
             "too_long": report("deals", start="2025-01-01", end="2026-01-02").json(),
@@ -233,6 +300,8 @@ def main() -> None:
             for caller in ("reader", "other_owner", None)
         }
         result["csv_refused"] = export("deals", start="2026-10-31", end="2026-10-01").json()
+        funnel_lines = export("funnel").content.decode("utf-8-sig").splitlines()
+        result["funnel_csv"] = [line for line in funnel_lines if line.startswith("total,")]
 
     print("RESULT " + json.dumps(result, default=str))
 

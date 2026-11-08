@@ -125,6 +125,23 @@ function reports(
         },
       };
     }
+    if (path.startsWith(`${base}/reports/funnel?`)) {
+      return {
+        status: 200,
+        body: {
+          period: PERIOD,
+          capped: false,
+          created: 12,
+          created_before: 9,
+          booked: 6,
+          booked_before: 3,
+          with_deal: 4,
+          with_deal_before: 2,
+          won: 3,
+          won_before: 1,
+        },
+      };
+    }
     if (path.startsWith(`${base}/reports/appointments?`)) {
       return {
         status: 200,
@@ -157,7 +174,7 @@ describe("reports", () => {
     await waitFor(() => {
       expect(
         new Set(asked.map((r) => r.path.split("?")[0]?.split("/").pop())).size,
-      ).toBe(4);
+      ).toBe(5);
     });
     for (const call of asked) {
       expect(period(call.path)).toEqual({
@@ -185,6 +202,69 @@ describe("reports", () => {
       screen.getByRole("region", { name: "New contacts by source" }),
     ).toHaveTextContent("Form8");
     expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("follows the period's new contacts through the funnel (P10-F)", async () => {
+    renderApp(`/w/${WS}/reports`, reports());
+    const funnel = await screen.findByRole("region", {
+      name: "Conversion funnel",
+    });
+    const steps = await within(funnel).findAllByRole("listitem");
+    expect(steps.map((step) => step.textContent)).toEqual([
+      "New contacts12",
+      "Booked an appointment650% of new contacts",
+      "Have a deal433% of new contacts",
+      "Won a deal325% of new contacts",
+    ]);
+    expect(funnel).toHaveTextContent("Previous 30 days: 9 new, 1 won");
+    expect(funnel).toHaveTextContent(
+      /each step is a share of the new contacts/,
+    );
+    expect(
+      within(funnel).getByRole("button", {
+        name: "Download Conversion funnel as CSV",
+      }),
+    ).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("says when the funnel has no new contacts, and fails alone", async () => {
+    const empty = {
+      period: PERIOD,
+      capped: false,
+      created: 0,
+      created_before: 2,
+      booked: 0,
+      booked_before: 1,
+      with_deal: 0,
+      with_deal_before: 0,
+      won: 0,
+      won_before: 0,
+    };
+    const { unmount } = renderApp(
+      `/w/${WS}/reports`,
+      reports({ funnel: { status: 200, body: empty } }),
+    );
+    const funnel = await screen.findByRole("region", {
+      name: "Conversion funnel",
+    });
+    expect(
+      await within(funnel).findByText(
+        "No contacts were created in this period.",
+      ),
+    ).toBeInTheDocument();
+    unmount();
+    renderApp(
+      `/w/${WS}/reports`,
+      reports({ funnel: { status: 403, body: { detail: "Forbidden" } } }),
+    );
+    const refused = await screen.findByRole("region", {
+      name: "Conversion funnel",
+    });
+    expect(await within(refused).findByRole("alert")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Deal outcomes" }),
+    ).toHaveTextContent("Created5");
   });
 
   it("asks again for another preset", async () => {

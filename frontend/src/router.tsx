@@ -187,7 +187,7 @@ interface SectionSearch {
   /** Opens a new-record dialog (the header's "New" menu). */
   create?: "contact" | "opportunity" | "appointment" | "conversation";
   /** A filtered list opened from the Home page (P4-D 1). */
-  view?: "overdue" | "idle";
+  view?: "overdue" | "idle" | "unassigned";
 }
 
 function SectionPage() {
@@ -207,6 +207,7 @@ function SectionPage() {
       <InboxPage
         workspaceId={workspaceId}
         openId={record ?? null}
+        initialAssigned={view === "unassigned" ? "unassigned" : "all"}
         startCreate={create === "conversation"}
         onCreateDone={() => {
           void navigate({ search: record ? { record } : {}, replace: true });
@@ -445,7 +446,9 @@ const sectionRoute = createRoute({
     search.create === "conversation"
       ? { create: search.create }
       : {}),
-    ...(search.view === "overdue" || search.view === "idle"
+    ...(search.view === "overdue" ||
+    search.view === "idle" ||
+    search.view === "unassigned"
       ? { view: search.view }
       : {}),
   }),

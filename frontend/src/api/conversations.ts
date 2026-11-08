@@ -75,6 +75,32 @@ export function useContactConversations(workspaceId: string, contactId: string) 
   });
 }
 
+/** How many open conversations the Home page reads at most (the API's limit). */
+export const HOME_CONVERSATIONS = 100;
+
+/*
+ * Open conversations for the Home page: all of them or only those without
+ * an owner, newest first, one page. A full page with a next cursor means
+ * there are more than it counts.
+ */
+export function useOpenConversations(
+  workspaceId: string,
+  assigned: "all" | "unassigned",
+) {
+  return useQuery({
+    queryKey: [...conversationKeys.lists(workspaceId), "home", assigned] as const,
+    queryFn: async (): Promise<ConversationPage> =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/conversations", {
+          params: {
+            path: where(workspaceId),
+            query: { status: "open", assigned, limit: HOME_CONVERSATIONS },
+          },
+        }),
+      ),
+  });
+}
+
 export function useConversations(workspaceId: string, filter: InboxFilter) {
   return useInfiniteQuery({
     queryKey: conversationKeys.list(workspaceId, filter),

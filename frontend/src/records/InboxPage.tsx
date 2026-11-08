@@ -95,6 +95,7 @@ export function InboxPage({
   onOpenAppointment = () => undefined,
   startCreate = false,
   onCreateDone = () => undefined,
+  initialAssigned = "all",
 }: {
   workspaceId: string;
   /** A conversation to open first (`?record=`), e.g. from a contact's drawer. */
@@ -108,6 +109,8 @@ export function InboxPage({
   startCreate?: boolean;
   /** Called when that dialog closes, to clear the request. */
   onCreateDone?: () => void;
+  /** The owner filter to start with (`?view=unassigned` from Home). */
+  initialAssigned?: "all" | "unassigned";
 }) {
   const t = useT();
   const access = useAccess(workspaceId);
@@ -122,7 +125,7 @@ export function InboxPage({
   const canReply = access.data?.actions.reply_conversations === true;
   const [filter, setFilter] = useState<Omit<InboxFilter, "q">>({
     status: "open",
-    assigned: "all",
+    assigned: initialAssigned,
   });
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());

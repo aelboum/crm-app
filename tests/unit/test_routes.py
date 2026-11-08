@@ -112,6 +112,9 @@ RECORDS |= {
     "GET /v1/workspaces/{tenant_id}/reports/deals": "crm_app.opportunity:read",
     "GET /v1/workspaces/{tenant_id}/reports/tasks": "crm_app.task:read",
     "GET /v1/workspaces/{tenant_id}/reports/appointments": "crm_app.appointment:read",
+    # Decision P10-F: the handlers also check deal (and appointment) read.
+    "GET /v1/workspaces/{tenant_id}/reports/funnel": "crm_app.contact:read",
+    "GET /v1/workspaces/{tenant_id}/reports/contact-trend": "crm_app.contact:read",
     # Email templates (P7-T): the campaign permissions; rendering replies.
     "GET /v1/workspaces/{tenant_id}/email-templates": "crm_app.campaign:read",
     "POST /v1/workspaces/{tenant_id}/email-templates": "crm_app.campaign:manage",
@@ -125,6 +128,7 @@ RECORDS |= {
     "GET /v1/workspaces/{tenant_id}/reports/deals/export.csv": "crm_app.opportunity:read",
     "GET /v1/workspaces/{tenant_id}/reports/tasks/export.csv": "crm_app.task:read",
     "GET /v1/workspaces/{tenant_id}/reports/appointments/export.csv": "crm_app.appointment:read",
+    "GET /v1/workspaces/{tenant_id}/reports/funnel/export.csv": "crm_app.contact:read",
 }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 

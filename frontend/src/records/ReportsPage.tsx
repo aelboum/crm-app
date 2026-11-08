@@ -11,6 +11,7 @@ import {
   daysIn,
   type DealReport,
   exportReport,
+  type FunnelReport,
   MAX_DAYS,
   type Period,
   type ReportKind,
@@ -19,6 +20,7 @@ import {
   useAppointmentReport,
   useContactReport,
   useDealReport,
+  useFunnelReport,
   useTaskReport,
 } from "../api/reports";
 import { useMe, useWorkspaceSettings } from "../api/queries";
@@ -35,9 +37,10 @@ import { ownerLabel } from "./parts";
  * Reports (decision P10-A): what happened in a period of whole days in the
  * workspace's time zone, against the same number of days before it. Every
  * figure has a written definition next to it and is counted by the server
- * from stored rows; each card loads and fails on its own. The design's
+ * from stored rows; each card loads and fails on its own. The conversion
+ * funnel follows the period's new contacts (decision P10-F). The design's
  * lead-source costs, first-reply times, conversations, reviews and agency
- * comparison are not shown: their data does not exist. No export yet.
+ * comparison are not shown: their data does not exist.
  */
 
 type Preset = 7 | 30 | 90;
@@ -89,6 +92,7 @@ export function ReportsPage({ workspaceId }: { workspaceId: string }) {
       <Headlines workspaceId={workspaceId} period={period} />
       <div className="home-grid reports-grid">
         <ContactsCard workspaceId={workspaceId} period={period} />
+        <FunnelCard workspaceId={workspaceId} period={period} />
         <DealsCard workspaceId={workspaceId} period={period} />
         <TasksCard workspaceId={workspaceId} period={period} />
         <AppointmentsCard workspaceId={workspaceId} period={period} />
@@ -429,6 +433,88 @@ function ContactsCard({
           )}
           <p className="muted reports-definition">
             {t("reports.contacts.definition")}
+          </p>
+        </>
+      ) : (
+        <Loading />
+      )}
+    </Card>
+  );
+}
+
+const FUNNEL_STEPS: {
+  key: "created" | "booked" | "with_deal" | "won";
+  label: MessageId;
+}[] = [
+  { key: "created", label: "reports.funnel.created" },
+  { key: "booked", label: "reports.funnel.booked" },
+  { key: "with_deal", label: "reports.funnel.withDeal" },
+  { key: "won", label: "reports.funnel.won" },
+];
+
+function FunnelCard({
+  workspaceId,
+  period,
+}: {
+  workspaceId: string;
+  period: Period;
+}) {
+  const t = useT();
+  const intl = useIntl();
+  const report = useFunnelReport(workspaceId, period);
+  const data: FunnelReport | undefined = report.data;
+  const days = daysIn(period);
+  return (
+    <Card
+      id="reports-funnel"
+      title={t("reports.funnel")}
+      csv={{ workspaceId, kind: "funnel", period }}
+    >
+      {report.isError ? (
+        <LoadError error={report.error} onRetry={() => void report.refetch()} />
+      ) : data ? (
+        <>
+          <Capped capped={data.capped} />
+          {data.created ? (
+            <ol className="report-funnel">
+              {FUNNEL_STEPS.map((step, index) => {
+                const value = data[step.key];
+                const share = Math.round((100 * value) / data.created);
+                return (
+                  <li key={step.key} className="report-funnel-step">
+                    <span
+                      className={`report-funnel-bar step-${String(index)}`}
+                      // At least wide enough for its label.
+                      style={{ width: `${String(Math.max(share, 34))}%` }}
+                    >
+                      <span>{t(step.label)}</span>
+                      <span className="report-funnel-value">
+                        {intl.formatNumber(value)}
+                      </span>
+                    </span>
+                    {index ? (
+                      <span className="report-funnel-share">
+                        {t("reports.funnel.share", {
+                          value: `${intl.formatNumber(share)}%`,
+                        })}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <p className="muted">{t("reports.funnel.none")}</p>
+          )}
+          <p className="reports-line muted">
+            {t("reports.funnel.before", {
+              days,
+              created: intl.formatNumber(data.created_before),
+              won: intl.formatNumber(data.won_before),
+            })}
+          </p>
+          <p className="muted reports-definition">
+            {t("reports.funnel.definition")}
           </p>
         </>
       ) : (
