@@ -1353,6 +1353,29 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed and audited (decision D-STG.5, 2026-11-08)
+
+Staging runs at `https://crm-staging.auravox.nl` on the owner's OVHcloud
+VPS, every service in containers on that host. Overall: **CONDITIONAL
+PASS** (`STAGING-ACCEPTANCE-REPORT.md`); not production approval.
+
+| Check | Result |
+| --- | --- |
+| Public exposure | only 22, 80, 443 open from outside |
+| Sign-in | ZITADEL OIDC on the app origin, in the browser; app sign-out ends the session server-side (cookie 401 afterwards) |
+| Tenant isolation | 39 cross-workspace API attempts refused (404/405); search no leak; RLS forced on 60/60 product tables |
+| CRM workflows | contacts, companies and links, tags, custom fields, deal stages and outcome, conversation, appointment, automation, template, reports, exports (`STAGING-E2E-TEST-REPORT.md`) |
+| Security | CSP, HSTS, CSRF (foreign-origin 403), CORS, rate limit (60 then 429), input handling; app image 0 HIGH/CRITICAL after `bb90ab8` |
+| Backup and restore | encrypted, restored into a separate instance in ~6 s; 14 of 15 checks (the audit-digest check waits on log shipping) |
+| Reboot | back in ~32 s after the fixes in `7aeddf6`, `1170b91` |
+
+Fixed during the audit: S-1 to S-5, S-11 (commits `a3685cd` to
+`bb90ab8`). Open, needing owner decisions: S-6 (third-party image
+advisories, ZITADEL), S-7 (provider session after sign-out), S-8 (MFA,
+public console), S-9 (backups off-host), S-10 (monitoring, log store),
+S-19 (bootstrap tokens). Not tested: signup and email verification, mobile
+layout in a browser, member management in the browser, real email.
+
 ## The Inbox's contact panel (decision P6-CX, 2026-11-08)
 
 | Check | Result |

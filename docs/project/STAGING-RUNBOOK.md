@@ -1,9 +1,9 @@
 # Staging runbook (decision D-STG.4)
 
 How to deploy, update, roll back, rotate secrets and restore LeadStack's
-staging. Provider-neutral: **no host, provider or domain is chosen yet**
-(brief H section 8), so `<staging-hostname>`, `<registry>` and `<host>`
-are placeholders. Every step names what it was checked with. "Rehearsed"
+staging. Provider-neutral in general; the staging VPS chosen on 2026-11-08 is in
+section 1a (decision D-STG.5). Elsewhere `<staging-hostname>`,
+`<registry>` and `<host>` are placeholders. Every step names what it was checked with. "Rehearsed"
 means run locally against `deploy/staging/` (decisions D-STG to D-STG.3);
 "not yet run" means it needs the real host.
 
@@ -53,6 +53,38 @@ refuses every email switch in production (`deploy/staging/env.template`).
    staging ready.
 9. **Exit checks.** The brief's E1 to E10; `verify_local.py` shows what each
    proves locally.
+
+## 1a. The staging VPS as built (decision D-STG.5, 2026-11-08)
+
+Run on the VPS (`ssh ovh-vps-ai-pbx`, user `debian`, passwordless sudo).
+Checkout `/srv/leadstack/crm-app` (read-only deploy key), settings in
+`deploy/staging/.local/` (0700; never copied off the host). Let `C` be:
+
+```sh
+C="sudo docker compose --env-file deploy/staging/.local/compose.env   -f deploy/staging/compose.yaml -f deploy/staging/compose.host.yaml   --profile stateful-local"
+```
+
+- **First time** (done 2026-11-08): install `docker.io docker-compose
+  docker-buildx git age python3-venv`; clone; build the image (below);
+  `prepare_local.py --host crm-staging.auravox.nl --days 365 --public-ca
+  /etc/ssl/certs/ca-certificates.crt` inside the image as uid 1000; start
+  everything but `edge`; once DNS answers the VPS, `$C up -d --wait edge`;
+  `identity_local.py --origin https://crm-staging.auravox.nl --no-restart`
+  inside the image on the `crm-app-staging_edge` network; `$C up -d --wait
+  --force-recreate app worker`; install `deploy/staging/systemd/` (not the
+  heartbeat until `HEARTBEAT_URL` exists) with `/opt/leadstack` linked to
+  the checkout and `deploy/staging/.env` to `.local/compose.env`.
+- **Deploy a commit:** `git fetch && git checkout <commit>`; `sudo docker
+  build -t crm-app:staging -t crm-app:<commit> .`; set `VERSION=<commit>`
+  in `.local/app.env`; `$C up -d --wait` (runs `migrate` first);
+  `curl https://crm-staging.auravox.nl/readyz` → 200.
+- **Roll back code:** `sudo docker tag crm-app:<previous> crm-app:staging`
+  and `$C up -d --wait app worker`.
+- **Backup and restore drill:** `sudo .venv/bin/python
+  deploy/staging/backup_drill.py` (a project environment in `.venv`, made
+  with uv). Backups stay on this host only (no bucket yet).
+- **Test accounts:** disposable users and their passwords are in
+  `.local/test-users.env`; never reuse them anywhere else.
 
 ## 2. Deploying a new version
 

@@ -471,6 +471,35 @@ approval), **Superseded**.
 - **Tests:** `tests/integration/test_bulk_actions.py` (4),
   `frontend/src/records/records.test.tsx` (2 new).
 
+## D-STG.5 — Staging on one OVHcloud VPS (2026-11-08)
+
+- **Status:** Approved by the owner, 2026-11-08 ("i confirm 1, 3 and 5";
+  hostname: "i will use a temporary domain name", `auravox.nl`). Resolves
+  brief H for staging only; production hosting stays open.
+- **What:**
+  1. Staging runs on the owner's OVHcloud VPS (Debian 13, 6 vCPU, 11 GiB,
+     99 GB) at `https://crm-staging.auravox.nl`, an A record set to DNS
+     only in Cloudflare, so Caddy gets its own Let's Encrypt certificate and
+     the app sees real client addresses (finding L4).
+  2. Everything on that host: app, worker, Caddy, ZITADEL and its login,
+     the egress proxy and resolver, and **PostgreSQL and Redis in
+     containers** (`stateful-local` profile, TLS from the stack's own CA),
+     instead of the brief's managed services. One machine is a single point
+     of failure: acceptable for staging, not for production.
+  3. The image is built on the VPS from a pinned commit, cloned with a
+     read-only GitHub deploy key; nothing is pushed to a registry.
+  4. The voice PBX may later share the host; LeadStack uses only ports 80
+     and 443 and leaves room for it.
+- **Repository changes:** host mode for the staging stack
+  (`prepare_local.py --host`, `compose.host.yaml`, `edge/site-host.caddy`,
+  `identity_local.py --origin`, `ZITADEL_STAGING_ISSUER`), log rotation and
+  labels, restart fixes, image security updates (commits `a3685cd` to
+  `bb90ab8`).
+- **Open (owner):** an off-host backup copy (bucket), a monitoring service
+  for the heartbeat, memory limits once the PBX is planned, and every item
+  in `STAGING-ACCEPTANCE-REPORT.md` §5.
+- **Evidence:** `STAGING-ACCEPTANCE-REPORT.md` and its four companions.
+
 ## D-STG.4 — Settings template and staging runbook (2026-11-07)
 
 - **Status:** Done under the autonomous mandate (the owner: "Procees there

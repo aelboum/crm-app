@@ -11,7 +11,7 @@ off). Costs are indicative orders of magnitude, not quotes.
 | # | Decision | Blocks | Urgency |
 | --- | --- | --- | --- |
 | 1 | Public submissions that match an existing contact (brief 8) | **Approved 2026-11-02 and implemented (DECISIONS P7-V)** | Done |
-| H | Hosting and first staging deployment (`DECISION-BRIEF-HOSTING.md`, 2026-11-07) | Every deployment, so every real user, email activation and signup | **Highest: nothing is deployed.** Recommendation: Scaleway Paris, Compose host + managed PostgreSQL and Redis; staging ≈ €77/month |
+| H | Hosting and first staging deployment (`DECISION-BRIEF-HOSTING.md`, 2026-11-07) | Every deployment, so every real user, email activation and signup | **Staging decided 2026-11-08 (DECISIONS D-STG.5):** one OVHcloud VPS, databases in containers, `crm-staging.auravox.nl`; deployed and audited (`STAGING-ACCEPTANCE-REPORT.md`). **Production hosting still open** (the brief's recommendation stands: managed PostgreSQL and Redis) |
 | 2 | Parent email domain and production activation (brief 6) | All real email: confirmations, reminders, replies | High: the product's core channel |
 | 3 | SaaS-OS GET support for inbound email (brief 1) | Inbound email content | High: needs an upstream release first. Proposal submitted upstream 2026-11-03: aelboum/saas-os#205 (`SAAS-OS-GET-PROPOSAL.md`); shipped upstream as `StrictEgressClient.get` in SaaS-OS v0.10.0, now pinned (K3.9); the receiving client is not built and inbound stays unauthorized |
 | 4 | Role-upgrade execution (brief 7) | New features for workspaces created before them | Medium: only when such workspaces exist. Test-database dry-run report for review: `ROLE-UPGRADE-DRY-RUN-REPORT.md` |
