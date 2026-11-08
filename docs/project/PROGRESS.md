@@ -1359,7 +1359,9 @@ a real delivery through the egress proxy.
 | --- | --- |
 | Frontend typecheck, lint, build; full suite `--maxWorkers=6` | clean; 358 passed (new: the switch, My day's titles and subline, business cards left out, each card asks with `assignee=me`, `host=me`, `assigned=mine`, `owner=me`, the choice remembered; axe clean) |
 
-No backend change. Not verified yet: a browser pass on staging.
+| Staging (`7b48676`), browser at 1280 px, workspace "Staging Alpha" | the switch shows beside the greeting; My day shows the subline, "My appointments today", "My tasks due today", "My conversations" and the attention strip; the business cards are hidden; switching back restores them |
+
+No backend change. Not verified: phone widths in a browser.
 
 ## Home setup checklist and 30-day tile changes (decision P4-S, 2026-11-08)
 
