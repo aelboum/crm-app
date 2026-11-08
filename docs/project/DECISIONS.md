@@ -471,6 +471,29 @@ approval), **Superseded**.
 - **Tests:** `tests/integration/test_bulk_actions.py` (4),
   `frontend/src/records/records.test.tsx` (2 new).
 
+## D-STG.6 — Caddy, Unbound and Squid images refreshed (2026-11-08)
+
+- **Status:** Done on the owner's instruction, 2026-11-08 ("update Caddy,
+  Unbound and Squid images"), after staging finding S-6.
+- **What:** pinned by digest, chosen by Trivy scans on the staging VPS
+  (HIGH/CRITICAL with a fix available):
+  - Caddy 2.11.4 → **2.11.9** (staging and local): 1 critical + 31 high →
+    1 high (`golang.org/x/net` inside Caddy's binary; waits for Caddy).
+  - Unbound `latest` → **`latest-x86_64`**: the multi-arch tag still
+    pointed at the old build (4 high); the per-architecture build is clean.
+    It runs on amd64 hosts only.
+  - Squid 6.6 (Ubuntu 24.04) → **7.2 (Ubuntu 26.04)**: 6 high → 0. A major
+    version: the configuration parses unchanged; the image now runs as a
+    non-root user (`_daemon_`, uid 584792), so its tmpfs directories
+    belong to that user, and it has no `bash`, so the health check opens
+    the port with Perl's core `IO::Socket::INET`.
+- **Verified on staging:** every service healthy; the worker's egress
+  unchanged (public IPv4 on 443 allowed; port 80, host names, private,
+  loopback and metadata addresses 403; no direct route out); the resolver
+  answers; the edge serves the same headers, redirect and certificate.
+  The worker was down about four minutes while Squid 7's user and health
+  check were fixed.
+
 ## ZIT-1 — ZITADEL v4.20.1 and LeadStack's login build on staging (2026-11-08)
 
 - **Status:** Approved by the owner, 2026-11-08 ("approve the ZITADEL

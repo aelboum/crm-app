@@ -182,7 +182,7 @@ services:
 
   edge:
     logging: *logging
-    image: caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
+    image: caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
     ports:
       - "127.0.0.1:8443:8443"
     volumes:
@@ -331,7 +331,9 @@ services:
 
   egress-proxy:
     logging: *logging
-    image: ubuntu/squid:6.6-24.04_edge@sha256:8a3baed477e2c282ab8aa5edad442f69873246964f225c5c2ae8364b6610963c
+    # Squid 7.2 on Ubuntu 26.04 (decision D-STG.6): 6.6 had six fixable
+    # HIGH advisories and no newer build.
+    image: ubuntu/squid:7.2-26.04_edge@sha256:041c64dd14c81548023c9532e4c2fac487e9a3f9f490913b50547d2974722025
     volumes:
       - ./egress/squid.conf:/etc/squid/squid.conf:ro
     # Squid sizes a table from the open-file limit; where Docker leaves it
@@ -341,20 +343,24 @@ services:
         soft: 65536
         hard: 65536
     tmpfs:
-      - /var/log/squid:uid=13,gid=13
-      - /var/spool/squid:uid=13,gid=13
+      # Squid 7's image runs as its non-root `_daemon_` user (uid 584792).
+      - /var/log/squid:uid=584792,gid=584792
+      - /var/spool/squid:uid=584792,gid=584792
     networks: [internal, egress]
     restart: unless-stopped
     healthcheck:
-      # bash, not sh: the image's /bin/sh (dash) has no /dev/tcp.
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3128"]
+      # Squid 7's image has no bash and its sh (dash) has no /dev/tcp: Perl's
+      # core IO::Socket::INET opens the port instead.
+      test: ["CMD", "perl", "-MIO::Socket::INET", "-e", "exit(IO::Socket::INET->new(PeerAddr => q{127.0.0.1:3128}, Timeout => 3) ? 0 : 1)"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   dns-resolver:
     logging: *logging
-    image: alpinelinux/unbound:latest@sha256:cd8dcbcaa7b6f223fe154be07f17c13006149be7f56d50c5664f46181e8d5e1b
+    # The x86_64 build (decision D-STG.6): the multi-arch `latest` lagged
+    # with four fixable HIGH advisories; amd64 hosts only.
+    image: alpinelinux/unbound:latest-x86_64@sha256:b19e62eaaa9210de08a600ca2e22f58bc124f87073ffb941ac75b5cde0a23949
     volumes:
       - ./egress/unbound.conf:/etc/unbound/unbound.conf:ro
     networks:

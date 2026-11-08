@@ -33,7 +33,7 @@ D-STG.5).
 | Image | Built on the VPS from the pinned commit (`crm-app:<commit>`, also `crm-app:staging`); no registry, nothing published | SaaS-OS `direct_url.json`: commit `0f9bf4d67e13aff284af9f30505b7f256ea49801`, v0.10.0, equal to the approved pin |
 | Secrets | `prepare_local.py --host crm-staging.auravox.nl --days 365 --public-ca /etc/ssl/certs/ca-certificates.crt`, run on the VPS inside the image; `.local/` mode 0700, env files and keys 0600 | `ls -la`; no secret printed or copied off the host |
 | Stack | `compose.yaml` + `compose.host.yaml`, profile `stateful-local` (PostgreSQL 16 and Redis 7 in containers, TLS from the stack's own CA) | `docker compose ps`: every service healthy |
-| Edge | Caddy 2.11.4, Let's Encrypt via HTTP-01, HSTS, HTTP→HTTPS 301 | certificate CN `crm-staging.auravox.nl`, issuer Let's Encrypt YE1, valid to 2027-02-06 |
+| Edge | Caddy 2.11.9 (2.11.4 at first; D-STG.6), Let's Encrypt via HTTP-01, HSTS, HTTP→HTTPS 301 | certificate CN `crm-staging.auravox.nl`, issuer Let's Encrypt YE1, valid to 2027-02-06 |
 | Identity | ZITADEL v4.19.5 + Login V2 on the app's origin; OIDC application created by `identity_local.py --origin … --no-restart` | discovery `issuer` = `https://crm-staging.auravox.nl`; browser sign-in works |
 | Timers | `deploy/staging/systemd/` installed (all but the heartbeat); `/opt/leadstack` → checkout, `deploy/staging/.env` → `.local/compose.env` | `systemctl list-timers`; `automation_maintenance` ran: "queued 0, queue unreachable 0" |
 | Host hardening | `X11Forwarding no` (`/etc/ssh/sshd_config.d/60-leadstack.conf`); LLMNR and mDNS off (`/etc/systemd/resolved.conf.d/60-leadstack.conf`); ufw allows 80/tcp and 443/tcp | `sshd -T`; port 5355 no longer listening |

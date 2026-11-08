@@ -49,7 +49,7 @@ are shared across the staging reports.
   CRITICAL; deployed. **Owner decision:** no. **Follow-up:** add an image
   scan to CI (proposed, not done).
 
-### S-6 High — Fixable HIGH and CRITICAL advisories in third-party images (partly fixed)
+### S-6 High — Fixable HIGH and CRITICAL advisories in third-party images (fixed where a release exists)
 - **Evidence:** Trivy, HIGH/CRITICAL with a fix: Caddy 2.11.4 (1 critical,
   31 high across its layers), ZITADEL v4.19.5 (1 critical, 25 high),
   ZITADEL Login v4.19.5 (2 critical, 13 high), Unbound (4 high), Squid
@@ -64,8 +64,10 @@ are shared across the staging reports.
 - **Update, same day (decision ZIT-1):** ZITADEL and the login moved to
   v4.20.1; staging runs LeadStack's login build. Server 26 → 12 findings,
   mostly false matches; the real remainder (`go-jose`, `golang.org/x/net`)
-  waits for a ZITADEL release. Caddy, Unbound and Squid remain open for a
-  dependency slice.
+  waits for a ZITADEL release.
+- **Update (decision D-STG.6):** Caddy 2.11.9 (1 high left, inside its
+  binary), Unbound `latest-x86_64` (clean), Squid 7.2 (clean). What remains
+  in Caddy and ZITADEL needs their next releases.
 
 ### S-7 Medium — Signing out leaves the ZITADEL session alive (fixed, decision ZIT-1)
 - **Evidence:** after "Sign out", ZITADEL's page asks to choose the
