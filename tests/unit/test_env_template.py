@@ -96,3 +96,19 @@ def test_every_email_switch_and_signup_is_off() -> None:
     assert len(switches) == 5
     assert all(template[name][0] == "false" for name in switches)
     assert template["SIGNUP_ENABLED"][0] == "false"
+
+
+def test_every_setting_a_host_writes_is_named() -> None:
+    """Decision D-STG.5: `prepare_local.py --host` adds log labels and turns
+    the stdout trace exporter off; each name is in the template."""
+    files = _prepare_local()._files(
+        dict.fromkeys(_PASSWORDS, "x"), "https://crm-staging.example.nl", "crm-staging.example.nl"
+    )
+    names = {
+        line.split("=", 1)[0]
+        for line in files["app.env"].splitlines()
+        if "=" in line and not line.startswith("#")
+    }
+    assert {"DEPLOYMENT_ID", "OBSERVABILITY_EXPORTER"} <= names
+    assert names - set(_template()) == set()
+    assert "OBSERVABILITY_EXPORTER=none" in files["app.env"]

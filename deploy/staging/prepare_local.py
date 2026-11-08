@@ -188,6 +188,14 @@ def _files(
         "FIELD_ENCRYPTION_ACTIVE_KEY_VERSION=v1",
         "FIELD_ENCRYPTION_KEY_V1=" + passwords["field_key"],
     ]
+    if host is not None:
+        # A real host (D-STG.5): log labels, and no trace spans on stdout
+        # (no exporter is approved; they would only fill the logs).
+        app += [
+            "DEPLOYMENT_ID=staging",
+            "OBSERVABILITY_SERVICE_NAME=crm-app",
+            "OBSERVABILITY_EXPORTER=none",
+        ]
     migrate = [
         f"MIGRATIONS_DATABASE_URL=postgresql+psycopg://crm_app_owner:{owner}@postgres:5432/crm_app?{tls}",
     ]
