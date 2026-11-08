@@ -484,8 +484,8 @@ function FunnelCard({
                   <li key={step.key} className="report-funnel-step">
                     <span
                       className={`report-funnel-bar step-${String(index)}`}
-                      // At least wide enough for its label.
-                      style={{ width: `${String(Math.max(share, 34))}%` }}
+                      // CSS keeps it at least as wide as its label and number.
+                      style={{ width: `${String(share)}%` }}
                     >
                       <span>{t(step.label)}</span>
                       <span className="report-funnel-value">
