@@ -42,8 +42,13 @@ RUN uv sync --locked --no-dev --no-editable \
 # --- Runtime -------------------------------------------------------------------------
 FROM python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
 # pip is never used at run time (SaaS-OS removes it for the same reason: its
-# vendored copies show up in image scans).
-RUN pip uninstall --yes pip \
+# vendored copies show up in image scans). Debian's security updates are
+# applied first: the pinned base can lag them (staging scan, 2026-11-08:
+# zlib1g CVE-2026-85091 and CVE-2026-76844, fixed in deb13u1).
+RUN apt-get update \
+    && apt-get upgrade --yes --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip uninstall --yes pip \
     && rm -rf /usr/local/lib/python3.13/ensurepip \
     && groupadd --system app \
     && useradd --system --gid app --home /app app
