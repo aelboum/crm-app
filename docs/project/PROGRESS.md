@@ -1363,7 +1363,9 @@ a real delivery through the egress proxy.
 | Ruff format and lint, pyright, secret scan | clean |
 | Frontend typecheck, lint, build; full suite `--maxWorkers=6` | clean; 354 passed (new: funnel steps and shares, empty and refused funnel; Home trend, sources, conversations, attention counts, Inbox opened on "without an owner", refused trend; axe clean) |
 
-Not verified: a browser pass over the new cards; trend figures across a
+| Staging (`crm-staging.auravox.nl`, `283a8c7`, then `8d3e125`), browser at 1280 px, workspace "Staging Alpha" | Home: unread and unowned conversation items, 12-week trend, sources (Manual 100%), recent conversations; "without an owner" opens the Inbox on Unassigned; Reports funnel 6 / 0 / 1 / 1. Found and fixed (`8d3e125`): the 34% bar floor cut "Booked an appointment" short; bars now fit their label |
+
+Not verified: phone widths in a browser; trend figures across a
 daylight-saving change (the integration test avoids week edges).
 
 ## Staging deployed and audited (decision D-STG.5, 2026-11-08)
