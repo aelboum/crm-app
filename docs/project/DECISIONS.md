@@ -340,6 +340,29 @@ approval), **Superseded**.
   `saas-os-migrate` cannot run against a database at the new head
   (`Can't locate revision`); recreate local and test databases instead.
 
+## P6-CX — The Inbox's contact panel (2026-11-08)
+
+- **Status:** Done under the autonomous mandate (the owner: "proceed",
+  2026-11-08). Design: `ScreenConversations.dc.html`, "Contact details"
+  (open by default, a toggle in the thread header, shown only on wide
+  screens).
+- **What:** beside the thread, the conversation's contact: name, job title
+  and company (or city), lifecycle stage, "View full record", email,
+  phone, city and owner, the contact's deals, upcoming appointments and
+  tags. Frontend only: it reads the routes the contact drawer reads
+  (`GET /contacts/{id}`, the contact's deals, upcoming appointments), so
+  each part shows only what the member may read and refusals show the
+  usual states. The deals and appointments parts are the drawer's own
+  sections, with their "New opportunity" and "New appointment" for
+  members who may create them.
+- **Differences from the design:** no lead score (the product has none);
+  the design's custom facts (office, insurance) are not shown, custom
+  fields stay in the full record; the panel appears from 1280 px wide, as
+  in the design, with a narrower list then so the thread keeps room; below
+  that the contact link in the header opens the record. No new API.
+- **Tests:** `frontend/src/records/inbox.test.tsx` (2: the panel's
+  contents, opening a deal, hiding and showing it, "View full record").
+
 ## P12-N — Integrations shown by name (2026-11-08)
 
 - **Status:** Done under the autonomous mandate (the owner: "proceed",

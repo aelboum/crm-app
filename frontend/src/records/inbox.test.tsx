@@ -22,6 +22,7 @@ const ME = "aaaaaaaa-0000-4000-8000-000000000001";
 const CONV = "c1000000-0000-4000-8000-000000000001";
 const CONTACT = "c0000000-0000-4000-8000-000000000001";
 const OLDER = "c1000000-0000-4000-8000-000000000002";
+const DEAL = "f0000000-0000-4000-8000-000000000001";
 const stamp = "2026-11-01T09:30:00+00:00";
 const REVIEW = {
   id: "r1000000-0000-4000-8000-000000000001",
@@ -157,6 +158,73 @@ function workspace(
     }
     if (path === `${base}/conversations/${CONV}`)
       return { status: 200, body: thread() };
+    // The contact panel (P6-CX) reads the contact, its deals and appointments.
+    if (path === `${base}/contacts/${CONTACT}`) {
+      return {
+        status: 200,
+        body: {
+          id: CONTACT,
+          first_name: "Ada",
+          last_name: "Lovelace",
+          email: "ada@example.test",
+          phone: "+44 20 7946 0000",
+          job_title: "Engineer",
+          city: "London",
+          lifecycle_stage: "lead",
+          source: "manual",
+          company_id: null,
+          company: null,
+          owner_user_id: ME,
+          created_at: stamp,
+          updated_at: stamp,
+          created_by_user_id: ME,
+          updated_by_user_id: ME,
+          version: 1,
+          archived_at: null,
+          tags: [{ id: "t1", name: "VIP" }],
+          custom_fields: {},
+        },
+      };
+    }
+    if (path.startsWith(`${base}/opportunities?`)) {
+      return {
+        status: 200,
+        body: {
+          items: [
+            {
+              id: DEAL,
+              title: "Analytical engine",
+              amount: "900.00",
+              currency: "EUR",
+              weighted_amount: "180.00",
+              pipeline_id: "p1",
+              stage_id: "s1",
+              stage: { id: "s1", name: "Qualified", probability: 20, position: 0 },
+              stage_entered_at: stamp,
+              owner_user_id: ME,
+              expected_close_date: null,
+              contact_id: CONTACT,
+              contact: { id: CONTACT, name: "Ada Lovelace", archived: false },
+              company_id: null,
+              company: null,
+              outcome: "open",
+              lost_reason: null,
+              closed_at: null,
+              created_at: stamp,
+              updated_at: stamp,
+              created_by_user_id: ME,
+              updated_by_user_id: ME,
+              version: 1,
+            },
+          ],
+          next_cursor: null,
+          total: 1,
+          total_capped: false,
+        },
+      };
+    }
+    if (path.startsWith(`${base}/appointments/upcoming`))
+      return { status: 200, body: { items: [] } };
     if (path === `${base}/conversation-reviews`)
       return { status: 200, body: { items: reply ? [REVIEW] : [] } };
     return undefined;
@@ -172,6 +240,51 @@ async function openThread(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("inbox", () => {
+  it("shows the contact panel beside the thread, linking to the record and deals", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(`/w/${WS}/inbox`, workspace(true));
+    await openThread(user);
+    const panel = await screen.findByRole("complementary", {
+      name: "Contact details",
+    });
+    expect(await within(panel).findByText("Ada Lovelace")).toBeInTheDocument();
+    expect(within(panel).getByText("ada@example.test")).toBeInTheDocument();
+    expect(within(panel).getByText("VIP")).toBeInTheDocument();
+    const deal = await within(panel).findByRole("button", {
+      name: /Analytical engine/,
+    });
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(deal);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/w/${WS}/opportunities`);
+    });
+    expect(router.state.location.search).toEqual({ record: DEAL });
+  });
+
+  it("hides and shows the contact panel from the thread header", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(`/w/${WS}/inbox`, workspace(true));
+    const pane = await openThread(user);
+    const toggle = await within(pane).findByRole("button", {
+      name: "Contact details",
+    });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("complementary", { name: "Contact details" })).toBeNull();
+    await user.click(toggle);
+    const panel = await screen.findByRole("complementary", {
+      name: "Contact details",
+    });
+    await user.click(
+      await within(panel).findByRole("button", { name: /View full record/ }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/w/${WS}/contacts`);
+    });
+    expect(router.state.location.search).toEqual({ record: CONTACT });
+  });
+
   it("lists conversations with unread state and marks one read when opened", async () => {
     const user = userEvent.setup();
     const { sent } = renderApp(`/w/${WS}/inbox`, workspace(true));

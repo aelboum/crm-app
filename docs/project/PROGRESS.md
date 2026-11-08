@@ -1353,6 +1353,17 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## The Inbox's contact panel (decision P6-CX, 2026-11-08)
+
+| Check | Result |
+| --- | --- |
+| Frontend `inbox.test.tsx` | 15 passed (new: the panel shows the contact, email, tag and deal, a deal opens on Opportunities, the toggle hides and shows it, "View full record" opens the contact; axe clean) |
+| Frontend typecheck, lint; full suite `--maxWorkers=6` | clean; 348 passed |
+| Browser, 1280 px (local stack, workspace "E2E Inbox 6C") | the panel shows beside the thread; the list and its filters fit after narrowing them; the toggle hides it and the thread widens |
+
+Not verified: widths below 1280 px in a browser (the window cannot be
+resized); there the panel and its toggle are hidden by CSS.
+
 ## Integrations shown by name (decision P12-N, 2026-11-08)
 
 | Check | Result |

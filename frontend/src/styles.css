@@ -1485,6 +1485,22 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .inbox-with { margin: 2px 0 0; font-size: 12.5px; overflow-wrap: anywhere; }
 .inbox-contact-link { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); text-decoration: underline; cursor: pointer; }
 .inbox-back { display: none; }
+/* The contact panel (P6-CX): a third column on wide screens only, as the
+   design hides it below 1280 px; the contact link stays in the header. */
+.inbox-context, .inbox-context-toggle { display: none; }
+.inbox-context-toggle { width: 30px; padding: 0; justify-content: center; }
+.inbox-context-toggle[aria-pressed="true"] { background: var(--chip); }
+.inbox-context-body { display: flex; flex-direction: column; gap: 16px; padding: 14px; }
+.inbox-context .field-row { grid-template-columns: 64px 1fr; }
+.inbox-context-identity { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+@media (min-width: 1280px) {
+  .inbox-context-toggle { display: inline-flex; }
+  /* Narrower list and panel so the thread keeps room at 1280 px. */
+  .has-context .inbox { grid-template-columns: 250px minmax(0, 1fr) 270px; }
+  .has-context .inbox-assigned { flex-basis: 100%; }
+  .has-context .inbox-search { width: auto; }
+  .has-context .inbox-context { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-surface); min-width: 0; overflow-y: auto; }
+}
 .inbox-thread-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .inbox-assignee { width: auto; max-width: 220px; }
 .inbox-messages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

@@ -211,6 +211,18 @@ function SectionPage() {
         onCreateDone={() => {
           void navigate({ search: record ? { record } : {}, replace: true });
         }}
+        onOpenDeal={(id) => {
+          void navigate({
+            params: { workspaceId, section: "opportunities" },
+            search: { record: id },
+          });
+        }}
+        onOpenAppointment={(id) => {
+          void navigate({
+            params: { workspaceId, section: "calendar" },
+            search: { record: id },
+          });
+        }}
         onOpenContact={(id) => {
           void navigate({
             params: { workspaceId, section: "contacts" },

@@ -1,5 +1,6 @@
-import { ArrowLeft, Plus, Search } from "lucide-react";
+import { ArrowLeft, PanelRight, Plus, Search } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
+import { Button as AriaButton } from "react-aria-components";
 import { useIntl } from "react-intl";
 
 import { ApiError } from "../api/client";
@@ -33,6 +34,7 @@ import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { type MemberNames, useMemberNames } from "../members/names";
 import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
+import { ContactContext } from "./ContactContext";
 import { TemplatePicker } from "./EmailTemplates";
 import { type Option, ownerLabel, ownerOptions } from "./parts";
 import { useDebounced } from "./useDebounced";
@@ -89,6 +91,8 @@ export function InboxPage({
   workspaceId,
   openId = null,
   onOpenContact,
+  onOpenDeal = () => undefined,
+  onOpenAppointment = () => undefined,
   startCreate = false,
   onCreateDone = () => undefined,
 }: {
@@ -96,6 +100,10 @@ export function InboxPage({
   /** A conversation to open first (`?record=`), e.g. from a contact's drawer. */
   openId?: string | null;
   onOpenContact: (id: string) => void;
+  /** From the contact panel: a deal on the Opportunities page. */
+  onOpenDeal?: (id: string) => void;
+  /** From the contact panel: an appointment in the Calendar. */
+  onOpenAppointment?: (id: string) => void;
   /** Open a new conversation (`?create=conversation`, "+ New"), if the caller may. */
   startCreate?: boolean;
   /** Called when that dialog closes, to clear the request. */
@@ -120,6 +128,10 @@ export function InboxPage({
   const q = useDebounced(search.trim());
   const [selected, setSelected] = useState<string | null>(openId);
   const [composing, setComposing] = useState(false);
+  // The contact panel (P6-CX) starts open, as in the design; wide screens only.
+  const [showContext, setShowContext] = useState(true);
+  const current = useConversation(workspaceId, selected);
+  const contextId = current.data?.contact_id ?? null;
   const list = useConversations(workspaceId, { ...filter, q });
   const markRead = useMarkRead(workspaceId);
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
@@ -130,7 +142,11 @@ export function InboxPage({
   };
 
   return (
-    <div className={`records-page inbox-page${selected ? " has-thread" : ""}`}>
+    <div
+      className={`records-page inbox-page${selected ? " has-thread" : ""}${
+        selected && contextId && showContext ? " has-context" : ""
+      }`}
+    >
       <div className="records-head">
         <div className="records-head-text">
           <h1 className="records-title">{t("nav.inbox")}</h1>
@@ -294,11 +310,32 @@ export function InboxPage({
                 setSelected(null);
               }}
               onOpenContact={onOpenContact}
+              contextShown={showContext}
+              onToggleContext={() => {
+                setShowContext((shown) => !shown);
+              }}
             />
           ) : (
             <p className="muted inbox-pick">{t("inbox.pick")}</p>
           )}
         </section>
+        {selected && contextId && showContext ? (
+          <aside
+            className="inbox-context"
+            id="inbox-context"
+            aria-label={t("inbox.context.label")}
+          >
+            <ContactContext
+              key={contextId}
+              workspaceId={workspaceId}
+              contactId={contextId}
+              meId={meId}
+              onOpenContact={onOpenContact}
+              onOpenDeal={onOpenDeal}
+              onOpenAppointment={onOpenAppointment}
+            />
+          </aside>
+        ) : null}
       </div>
       {composing || (startCreate && canReply) ? (
         <NewConversationDialog
@@ -428,6 +465,8 @@ function Thread({
   meId,
   onBack,
   onOpenContact,
+  contextShown,
+  onToggleContext,
 }: {
   workspaceId: string;
   id: string;
@@ -436,6 +475,8 @@ function Thread({
   meId: string | undefined;
   onBack: () => void;
   onOpenContact: (id: string) => void;
+  contextShown: boolean;
+  onToggleContext: () => void;
 }) {
   const t = useT();
   const names = useMemberNames();
@@ -475,7 +516,10 @@ function Thread({
   const assignee = item.assignee_user_id ?? "";
   const choices =
     assignee && !people.some((p) => p.id === assignee)
-      ? [...people, { id: assignee, label: ownerLabel(t, assignee, meId, names) }]
+      ? [
+          ...people,
+          { id: assignee, label: ownerLabel(t, assignee, meId, names) },
+        ]
       : people;
   const contactId = item.contact_id;
   return (
@@ -513,6 +557,17 @@ function Thread({
         <Badge tone={item.status === "open" ? "accent" : "neutral"}>
           {t(`inbox.status.${item.status}`)}
         </Badge>
+        {contactId ? (
+          <AriaButton
+            className="btn btn-secondary btn-sm inbox-context-toggle"
+            aria-pressed={contextShown}
+            {...(contextShown ? { "aria-controls": "inbox-context" } : {})}
+            aria-label={t("inbox.context.toggle")}
+            onPress={onToggleContext}
+          >
+            <PanelRight size={15} aria-hidden="true" />
+          </AriaButton>
+        ) : null}
       </div>
       {canReply ? (
         <div className="inbox-thread-actions">
