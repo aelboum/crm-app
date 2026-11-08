@@ -381,6 +381,10 @@ networks:
     ipam:
       config:
         - subnet: 172.31.54.0/28
+          # Dynamic addresses (the worker's) come from .8 to .15 only, so
+          # the resolver's fixed .2 is free when Docker starts both at once
+          # after a reboot (D-STG.5: it was taken, the resolver failed).
+          ip_range: 172.31.54.8/29
 
 volumes:
   postgres-data:
