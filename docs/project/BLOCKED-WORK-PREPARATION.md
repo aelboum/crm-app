@@ -10,6 +10,12 @@ must make. Facts about SaaS-OS were read from the installed v0.6.0 package
 
 ## 1. AI assistants and knowledge (Phase 9)
 
+**Update 2026-11-09 (decision P9-P):** the owner chose the provider
+direction (Groq first, Zero Data Retention, no training, provider
+independence through SaaS-OS). The verified v0.10.0 mapping and the
+missing pieces (gaps 20 to 22) are in P9-P; the text below is the
+original v0.6.0 analysis.
+
 **What SaaS-OS v0.6.0 provides (verified):** `saas_os.inference` with
 `run_inference(caller, tenant_id=…, request=InferenceRequest)` (governed,
 non-streaming; `stream_inference` is not enabled), `register_use_case` /

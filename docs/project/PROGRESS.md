@@ -1353,6 +1353,28 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## AI provider decision and contact-brief groundwork (decision P9-P, 2026-11-09)
+
+The owner chose Groq first, under Zero Data Retention, with no training and
+pay-as-you-go billing, and made provider independence mandatory. SaaS-OS
+v0.10.0's governed inference was inspected and meets the architecture
+(details in P9-P). Three gaps are recorded, not filed: 20, no supported way
+to turn AI on for a workspace (blocking); 21, no money limit; 22, no tenant
+usage read. Brief 2, the register, `BLOCKED-WORK-PREPARATION.md` section 1
+and the roadmap's Phase 9 status are updated.
+
+Built: `crm_app.domains.ai_brief` (the allowlist of facts and the data
+part) and `crm_app.ai` (use-case definition, request, outcome states).
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/unit` | 803 passed (new: `test_ai_brief.py`, 11 in-process; `test_ai_states.py`, a SaaS-OS probe in a fresh interpreter with a stub in place of `run_inference`) |
+| ruff check and format, pyright, lint-imports, secret scan | clean; 2 contracts kept |
+
+Not done: no route, permission or start-up registration; nothing reads a
+contact's facts from the database yet; no provider is configured anywhere,
+and no request has been sent to any provider.
+
 ## Phone-width pass on staging (2026-11-08)
 
 Browser window at 400 CSS px (Chrome's narrowest), staging `ad247c2`,

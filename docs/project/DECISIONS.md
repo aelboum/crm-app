@@ -3285,6 +3285,128 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Not decided here:** assistants with tools, knowledge ingestion and
   retrieval, conversation summaries (they wait for 6.1).
 
+## P9-P — AI provider and provider independence (owner, 2026-11-09)
+
+- **Status:** Owner decision, recorded 2026-11-09. Supersedes brief 2's
+  recommendation where they differ. No production AI activation follows
+  from it (restriction 5 below).
+- **Provider (owner):**
+  1. Groq as the initial low-cost provider, *subject to* verifying its
+     business terms, DPA and EU data-transfer safeguards.
+  2. Evaluate `openai/gpt-oss-20b` as the initial model.
+  3. Zero Data Retention enabled before any CRM information is processed.
+  4. No provider may use LeadStack customer data for model training.
+  5. Pay-as-you-go billing; no minimum monthly spend and no enterprise
+     contract without the owner's approval.
+- **Provider independence is mandatory (owner).** A common internal AI
+  interface, separate provider adapters, an administrator-managed provider
+  and model catalogue, OpenAI-compatible and native APIs, providers added,
+  configured, disabled and replaced without rewriting CRM features,
+  per-workspace provider and model choice from approved providers,
+  server-side key storage never exposed to the frontend, per-workspace
+  metering, quotas and spending limits, provider-specific retention and
+  data-processing settings, and no arbitrary endpoints or SSRF through
+  provider configuration.
+- **Operating restrictions (owner):**
+  1. AI disabled by default in every workspace.
+  2. Suggestions only; AI cannot execute actions on its own.
+  3. No contact details or message contents sent unless separately approved.
+  4. No provider account, purchase or paid usage without the owner's
+     authorization.
+  5. No production AI activation until the data-processing requirements and
+     the remaining owner decisions are approved.
+- **How the architecture is met (verified in the pinned SaaS-OS v0.10.0,
+  2026-11-09).** SaaS-OS's governed inference is the provider-independent
+  layer; LeadStack consumes it and builds no provider code of its own,
+  because a product-side adapter, catalogue or key store would be a parallel
+  platform implementation (CLAUDE.md section 3):
+  - *Common interface:* `saas_os.inference.run_inference` with a
+    registered `UseCase`; LeadStack names an operator alias (first:
+    `crm-suggest`), never a provider or model, so a provider is replaced by
+    repointing the alias.
+  - *Adapters:* `openai_chat_completions` (any OpenAI-compatible endpoint;
+    Groq's is one), `anthropic_messages` and `gemini_generate_content`
+    (native), selected by the provider's protocol.
+  - *Catalogue:* providers, models (capabilities, output and context
+    limits, lifecycle active, deprecated or disabled), aliases with ordered
+    candidates, prices per model, and provider status active or disabled,
+    managed with `saas-os-operator ai-*` under platform permissions
+    `platform.ai_*`.
+  - *Keys:* a provider row stores only a secret *name*; the value comes from
+    the deployment's secret store (`saas_os.infra.secrets`), and only names
+    listed in `AI_PROVIDER_CREDENTIALS` are eligible. The key is never in the
+    database, the browser, a log or a response. Its protection at rest is the
+    secret store's (on staging, a root-only environment file); choosing the
+    production secret store is still open.
+  - *Endpoints and SSRF:* provider calls go through SaaS-OS's strict egress
+    policy; a private or internal host needs an explicit trust entry for an
+    exact host and port that expires; a credential is bound to its endpoint,
+    so changing a provider's base URL needs the binding confirmed again.
+  - *Retention and training:* each provider declares residency,
+    `retention_days` and `training_use`; each workspace's preferences
+    (allowed residency, maximum retention, exclude training) are matched
+    before routing, and a provider that declares nothing fails every
+    requirement that is set. LeadStack's setting for every workspace will be
+    `exclude_training_use = true` and a maximum retention of 0 days, so only
+    a provider declared with Zero Data Retention and no training can serve.
+  - *Data authorization:* the installation allows a provider per
+    classification (`none`, `tenant_data`, `sensitive`); the workspace must
+    grant the use case, the classification and the destination model.
+  - *Metering and quota:* every attempt is recorded before sending, with
+    tokens and an estimated cost from the model's price; a monthly
+    `ai.tokens` entitlement per plan is checked before each call.
+- **Missing in SaaS-OS v0.10.0 (gaps 20 to 22 in `saas-os-gaps.md`,
+  recorded and not filed; filing upstream needs the owner's approval):**
+  1. gap 20, *blocking:* products cannot turn AI on for a workspace, grant
+     a use case or destination, or set its preferences; those functions are
+     internal and nothing in SaaS-OS calls them. Until it closes, every
+     inference is refused, which keeps AI off everywhere;
+  2. gap 21: there is no spending limit in money; the token quota, set from
+     the model's price, is the spending cap meanwhile;
+  3. gap 22: a workspace cannot read its own AI usage.
+- **Data boundary of the first use case (within restriction 3):** the
+  contact brief sends only the contact's lifecycle stage, source, tag names,
+  creation day, the kinds and days of its last 20 history entries, its
+  deals' stage names and outcomes, and counts of open and overdue tasks and
+  upcoming appointments. It never sends names, email addresses, phone
+  numbers, job title, city, company name, notes, message bodies,
+  custom-field values, task or appointment titles, or member names. The
+  allowlist is the `ContactFacts` type in `crm_app.domains.ai_brief`;
+  widening it needs the owner's approval. Tag and stage names are chosen by
+  the workspace and could contain personal data; they are bounded to 60
+  characters and sent as `tenant_data`.
+- **Groq check before any activation (owner, with the operator):**
+  1. business terms and DPA accepted by the owner;
+  2. EU transfer safeguards (Groq processes outside the EU; Standard
+     Contractual Clauses or an equivalent);
+  3. Zero Data Retention enabled on the account and confirmed in writing;
+  4. no training on inputs, confirmed;
+  5. the model's availability and price for `openai/gpt-oss-20b`,
+     recorded with `ai-model-create` and a price row;
+  6. a spend cap on the Groq account itself where it offers one.
+  The provider is then declared with `ai-provider-data-handling`
+  (residency, `retention_days` 0, `training_use` no) exactly as verified.
+  The facts are not invented here.
+- **Built now (independent of the open decisions):** `crm_app.ai` and
+  `crm_app.domains.ai_brief`:
+  - the contact-brief use case (`crm.contact_brief`, ceiling `tenant_data`,
+    text only, two parts, 16 kB);
+  - the allowlisted facts and their bounded JSON data part, with the fixed
+    instructions sent as `none` and the facts as `tenant_data`;
+  - the outcome states: ready, unavailable, quota reached, busy and failed,
+    none of them carrying provider detail.
+  Nothing is stored, logged or sent automatically. No route, permission or
+  start-up registration yet; unit tests use a stub in place of
+  `run_inference`.
+- **Still open (owner):**
+  - the Groq check;
+  - which plans include AI and their token limits;
+  - whether `AI_INFERENCE_TOKEN_QUOTA_REQUIRED` is on;
+  - filing gaps 20 to 22;
+  - the production secret store;
+  - the DPIA;
+  - production activation.
+
 ## P8-B — More automation triggers and actions (2026-11-02, under M1)
 
 - **Status:** Decided and built under M1 (owner, 2026-11-01: "proceed" with

@@ -792,7 +792,7 @@ The UI must not imply that unsupported nodes or actions are executable.
 
 # 14. Phase 9 — AI Assistants and Knowledge
 
-**Status:** Blocked on owner decisions (decision P9-0, 2026-11-01): AI provider and account, plan entitlements and token limits, and which CRM data may be sent. SaaS-OS's governed inference is verified; the first slice (contact brief) is planned.
+**Status:** Provider direction decided (decision P9-P, 2026-11-09): Groq first under Zero Data Retention and no training, provider independence through SaaS-OS's governed inference, AI off by default and suggestions only. Still blocked before activation: Groq's terms, DPA and EU-transfer check, plans and token limits, SaaS-OS gap 20 (no supported way to turn AI on for a workspace), and production approval. The first slice (contact brief) is planned.
 
 **Dependency:** Verified SaaS-OS inference capabilities or an explicitly approved product-side integration strategy.
 

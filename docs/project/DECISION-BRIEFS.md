@@ -17,7 +17,7 @@ off). Costs are indicative orders of magnitude, not quotes.
 | 4 | Role-upgrade execution (brief 7) | New features for workspaces created before them | Medium: only when such workspaces exist. Test-database dry-run report for review: `ROLE-UPGRADE-DRY-RUN-REPORT.md` |
 | 5 | Custom-domain resolver and certificates (brief 4) | Hosted pages on customer domains | Medium |
 | 6 | Agency workspaces and billing (brief 3) | Phase 11, paid plans | Medium: commercial model |
-| 7 | AI provider, plan limits, permitted data (brief 2) | Phase 9 | Lower: no dependency for others |
+| 7 | AI provider, plan limits, permitted data (brief 2) | Phase 9 | **Provider direction decided 2026-11-09 (DECISIONS P9-P):** Groq first, model `openai/gpt-oss-20b` to evaluate, Zero Data Retention, no training, pay as you go, provider independence through SaaS-OS. Open: Groq's terms, DPA and EU-transfer check; plans and token limits; SaaS-OS gaps 20 to 22 (filing needs approval); production activation |
 | 8 | Website tracking and consent (brief 5) | Visit history | Lower: optional feature |
 | 9 | AI voice agents: direction and workstream 15V (brief 9) | Any voice work; nothing else | **Direction approved 2026-11-03 (DECISIONS P15-V)**; K5 unchanged. Open: providers (`VOICE-PROVIDER-COMPARISON.md`), legal review and DPIA (`VOICE-LEGAL-REVIEW.md`), prices (`VOICE-COST-MODEL.md`), SaaS-OS streaming submitted upstream 2026-11-03 as aelboum/saas-os#206 (`SAAS-OS-REALTIME-PROPOSAL.md`). Sandbox accounts and legal counsel not approved yet; cost estimate in `VOICE-ACTIVITY-COSTS.md`. Readiness specification and slices with approval gates: `VOICE-SPEC.md`, `VOICE-UX-SPEC.md`, `VOICE-SLICES.md` (next gate: V0/V1) |
 | — | minimatch audit exception (13-A3) | Nothing; development tools only | Expires 2026-12-31: decide again before then if no fix exists |
@@ -43,26 +43,64 @@ off). Costs are indicative orders of magnitude, not quotes.
 
 ## Brief 2 — AI provider, account, plan limits and permitted CRM data
 
-- **Decision:**
-  - which provider and account SaaS-OS's governed inference uses;
-  - which plans include AI and their monthly token limit;
-  - which CRM fields may be sent.
-- **Alternatives:**
-  - provider: a major hosted model provider under a business agreement with no training on inputs, or a self-hosted model (more operational work, lower quality);
-  - data: (a) a minimal allowlist with no contact details or message text (the contact brief); (b) also message text for reply suggestions; (c) broad record access. Refused.
-- **Recommendation:** a hosted provider with a no-training, no-retention
-  data agreement; start with data option (a) and the contact brief only;
-  AI off by default per workspace; a modest token quota per plan.
-- **Cost:** usage-based per token. Small for briefs (a few thousand tokens
-  each), capped by the quota. No cost until enabled.
-- **Security:**
-  - CRM data leaves the platform to the provider, under the agreement;
-  - prompts never carry secrets;
-  - CRM content is treated as untrusted data;
-  - outputs are only shown, never acted on automatically;
-  - the audit records use and token counts, not text.
-- **Reversibility:** high. Switch off per workspace or platform-wide. Data
-  already sent cannot be recalled, which is why the allowlist starts minimal.
+**Owner's decision, 2026-11-09 (DECISIONS P9-P).** Recorded here in short:
+
+- **Provider:** Groq first, as the low-cost provider, *subject to* checking
+  its business terms, DPA and EU data-transfer safeguards. Model to evaluate:
+  `openai/gpt-oss-20b`.
+- **Data handling:** Zero Data Retention on before any CRM information is
+  processed; no provider may train on LeadStack customer data.
+- **Money:** pay as you go; no minimum monthly spend and no enterprise
+  contract without the owner's approval.
+- **Provider independence is mandatory:**
+  - one internal AI interface;
+  - separate adapters for OpenAI-compatible and native APIs;
+  - a provider and model catalogue that administrators manage;
+  - providers that can be added, disabled and replaced without rewriting
+    CRM features;
+  - each workspace chooses among approved providers and models;
+  - keys kept server-side and never in the frontend;
+  - usage, quotas and spending limits per workspace;
+  - retention and processing settings per provider;
+  - no arbitrary endpoints and no SSRF.
+- **Operating restrictions:**
+  - AI off by default in every workspace, suggestions only;
+  - no contact details or message contents sent unless separately approved;
+  - no production activation, provider account, purchase or paid usage
+    without the owner's authorization.
+
+**How it is met (verified in SaaS-OS v0.10.0, details in P9-P).** SaaS-OS's
+governed inference already is the provider-independent layer:
+
+| Requirement | Met by |
+| --- | --- |
+| Interface | `saas_os.inference.run_inference` |
+| Adapters | OpenAI-compatible (covers Groq), Anthropic and Gemini native |
+| Catalogue | providers, models, aliases, prices and enable/disable through `saas-os-operator ai-*` |
+| Replacing a provider | features name an alias, never a provider |
+| Keys | secret names from the deployment's secret store only, listed in `AI_PROVIDER_CREDENTIALS`, never in the database or the browser |
+| Endpoints | the egress policy, plus explicit expiring trust entries for any private host |
+| Retention and training | per-provider declarations, matched against per-workspace preferences |
+| Metering and quota | every attempt metered; a monthly token quota |
+
+LeadStack builds no adapters or key store of its own: that would be a
+parallel platform implementation (CLAUDE.md section 3).
+
+**Still missing (SaaS-OS gaps 20 to 22, recorded, not filed):**
+
+- products have no supported way to turn AI on for a workspace or to set its
+  model choice and preferences;
+- there is no spending limit in money, only a token quota;
+- a workspace cannot read its own AI usage.
+
+**Still open (owner):**
+
+- the result of the Groq check;
+- which plans include AI, and their monthly token limits;
+- whether to file gaps 20 to 22 upstream;
+- the production secret store;
+- the data-protection assessment (DPIA);
+- production activation.
 
 ## Brief 3 — Agency workspace and billing model
 
