@@ -204,7 +204,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "saas-os", git = "https://github.com/aelboum/saas-os?rev=fb842fff4b2b24a3a4bf25f3000aedae46dce5aa" }]
+requires-dist = [{ name = "saas-os", git = "https://github.com/aelboum/saas-os?rev=cdede956dd884fc816b234f1b546ce3b983b4efc" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -924,8 +924,8 @@ wheels = [
 
 [[package]]
 name = "saas-os"
-version = "0.14.0"
-source = { git = "https://github.com/aelboum/saas-os?rev=fb842fff4b2b24a3a4bf25f3000aedae46dce5aa#fb842fff4b2b24a3a4bf25f3000aedae46dce5aa" }
+version = "0.15.0"
+source = { git = "https://github.com/aelboum/saas-os?rev=cdede956dd884fc816b234f1b546ce3b983b4efc#cdede956dd884fc816b234f1b546ce3b983b4efc" }
 dependencies = [
     { name = "alembic" },
     { name = "arq" },

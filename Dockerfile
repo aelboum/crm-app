@@ -7,9 +7,9 @@
 #   local build output out of the build context.
 # - Base images are pinned by digest as well as tag, as SaaS-OS pins its own;
 #   a moved tag cannot change what is built. The Python base is the digest
-#   SaaS-OS v0.14.0's Dockerfile uses.
+#   SaaS-OS v0.15.0's Dockerfile uses.
 # - The SaaS-OS dependency is installed from `uv.lock`, so the image carries
-#   exactly the approved pin (decision K3.10); `--locked` fails the build if
+#   exactly the approved pin (decision K3.11); `--locked` fails the build if
 #   the lock and the manifest disagree.
 # - Runs as a non-root user. No compiler, git or uv in the final image.
 

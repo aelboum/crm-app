@@ -1353,6 +1353,30 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## SaaS-OS upgrade to v0.15.0 (decision K3.11, 2026-11-17)
+
+On the new pin `cdede95` (v0.15.0, from v0.14.0 `fb842ff`), locally on
+Windows, on `main`:
+
+| Check | Result |
+| --- | --- |
+| Tag | `v0.15.0` resolves to `cdede95…`; `git tag -v v0.15.0`: good ED25519 signature by the owner's key |
+| `uv lock --upgrade-package saas-os`, `uv lock --check`, `uv sync --frozen` | Only the saas-os entry changed (0.14.0 → 0.15.0); installed from commit `cdede95…` |
+| `saas_os.inference.settings` | Imports; nine functions and eleven types as in SaaS-OS's public API snapshot |
+| `ruff format --check .` / `ruff check .` | clean |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| `pip-audit --strict --require-hashes` (CI's export) | No known vulnerabilities |
+| detect-secrets hook over the changed files | Exit 0, after replacing the audited false-positive hash of the pin SHA in `.secrets.baseline` |
+| `pytest tests/unit` | 803 passed; includes the pin test, now asserting `cdede95` |
+| `pytest tests/integration`, `.env.test`, local PostgreSQL | 910 passed (55 min); migration head unchanged at `e1f5a8c3b7d9` |
+
+No product code changed and no migration was added. Gap 20 is closed
+upstream; AI stays off in every workspace until the Settings › AI slice
+is built and a member turns it on. Staging still runs `7423c7a`:
+deploying needs the owner's go-ahead. Not run locally: `tests/identity`
+(opt-in, needs the local ZITADEL) and the frontend checks (no frontend
+file changed).
+
 ## SaaS-OS upgrade to v0.14.0 (decision K3.10, 2026-11-17)
 
 On the new pin `fb842ff` (v0.14.0, from v0.10.0 `0f9bf4d`; v0.11.0 to

@@ -3,7 +3,7 @@
 **Status:** Phase 1 complete (CI passed on the pushed commit, 2026-10-21); Phase 2 complete (2026-10-24, see §7). Current state: `docs/project/PROGRESS.md`
 **Product name:** LeadStack CRM (internal provisional name only; see decision K4)
 **Architecture:** New product consuming SaaS-OS as an external package
-**SaaS-OS pin:** `fb842fff4b2b24a3a4bf25f3000aedae46dce5aa` (v0.14.0; decisions K3, K3.1, K3.2, K3.3, K3.4, K3.9 and K3.10)
+**SaaS-OS pin:** `cdede956dd884fc816b234f1b546ce3b983b4efc` (v0.15.0; decisions K3, K3.1, K3.2, K3.3, K3.4, K3.9, K3.10 and K3.11)
 **Product approach:** Modular monolith initially
 **Database:** PostgreSQL
 **Identity:** ZITADEL, subject to compatibility verification

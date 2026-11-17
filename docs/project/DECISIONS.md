@@ -1115,6 +1115,52 @@ approval), **Superseded**.
   the new code has run, plan it as forward-only: the downgrade of
   `c7e3a9f2b4d8` refuses while any audit subject reference exists.
 
+## K3.11 — SaaS-OS pin moved to v0.15.0
+
+- **Status:** Approved by the owner, 2026-11-17 ("apply it", answering
+  "Should I move the pin to v0.15.0?"). Supersedes the commit named in
+  K3.10; every other part of K3 stands. The pin stays fixed until a
+  further approved decision. Staging is not redeployed by this decision.
+- **Decision:** Exactly one SaaS-OS dependency:
+  `saas-os @ git+https://github.com/aelboum/saas-os@cdede956dd884fc816b234f1b546ce3b983b4efc`
+  (v0.15.0, the latest release).
+- **Why:** v0.15.0 closes the rest of gap 20 (aelboum/saas-os#285, filed
+  by LeadStack): the public package `saas_os.inference.settings` lets a
+  product turn AI on for a workspace, grant use cases and models, rank
+  them, set data-handling preferences and a monthly cap, and read the
+  budget.
+- **Evidence (verified 2026-11-17):**
+  - The tag `v0.15.0` resolves to `cdede95…`, the merge commit of release
+    pull request #287; `git tag -v v0.15.0` reports a good ED25519
+    signature by the owner's key. SaaS-OS CI run 44171921719 passed.
+  - No migration (head stays `e1f5a8c3b7d9`), no new setting, no new
+    permission, no change to the locked third-party dependencies.
+  - The public API snapshot only gained lines: the package
+    `saas_os.inference.settings` (nine functions, eleven types).
+  - CONSUMER-GUIDE §14, v0.14.0 → v0.15.0, against this product:
+    1. Nothing changes for a tenant on upgrade; AI stays off in every
+       workspace until a member turns it on, and no LeadStack route
+       calls the new package yet.
+    2. To offer AI the product writes its own settings routes and grants
+       `ai.policy:manage`, `ai.policy:read`, `ai.budget:manage` and
+       `ai.usage:read` to the roles that should hold them. Not done by
+       this decision; it is the Settings › AI slice.
+    3. Four SaaS-OS system jobs now run their database work in a thread
+       and log a `*_skipped` event when a run overlaps. No product job
+       is affected; LeadStack has no alert on these logs.
+  - Every SaaS-OS import is still a public export
+    (`tests/unit/test_import_surface.py`).
+  - `uv lock --upgrade-package saas-os` changed only the saas-os entry.
+  - The base image digest in SaaS-OS's Dockerfile is unchanged, so the
+    product's `Dockerfile` keeps its digest.
+- **Gaps after the move:** 20, 21 and 22 are closed upstream. There is
+  still no SaaS-OS HTTP route for tenant AI settings, and
+  `tenant_budget_status` stays internal; neither blocks the product.
+- **Rollback:** move the pin, lock entry, `APPROVED_PIN` and the
+  `.secrets.baseline` pin hash back to `fb842ff`. There is no migration
+  to undo; settings a workspace saved through the new package stay in
+  tables v0.14.0 already has and keep their effect there.
+
 ## UI-Q1 — Quick wins on built features (2026-11-06, owner: "Yes")
 
 - **Status:** Done under the autonomous mandate, frontend only. No API,
