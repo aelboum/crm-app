@@ -6,7 +6,7 @@ name only (decision K4 in `docs/project/DECISIONS.md`).
 
 The product consumes [SaaS-OS](https://github.com/aelboum/saas-os) as an
 external package pinned to commit
-`0f9bf4d67e13aff284af9f30505b7f256ea49801` (release v0.10.0). SaaS-OS supplies
+`fb842fff4b2b24a3a4bf25f3000aedae46dce5aa` (release v0.14.0). SaaS-OS supplies
 the platform: application bootstrap, OIDC sign-in, tenancy, authorization,
 Row-Level Security helpers, jobs and health checks. This repository owns the
 CRM domain, its schema and migrations, and its configuration. See

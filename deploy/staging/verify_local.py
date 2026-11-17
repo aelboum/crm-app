@@ -71,7 +71,7 @@ COMPOSE = [
 ]
 ORIGIN = "https://leadstack.localhost:8443"
 PROJECT = "crm-app-staging"
-SAAS_OS_HEAD = "e2b7c4d9a1f6"  # pragma: allowlist secret
+SAAS_OS_HEAD = "e1f5a8c3b7d9"  # pragma: allowlist secret
 results: list[tuple[str, bool, str]] = []
 
 _HEADS = """

@@ -3,19 +3,23 @@
 ## Pin
 
 ```text
-saas-os @ git+https://github.com/aelboum/saas-os@0f9bf4d67e13aff284af9f30505b7f256ea49801
+saas-os @ git+https://github.com/aelboum/saas-os@fb842fff4b2b24a3a4bf25f3000aedae46dce5aa
 ```
 
-- **Release:** v0.10.0. The tag is annotated and signed with the owner's
-  key (`git tag -v v0.10.0`: good ED25519 signature) and resolved to this
-  commit, the merge commit of release pull request #234, on 2026-11-07.
-- **Platform migration head:** `e2b7c4d9a1f6` (was `b3d5f7a9c2e4` at
+- **Release:** v0.14.0. The tag is annotated and signed with the owner's
+  key (`git tag -v v0.14.0`: good ED25519 signature) and resolved to this
+  commit, the merge commit of release pull request #280, on 2026-11-17.
+- **Platform migration head:** `e1f5a8c3b7d9` (was `b3d5f7a9c2e4` at
   v0.6.0; v0.7.0 added seven revisions, v0.8.0 one, v0.9.0 and v0.10.0
-  none). They only add tables, columns and checks.
+  none, v0.11.0 six, v0.12.0 none, v0.13.0 one, v0.14.0 four). From
+  v0.14.0 a rollback is forward-only once the new code has run: the
+  downgrade of `c7e3a9f2b4d8` refuses while any audit subject reference
+  exists (CONSUMER-GUIDE §14, v0.13.0 → v0.14.0, step 7).
 - **Approval:** decision K3, moved from v0.1.2 (`b0809ee`) by decision
   K3.1, from v0.3.0 (`5905156`) by decision K3.2, from v0.5.0
   (`b03d87a`) by decision K3.3, from v0.6.0 (`d980e73`) by decision
-  K3.4 and from v0.8.0 (`140d9dd`) by decision K3.9. The pin is fixed
+  K3.4, from v0.8.0 (`140d9dd`) by decision K3.9 and from v0.10.0
+  (`0f9bf4d`) by decision K3.10. The pin is fixed
   until a further approved decision.
 - **Guard:** `tests/unit/test_dependency_pin.py` checks the manifest, the
   `uv.lock` source, the installed `direct_url.json` commit, that the

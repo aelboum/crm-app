@@ -1064,6 +1064,57 @@ approval), **Superseded**.
   `.secrets.baseline` hash back to `140d9dd`. There is no schema change
   to undo.
 
+## K3.10 — SaaS-OS pin moved to v0.14.0
+
+- **Status:** Approved by the owner, 2026-11-17 ("apply 1", answering
+  "Move the pin to v0.14.0?"). Supersedes the commit named in K3.9; every
+  other part of K3 stands. The pin stays fixed until a further approved
+  decision. Staging is not redeployed by this decision.
+- **Decision:** Exactly one SaaS-OS dependency:
+  `saas-os @ git+https://github.com/aelboum/saas-os@fb842fff4b2b24a3a4bf25f3000aedae46dce5aa`
+  (v0.14.0, the latest release; v0.11.0 `2158a81`, v0.12.0 `c17c7b4` and
+  v0.13.0 `a2a9384` are skipped as intermediate steps).
+- **Why:** v0.11.0 ships SaaS-OS's work on gaps 20 to 22 (decision P9-P).
+- **Evidence (verified 2026-11-17):**
+  - The tag `v0.14.0` resolves to `fb842ff…`; `git tag -v v0.14.0`
+    reports a good ED25519 signature by the owner's key.
+  - Eleven platform migrations; the head moves from `e2b7c4d9a1f6` to
+    `e1f5a8c3b7d9` (`tests/integration/test_foundation.py`,
+    `deploy/staging/verify_local.py`). New settings are optional and
+    off or inert by default (`AI_PRICE_MAX_AGE_SECONDS`,
+    `AI_INFERENCE_BUDGET_REQUIRED`, four AI retention settings).
+  - The public API snapshot only changed by additions, plus two new
+    base classes: `EmailOutcomeUnknownError` is now also a
+    `NonRetriableJobError` and `PermanentEventError` a
+    `PermanentJobError`.
+  - CONSUMER-GUIDE §14, v0.10.0 → v0.14.0, against this product:
+    1. Directly queued jobs dead-letter `EmailOutcomeUnknownError` and
+       `PermanentEventError` on the first attempt (v0.12.0). The
+       e-mail send job catches `EmailOutcomeUnknownError` itself and
+       raises the product's own `EmailSendDeferredError` `from None`,
+       so its retry behaviour is unchanged; no product job raises
+       `PermanentEventError`.
+    2. Tenant audit rows store `initiated_by` as a subject reference,
+       not a user id (v0.14.0). The product only writes audit rows and
+       never reads `initiated_by` (`crm_app.system_audit` leaves it
+       out).
+    3. The AI usage router and retention jobs are opt-in and are not
+       mounted or scheduled.
+  - Every SaaS-OS import is still a public export
+    (`tests/unit/test_import_surface.py`).
+  - `uv lock --upgrade-package saas-os` changed only the saas-os entry.
+  - `saas-os-update check` was not run; SaaS-OS records
+    `REVIEW_REQUIRED` for each step, and the review is the list above.
+- **Gaps after the move:** 21 and 22 are closed upstream. 20 is only
+  partly closed: turning AI on for a workspace and granting it models
+  are still internal to SaaS-OS, so AI stays off everywhere
+  (`saas-os-gaps.md`).
+- **Rollback:** before any v0.14.0 code runs against a database, move
+  the pin, lock entry, `APPROVED_PIN`, the two migration heads and the
+  `.secrets.baseline` hashes back to `0f9bf4d` / `e2b7c4d9a1f6`. After
+  the new code has run, plan it as forward-only: the downgrade of
+  `c7e3a9f2b4d8` refuses while any audit subject reference exists.
+
 ## UI-Q1 — Quick wins on built features (2026-11-06, owner: "Yes")
 
 - **Status:** Done under the autonomous mandate, frontend only. No API,

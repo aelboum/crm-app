@@ -1353,6 +1353,29 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## SaaS-OS upgrade to v0.14.0 (decision K3.10, 2026-11-17)
+
+On the new pin `fb842ff` (v0.14.0, from v0.10.0 `0f9bf4d`; v0.11.0 to
+v0.13.0 skipped), locally on Windows, on `main`:
+
+| Check | Result |
+| --- | --- |
+| Tag | `v0.14.0` resolves to `fb842ff…`; `git tag -v v0.14.0`: good ED25519 signature by the owner's key |
+| `uv lock --upgrade-package saas-os`, `uv lock --check`, `uv sync --frozen` | Only the saas-os entry changed (0.10.0 → 0.14.0); installed from commit `fb842ff…` |
+| `ruff format --check .` / `ruff check .` | 421 files already formatted / all checks passed |
+| `pyright` / `lint-imports` | 0 errors / 2 kept, 0 broken |
+| detect-secrets hook over tracked and untracked files | Exit 0, after replacing the audited false-positive hashes of the pin SHA and the migration head in `.secrets.baseline` |
+| `pytest tests/unit` | 803 passed; includes the pin test, now asserting `fb842ff` |
+| `pytest tests/integration`, `.env.test`, local PostgreSQL | 910 passed (1 h 0 min); applies the eleven new platform migrations to head `e1f5a8c3b7d9`, twice |
+
+No product code changed. Gaps 21 and 22 are closed upstream; gap 20 is
+only partly closed, so AI stays off in every workspace
+(`saas-os-gaps.md`). Staging still runs `7423c7a`: deploying this needs
+the owner's go-ahead, and once v0.14.0 has run against a database a
+rollback is forward-only (DECISIONS K3.10). Not run locally:
+`tests/identity` (opt-in, needs the local ZITADEL) and the frontend
+checks (no frontend file changed).
+
 ## AI provider decision and contact-brief groundwork (decision P9-P, 2026-11-09)
 
 The owner chose Groq first, under Zero Data Retention, with no training and
