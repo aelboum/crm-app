@@ -1353,6 +1353,26 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed at `855c200` (2026-11-18, owner: "Deploy staging")
+
+| Check | Result |
+| --- | --- |
+| CI on `855c200` | run 44370063063, 5 of 5 jobs passed |
+| Before: `audit_store.sh collect`; `backup_drill.py` | 0 new lines (12 kept); **15 passed, 0 failed** (244 digest windows, no findings); this backup is the rollback point |
+| Image | built on the VPS, `crm-app:855c200`; `VERSION=855c200` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| Migration heads | `0046_campaign_queue`, SaaS-OS `e1f5a8c3b7d9` |
+| `/readyz`; `/app/u/<ws>` | 200; 200 |
+| `/v1/tenants/<ws>/ai/usage`, `/usage/monthly`, `/limits` without a session | 401 each |
+| One-click unsubscribe, unknown token | 204 |
+| `leadstack-job@crm_app.email_maintenance` run by hand | exit 0; "campaigns processed 0, failed 0, waiting 0" (campaign sending is off) |
+| Signed in as the Alpha Owner (test account), Settings › AI | "AI usage" card: "No AI use yet."; monthly read 200, 12 months, 0 calls |
+| App and worker logs, first 10 minutes | no error lines |
+
+Rollback: code to `crm-app:c94d156` (migration 0046 only adds an empty
+table, which the older code ignores); a full rollback restores the backup
+taken above.
+
 ## AI usage in Settings › AI (decision P9-U, 2026-11-18)
 
 SaaS-OS's usage router is mounted unchanged (`/v1/tenants/{id}/ai/usage`,
