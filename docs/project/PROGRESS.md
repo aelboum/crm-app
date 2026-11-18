@@ -1373,10 +1373,16 @@ and campaigns cannot be queued.
 | `GET /v1/workspaces/{id}/ai`, `/ai/budget` without a session | 401 |
 | App and worker logs, first 10 minutes | no error lines |
 
-Not checked: Settings › AI signed in. Staging's workspaces were created
-before the AI permissions, so their Owners hold none until the permission
-grant migrations run (the two changing ones are in the held-back
-administrative list, which needs the owner's approval). Rollback: the code
+**AI permissions on staging** (owner: "apply AI permissions on staging",
+2026-11-18), with `crm_app.role_upgrade` per `ROLE-UPGRADE-RUNBOOK.md`:
+the dry run (`--include-administrative`, fingerprint `4371572593bb384c`)
+listed only `ai.policy:read`, `ai.policy:manage`, `ai.usage:read` and
+`ai.budget:manage` for Owner and Admin in the two staging workspaces;
+`--apply --expect 4371572593bb384c` granted exactly those; a second dry
+run grants nothing; the audit log has 16 `role_permission.grant` entries.
+AI stays off in both workspaces and no provider is configured.
+
+Not checked: Settings › AI signed in, in a browser. Rollback: the code
 alone can go back to `crm-app:7423c7a`; the SaaS-OS v0.14.0 schema is
 forward-only once used (K3.10), so a full rollback means restoring the
 backup taken above (2026-11-18, before the deploy) and losing later changes.
