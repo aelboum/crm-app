@@ -18,7 +18,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from saas_os.core.email import EmailMessage, EmailSendResult
 from saas_os.core.identity import issue_session
-from saas_os.infra.db import tenant_session_scope
+from saas_os.infra.db import session_scope, tenant_session_scope
 from sqlalchemy import text
 
 from crm_app import campaigns, emails, suppression
@@ -302,6 +302,101 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
                 list_unsubscribe_url=f"https://app.example.test/v1/public/unsubscribe/{a.id}/late",
             )
         result["late_send"] = [late, emails.send(a.id, again_id, provider=recorder)]
+
+        # The sending queue (decision P7-S), in workspace b: queuing records
+        # the campaign; the maintenance run adds recipients in batches as
+        # the sending component, then removes the row.
+        origin = os.environ.get("PUBLIC_APP_ORIGIN")
+        os.environ["PUBLIC_APP_ORIGIN"] = "https://app.example.test"
+        # Workspace a's campaign was processed above: its row goes now.
+        result["queue_drained"] = campaigns.run_queued()["finished"]
+        b_scope = Scope(workspace=b.id, actor=b.owner_id)
+        b_base = f"/v1/workspaces/{b.id}"
+        for first in ("Bea", "Cal", "Dot"):
+            made_id = client.post(
+                f"{b_base}/contacts",
+                json={
+                    "first_name": first,
+                    "lifecycle_stage": "lead",
+                    "email": f"{first.lower()}@example.test",
+                },
+                headers=auth("other_owner"),
+            ).json()["id"]
+            suppression.record_consent(b_scope, uuid.UUID(made_id), "Yes, email me news.")
+        winter = client.post(
+            f"{b_base}/campaigns",
+            json={**draft, "name": "Winter news"},
+            headers=auth("other_owner"),
+        ).json()
+        w_one = f"{b_base}/campaigns/{winter['id']}"
+        for step, version in (("validate", 1), ("submit", 2), ("approve", 3)):
+            client.post(f"{w_one}/{step}", headers=auth("other_owner", version))
+        w_queued = client.post(f"{w_one}/queue", headers=auth("other_owner", 4)).json()
+
+        def queue_rows() -> int:
+            with session_scope() as session:
+                return session.execute(
+                    text("SELECT count(*) FROM crm_app.campaign_queue WHERE campaign_id = :c"),
+                    {"c": winter["id"]},
+                ).scalar_one()
+
+        def w_status() -> str:
+            return _scalar(
+                b.id,
+                "SELECT status FROM crm_app.campaign WHERE tenant_id = :t AND id = :c",
+                c=winter["id"],
+            )
+
+        result["queue_recorded"] = [w_queued["status"], queue_rows()]
+        os.environ["PUBLIC_APP_ORIGIN"] = "http://app.example.test"
+        no_https = campaigns.run_queued(batch=2)
+        os.environ["PUBLIC_APP_ORIGIN"] = "https://app.example.test"
+        try:
+            first_run = campaigns.run_queued(batch=2)
+            mid = [w_status(), queue_rows()]
+            second_run = campaigns.run_queued(batch=2)
+            done = [w_status(), queue_rows()]
+            # A row whose campaign does not exist is removed, nothing sent.
+            campaigns._register(b.id, uuid.uuid4(), b.owner_id)
+            third_run = campaigns.run_queued(batch=2)
+        finally:
+            if origin is None:
+                os.environ.pop("PUBLIC_APP_ORIGIN", None)
+            else:
+                os.environ["PUBLIC_APP_ORIGIN"] = origin
+
+        def counts(run: dict[str, Any]) -> list[int]:
+            return [run["campaigns"], run["finished"], run["waiting"], len(run["emails"])]
+
+        result["queue_runs"] = {
+            "no_https": counts(no_https),
+            "first": [*counts(first_run), *mid],
+            "second": [*counts(second_run), *done],
+            "stale": counts(third_run),
+        }
+        result["queue_recipients"] = _scalar(
+            b.id,
+            "SELECT count(*) FROM crm_app.campaign_recipient"
+            " WHERE tenant_id = :t AND campaign_id = :c",
+            c=winter["id"],
+        )
+        result["queue_emails_in_b"] = all(
+            workspace == b.id for workspace, _ in [*first_run["emails"], *second_run["emails"]]
+        )
+        with tenant_session_scope(b.id) as session:
+            result["queue_audit"] = [
+                list(row)
+                for row in session.execute(
+                    text(
+                        "SELECT action, actor_type, metadata->'system_actor'->>'name',"
+                        " metadata->>'on_behalf_of_user_id' = :o"
+                        " FROM core.audit_log WHERE tenant_id = :t AND resource_id = :c"
+                        " AND action IN ('crm_app.campaign.queued', 'crm_app.campaign.completed')"
+                        " ORDER BY action"
+                    ),
+                    {"t": b.id, "c": winter["id"], "o": str(b.owner_id)},
+                )
+            ]
 
         # Production: no campaign can be queued even with the switches on.
         os.environ["ENVIRONMENT"] = "production"

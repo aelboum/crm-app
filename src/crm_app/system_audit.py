@@ -51,6 +51,7 @@ COMPONENTS: Mapping[str, SystemActorKind] = {
     "crm_app.booking_page": SystemActorKind.PUBLIC_LINK,
     "crm_app.public_form": SystemActorKind.PUBLIC_LINK,
     "crm_app.consent_link": SystemActorKind.PUBLIC_LINK,
+    "crm_app.campaign_send": SystemActorKind.WORKER_JOB,
 }
 
 # The metadata key naming the member whose scope a system action ran in

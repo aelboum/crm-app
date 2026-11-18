@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -123,7 +124,8 @@ _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 # `inbound_email` and `conversation_route_index` (migration 0025) hold a
 # routed email's state and the hashes of a workspace's routing tokens.
 # `member_reminder_workspace` (migration 0039) says up to when a workspace
-# has appointments to remind their hosts of.
+# has appointments to remind their hosts of. `campaign_queue` (migration
+# 0046) names a workspace's campaigns waiting to be sent.
 PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
     "signup",
     "import_expiry",
@@ -135,6 +137,7 @@ PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
     "sending_domain_index",
     "reminder_workspace",
     "member_reminder_workspace",
+    "campaign_queue",
 )
 
 
@@ -205,6 +208,13 @@ def _forget_member_reminders(tenant_id: uuid.UUID) -> None:
         raise PurgeIncompleteError("Rows remain in: member_reminder_workspace")
 
 
+def _forget_campaign_queue(tenant_id: uuid.UUID) -> None:
+    from crm_app import campaigns  # noqa: PLC0415
+
+    if not campaigns.forget_workspace(tenant_id):
+        raise PurgeIncompleteError("Rows remain in: campaign_queue")
+
+
 def _forget_sending_domains(tenant_id: uuid.UUID) -> None:
     from crm_app import sending_domains  # noqa: PLC0415
 
@@ -236,6 +246,21 @@ class PurgeIncompleteError(RuntimeError):
 class PurgeRegistrationError(RuntimeError):
     """The participants registered in this process are not exactly the ones
     this product needs; purging now would leave product rows behind."""
+
+
+# Each global table's purge step, in the order they run.
+_GLOBAL_STEPS: tuple[tuple[tuple[str, ...], Callable[[uuid.UUID], None]], ...] = (
+    (("signup",), _forget_signups),
+    (("import_expiry",), _forget_import_expiry),
+    (("email_index",), _forget_email_index),
+    (("automation_due",), _forget_automation_due),
+    (("inbound_email", "conversation_route_index"), _forget_inbound),
+    (("custom_domain_index",), _forget_custom_domains),
+    (("sending_domain_index",), _forget_sending_domains),
+    (("reminder_workspace",), _forget_reminders),
+    (("member_reminder_workspace",), _forget_member_reminders),
+    (("campaign_queue",), _forget_campaign_queue),
+)
 
 
 class CrmDataPurgeParticipant:
@@ -288,24 +313,10 @@ class CrmDataPurgeParticipant:
             remaining = [t for t in self._tables if self._has_rows(session, t, tenant_id)]
             if remaining:
                 raise PurgeIncompleteError(f"Rows remain in: {', '.join(remaining)}")
-        if "signup" in self._global_references:
-            _forget_signups(tenant_id)
-        if "import_expiry" in self._global_references:
-            _forget_import_expiry(tenant_id)
-        if "email_index" in self._global_references:
-            _forget_email_index(tenant_id)
-        if "automation_due" in self._global_references:
-            _forget_automation_due(tenant_id)
-        if {"inbound_email", "conversation_route_index"} & set(self._global_references):
-            _forget_inbound(tenant_id)
-        if "custom_domain_index" in self._global_references:
-            _forget_custom_domains(tenant_id)
-        if "sending_domain_index" in self._global_references:
-            _forget_sending_domains(tenant_id)
-        if "reminder_workspace" in self._global_references:
-            _forget_reminders(tenant_id)
-        if "member_reminder_workspace" in self._global_references:
-            _forget_member_reminders(tenant_id)
+        references = set(self._global_references)
+        for names, step in _GLOBAL_STEPS:
+            if references & set(names):
+                step(tenant_id)
 
     def _table(self, table: str) -> Any:  # a SQLAlchemy Table; typed loosely to keep SQLAlchemy out
         from saas_os.infra.db import Base  # noqa: PLC0415

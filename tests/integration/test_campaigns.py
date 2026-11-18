@@ -113,3 +113,24 @@ def test_other_workspaces_see_nothing_and_audit_holds_no_text(probe: Probe) -> N
     assert probe["isolation"] == [0, 404, 404]
     assert probe["audit_text"] == 0
     assert probe["audit_steps"] == 2
+
+
+def test_the_maintenance_run_sends_queued_campaigns_in_batches(probe: Probe) -> None:
+    """Decision P7-S: queuing records the campaign; each run adds at most a
+    batch of recipients as the sending component, on behalf of the member
+    who queued it, and the row goes once the campaign is finished."""
+    # Workspace a's campaign, processed directly, leaves the queue.
+    assert probe["queue_drained"] >= 1
+    assert probe["queue_recorded"] == ["queued", 1]
+    runs = probe["queue_runs"]
+    # [campaigns processed, finished, waiting, emails] (+ status, queue rows)
+    assert runs["no_https"] == [0, 0, 1, 0]
+    assert runs["first"] == [1, 0, 0, 2, "processing", 1]
+    assert runs["second"] == [1, 1, 0, 1, "completed", 0]
+    assert runs["stale"] == [0, 1, 0, 0]
+    assert probe["queue_recipients"] == 3
+    assert probe["queue_emails_in_b"] is True
+    owner = probe["queue_audit"]
+    assert owner[0] == ["crm_app.campaign.completed", "system", "crm_app.campaign_send", True]
+    assert owner[1][0] == "crm_app.campaign.queued"
+    assert owner[1][1] == "user"

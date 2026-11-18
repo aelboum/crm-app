@@ -17,10 +17,16 @@ recipients and unsubscribing.
   headers (`List-Unsubscribe`, `List-Unsubscribe-Post`; decision E-H1,
   SaaS-OS v0.10.0), which bulk-sender rules require. Nothing sends a
   campaign because it was saved, validated or approved.
-- `process` (run after queuing) adds each eligible contact once (a unique
-  key per campaign and contact) and queues one email per recipient through
-  `crm_app.emails` (purpose `campaign`, the campaign stream), where consent
-  and suppression are checked again at send time.
+- `process` adds each eligible contact once (a unique key per campaign and
+  contact) and queues one email per recipient through `crm_app.emails`
+  (purpose `campaign`, the campaign stream), where consent and suppression
+  are checked again at send time.
+- Queuing also records the campaign in the global `campaign_queue`
+  (decision P7-S). `run_queued`, called by the email maintenance run
+  (`crm_app.email_maintenance`), processes each queued campaign in batches
+  of `BATCH` new recipients as the component `crm_app.campaign_send`, on
+  behalf of the member who queued it, and removes the row once the
+  campaign is finished. It does nothing while sending is unavailable.
 - `unsubscribe` takes a recipient's token from the email's link: it
   suppresses the address (reason `unsubscribed`) and records the
   withdrawal of consent.
@@ -29,29 +35,38 @@ recipients and unsubscribing.
 from __future__ import annotations
 
 import hashlib
+import logging
+import os
 import secrets
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-from saas_os.core.audit_log import record_in_transaction
-from saas_os.core.authority import UserCaller
-from saas_os.core.tenancy import lock_open_tenant
+from saas_os.core.tenancy import (
+    TenantClosedError,
+    TenantNotFoundError,
+    get_tenant,
+    lock_open_tenant,
+)
 from saas_os.infra.db import (
+    IntegrityError,
     OperationalError,
     Session,
+    delete,
     is_transaction_conflict,
     select,
+    session_scope,
     tenant_session_scope,
 )
 
-from crm_app import emails, suppression
+from crm_app import emails, suppression, system_audit
 from crm_app.domains import campaigns as rules
 from crm_app.domains import email_streams as streams
 from crm_app.domains.records import STAGES, InvalidValue
 from crm_app.models import (
     Campaign,
+    CampaignQueue,
     CampaignRecipient,
     Contact,
     ContactTag,
@@ -65,7 +80,13 @@ from crm_app.records import (
 )
 from crm_app.settings import stream_enabled
 
+logger = logging.getLogger(__name__)
 RESOURCE = "crm_app.campaign"
+# The component that processes queued campaigns (decision P7-S).
+SENDER = "crm_app.campaign_send"
+# New recipients added per campaign per maintenance run; the rest wait for
+# the next run (every 2 minutes).
+BATCH = 500
 LIST_LIMIT = 100
 AUDIENCE_MAX = 50_000
 # Bulk mail needs `List-Unsubscribe` and `List-Unsubscribe-Post` headers,
@@ -122,10 +143,12 @@ def _transaction[T](scope: Scope, fn: Callable[[Session], T]) -> T:
 
 
 def _audit(session: Session, scope: Scope, verb: str, row: Campaign, **meta: Any) -> None:
-    record_in_transaction(
+    # The member's own entry, or the sending component's on their behalf.
+    system_audit.record_scoped(
         session,
-        caller=UserCaller(scope.actor),
-        tenant_id=scope.workspace,
+        workspace=scope.workspace,
+        member=scope.actor,
+        component=scope.component,
         action=f"{RESOURCE}.{verb}",
         resource_type=RESOURCE,
         resource_id=str(row.id),
@@ -425,8 +448,6 @@ def cancel(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> It
 
 
 def _production() -> bool:
-    import os  # noqa: PLC0415
-
     return os.environ.get("ENVIRONMENT", "").strip().lower() == "production"
 
 
@@ -439,6 +460,9 @@ def queue(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Ite
     the approval still matches its content and audience."""
     if not sending_available():
         raise SendingUnavailableError
+    # Recorded first, in its own transaction: if queuing rolls back, the
+    # maintenance run finds the campaign not queued and removes the row.
+    _register(scope.workspace, campaign_id, scope.actor)
 
     def business(session: Session) -> Item:
         row = _load(session, scope, campaign_id, lock=True)
@@ -459,17 +483,20 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("ascii")).hexdigest()
 
 
-def process(
+def process(  # noqa: PLR0913 - one campaign and where its links point
     scope: Scope,
     campaign_id: uuid.UUID,
     *,
     workspace_name: str,
     unsubscribe_base: str,
     one_click_base: str,
+    batch: int | None = None,
 ) -> Item:
     """Add the eligible recipients of a queued campaign, each at most once,
     and queue one email each. Safe to run again: recipients already added
-    are skipped, and a finished campaign is left as it is.
+    are skipped, and a finished campaign is left as it is. With `batch`, at
+    most that many are added and the campaign stays `processing` while
+    more remain.
 
     `unsubscribe_base` is the page the body's link opens (`.../app/u`, the
     link ends in `/{workspace}#{token}`); `one_click_base` is the `https:`
@@ -499,9 +526,13 @@ def process(
         )
         queued: list[uuid.UUID] = []
         failed = 0
+        more = False
         for contact in chosen:
             if contact.id in done:
                 continue
+            if batch is not None and len(queued) >= batch:
+                more = True
+                break
             token = secrets.token_hex(16)
             values = {"first_name": contact.first_name, "last_name": contact.last_name}
             # The page keeps the token in the fragment, out of server logs.
@@ -536,6 +567,11 @@ def process(
                 )
             )
             queued.append(email_id)
+        if more:
+            # Not finished: the next run adds the rest. Audited when done.
+            _touch(row)
+            session.flush()
+            return _item(row), queued
         row.status = "partially_completed" if failed else "completed"
         _touch(row)
         _audit(session, scope, row.status, row, queued=len(queued), failed=failed)
@@ -544,6 +580,119 @@ def process(
 
     item, queued = _transaction(scope, business)
     return {**item, "queued_emails": [str(e) for e in queued]}
+
+
+# --- The sending queue (decision P7-S) ----------------------------------------------------
+
+
+def _register(workspace: uuid.UUID, campaign_id: uuid.UUID, member: uuid.UUID) -> None:
+    try:
+        with session_scope() as session:
+            if session.get(CampaignQueue, campaign_id) is None:
+                session.add(
+                    CampaignQueue(
+                        campaign_id=campaign_id,
+                        workspace_id=workspace,
+                        queued_by=member,
+                        created_at=_now(),
+                    )
+                )
+    except IntegrityError:
+        pass  # A concurrent queue recorded it first.
+
+
+def _unregister(campaign_id: uuid.UUID) -> None:
+    with session_scope() as session:
+        session.execute(delete(CampaignQueue).where(CampaignQueue.campaign_id == campaign_id))
+
+
+def forget_workspace(tenant_id: uuid.UUID) -> bool:
+    """Remove a purged workspace's queue rows; True when none remains."""
+    with session_scope() as session:
+        session.execute(delete(CampaignQueue).where(CampaignQueue.workspace_id == tenant_id))
+    with session_scope() as session:
+        left = session.execute(
+            select(CampaignQueue.campaign_id)
+            .where(CampaignQueue.workspace_id == tenant_id)
+            .limit(1)
+        ).first()
+    return left is None
+
+
+def _links() -> tuple[str, str] | None:
+    """The unsubscribe page and the one-click route, under the app's public
+    `https:` origin; None without one (nothing is processed)."""
+    origin = os.environ.get("PUBLIC_APP_ORIGIN", "").strip().rstrip("/")
+    if not origin.startswith("https://"):
+        return None
+    return f"{origin}/app/u", f"{origin}/v1/public/unsubscribe"
+
+
+_UNFINISHED = ("queued", "processing")
+
+
+def run_queued(*, limit: int = 50, batch: int = BATCH) -> dict[str, Any]:
+    """Process the queued campaigns, `batch` new recipients each. Returns
+    counts and the emails queued, as (workspace, email) pairs, for the
+    caller to hand to the worker. Nothing happens while sending is
+    unavailable or the app has no `https:` origin: the rows wait."""
+    totals: dict[str, Any] = {
+        "campaigns": 0,
+        "finished": 0,
+        "failed": 0,
+        "waiting": 0,
+        "emails": [],
+    }
+    links = _links()
+    with session_scope() as session:
+        rows = list(
+            session.execute(
+                select(
+                    CampaignQueue.workspace_id, CampaignQueue.campaign_id, CampaignQueue.queued_by
+                )
+                .order_by(CampaignQueue.created_at, CampaignQueue.campaign_id)
+                .limit(limit)
+            ).all()
+        )
+    if not sending_available() or links is None:
+        totals["waiting"] = len(rows)
+        return totals
+    unsubscribe_base, one_click_base = links
+    for workspace, campaign_id, member in rows:
+        scope = Scope(workspace=workspace, actor=member, component=SENDER)
+        try:
+            name = get_tenant(workspace).name
+            item = process(
+                scope,
+                campaign_id,
+                workspace_name=name,
+                unsubscribe_base=unsubscribe_base,
+                one_click_base=one_click_base,
+                batch=batch,
+            )
+        except RecordNotFoundError:
+            _unregister(campaign_id)  # The campaign or its workspace is gone.
+            totals["finished"] += 1
+            continue
+        except (TenantClosedError, TenantNotFoundError, TransactionConflictError, OperationalError):
+            totals["failed"] += 1
+            continue
+        except Exception as exc:  # noqa: BLE001 - one campaign never stops the run (13-H5)
+            # Ids and the error's type only: never content or addresses.
+            logger.warning(
+                "campaigns: campaign %s in %s failed (%s)",
+                campaign_id,
+                workspace,
+                type(exc).__name__,
+            )
+            totals["failed"] += 1
+            continue
+        totals["campaigns"] += 1
+        totals["emails"].extend((workspace, uuid.UUID(e)) for e in item["queued_emails"])
+        if item["status"] not in _UNFINISHED:
+            _unregister(campaign_id)
+            totals["finished"] += 1
+    return totals
 
 
 # --- Unsubscribe -----------------------------------------------------------------------------

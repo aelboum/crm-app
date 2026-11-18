@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0045_email_headers` own the
+Migrations `0002_contacts_companies` to `0046_campaign_queue` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -614,6 +614,19 @@ class MemberReminderWorkspace(Base):
 
     workspace_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CampaignQueue(Base):
+    """A queued campaign waiting to be sent (global, for the maintenance
+    run; migration 0046, P7-S). The campaign stays the authority."""
+
+    __tablename__ = "campaign_queue"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    campaign_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column()
+    queued_by: Mapped[uuid.UUID] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Form(Base):

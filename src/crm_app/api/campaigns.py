@@ -14,9 +14,10 @@
 
 Every change needs `If-Match`. Editing returns a campaign to draft and
 clears its approval. Queuing answers 409 `campaign_sending_unavailable`
-until campaign sending is available (it is not: no `List-Unsubscribe`
-support in SaaS-OS v0.6.0, and production email is not authorized), so no
-route sends a campaign. The unsubscribe route takes the token from a
+unless campaign sending is available (the campaign stream switched on,
+never in production). A queued campaign is processed by the email
+maintenance run (`campaigns.run_queued`, decision P7-S), never by a
+route. The unsubscribe route takes the token from a
 recipient's link; it answers 204 whether or not the token is known, so it
 reveals nothing, and is limited per client address.
 """

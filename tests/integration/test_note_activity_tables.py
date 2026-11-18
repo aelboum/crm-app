@@ -492,6 +492,7 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "inbound_quarantine",
         "campaign",
         "campaign_recipient",
+        "campaign_queue",
         "email_template",
         "consent_confirmation",
         "member_profile",

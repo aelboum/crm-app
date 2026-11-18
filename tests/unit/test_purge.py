@@ -176,6 +176,7 @@ def test_global_tables_naming_a_workspace_are_removed_by_the_participant() -> No
         "sending_domain_index",
         "reminder_workspace",
         "member_reminder_workspace",
+        "campaign_queue",
     )
     assert frozenset(PURGE_GLOBAL_REFERENCES) <= GLOBAL_TABLES
 

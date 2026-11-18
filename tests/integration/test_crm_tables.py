@@ -371,6 +371,7 @@ def test_the_migration_rolls_back_and_forward(
         "inbound_quarantine",
         "campaign",
         "campaign_recipient",
+        "campaign_queue",
         "email_template",
         "consent_confirmation",
         "member_profile",

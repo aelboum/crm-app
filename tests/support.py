@@ -114,6 +114,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         # P7-C (campaigns).
         "campaign",
         "campaign_recipient",
+        # P7-S (campaigns waiting to be sent).
+        "campaign_queue",
         # M-P1 (member display names).
         "member_profile",
         # N-1 (in-app notifications).
@@ -167,6 +169,8 @@ APPEND_ONLY_TABLES: frozenset[str] = frozenset(
         "appointment_reminder",
         # N-2: likewise for a host's in-app reminder.
         "appointment_member_reminder",
+        # P7-S: a queued campaign is added and removed, never changed.
+        "campaign_queue",
     }
 )
 
@@ -188,6 +192,7 @@ GLOBAL_TABLES: frozenset[str] = frozenset(
         "sending_domain_index",
         "reminder_workspace",
         "member_reminder_workspace",
+        "campaign_queue",
     }
 )
 

@@ -1353,6 +1353,22 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Campaign sending job (decision P7-S, 2026-11-18)
+
+Queued campaigns are now processed by the email maintenance run, 500 new
+recipients per campaign per run, as the component `crm_app.campaign_send`.
+Migration `0046_campaign_queue`. Nothing is turned on: sending still needs
+the campaign stream, which is off on staging and refused in production.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_campaigns.py ... test_emails.py` (campaigns, table guards, foundation, purge, migrations as owner, tenant table guard, emails) | 137 passed |
+| `uv run pytest tests/unit` | 808 passed |
+| `ruff check`, `ruff format --check`, `pyright` on `src/crm_app` and `tests` | clean |
+
+Not run locally: the full integration suite (CI runs it). Not deployed to
+staging.
+
 ## Staging audit digest store (decision D-STG.7, 2026-11-18)
 
 Owner: "Go 1 then 2 then 4" (item 1). On the VPS at checkout `2865826`

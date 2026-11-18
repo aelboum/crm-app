@@ -1040,6 +1040,44 @@ approval), **Superseded**.
   `tests/integration/test_emails.py` (four tests: no window, window and
   expiry, never ends as not sent, `EmailNotSentError` retried).
 
+## P7-S — The campaign sending job (2026-11-18, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's instruction, 2026-11-18 ("Go 1
+  then 2 then 4", item 2). Nothing processed a queued campaign until now:
+  `campaigns.process` existed but nothing called it. Sending stays off
+  wherever the campaign stream is off, and always in production; this
+  turns nothing on.
+- **What:**
+  1. `campaign_queue` (migration 0046): global, tenant-context exclusion,
+     one row per queued campaign (its id, its workspace's, the member who
+     queued it, a time). The app role may add and remove rows, never
+     change one. `queue` records the row in its own transaction before
+     the campaign's: a rolled-back queue leaves a row the run removes.
+  2. `campaigns.run_queued`, called first in every `email_maintenance`
+     run (every 2 minutes): for each row, oldest first, it calls
+     `process` with at most `BATCH` (500) new recipients as the component
+     `crm_app.campaign_send` (a worker job), on behalf of the member who
+     queued it. A campaign stays `processing` while recipients remain and
+     is audited once, when it finishes; the row is then removed. A row
+     whose campaign is gone is removed. The emails queued go to the
+     worker in the same run, where suppression and consent are checked
+     again at send time.
+  3. It does nothing (the rows wait) while sending is unavailable or the
+     app has no `https:` `PUBLIC_APP_ORIGIN`, which the unsubscribe links
+     need. One campaign's failure never stops the others (13-H5); the log
+     names ids and the error type only.
+  4. The purge participant removes a workspace's rows.
+- **Not built:** scheduling a campaign for later; pausing a campaign that
+  is processing (cancelling is refused once queued, as before); delivery
+  metrics. Each run re-reads the whole audience to find who remains, which
+  is fine up to the 50,000-contact limit but is not free.
+- **Tests:** `tests/integration/test_campaigns.py` (queued campaign
+  recorded; no `https:` origin, nothing processed; batches of 2 over 3
+  recipients, `processing` then `completed`, row removed; a stale row
+  removed; the completion audited as `crm_app.campaign_send` on behalf of
+  the queuing owner); unit table guards (`tests/support.py`,
+  `test_purge.py`).
+
 ## E-H1 — Unsubscribe and threading headers (2026-11-18, under the autonomous mandate)
 
 - **Status:** Built under the owner's instruction "Go 2" (2026-11-18:

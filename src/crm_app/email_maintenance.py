@@ -15,7 +15,9 @@ twice, at most `MAX_ATTEMPTS` tries). Received emails that are due
 (decision P6-I) are processed in this run, which also recovers any whose
 worker died. Custom domains (decision P12-D) are checked again daily and
 expired claims removed. Hosts of appointments starting within 30 minutes
-are reminded in the app (decision N-2). It prints counts only.
+are reminded in the app (decision N-2). Queued campaigns get their next
+batch of recipients (decision P7-S), whose emails are handed over in the
+same run. It prints counts only.
 """
 
 from __future__ import annotations
@@ -53,8 +55,15 @@ def maintain() -> dict[str, int]:
         hosts = member_reminders.run_due()
     except Exception:  # noqa: BLE001 - member reminders never stop email delivery
         hosts = {"notified": 0}
+    from crm_app import campaigns  # noqa: PLC0415
+
+    # Before the sweep, so this batch's emails are handed over in this run.
+    try:
+        sent = campaigns.run_queued()
+    except Exception:  # noqa: BLE001 - campaigns never stop email delivery (13-H5)
+        sent = {"campaigns": 0, "failed": 0, "waiting": 0, "emails": []}
     orphans = 0
-    pending: list[tuple[uuid.UUID, uuid.UUID]] = []
+    pending: list[tuple[uuid.UUID, uuid.UUID]] = list(sent["emails"])
     for workspace, email_id in emails.due():
         if emails.orphan(workspace, email_id):
             orphans += 1
@@ -82,6 +91,9 @@ def maintain() -> dict[str, int]:
         "unreachable": unreachable,
         "orphans": orphans,
         "inbound": received,
+        "campaigns": sent["campaigns"],
+        "campaigns_failed": sent["failed"],
+        "campaigns_waiting": sent["waiting"],
     }
 
 
@@ -96,7 +108,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         f" orphan entries removed {report['orphans']}; inbound processed {report['inbound']};"
         f" domains lapsed {report['domains_lapsed']},"
         f" expired domain claims removed {report['domain_claims_expired']};"
-        f" hosts reminded in the app {report['hosts_reminded']}"
+        f" hosts reminded in the app {report['hosts_reminded']};"
+        f" campaigns processed {report['campaigns']}, failed {report['campaigns_failed']},"
+        f" waiting {report['campaigns_waiting']}"
     )
     return 1 if report["unreachable"] else 0
 
