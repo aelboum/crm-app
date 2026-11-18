@@ -3618,6 +3618,31 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   - the DPIA;
   - production activation.
 
+## P9-U — AI usage in Settings › AI (2026-11-18, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's instruction, 2026-11-18 ("Go 1
+  then 2 then 4", item 4).
+- **What:** SaaS-OS's opt-in router `saas_os.api.v1.ai_usage` (public
+  surface, in our pin since K3.10; gap 22) is mounted unchanged:
+  `GET /v1/tenants/{id}/ai/usage`, `/ai/usage/monthly` and `/ai/limits`,
+  each behind `ai.usage:read`, which Owners and Admins hold since P9-S.
+  SaaS-OS checks the permission and the workspace, audits each read
+  (`ai.usage.read`), and returns counts, tokens and estimated cost only:
+  no prompt, output, request id or error detail. LeadStack keeps no usage
+  record of its own (metering stays SaaS-OS's, P9-0).
+- **Screen:** Settings › AI gains an "AI usage" card under the budget:
+  this UTC month by feature (`group_by=use_case`, `crm.contact_brief`
+  shown as "Contact brief") and the last 12 months, newest first; calls,
+  tokens (input + output) and estimated cost per currency; "No AI use
+  yet." when there is none. Shown only to members with `read_ai_usage`.
+- **Not built:** the token quota and the 93-day day-by-day view the router
+  also offers; charts.
+- **Tests:** `tests/integration/test_ai_settings_routes.py` (Owner and
+  Admin 200, Member and Read-only 403, another workspace's Owner 404, no
+  session 401, an unknown grouping refused, twelve empty months),
+  `frontend/src/pages/aiSettings.test.tsx` (empty state; tables by feature
+  and by month; no accessibility violations).
+
 ## P9-S — Workspace AI settings (2026-11-18, under the autonomous mandate)
 
 - **Status:** Built and pushed under the owner's instruction "Go 1"

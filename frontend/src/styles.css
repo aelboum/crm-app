@@ -1676,3 +1676,8 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .ai-budget { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
 .ai-budget dt { color: var(--muted); }
 .ai-budget dd { margin: 0; }
+.ai-usage-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-variant-numeric: tabular-nums; }
+.ai-usage-table caption { text-align: left; font-weight: 600; padding-bottom: 6px; }
+.ai-usage-table th, .ai-usage-table td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid #f1f2f4; }
+.ai-usage-table thead th { color: var(--muted); font-weight: 500; font-size: 12px; }
+.ai-usage-table tbody th { font-weight: 400; }

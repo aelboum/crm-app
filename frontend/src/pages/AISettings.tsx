@@ -1,12 +1,15 @@
 import { type SyntheticEvent, useState } from "react";
 
 import {
+  type AIAmounts,
   type AIBudget,
   type AIFeature,
   type AIModel,
   type AISettings as Settings,
   useAIBudget,
+  useAIMonthlyUsage,
   useAISettings,
+  useAIUsageByFeature,
   useSetAIBudgetCap,
   useSetAIEnabled,
   useSetAIFeature,
@@ -475,6 +478,131 @@ function BudgetCard({
   );
 }
 
+// SaaS-OS's use case names for the product's features.
+const USE_CASE_TEXT: Record<string, MessageId> = {
+  "crm.contact_brief": "ai.feature.contactBrief",
+};
+
+function tokens(amounts: AIAmounts): string {
+  return (amounts.input_tokens + amounts.output_tokens).toLocaleString("en");
+}
+
+function cost(amounts: AIAmounts): string {
+  return amounts.estimated_cost.length === 0
+    ? "—"
+    : amounts.estimated_cost
+        .map((part) => `${part.estimated} ${part.currency}`)
+        .join(", ");
+}
+
+function monthName(key: string): string {
+  // "2026-11" is a UTC month; shown in English like the rest of the page.
+  const [year, month] = key.split("-").map(Number);
+  if (!year || !month) return key;
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function UsageTable({
+  caption,
+  first,
+  rows,
+}: {
+  caption: string;
+  first: string;
+  rows: { key: string; label: string; amounts: AIAmounts }[];
+}) {
+  const t = useT();
+  return (
+    <table className="ai-usage-table">
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{first}</th>
+          <th scope="col">{t("ai.usage.calls")}</th>
+          <th scope="col">{t("ai.usage.tokens")}</th>
+          <th scope="col">{t("ai.usage.cost")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.key}>
+            <th scope="row">{row.label}</th>
+            <td>{row.amounts.attempts.toLocaleString("en")}</td>
+            <td>{tokens(row.amounts)}</td>
+            <td>{cost(row.amounts)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function UsageCard({ workspaceId }: { workspaceId: string }) {
+  const t = useT();
+  const monthly = useAIMonthlyUsage(workspaceId);
+  const byFeature = useAIUsageByFeature(workspaceId);
+  const month = monthly.data;
+  const feature = byFeature.data;
+  let body;
+  if (monthly.isError) {
+    body = (
+      <LoadError error={monthly.error} onRetry={() => void monthly.refetch()} />
+    );
+  } else if (byFeature.isError) {
+    body = (
+      <LoadError
+        error={byFeature.error}
+        onRetry={() => void byFeature.refetch()}
+      />
+    );
+  } else if (!month || !feature) {
+    body = <Loading />;
+  } else if (month.totals.attempts === 0 && feature.totals.attempts === 0) {
+    body = (
+      <p className="notice info" role="status">
+        {t("ai.usage.empty")}
+      </p>
+    );
+  } else {
+    body = (
+      <>
+        <UsageTable
+          caption={t("ai.usage.thisMonth")}
+          first={t("ai.usage.feature")}
+          rows={feature.groups.map((group) => {
+            const name = USE_CASE_TEXT[group.key];
+            return {
+              key: group.key,
+              label: name ? t(name) : group.key,
+              amounts: group.amounts,
+            };
+          })}
+        />
+        <UsageTable
+          caption={t("ai.usage.byMonth")}
+          first={t("ai.usage.month")}
+          rows={[...month.groups].reverse().map((group) => ({
+            key: group.key,
+            label: monthName(group.key),
+            amounts: group.amounts,
+          }))}
+        />
+      </>
+    );
+  }
+  return (
+    <section className="records-card domains" aria-label={t("ai.usage.title")}>
+      <h2 className="settings-card-title">{t("ai.usage.title")}</h2>
+      <p className="muted">{t("ai.usage.intro")}</p>
+      {body}
+    </section>
+  );
+}
+
 export function AISettings({
   workspaceId,
   canRead,
@@ -523,7 +651,10 @@ export function AISettings({
         </>
       )}
       {canReadUsage ? (
-        <BudgetCard workspaceId={workspaceId} canManage={canManageBudget} />
+        <>
+          <BudgetCard workspaceId={workspaceId} canManage={canManageBudget} />
+          <UsageCard workspaceId={workspaceId} />
+        </>
       ) : null}
     </>
   );

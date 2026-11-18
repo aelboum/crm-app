@@ -35,6 +35,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 from saas_os.api.context import RequestContext, RequestPrincipal
 from saas_os.api.dependencies import require_permission
+from saas_os.api.v1.ai_usage import router as usage_router
 from saas_os.core.authority import UserCaller
 from saas_os.core.rbac import AuthorityNotAuthorizedError
 from saas_os.inference.settings import (
@@ -57,6 +58,7 @@ from saas_os.inference.settings import (
 from crm_app import ai
 
 router = APIRouter(prefix="/v1/workspaces", tags=["ai settings"])
+
 
 ReadPolicy = Annotated[RequestContext, Depends(require_permission("ai.policy", "read"))]
 ManagePolicy = Annotated[RequestContext, Depends(require_permission("ai.policy", "manage"))]
@@ -364,3 +366,10 @@ def put_ai_budget(tenant_id: uuid.UUID, body: BudgetIn, context: ManageBudget) -
     except _SETTINGS_ERRORS as exc:
         raise _refused(exc) from None
     return Response(status_code=204)
+
+
+# Mounted in this order: the product's routes, then SaaS-OS's own opt-in
+# reads of a workspace's AI usage and limits, as they are
+# (`/v1/tenants/{id}/ai/usage`, `/usage/monthly`, `/limits`; `ai.usage:read`,
+# decision P9-U). Nothing here wraps or changes them.
+routers = (router, usage_router)

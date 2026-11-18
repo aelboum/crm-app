@@ -145,3 +145,20 @@ def test_saas_os_audits_each_change_in_the_workspace(
         (probe["other"],),
     ).fetchone()
     assert other == (0,)
+
+
+def test_owners_and_admins_read_ai_usage_through_saas_os(probe: Probe) -> None:
+    """Decision P9-U: SaaS-OS's usage router, mounted as is. Owners and
+    Admins hold `ai.usage:read`; another workspace's Owner gets 404."""
+    allowed = [200, 200, 200]
+    assert probe["usage_read"] == {
+        "owner": allowed,
+        "admin": allowed,
+        "member": [403, 403, 403],
+        "reader": [403, 403, 403],
+        "other_owner": [404, 404, 404],
+    }
+    # Twelve months, none used; this month by feature, empty.
+    assert probe["usage"] == ["month", 12, 0, "use_case", []]
+    assert probe["usage_bad_group"] in (400, 422)
+    assert probe["usage_no_session"] == 401

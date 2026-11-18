@@ -1353,6 +1353,22 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## AI usage in Settings › AI (decision P9-U, 2026-11-18)
+
+SaaS-OS's usage router is mounted unchanged (`/v1/tenants/{id}/ai/usage`,
+`/usage/monthly`, `/limits`, `ai.usage:read`); Settings › AI shows usage
+this month by feature and over the last 12 months.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_ai_settings_routes.py` | 8 passed (Owner, Admin 200; Member, Read-only 403; other workspace 404; no session 401) |
+| `uv run pytest tests/unit` | 808 passed (OpenAPI regenerated: additions only) |
+| `npx vitest run --maxWorkers=2` | 37 files, 373 passed (`aiSettings.test.tsx` 7) |
+| `npx tsc --noEmit`, `npm run lint`, `ruff`, `pyright` | clean |
+
+Not deployed to staging. No AI provider exists, so every workspace shows
+"No AI use yet."
+
 ## Campaign sending job (decision P7-S, 2026-11-18)
 
 Queued campaigns are now processed by the email maintenance run, 500 new

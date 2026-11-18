@@ -363,6 +363,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenants/{tenant_id}/ai/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Limits
+         * @description The soft monthly token quota and the monthly budget, current UTC month.
+         */
+        get: operations["ai_limits_v1_tenants__tenant_id__ai_limits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/{tenant_id}/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Usage
+         * @description `since`/`until`: both timezone-aware or both omitted (the current UTC
+         *     month), at most 93 days apart. `group_by`: provider, model, use_case, day,
+         *     provenance or state.
+         */
+        get: operations["ai_usage_v1_tenants__tenant_id__ai_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/{tenant_id}/ai/usage/monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Monthly Usage
+         * @description Whole UTC months. `since`/`until`: both or neither (the current month
+         *     and the eleven before it), each the first instant of a UTC month, at most
+         *     24 months apart. `group_by`: month (every month of the window, empty ones
+         *     included), provider, model, use_case, provenance or state. Counts finished
+         *     attempts only, including attempts whose rows no longer exist.
+         */
+        get: operations["ai_monthly_usage_v1_tenants__tenant_id__ai_usage_monthly_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenants/{tenant_id}/invitations/accept": {
         parameters: {
             query?: never;
@@ -2961,6 +3027,27 @@ export interface components {
             /** Currency */
             currency: string;
         };
+        /** AmountsResponse */
+        AmountsResponse: {
+            /** Attempts */
+            attempts: number;
+            /** Attempts By State */
+            attempts_by_state: components["schemas"]["StateCountResponse"][];
+            /** Cached Input Tokens */
+            cached_input_tokens: number;
+            /** Cost Unknown Attempts */
+            cost_unknown_attempts: number;
+            /** Estimated Cost */
+            estimated_cost: components["schemas"]["CostResponse"][];
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Tokens By Provenance */
+            tokens_by_provenance: components["schemas"]["ProvenanceTokensResponse"][];
+            /** Usage Unknown Attempts */
+            usage_unknown_attempts: number;
+        };
         /** AppointmentIn */
         AppointmentIn: {
             /**
@@ -3412,6 +3499,33 @@ export interface components {
          *     spend in `currency` as plain decimal strings, never invoice amounts.
          */
         BudgetOut: {
+            /** Currency */
+            currency: string | null;
+            /** Limit */
+            limit: string | null;
+            /** Period Start */
+            period_start: string | null;
+            /** Remaining */
+            remaining: string | null;
+            /** Reserved */
+            reserved: string | null;
+            /** Retained */
+            retained: string | null;
+            /** Settled */
+            settled: string | null;
+            /** Source */
+            source: string | null;
+            /** State */
+            state: string;
+            /** Threshold Reached */
+            threshold_reached: number | null;
+            /** Warn Thresholds */
+            warn_thresholds: number[];
+        };
+        /** BudgetResponse */
+        BudgetResponse: {
+            /** Basis */
+            basis: string;
             /** Currency */
             currency: string | null;
             /** Limit */
@@ -4119,6 +4233,13 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** CostResponse */
+        CostResponse: {
+            /** Currency */
+            currency: string;
+            /** Estimated */
+            estimated: string;
+        };
         /** Count */
         Count: {
             /** Count */
@@ -4809,6 +4930,12 @@ export interface components {
             /** Won Before */
             won_before: number;
         };
+        /** GroupResponse */
+        GroupResponse: {
+            amounts: components["schemas"]["AmountsResponse"];
+            /** Key */
+            key: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5085,6 +5212,16 @@ export interface components {
             /** Revoked At */
             revoked_at: string | null;
         };
+        /** LimitsResponse */
+        LimitsResponse: {
+            budget: components["schemas"]["BudgetResponse"];
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            token_quota: components["schemas"]["QuotaResponse"];
+        };
         /** LinkRef */
         LinkRef: {
             /** Archived */
@@ -5200,6 +5337,33 @@ export interface components {
             provider_key: string;
             /** Rank */
             rank: number | null;
+        };
+        /** MonthlyUsageResponse */
+        MonthlyUsageResponse: {
+            /** Basis */
+            basis: string;
+            /** Group By */
+            group_by: string;
+            /** Groups */
+            groups: components["schemas"]["GroupResponse"][];
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Timezone */
+            timezone: string;
+            totals: components["schemas"]["AmountsResponse"];
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
         };
         /** NoteIn */
         NoteIn: {
@@ -5423,6 +5587,17 @@ export interface components {
              */
             user_id: string;
         };
+        /** ProvenanceTokensResponse */
+        ProvenanceTokensResponse: {
+            /** Attempts */
+            attempts: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Provenance */
+            provenance: string;
+        };
         /** PublicBookingPage */
         PublicBookingPage: {
             contact?: components["schemas"]["BusinessContact"] | null;
@@ -5468,6 +5643,19 @@ export interface components {
             name: string;
             /** Thank You */
             thank_you: string;
+        };
+        /** QuotaResponse */
+        QuotaResponse: {
+            /** Basis */
+            basis: string;
+            /** Limit */
+            limit: number | null;
+            /** Remaining */
+            remaining: number | null;
+            /** State */
+            state: string;
+            /** Used */
+            used: number | null;
         };
         /** RecentActivity */
         RecentActivity: {
@@ -5967,6 +6155,13 @@ export interface components {
             /** Weighted Amount */
             weighted_amount: string;
         };
+        /** StateCountResponse */
+        StateCountResponse: {
+            /** Attempts */
+            attempts: number;
+            /** State */
+            state: string;
+        };
         /** StatusChange */
         StatusChange: {
             /**
@@ -6375,6 +6570,35 @@ export interface components {
             start: string;
             /** Won */
             won: number;
+        };
+        /** UsageResponse */
+        UsageResponse: {
+            /** Basis */
+            basis: string;
+            budget: components["schemas"]["BudgetResponse"];
+            /** Group By */
+            group_by: string;
+            /** Groups */
+            groups: components["schemas"]["GroupResponse"][];
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Timezone */
+            timezone: string;
+            token_quota: components["schemas"]["QuotaResponse"];
+            totals: components["schemas"]["AmountsResponse"];
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -7188,6 +7412,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SignupStatus"];
+                };
+            };
+        };
+    };
+    ai_limits_v1_tenants__tenant_id__ai_limits_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LimitsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_usage_v1_tenants__tenant_id__ai_usage_get: {
+        parameters: {
+            query?: {
+                since?: string | null;
+                until?: string | null;
+                group_by?: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_monthly_usage_v1_tenants__tenant_id__ai_usage_monthly_get: {
+        parameters: {
+            query?: {
+                since?: string | null;
+                until?: string | null;
+                group_by?: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthlyUsageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

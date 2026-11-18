@@ -18,12 +18,19 @@ export type AIPreferences = components["schemas"]["PreferencesIn"];
 export type AIModelChoice = components["schemas"]["ModelIn"];
 export type AIBudget = components["schemas"]["BudgetOut"];
 export type AIBudgetCap = components["schemas"]["BudgetIn"];
+export type AIUsage = components["schemas"]["UsageResponse"];
+export type AIMonthlyUsage = components["schemas"]["MonthlyUsageResponse"];
+export type AIAmounts = components["schemas"]["AmountsResponse"];
 
 export const aiKeys = {
   settings: (workspaceId: string) =>
     ["workspace", workspaceId, "ai", "settings"] as const,
   budget: (workspaceId: string) =>
     ["workspace", workspaceId, "ai", "budget"] as const,
+  usage: (workspaceId: string) =>
+    ["workspace", workspaceId, "ai", "usage"] as const,
+  monthly: (workspaceId: string) =>
+    ["workspace", workspaceId, "ai", "monthly"] as const,
 };
 
 export function useAISettings(workspaceId: string, enabled = true) {
@@ -47,6 +54,42 @@ export function useAIBudget(workspaceId: string, enabled = true) {
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/ai/budget", {
           params: { path: where(workspaceId) },
+        }),
+      ),
+  });
+}
+
+/*
+ * AI usage (decision P9-U), from SaaS-OS's own read routes under
+ * `/v1/tenants/{id}/ai` (`ai.usage:read`). Estimates, never an invoice.
+ */
+
+/** This UTC month, per feature (SaaS-OS's use case). */
+export function useAIUsageByFeature(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: aiKeys.usage(workspaceId),
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/tenants/{tenant_id}/ai/usage", {
+          params: {
+            path: where(workspaceId),
+            query: { group_by: "use_case" },
+          },
+        }),
+      ),
+  });
+}
+
+/** The current UTC month and the eleven before it, one group each. */
+export function useAIMonthlyUsage(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: aiKeys.monthly(workspaceId),
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/tenants/{tenant_id}/ai/usage/monthly", {
+          params: { path: where(workspaceId), query: { group_by: "month" } },
         }),
       ),
   });

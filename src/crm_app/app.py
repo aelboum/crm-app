@@ -46,7 +46,7 @@ def create_app() -> FastAPI:
     from saas_os.api.v1 import invitation_acceptance_router  # noqa: PLC0415
 
     from crm_app.api.access import router as access_router  # noqa: PLC0415
-    from crm_app.api.ai_settings import router as ai_settings_router  # noqa: PLC0415
+    from crm_app.api.ai_settings import routers as ai_routers  # noqa: PLC0415
     from crm_app.api.appointments import router as appointments_router  # noqa: PLC0415
     from crm_app.api.automations import router as automations_router  # noqa: PLC0415
     from crm_app.api.booking_pages import public_router as public_booking_router  # noqa: PLC0415
@@ -98,7 +98,8 @@ def create_app() -> FastAPI:
         workspaces_router,
         settings_router,
         access_router,
-        ai_settings_router,
+        # Settings > AI, then SaaS-OS's opt-in usage reads (decision P9-U).
+        *ai_routers,
         members_router,
         notifications_router,
         *record_routers,

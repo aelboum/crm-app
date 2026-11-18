@@ -32,7 +32,7 @@ def _out(response: Any) -> Any:
 CALLERS = ("owner", "admin", "member", "reader", "other_owner")
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
     if os.environ.get("ENVIRONMENT") != "test":
         raise SystemExit("ai_settings_probe runs only with ENVIRONMENT=test")
     a = _new_workspace("ai-a")
@@ -185,6 +185,30 @@ def main() -> None:
         }
         budget = client.get(f"{base}/budget", headers=auth("admin"))
         result["budget"] = [budget.status_code, _out(budget)]
+
+        # --- Usage (decision P9-U): SaaS-OS's own reads, `ai.usage:read` ------------------
+        usage = f"/v1/tenants/{a.id}/ai"
+        result["usage_read"] = {
+            c: [
+                client.get(f"{usage}/usage?group_by=use_case", headers=auth(c)).status_code,
+                client.get(f"{usage}/usage/monthly", headers=auth(c)).status_code,
+                client.get(f"{usage}/limits", headers=auth(c)).status_code,
+            ]
+            for c in CALLERS
+        }
+        monthly = client.get(f"{usage}/usage/monthly", headers=auth("owner")).json()
+        by_feature = client.get(f"{usage}/usage?group_by=use_case", headers=auth("owner")).json()
+        result["usage"] = [
+            monthly["group_by"],
+            len(monthly["groups"]),
+            monthly["totals"]["attempts"],
+            by_feature["group_by"],
+            by_feature["groups"],
+        ]
+        result["usage_bad_group"] = client.get(
+            f"{usage}/usage?group_by=secret", headers=auth("owner")
+        ).status_code
+        result["usage_no_session"] = client.get(f"{usage}/usage").status_code
 
     print("RESULT " + json.dumps(result, default=str))
 

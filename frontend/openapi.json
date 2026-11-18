@@ -407,6 +407,68 @@
         "title": "Amount",
         "type": "object"
       },
+      "AmountsResponse": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "attempts_by_state": {
+            "items": {
+              "$ref": "#/components/schemas/StateCountResponse"
+            },
+            "title": "Attempts By State",
+            "type": "array"
+          },
+          "cached_input_tokens": {
+            "title": "Cached Input Tokens",
+            "type": "integer"
+          },
+          "cost_unknown_attempts": {
+            "title": "Cost Unknown Attempts",
+            "type": "integer"
+          },
+          "estimated_cost": {
+            "items": {
+              "$ref": "#/components/schemas/CostResponse"
+            },
+            "title": "Estimated Cost",
+            "type": "array"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "tokens_by_provenance": {
+            "items": {
+              "$ref": "#/components/schemas/ProvenanceTokensResponse"
+            },
+            "title": "Tokens By Provenance",
+            "type": "array"
+          },
+          "usage_unknown_attempts": {
+            "title": "Usage Unknown Attempts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attempts",
+          "attempts_by_state",
+          "input_tokens",
+          "output_tokens",
+          "cached_input_tokens",
+          "tokens_by_provenance",
+          "estimated_cost",
+          "usage_unknown_attempts",
+          "cost_unknown_attempts"
+        ],
+        "title": "AmountsResponse",
+        "type": "object"
+      },
       "AppointmentIn": {
         "additionalProperties": false,
         "properties": {
@@ -1830,6 +1892,141 @@
           "threshold_reached"
         ],
         "title": "BudgetOut",
+        "type": "object"
+      },
+      "BudgetResponse": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "reserved": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserved"
+          },
+          "retained": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained"
+          },
+          "settled": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "threshold_reached": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Reached"
+          },
+          "warn_thresholds": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Warn Thresholds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "state",
+          "basis",
+          "currency",
+          "limit",
+          "source",
+          "settled",
+          "reserved",
+          "retained",
+          "remaining",
+          "period_start",
+          "warn_thresholds",
+          "threshold_reached"
+        ],
+        "title": "BudgetResponse",
         "type": "object"
       },
       "BulkSkipped": {
@@ -4072,6 +4269,24 @@
         "title": "ConversationSummary",
         "type": "object"
       },
+      "CostResponse": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "estimated": {
+            "title": "Estimated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "estimated"
+        ],
+        "title": "CostResponse",
+        "type": "object"
+      },
       "Count": {
         "properties": {
           "count": {
@@ -6255,6 +6470,23 @@
         "title": "FunnelReport",
         "type": "object"
       },
+      "GroupResponse": {
+        "properties": {
+          "amounts": {
+            "$ref": "#/components/schemas/AmountsResponse"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "amounts"
+        ],
+        "title": "GroupResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6951,6 +7183,28 @@
         "title": "KeyOut",
         "type": "object"
       },
+      "LimitsResponse": {
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/BudgetResponse"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "token_quota": {
+            "$ref": "#/components/schemas/QuotaResponse"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "token_quota",
+          "budget"
+        ],
+        "title": "LimitsResponse",
+        "type": "object"
+      },
       "LinkRef": {
         "properties": {
           "archived": {
@@ -7258,6 +7512,59 @@
           "blocked_by"
         ],
         "title": "ModelOut",
+        "type": "object"
+      },
+      "MonthlyUsageResponse": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "group_by": {
+            "title": "Group By",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupResponse"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AmountsResponse"
+          },
+          "until": {
+            "format": "date-time",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "since",
+          "until",
+          "timezone",
+          "group_by",
+          "basis",
+          "totals",
+          "groups"
+        ],
+        "title": "MonthlyUsageResponse",
         "type": "object"
       },
       "NoteIn": {
@@ -7838,6 +8145,34 @@
         "title": "ProfileOut",
         "type": "object"
       },
+      "ProvenanceTokensResponse": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provenance",
+          "attempts",
+          "input_tokens",
+          "output_tokens"
+        ],
+        "title": "ProvenanceTokensResponse",
+        "type": "object"
+      },
       "PublicBookingPage": {
         "properties": {
           "contact": {
@@ -7986,6 +8321,60 @@
           "thank_you"
         ],
         "title": "PublicForm",
+        "type": "object"
+      },
+      "QuotaResponse": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "used": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used"
+          }
+        },
+        "required": [
+          "state",
+          "limit",
+          "used",
+          "remaining",
+          "basis"
+        ],
+        "title": "QuotaResponse",
         "type": "object"
       },
       "RecentActivity": {
@@ -9598,6 +9987,24 @@
         "title": "StageTotal",
         "type": "object"
       },
+      "StateCountResponse": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "attempts"
+        ],
+        "title": "StateCountResponse",
+        "type": "object"
+      },
       "StatusChange": {
         "properties": {
           "confirm_owner_change": {
@@ -10805,6 +11212,67 @@
           "won"
         ],
         "title": "TrendWeek",
+        "type": "object"
+      },
+      "UsageResponse": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/BudgetResponse"
+          },
+          "group_by": {
+            "title": "Group By",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupResponse"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "token_quota": {
+            "$ref": "#/components/schemas/QuotaResponse"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AmountsResponse"
+          },
+          "until": {
+            "format": "date-time",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "since",
+          "until",
+          "timezone",
+          "group_by",
+          "basis",
+          "totals",
+          "groups",
+          "token_quota",
+          "budget"
+        ],
+        "title": "UsageResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -12250,6 +12718,274 @@
         "summary": "Signup Status",
         "tags": [
           "signups"
+        ]
+      }
+    },
+    "/v1/tenants/{tenant_id}/ai/limits": {
+      "get": {
+        "description": "The soft monthly token quota and the monthly budget, current UTC month.",
+        "operationId": "ai_limits_v1_tenants__tenant_id__ai_limits_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Limits",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/v1/tenants/{tenant_id}/ai/usage": {
+      "get": {
+        "description": "`since`/`until`: both timezone-aware or both omitted (the current UTC\nmonth), at most 93 days apart. `group_by`: provider, model, use_case, day,\nprovenance or state.",
+        "operationId": "ai_usage_v1_tenants__tenant_id__ai_usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_by",
+            "required": false,
+            "schema": {
+              "default": "provider",
+              "title": "Group By",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Usage",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/v1/tenants/{tenant_id}/ai/usage/monthly": {
+      "get": {
+        "description": "Whole UTC months. `since`/`until`: both or neither (the current month\nand the eleven before it), each the first instant of a UTC month, at most\n24 months apart. `group_by`: month (every month of the window, empty ones\nincluded), provider, model, use_case, provenance or state. Counts finished\nattempts only, including attempts whose rows no longer exist.",
+        "operationId": "ai_monthly_usage_v1_tenants__tenant_id__ai_usage_monthly_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_by",
+            "required": false,
+            "schema": {
+              "default": "month",
+              "title": "Group By",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyUsageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Monthly Usage",
+        "tags": [
+          "ai"
         ]
       }
     },

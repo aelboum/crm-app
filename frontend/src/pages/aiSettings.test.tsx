@@ -13,6 +13,8 @@ import {
  * switched on with the right requests; a model the workspace's
  * preferences rule out cannot be chosen and says why; preferences and the
  * monthly cap are saved; members without the permission see no settings.
+ * AI usage (decision P9-U) comes from SaaS-OS's own read routes: by
+ * feature this month and by month, or a plain note when there is none.
  */
 
 const WS = "11111111-2222-4333-8444-555555555555";
@@ -59,14 +61,69 @@ const BUDGET = {
   threshold_reached: null,
 };
 
+function amounts(attempts: number, cost: string | null) {
+  return {
+    attempts,
+    attempts_by_state: [],
+    input_tokens: attempts * 1000,
+    output_tokens: attempts * 200,
+    cached_input_tokens: 0,
+    tokens_by_provenance: [],
+    estimated_cost: cost ? [{ currency: "EUR", estimated: cost }] : [],
+    usage_unknown_attempts: 0,
+    cost_unknown_attempts: 0,
+  };
+}
+
+function usage(used: boolean) {
+  const window = {
+    tenant_id: WS,
+    since: "2025-12-01T00:00:00Z",
+    until: "2026-12-01T00:00:00Z",
+    timezone: "UTC",
+    basis: "x",
+  };
+  const months = ["2026-10", "2026-11"].map((key, index) => ({
+    key,
+    amounts: used ? amounts(index + 2, `0.0${index + 1}`) : amounts(0, null),
+  }));
+  return {
+    monthly: {
+      ...window,
+      group_by: "month",
+      totals: used ? amounts(5, "0.03") : amounts(0, null),
+      groups: months,
+    },
+    byFeature: {
+      ...window,
+      group_by: "use_case",
+      totals: used ? amounts(3, "0.02") : amounts(0, null),
+      groups: used
+        ? [{ key: "crm.contact_brief", amounts: amounts(3, "0.02") }]
+        : [],
+      token_quota: {
+        state: "unconfigured",
+        limit: null,
+        used: null,
+        remaining: null,
+        basis: "x",
+      },
+      budget: { ...BUDGET, basis: "x" },
+    },
+  };
+}
+
 type Reply = { status: number; body?: unknown } | undefined;
 
 function workspace(
   allowed: boolean,
   onWrite?: (method: string, path: string, body: unknown) => Reply,
+  used = false,
 ): Handler {
+  const reads = usage(used);
   return (method, path, body) => {
     const base = `/v1/workspaces/${WS}`;
+    const tenant = `/v1/tenants/${WS}/ai`;
     if (method !== "GET")
       return onWrite?.(method, path, body) ?? { status: 204 };
     if (path === "/auth/me") return { status: 200, body: { user_id: "u-me" } };
@@ -96,6 +153,10 @@ function workspace(
     }
     if (path === `${base}/ai`) return { status: 200, body: SETTINGS };
     if (path === `${base}/ai/budget`) return { status: 200, body: BUDGET };
+    if (path.startsWith(`${tenant}/usage/monthly?`))
+      return { status: 200, body: reads.monthly };
+    if (path.startsWith(`${tenant}/usage?`))
+      return { status: 200, body: reads.byFeature };
     return undefined;
   };
 }
@@ -218,6 +279,39 @@ describe("AI settings", () => {
     expect(await within(card).findByRole("alert")).toHaveTextContent(
       "That model is no longer available.",
     );
+  });
+
+  it("says when the workspace has used no AI", async () => {
+    renderApp(URL, workspace(true));
+    const card = await screen.findByRole("region", { name: "AI usage" });
+    expect(await within(card).findByText("No AI use yet.")).toBeInTheDocument();
+    expect(within(card).queryByRole("table")).toBeNull();
+  });
+
+  it("shows AI usage by feature and by month", async () => {
+    const { sent } = renderApp(URL, workspace(true, undefined, true));
+    const card = await screen.findByRole("region", { name: "AI usage" });
+    const feature = await within(card).findByRole("table", {
+      name: "This month, by feature",
+    });
+    const brief = within(feature).getByRole("row", { name: /Contact brief/ });
+    expect(brief).toHaveTextContent("3");
+    expect(brief).toHaveTextContent("3,600");
+    expect(brief).toHaveTextContent("0.02 EUR");
+    const months = within(card).getByRole("table", {
+      name: "The last 12 months",
+    });
+    const rows = within(months).getAllByRole("row");
+    // Newest first, after the header row.
+    expect(rows[1]).toHaveTextContent("November 2026");
+    expect(rows[2]).toHaveTextContent("October 2026");
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        method: "GET",
+        path: `/v1/tenants/${WS}/ai/usage?group_by=use_case`,
+      }),
+    );
+    expect(await accessibilityViolations()).toEqual([]);
   });
 
   it("shows members no settings", async () => {
