@@ -1353,6 +1353,26 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging audit digest store (decision D-STG.7, 2026-11-18)
+
+Owner: "Go 1 then 2 then 4" (item 1). On the VPS at checkout `2865826`
+(the running image stays `crm-app:c94d156`):
+
+| Check | Result |
+| --- | --- |
+| `audit_store.sh collect`, first run | 10 lines kept from the worker's current log |
+| `audit_store.sh seed` (17:42 UTC) | 243 records copied from `core.audit_digests` into `seed.log` |
+| `collect` again; `seed` again | 0 new lines; seed refused ("a seed is taken once"), exit 1 |
+| Truncating `audit_digest.log` as root | refused, `Operation not permitted`; both files carry the append-only attribute; directory `root` 0700 |
+| `leadstack-audit-store.timer` | installed and enabled, every 10 minutes |
+| `sudo .venv/bin/python deploy/staging/backup_drill.py` | **15 passed, 0 failed**: `audit_digest verify` over 263 lines (worker log, `audit_digest.log`, `seed.log`), 243 windows from 2026-11-08 14:00 to 2026-11-18 17:00 UTC, no findings; app 137 tables / 1,430 rows and ZITADEL 144 / 2,308 rows match |
+| `uv run pytest tests/unit/test_staging_timers.py` | 6 passed |
+
+Limits: the windows before the seed are checked against the database's
+own copy of their records, so a change made to them before 2026-11-18
+would not show. The store is on the same host (root can clear the
+attribute); the external log store stays an owner decision (S11).
+
 ## Staging deployed at `c94d156` (2026-11-18, owner: "Deploy staging")
 
 From `7423c7a`: SaaS-OS v0.15.0 (K3.10, K3.11), Settings › AI (P9-S), the
