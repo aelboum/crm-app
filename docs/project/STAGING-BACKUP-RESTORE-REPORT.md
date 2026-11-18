@@ -54,7 +54,7 @@ drill (S-11, fixed in `4470baf`).
   of plaintext dumps after each run. SaaS-OS is not changed.
 - **Owner decision: yes** (bucket and its cost).
 
-### S-10 Medium — Audit digests live only in container logs (open)
+### S-10 Medium — Audit digests live only in container logs (stand-in in place; external store open)
 - **Evidence:** the worker's digest job runs every minute and emits a
   digest once an hourly window has settled (1 h + 15 min); the 13:00–14:00
   digest was written around 14:15 into the log of a worker container that
@@ -65,6 +65,11 @@ drill (S-11, fixed in `4470baf`).
 - **Remediation:** ship container logs to an external store, or at least
   append the worker's `audit_digest` lines to a file on the host before a
   redeploy. **Owner decision: yes** (log store).
+- **Stand-in (2026-11-18, decision D-STG.7):** `audit_store.sh` keeps the
+  lines in append-only files on the host every 10 minutes and before each
+  redeploy, and the drill verifies against them. Records that had rotated
+  away were seeded once from `core.audit_digests`, which cannot show
+  changes made before the seed. Same host, so still not the external store.
 
 ### S-11 Low — The drill could not read its own audit log on Linux (fixed)
 - `NamedTemporaryFile` kept mode 0600 under `sudo`, unreadable by the

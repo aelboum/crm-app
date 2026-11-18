@@ -79,3 +79,15 @@ def test_no_unit_holds_a_secret() -> None:
         text = unit.read_text(encoding="utf-8")
         assert not re.search(r"(?i)(password|token|secret|key)\s*=", text), unit.name
         assert "://" not in text, unit.name
+
+
+def test_the_audit_digest_store_has_a_timer_and_its_script() -> None:
+    """Decision D-STG.7: the worker's audit_digest lines are copied off its
+    rotating container log into append-only files on the host."""
+    assert "leadstack-audit-store.service" in _timer_targets().values()
+    service = (UNITS / "leadstack-audit-store.service").read_text(encoding="utf-8")
+    assert "audit_store.sh collect" in service
+    script = (REPO_ROOT / "deploy" / "staging" / "audit_store.sh").read_text(encoding="utf-8")
+    # Kept files are created append-only and never rewritten.
+    assert "chattr +a" in script
+    assert not re.search(r"^\s*(rm|truncate|mv)\b.*STORE", script, re.M)

@@ -1,0 +1,13 @@
+# Every 10 minutes: keep the worker's audit_digest lines (decision D-STG.7).
+
+[Unit]
+Description=LeadStack timer: Every 10 minutes: keep the worker's audit_digest lines
+
+[Timer]
+OnCalendar=*:0/10
+Persistent=true
+RandomizedDelaySec=0
+Unit=leadstack-audit-store.service
+
+[Install]
+WantedBy=timers.target

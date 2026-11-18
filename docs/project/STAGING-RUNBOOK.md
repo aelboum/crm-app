@@ -74,7 +74,15 @@ C="sudo docker compose --env-file deploy/staging/.local/compose.env   -f deploy/
   --force-recreate app worker`; install `deploy/staging/systemd/` (not the
   heartbeat until `HEARTBEAT_URL` exists) with `/opt/leadstack` linked to
   the checkout and `deploy/staging/.env` to `.local/compose.env`.
-- **Deploy a commit:** `git fetch && git checkout <commit>`; `sudo docker
+- **Audit digest store** (decision D-STG.7, 2026-11-18): `sudo sh
+  deploy/staging/audit_store.sh collect` copies the worker's
+  `audit_digest` lines into append-only files in
+  `/var/lib/leadstack/audit-digests/`; `leadstack-audit-store.timer` runs
+  it every 10 minutes. `seed` was run once (records that had rotated away,
+  copied from `core.audit_digests`); it refuses to run again.
+- **Deploy a commit:** `sudo sh deploy/staging/audit_store.sh collect`
+  first (the redeploy drops the worker's log); `git fetch && git checkout
+  <commit>`; `sudo docker
   build -t crm-app:staging -t crm-app:<commit> .`; set `VERSION=<commit>`
   in `.local/app.env`; `$C up -d --wait` (runs `migrate` first);
   `curl https://crm-staging.auravox.nl/readyz` → 200.
@@ -136,8 +144,8 @@ C="sudo docker compose --env-file deploy/staging/.local/compose.env   -f deploy/
   on a separate instance prepared with the same roles. Then check, as the
   drill does: row counts, migration versions, RLS forced on every table,
   the app role still safe, tenant isolation through the app role, and
-  `python -m saas_os.ops.audit_digest verify` against the exported digest
-  log (windows after the backup are expected to differ; record the restore
+  `python -m saas_os.ops.audit_digest verify` against the digest lines
+  kept in `/var/lib/leadstack/audit-digests/` and the worker's current log (windows after the backup are expected to differ; record the restore
   time). Only then point the app at it.
 
 ## 6. When something goes wrong

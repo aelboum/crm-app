@@ -471,6 +471,36 @@ approval), **Superseded**.
 - **Tests:** `tests/integration/test_bulk_actions.py` (4),
   `frontend/src/records/records.test.tsx` (2 new).
 
+## D-STG.7 — Audit digests kept in append-only files on the staging host (2026-11-18)
+
+- **Status:** Done on the owner's instruction, 2026-11-18 ("Go 1 then 2
+  then 4", item 1: fix the failing backup-drill check), after staging
+  finding S-10.
+- **Problem:** the backup drill's last check (`audit_digest verify`)
+  failed with `chain_start_missing`. Its evidence was the worker's
+  container log, which Docker rotates (5 × 10 MB) and loses on every
+  redeploy, so the chain's first records were gone. The database was not
+  at fault.
+- **What:** `deploy/staging/audit_store.sh collect`, run every 10 minutes
+  by `leadstack-audit-store.timer` and by hand before every redeploy,
+  appends each `audit_digest` line not yet kept to
+  `/var/lib/leadstack/audit-digests/audit_digest.log` (root-only, ext4
+  append-only attribute). The drill verifies against those files plus the
+  worker's current log.
+- **The seed:** the lines from 2026-11-08 to the store's start had already
+  rotated away. `audit_store.sh seed` copied, once, the records the
+  database itself keeps (`core.audit_digests`, which SaaS-OS stores
+  exactly as logged) into the append-only `seed.log`. That is the
+  database's own copy: it cannot show a change made before the seed was
+  taken, only one made afterwards. The verifier, its check and its
+  findings are unchanged.
+- **Still a stand-in:** the files sit on the same host and root can clear
+  the attribute. ADR-0053 asks for a store whose administrators hold no
+  database credential: an external log store stays an owner decision
+  (hosting brief S11). Nothing is bought or sent off the host.
+- **Tests:** `tests/unit/test_staging_timers.py` (the timer, its unit and
+  the script's append-only files).
+
 ## D-STG.6 — Caddy, Unbound and Squid images refreshed (2026-11-08)
 
 - **Status:** Done on the owner's instruction, 2026-11-08 ("update Caddy,

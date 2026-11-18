@@ -1,0 +1,15 @@
+# Copy the worker's audit_digest log lines into append-only files on the
+# host before Docker rotates or a redeploy drops them (decision D-STG.7;
+# SaaS-OS ADR-0053). A stand-in for an external log store, which is an owner
+# decision. A non-zero exit is a failed unit (`systemctl --failed`).
+
+[Unit]
+Description=LeadStack audit digest store
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+Environment=STORE_DIR=/var/lib/leadstack/audit-digests
+ExecStart=/bin/sh /opt/leadstack/deploy/staging/audit_store.sh collect
+TimeoutStartSec=300

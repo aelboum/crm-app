@@ -18,8 +18,10 @@ at the pinned commit), run on this host as its systemd timer would run it:
    policy; the app role is still a safe role; every table's row count and
    both migration versions match the live databases; through the app role,
    one workspace's context sees none of the other's rows; and
-   `saas_os.ops.audit_digest verify` passes against the worker's exported
-   `audit_digest` log lines (the stand-in for the external log store).
+   `saas_os.ops.audit_digest verify` passes against the `audit_digest`
+   lines kept in the host's append-only store (`audit_store.sh`, decision
+   D-STG.7) plus the worker's current log: the stand-in for the external
+   log store.
 4. Remove the drill instance and its network. The backups stay.
 
 Stand-in limits (written down, not hidden):
@@ -58,6 +60,8 @@ AGE_KEYGEN = shutil.which("age-keygen") or "age-keygen"
 PROJECT = "crm-app-staging"
 LIVE = f"{PROJECT}-postgres-1"
 WORKER = f"{PROJECT}-worker-1"
+# Where audit_store.sh keeps the digest lines on the staging host.
+AUDIT_STORE = Path(os.environ.get("AUDIT_STORE_DIR", "/var/lib/leadstack/audit-digests"))
 DRILL = f"{PROJECT}-restore-drill"
 DRILL_NETWORK = f"{PROJECT}_restore-drill"
 IMAGE = "crm-app:staging"
@@ -325,13 +329,20 @@ def _verify_app_copy(drill_admin: str, runtime: str) -> None:
         json.dumps(isolation),
     )
 
-    # The worker's audit_digest lines stand in for the external log store.
+    # The host's append-only digest store (audit_store.sh, decision
+    # D-STG.7) stands in for the external log store; the worker's current
+    # log adds lines the store's timer has not copied yet. The verifier
+    # counts a record logged twice once.
     exported = run([DOCKER, "logs", WORKER])
     lines = [
         x
         for x in (exported.stdout + exported.stderr).splitlines()
         if '"message": "audit_digest"' in x
     ]
+    kept = sorted(AUDIT_STORE.glob("*.log")) if AUDIT_STORE.is_dir() else []
+    for path in kept:
+        lines.extend(x for x in path.read_text(encoding="utf-8").splitlines() if x.strip())
+    sources = ", ".join(path.name for path in kept) or "no host store"
     with tempfile.NamedTemporaryFile("w", suffix=".log", delete=False, encoding="utf-8") as handle:
         handle.write("\n".join(lines) + "\n")
         log_path = handle.name
@@ -363,7 +374,8 @@ def _verify_app_copy(drill_admin: str, runtime: str) -> None:
     finally:
         os.unlink(log_path)
     check(
-        f"E8 audit_digest verify passes on the restored copy ({len(lines)} records)",
+        f"E8 audit_digest verify passes on the restored copy ({len(lines)} lines;"
+        f" worker log and {sources})",
         digest.returncode == 0 and bool(lines),
         _last_line(digest),
     )
