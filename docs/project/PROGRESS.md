@@ -1353,6 +1353,18 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Rehearsal data removed from staging (2026-11-18, owner: "last 3")
+
+Signed in as the Staging Alpha Owner (test account), through the app:
+deleted the contacts Rita Rehearsal and Ravi Rehearsal and the tag
+"Rehearsal 2026-11-18" (audit: two `crm_app.contact.deleted`, one
+`crm_app.tag.deleted`; no app errors). The campaign "Rehearsal check"
+stays: the product has no route to delete a campaign and a completed one
+cannot be cancelled, and no manual database edit was made. Its two
+recipient rows remain with the contact link cleared and the
+`@example.com` test addresses. Rehearsal itself is still on for Staging
+Alpha and Beta.
+
 ## Campaign results (decision P7-RP, 2026-11-18)
 
 A campaign's detail shows its results once queued: recipients, each email
