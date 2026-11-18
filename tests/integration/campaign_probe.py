@@ -197,13 +197,15 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             owner_scope,
             uuid.UUID(camp["id"]),
             workspace_name="Acme",
-            unsubscribe_base="https://app.example.test/app/unsubscribe",
+            unsubscribe_base="https://app.example.test/app/u",
+            one_click_base="https://app.example.test/v1/public/unsubscribe",
         )
         again = campaigns.process(
             owner_scope,
             uuid.UUID(camp["id"]),
             workspace_name="Acme",
-            unsubscribe_base="https://app.example.test/app/unsubscribe",
+            unsubscribe_base="https://app.example.test/app/u",
+            one_click_base="https://app.example.test/v1/public/unsubscribe",
         )
         result["processed"] = [
             processed["status"],
@@ -220,10 +222,27 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             e=email_id,
         )
         result["rendered"] = [body.startswith("Hello Ada,"), "Unsubscribe: https://" in body]
-        token = re.search(r"/unsubscribe/[0-9a-f-]+/([0-9a-f]{32})", body)
+        token = re.search(r"/app/u/[0-9a-f-]+#([0-9a-f]{32})", body)
         recorder = Recorder()
         result["sent"] = emails.send(a.id, email_id, provider=recorder)
         result["sender"] = recorder.sent[-1].sender if recorder.sent else None
+        # One-click unsubscribe headers (decision E-H1): the public route,
+        # with the same token as the body's link.
+        header = recorder.sent[-1].list_unsubscribe if recorder.sent else ()
+        result["headers"] = [
+            len(header),
+            bool(recorder.sent and recorder.sent[-1].list_unsubscribe_post),
+            bool(header and token and header[0].endswith(f"/{a.id}/{token.group(1)}")),
+            bool(
+                header and header[0].startswith("https://app.example.test/v1/public/unsubscribe/")
+            ),
+        ]
+        result["message_id_stored"] = _scalar(
+            a.id,
+            "SELECT message_id = :m FROM crm_app.email_message WHERE tenant_id = :t AND id = :e",
+            e=email_id,
+            m=recorder.sent[-1].message_id if recorder.sent else "",
+        )
 
         # Unsubscribing: suppressed and consent withdrawn; repeats, unknown
         # tokens and another workspace's path change nothing visible.
@@ -280,6 +299,7 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
                 subject="Late",
                 text_body="Late news",
                 contact_id=uuid.UUID(ada),
+                list_unsubscribe_url=f"https://app.example.test/v1/public/unsubscribe/{a.id}/late",
             )
         result["late_send"] = [late, emails.send(a.id, again_id, provider=recorder)]
 

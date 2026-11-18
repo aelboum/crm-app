@@ -163,3 +163,37 @@ def test_provider_events_are_reduced_to_what_is_kept() -> None:
         ["not", "an", "object"],
     ):
         assert rules.provider_event("msg_1", ignored) is None
+
+
+# --- Headers (decision E-H1) --------------------------------------------------------------
+
+
+def test_a_campaign_needs_an_https_one_click_address() -> None:
+    url = "https://app.example.test/v1/public/unsubscribe/11111111-2222-4333-8444-555555555555/abc"
+    assert rules.unsubscribe_url("campaign", url) == url
+    for bad in (
+        None,
+        "http://app.example.test/v1/public/unsubscribe/x/y",
+        "mailto:unsubscribe@example.test",
+        "https://app.example.test/x y",
+        "https://app.example.test/x\r\nBcc: someone@example.test",
+        "https://" + "a" * 2050 + "/x",
+    ):
+        with pytest.raises(ValueError, match="https one-click"):
+            rules.unsubscribe_url("campaign", bad)
+
+
+def test_other_mail_carries_no_unsubscribe_address() -> None:
+    assert rules.unsubscribe_url("conversation_reply", None) is None
+    with pytest.raises(ValueError, match="no unsubscribe address"):
+        rules.unsubscribe_url("booking_confirmation", "https://app.example.test/u/x")
+
+
+def test_a_reply_refers_to_the_conversations_earlier_messages() -> None:
+    assert rules.thread([]) is None
+    assert rules.thread(["not-an-id", "<a b@example.test>"]) is None
+    ids = [f"<{n}@mail.example.test>" for n in range(12)]
+    thread = rules.thread(["<x@y>\r\nBcc: z", *ids])
+    assert thread is not None
+    assert thread.in_reply_to == "<11@mail.example.test>"
+    assert thread.references == tuple(ids[-rules.REFERENCES_MAX :])

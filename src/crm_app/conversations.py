@@ -39,6 +39,7 @@ from saas_os.infra.db import (
 
 from crm_app import emails, inbound, notifications
 from crm_app.domains import conversations as rules
+from crm_app.domains import emails as email_rules
 from crm_app.domains import paging
 from crm_app.domains.records import InvalidValue, visible_text
 from crm_app.models import (
@@ -211,6 +212,30 @@ def _mark_read(session: Session, scope: Scope, conversation_id: uuid.UUID, at: d
         row.read_at = at
 
 
+def _thread(
+    session: Session, scope: Scope, conversation_id: uuid.UUID
+) -> email_rules.Thread | None:
+    """The `Message-ID`s this conversation already sent, oldest first, as a
+    reply's `In-Reply-To` and `References` (decision E-H1). Received mail
+    is not named: its `Message-ID` is not stored yet (inbound fetching,
+    SaaS-OS gap 2)."""
+    ids = session.execute(
+        select(EmailMessage.message_id)
+        .join(
+            ConversationMessage,
+            (ConversationMessage.tenant_id == EmailMessage.tenant_id)
+            & (ConversationMessage.email_message_id == EmailMessage.id),
+        )
+        .where(
+            ConversationMessage.tenant_id == scope.workspace,
+            ConversationMessage.conversation_id == conversation_id,
+            EmailMessage.message_id.is_not(None),
+        )
+        .order_by(EmailMessage.sent_at, EmailMessage.id)
+    ).scalars()
+    return email_rules.thread([value for value in ids if value])
+
+
 def _queue_reply(
     session: Session, scope: Scope, conversation: Conversation, text: str
 ) -> uuid.UUID:
@@ -228,6 +253,7 @@ def _queue_reply(
             subject=conversation.subject,
             text_body=text,
             contact_id=contact.id,
+            thread=_thread(session, scope, conversation.id),
         )
     except InvalidValue as exc:
         raise ConversationRuleError(str(exc)) from None

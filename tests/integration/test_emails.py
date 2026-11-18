@@ -215,3 +215,13 @@ def test_production_never_hands_email_to_a_provider(probe: Probe) -> None:
 
 def test_a_provider_rejection_after_acceptance_is_final(probe: Probe) -> None:
     assert probe["provider_failed"] == [204, "rejected", 204, "rejected"]
+
+
+def test_a_reply_carries_its_thread_and_keeps_its_message_id(probe: Probe) -> None:
+    status, in_reply_to, references, unsubscribe, kept = probe["threaded"]
+    assert status == "sent"
+    assert in_reply_to == ["<two@mail.example.test>"]
+    assert references == ["<one@mail.example.test>", "<two@mail.example.test>"]
+    # Only campaign mail carries an unsubscribe address (decision E-H1).
+    assert unsubscribe == []
+    assert kept is True

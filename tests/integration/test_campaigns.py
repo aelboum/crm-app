@@ -88,6 +88,10 @@ def test_a_changed_approval_is_refused_and_recipients_are_added_once(probe: Prob
     assert probe["rendered"] == [True, True]
     assert probe["sent"] == "sent"
     assert probe["sender"] == "news@campaigns.example.test"
+    # One https List-Unsubscribe address, One-Click asked, the body's token
+    # (decision E-H1); the Message-ID it went with is kept.
+    assert probe["headers"] == [1, True, True, True]
+    assert probe["message_id_stored"] is True
 
 
 def test_unsubscribing_suppresses_and_withdraws_consent(probe: Probe) -> None:

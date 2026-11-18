@@ -128,3 +128,10 @@ def test_changes_are_audited_without_message_text(
         "crm_app.conversation.closed",
     } <= actions
     assert not any("Here it is" in meta or "Priced" in meta for _, meta in rows)
+
+
+def test_a_reply_refers_to_the_threads_earlier_email(probe: Probe) -> None:
+    first, status, later = probe["threading"]
+    assert first == [None, None]
+    assert status == 201
+    assert later == ["<first-reply@mail.example.test>", "<first-reply@mail.example.test>"]

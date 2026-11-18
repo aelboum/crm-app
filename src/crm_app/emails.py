@@ -168,12 +168,17 @@ def queue(  # noqa: PLR0913 - one email's fields
     subject: str,
     text_body: str,
     contact_id: uuid.UUID | None = None,
+    list_unsubscribe_url: str | None = None,
+    thread: rules.Thread | None = None,
 ) -> uuid.UUID:
     """Record an email in the caller's workspace transaction; returns its id.
-    `InvalidValue` for content outside the rules."""
+    `InvalidValue` for content outside the rules. A campaign email needs its
+    one-click `list_unsubscribe_url`; a reply may carry the `thread` it
+    answers (decision E-H1)."""
     if purpose not in rules.PURPOSES:
         raise ValueError(f"unknown email purpose: {purpose}")
     content = rules.content(to_email, subject, text_body)
+    unsubscribe = rules.unsubscribe_url(purpose, list_unsubscribe_url)
     email_id = uuid.uuid4()
     now = _now()
     # Indexed first, with a retry time, in its own transaction: if the
@@ -194,6 +199,9 @@ def queue(  # noqa: PLR0913 - one email's fields
         purpose=purpose,
         sender_identity_id=own[0] if own else None,
         sender_address=own[1] if own else None,
+        list_unsubscribe_url=unsubscribe,
+        in_reply_to=thread.in_reply_to if thread else None,
+        thread_references=" ".join(thread.references) if thread and thread.references else None,
         to_email=content.to_email,
         contact_id=contact_id,
         subject=content.subject,
@@ -224,6 +232,9 @@ class _Claim:
     sender: str
     attempts: int
     reply_to: str | None
+    list_unsubscribe_url: str | None = None
+    in_reply_to: str | None = None
+    references: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -369,6 +380,9 @@ def _claim(  # noqa: PLR0911, PLR0912 - one answer per state
             sender=sender,
             attempts=row.attempts,
             reply_to=reply_to,
+            list_unsubscribe_url=row.list_unsubscribe_url,
+            in_reply_to=row.in_reply_to,
+            references=tuple((row.thread_references or "").split()),
         )
 
 
@@ -457,6 +471,12 @@ def send(
         text_body=claim.text_body,
         reply_to=claim.reply_to,
         message_id=rules.message_id(str(email_id), claim.sender),
+        # Decision E-H1: one-click unsubscribe for campaign mail (RFC 8058),
+        # and a reply's place in its thread.
+        list_unsubscribe=(claim.list_unsubscribe_url,) if claim.list_unsubscribe_url else (),
+        list_unsubscribe_post=claim.list_unsubscribe_url is not None,
+        in_reply_to=(claim.in_reply_to,) if claim.in_reply_to else (),
+        references=claim.references,
     )
     failure: EmailProviderError | None = None
     provider_id: str | None = None
@@ -489,6 +509,7 @@ def send(
         now = _now()
         row.status, row.provider, row.sent_at, row.updated_at = "sent", name, now, now
         row.provider_message_id = provider_id
+        row.message_id = outgoing.message_id
         row.last_error, row.next_attempt_at = None, None
         _audit(session, row, "sent", provider=name, stream=claim.stream.value)
 

@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0044_business_profile` own the
+Migrations `0002_contacts_companies` to `0045_email_headers` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -839,6 +839,13 @@ class EmailMessage(Base):
     # The workspace's own sender, when one was chosen (migration 0029, P6-D).
     sender_identity_id: Mapped[uuid.UUID | None] = mapped_column()
     sender_address: Mapped[str | None] = mapped_column(Text)
+    # Headers, identical on every try (migration 0045, decision E-H1): a
+    # campaign's one-click unsubscribe address; the Message-ID it was sent
+    # with; a reply's In-Reply-To and References (space-separated ids).
+    list_unsubscribe_url: Mapped[str | None] = mapped_column(Text)
+    message_id: Mapped[str | None] = mapped_column(Text)
+    in_reply_to: Mapped[str | None] = mapped_column(Text)
+    thread_references: Mapped[str | None] = mapped_column(Text)
 
 
 class EmailEvent(Base):

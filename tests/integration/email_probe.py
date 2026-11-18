@@ -35,6 +35,7 @@ from sqlalchemy import text
 
 from crm_app import emails, suppression
 from crm_app.app import create_app
+from crm_app.domains import emails as email_rules
 from crm_app.models import EmailIndex
 from crm_app.records import Scope
 from tests.integration.workspace_route_probe import _new_workspace
@@ -80,6 +81,14 @@ class Recorder:
         with self.lock:
             self.sent.append(message)
             return EmailSendResult(accepted=True, provider_message_id=f"re_{uuid.uuid4().hex}")
+
+
+def _stored_message_id(workspace: uuid.UUID, email_id: uuid.UUID) -> str | None:
+    with tenant_session_scope(workspace) as session:
+        return session.execute(
+            text("SELECT message_id FROM crm_app.email_message WHERE tenant_id = :t AND id = :e"),
+            {"t": workspace, "e": email_id},
+        ).scalar_one()
 
 
 def _row(workspace: uuid.UUID, email_id: uuid.UUID) -> dict[str, Any]:
@@ -327,6 +336,31 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
     os.environ["EMAIL_PARENT_DOMAIN"] = "example.test"
     before = len(provider.sent)
     sent_reply = emails.send(c.id, reply, provider=provider)
+    # A reply that carries its thread sends it as In-Reply-To and References
+    # (decision E-H1), and keeps the Message-ID it went out with.
+    with tenant_session_scope(c.id) as session:
+        threaded = emails.queue(
+            session,
+            scope_b,
+            purpose="conversation_reply",
+            to_email="bob@example.test",
+            subject="Re: Hi",
+            text_body="And another thing.",
+            thread=email_rules.Thread(
+                in_reply_to="<two@mail.example.test>",
+                references=("<one@mail.example.test>", "<two@mail.example.test>"),
+            ),
+        )
+    sent_count = len(provider.sent)
+    threaded_status = emails.send(c.id, threaded, provider=provider)
+    out = provider.sent[sent_count] if len(provider.sent) > sent_count else None
+    result["threaded"] = [
+        threaded_status,
+        list(out.in_reply_to) if out else None,
+        list(out.references) if out else None,
+        list(out.list_unsubscribe) if out else None,
+        _stored_message_id(c.id, threaded) == (out.message_id if out else ""),
+    ]
     result["streams"] = {
         "outcomes": [stream_off, no_parent, sent_reply],
         "from": provider.sent[before].sender if len(provider.sent) > before else None,

@@ -18,6 +18,7 @@ import { HomePage, isWorkspaceId } from "./pages/HomePage";
 import { InvitePage } from "./pages/InvitePage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { ConsentConfirmPage } from "./pages/ConsentConfirmPage";
+import { UnsubscribePage } from "./pages/UnsubscribePage";
 import { PublicFormPage } from "./pages/PublicFormPage";
 import { VisitorBookingPage } from "./pages/VisitorBookingPage";
 import { CompaniesPage } from "./records/CompaniesPage";
@@ -129,6 +130,21 @@ const consentConfirmRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/c/$workspaceId",
   component: ConsentConfirmRoutePage,
+});
+
+function UnsubscribeRoutePage() {
+  const { workspaceId } = unsubscribeRoute.useParams();
+  // The token is the fragment: browsers never send it with the page request.
+  const token = useLocation({ select: (location) => location.hash });
+  if (!isWorkspaceId(workspaceId)) return <PublicNotFound />;
+  return <UnsubscribePage workspaceId={workspaceId} token={token} />;
+}
+
+// Unsubscribing from a campaign email's link (P7-C, E-H1): /app/u/<workspace>#<token>.
+const unsubscribeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/u/$workspaceId",
+  component: UnsubscribeRoutePage,
 });
 
 const notFound = (
@@ -482,6 +498,7 @@ const routeTree = rootRoute.addChildren([
   publicFormRoute,
   visitorBookingRoute,
   consentConfirmRoute,
+  unsubscribeRoute,
   publicBookingRoute,
 ]);
 

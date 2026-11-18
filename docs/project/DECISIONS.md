@@ -1010,6 +1010,52 @@ approval), **Superseded**.
   `tests/integration/test_emails.py` (four tests: no window, window and
   expiry, never ends as not sent, `EmailNotSentError` retried).
 
+## E-H1 — Unsubscribe and threading headers (2026-11-18, under the autonomous mandate)
+
+- **Status:** Built under the owner's instruction "Go 2" (2026-11-18:
+  "Email headers, code only"). Nothing is sent: production email sending
+  stays unauthorized (K3.4) and every stream switch stays off by default.
+- **Why:** bulk-sender rules (Gmail, Yahoo) require one-click unsubscribe
+  on marketing mail (RFC 8058), and replies thread best with
+  `In-Reply-To` and `References`. SaaS-OS v0.10.0 added these fields to
+  `EmailMessage` (gap 1, issue 224); LeadStack is pinned past it.
+- **Decision:**
+  1. Every **campaign** email carries `List-Unsubscribe` with its
+     recipient's `https:` one-click address (the public
+     `POST /v1/public/unsubscribe/{workspace}/{token}` route, same token
+     as the body's link) and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`.
+     `emails.queue` refuses a campaign email without one and any other
+     email with one. `campaigns.process` takes the route's base address
+     (`one_click_base`).
+  2. A sent email keeps the `Message-ID` it went out with. A
+     **conversation reply** names the conversation's earlier sent emails:
+     the newest as `In-Reply-To`, up to ten as `References`. Received mail
+     is not named yet: its `Message-ID` is not stored until inbound
+     fetching exists (gap 2). The routing reply address (P6-I) stays.
+  3. Values are fixed when the email is queued or sent (migration
+     `0045_email_headers`), so every retry sends the same headers;
+     SaaS-OS validates them again against header injection.
+  4. `campaigns.SENDING_AVAILABLE` is now true. A campaign still needs the
+     campaign stream switched on (never in production), an approval that
+     matches its content and audience, and sending enabled; and nothing
+     in the product calls `campaigns.process` yet.
+- **Verified:** `tests/unit/test_email_rules.py` (address and thread
+  rules, injection refused); `test_campaigns.py` (a sent campaign email
+  carries one https address, One-Click asked, the body's token; its
+  Message-ID kept); `test_emails.py` (a reply sends its thread; no
+  unsubscribe header on other mail); `test_conversations.py` (the first
+  reply names nothing, the next names the first).
+- **Not verified:** a real provider's handling of the headers (no email
+  is sent anywhere), and a mail client's threading.
+  5. **Unsubscribe page** (owner, "Go 1", 2026-11-18): the body's link
+     is `/app/u/{workspace}#{token}`. The token stays in the fragment, out
+     of server logs, and nothing changes until the person presses
+     "Unsubscribe me", so a link scanner unsubscribes no one. The page
+     calls the same public route as one-click; it answers alike for known
+     and unknown links. Tested in `frontend/src/pages/unsubscribe.test.tsx`
+     (3 tests, with an accessibility scan) and `test_campaigns.py` (the
+     body's link carries the token in the fragment).
+
 ## K3.9 — SaaS-OS pin moved to v0.10.0
 
 - **Status:** Approved by the owner, 2026-11-07 ("saas-os is updated to

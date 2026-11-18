@@ -1353,6 +1353,27 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Unsubscribe and threading headers (decision E-H1, 2026-11-18)
+
+Campaign emails carry one-click `List-Unsubscribe` headers; conversation
+replies carry `In-Reply-To` and `References`. Migration
+`0045_email_headers`. Nothing is sent anywhere.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/unit` | 807 passed |
+| `test_emails.py`, `test_conversations.py`, `test_campaigns.py`, `test_foundation.py` | passed |
+| `pytest tests/integration` (full) | 919 passed (58 min); `test_campaigns.py` rerun on the final code: 9 passed |
+| Frontend `vitest run --maxWorkers=2`, `build` | 371 passed (37 files); built |
+| `ruff check` / `ruff format --check` / `pyright` / `lint-imports` | clean / clean / 0 errors / 2 kept, 0 broken |
+
+The body's unsubscribe link opens `/app/u/{workspace}#{token}`, which
+unsubscribes only when the person presses the button (3 page tests, with an
+accessibility scan).
+
+Not verified: a real provider's handling of the headers; a mail client's
+threading.
+
 ## Workspace AI settings (decision P9-S, 2026-11-18)
 
 Settings › AI over SaaS-OS's `saas_os.inference.settings`: AI on or off,

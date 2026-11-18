@@ -35,7 +35,7 @@ SaaS-OS v0.6.0 does **not** provide (gaps; the pin is not changed):
 | Capability | Consequence in LeadStack |
 | --- | --- |
 | Display names in `From` | Senders are bare addresses (`team@mail.<parent>`). |
-| Custom headers other than `Message-ID` | No `List-Unsubscribe` / `List-Unsubscribe-Post`, no `In-Reply-To` / `References`. Campaign sending cannot meet bulk-sender header requirements until SaaS-OS adds them (an upstream request to raise). Conversation threading uses a routing reply address instead of headers. |
+| Custom headers other than `Message-ID` | Closed: SaaS-OS v0.10.0 added `List-Unsubscribe`, `List-Unsubscribe-Post`, `In-Reply-To` and `References`; adopted by decision E-H1 (campaign one-click unsubscribe, reply threading). |
 | Attachments, tags, scheduling, batch send | Outbound mail is text only. |
 | Resend Domains API, inbound (receiving) API, webhook verification | Product-owned adapters over `StrictEgressClient` (inbound, domains) and the product's own Svix verification (`crm_app.domains.emails.signature_valid`, 6E.1). |
 | Jitter or `Retry-After` in job retries | The product keeps `email_message.next_attempt_at` (P6-S). |
@@ -153,7 +153,8 @@ each one gets its own decision entry, tests and documentation.
    `partially_completed`). Approval binds a hash of the content and
    audience; any change after approval returns the campaign to draft.
    Sending stays disabled: no campaign can be sent until the campaign
-   stream is activated, which also needs `List-Unsubscribe` support.
+   stream is activated. Each campaign email carries one-click unsubscribe
+   headers (decision E-H1).
 3. **Customer-owned sending domains — built (P6-D)**; creating domains at Resend is off unless `EMAIL_CUSTOMER_DOMAINS_ENABLED` (refused in production). A workspace registers its own
    domain through the Resend Domains API (product adapter), is shown the
    exact records Resend returns, verifies, and then adds sender identities
@@ -209,9 +210,9 @@ passed, approved by the owner:
    signing secrets, stored in the production secrets provider.
 6. A test send and a test inbound message pass on the verified domains
    with internal addresses only.
-7. For campaigns additionally: `List-Unsubscribe` support (SaaS-OS, or an
-   approved alternative), the unsubscribe flow, and the per-campaign
-   approval workflow verified.
+7. For campaigns additionally: the unsubscribe flow and the per-campaign
+   approval workflow verified on the real domain (`List-Unsubscribe`
+   headers and the unsubscribe page: built, decision E-H1).
 8. For inbound attachments additionally: an approved malware scanner.
 9. For inbound at all: an approved receiving client (decision P6-I) and a
    retention period for unmatched rows.

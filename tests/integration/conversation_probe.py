@@ -218,6 +218,65 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         after = client.get(one, headers=auth()).json()
         result["after_contact_delete"] = [after["contact_id"], len(after["messages"])]
 
+        # Threading (decision E-H1), in the other workspace so the counts
+        # above stay as they are: the first reply refers to nothing; once it
+        # has gone out with a Message-ID, the next reply refers to it.
+        b_base = f"/v1/workspaces/{b.id}"
+        lin = client.post(
+            f"{b_base}/contacts",
+            json={"first_name": "Lin", "email": "lin@example.test"},
+            headers=auth("other_owner"),
+        ).json()["id"]
+        conv_b = client.post(
+            f"{b_base}/conversations",
+            json={
+                "contact_id": lin,
+                "channel": "email",
+                "subject": "Quote",
+                "kind": "inbound",
+                "body": "Hello",
+            },
+            headers=auth("other_owner"),
+        ).json()["id"]
+        b_one = f"{b_base}/conversations/{conv_b}/messages"
+        client.post(
+            b_one, json={"kind": "outbound", "body": "Hi Lin."}, headers=auth("other_owner")
+        )
+        with tenant_session_scope(b.id) as session:
+            first_row = session.execute(
+                text(
+                    "SELECT id, in_reply_to, thread_references FROM crm_app.email_message"
+                    " WHERE tenant_id = :t AND purpose = 'conversation_reply'"
+                    " ORDER BY created_at LIMIT 1"
+                ),
+                {"t": b.id},
+            ).one()
+            session.execute(
+                text(
+                    "UPDATE crm_app.email_message SET status = 'sent', sent_at = now(),"
+                    " message_id = '<first-reply@mail.example.test>'"
+                    " WHERE tenant_id = :t AND id = :e"
+                ),
+                {"t": b.id, "e": first_row[0]},
+            )
+        second = client.post(
+            b_one, json={"kind": "outbound", "body": "One more thing."}, headers=auth("other_owner")
+        )
+        with tenant_session_scope(b.id) as session:
+            later = session.execute(
+                text(
+                    "SELECT in_reply_to, thread_references FROM crm_app.email_message"
+                    " WHERE tenant_id = :t AND purpose = 'conversation_reply'"
+                    " ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"t": b.id},
+            ).one()
+        result["threading"] = [
+            [first_row[1], first_row[2]],
+            second.status_code,
+            [later[0], later[1]],
+        ]
+
     print("RESULT " + json.dumps(result, default=str))
 
 

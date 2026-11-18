@@ -11,12 +11,12 @@ recipients and unsubscribing.
 - `approve` (only `crm_app.campaign:approve`) records the hash of the exact
   content and audience; `reject` sends it back with a note. Every step is
   audited with ids, states and hashes, never content.
-- `queue` is refused unless campaign sending is available
-  (`SENDING_AVAILABLE`, false: SaaS-OS v0.6.0 cannot set the
-  `List-Unsubscribe` headers bulk mail needs) and the campaign stream is
-  switched on (never in production), and only while the approved hash
-  still matches. Nothing sends a campaign because it was saved, validated
-  or approved.
+- `queue` is refused unless campaign sending is available: the campaign
+  stream is switched on (never in production), and only while the approved
+  hash still matches. Each campaign email carries one-click unsubscribe
+  headers (`List-Unsubscribe`, `List-Unsubscribe-Post`; decision E-H1,
+  SaaS-OS v0.10.0), which bulk-sender rules require. Nothing sends a
+  campaign because it was saved, validated or approved.
 - `process` (run after queuing) adds each eligible contact once (a unique
   key per campaign and contact) and queues one email per recipient through
   `crm_app.emails` (purpose `campaign`, the campaign stream), where consent
@@ -70,7 +70,10 @@ LIST_LIMIT = 100
 AUDIENCE_MAX = 50_000
 # Bulk mail needs `List-Unsubscribe` and `List-Unsubscribe-Post` headers,
 # which SaaS-OS v0.6.0 cannot set (EMAIL-ARCHITECTURE.md, section 1).
-SENDING_AVAILABLE = False
+# True since decision E-H1: campaign emails carry one-click unsubscribe
+# headers. Sending still needs the campaign stream switched on, never in
+# production, and an approval that matches the content and audience.
+SENDING_AVAILABLE = True
 
 Item = dict[str, Any]
 
@@ -457,11 +460,21 @@ def _token_hash(token: str) -> str:
 
 
 def process(
-    scope: Scope, campaign_id: uuid.UUID, *, workspace_name: str, unsubscribe_base: str
+    scope: Scope,
+    campaign_id: uuid.UUID,
+    *,
+    workspace_name: str,
+    unsubscribe_base: str,
+    one_click_base: str,
 ) -> Item:
     """Add the eligible recipients of a queued campaign, each at most once,
     and queue one email each. Safe to run again: recipients already added
-    are skipped, and a finished campaign is left as it is."""
+    are skipped, and a finished campaign is left as it is.
+
+    `unsubscribe_base` is the page the body's link opens (`.../app/u`, the
+    link ends in `/{workspace}#{token}`); `one_click_base` is the `https:`
+    address of the public one-click route (`POST /v1/public/unsubscribe`),
+    sent as `List-Unsubscribe` and ending in `/{workspace}/{token}`."""
     if not sending_available():
         raise SendingUnavailableError
 
@@ -491,8 +504,9 @@ def process(
                 continue
             token = secrets.token_hex(16)
             values = {"first_name": contact.first_name, "last_name": contact.last_name}
+            # The page keeps the token in the fragment, out of server logs.
             text = rules.render(row.body, values) + rules.footer(
-                workspace_name, f"{unsubscribe_base}/{scope.workspace}/{token}"
+                workspace_name, f"{unsubscribe_base}/{scope.workspace}#{token}"
             )
             try:
                 email_id = emails.queue(
@@ -503,6 +517,7 @@ def process(
                     subject=rules.render(row.subject, values),
                     text_body=text,
                     contact_id=contact.id,
+                    list_unsubscribe_url=f"{one_click_base}/{scope.workspace}/{token}",
                 )
             except InvalidValue:
                 failed += 1

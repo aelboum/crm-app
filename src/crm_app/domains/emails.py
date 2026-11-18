@@ -127,6 +127,49 @@ def message_id(email_id: str, sender: str) -> str:
     return f"<{email_id}@{domain}>"
 
 
+# --- Headers (decision E-H1) -------------------------------------------------------------
+
+# Bulk-sender rules ask one-click unsubscribe of campaign mail (RFC 8058).
+UNSUBSCRIBE_PURPOSES = frozenset({"campaign"})
+UNSUBSCRIBE_URL_MAX = 2048
+# How many earlier messages a reply's `References` names, newest last.
+REFERENCES_MAX = 10
+_UNSUBSCRIBE_URL = re.compile(r"https://[A-Za-z0-9.-]+(?::\d{1,5})?/[A-Za-z0-9._~/%-]*")
+_MESSAGE_ID = re.compile(r"<[A-Za-z0-9._%+-]{1,200}@[A-Za-z0-9.-]{1,253}>")
+
+
+def unsubscribe_url(purpose: str, url: str | None) -> str | None:
+    """The one-click unsubscribe address an email carries: required for a
+    campaign, refused for any other purpose. `ValueError` otherwise: a
+    caller's mistake, never a member's input."""
+    if purpose not in UNSUBSCRIBE_PURPOSES:
+        if url is not None:
+            raise ValueError(f"{purpose} email carries no unsubscribe address")
+        return None
+    if url is None or len(url) > UNSUBSCRIBE_URL_MAX or not _UNSUBSCRIBE_URL.fullmatch(url):
+        raise ValueError("a campaign email needs an https one-click unsubscribe address")
+    return url
+
+
+@dataclass(frozen=True)
+class Thread:
+    """A reply's place in its conversation: the message it answers and the
+    earlier ones, oldest first, as RFC 5322 message ids."""
+
+    in_reply_to: str | None
+    references: tuple[str, ...]
+
+
+def thread(earlier: list[str]) -> Thread | None:
+    """The thread headers of a reply from the message ids the conversation
+    already sent, oldest first. Malformed ids are skipped; at most
+    `REFERENCES_MAX` are named. None when there is nothing to refer to."""
+    ids = [value for value in earlier if _MESSAGE_ID.fullmatch(value)][-REFERENCES_MAX:]
+    if not ids:
+        return None
+    return Thread(in_reply_to=ids[-1], references=tuple(ids))
+
+
 def after_event(status: str, event: str) -> str:
     """The status after a provider's `event` for an email in `status`."""
     if status not in _RANK:
