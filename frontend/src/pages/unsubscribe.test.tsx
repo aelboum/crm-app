@@ -11,7 +11,7 @@ import { accessibilityViolations, renderApp } from "../test/render";
  */
 
 const WS = "11111111-2222-4333-8444-555555555555";
-const TOKEN = "0123456789abcdef0123456789abcdef";
+const TOKEN = "0123456789abcdef0123456789abcdef"; // pragma: allowlist secret
 
 describe("unsubscribe page", () => {
   it("unsubscribes only when the person presses the button", async () => {
