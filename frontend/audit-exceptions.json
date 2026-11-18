@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "expires": "2026-12-17",
+    "decision": "13-A5",
+    "owner": "Repository owner (aelboum)",
+    "reason": "Development tooling only (vite and vitest, directly and through tinyglobby and fdir); every picomatch up to 4.0.7, the latest, is affected and no patched release exists. Glob patterns come from the repository's own configuration; the production tree audits clean.",
+    "plan": "Before 2026-12-17: move to a patched picomatch (or vite/vitest releases that ship one) as soon as it exists; otherwise the owner decides again. The gate fails on expiry."
+  }
+]

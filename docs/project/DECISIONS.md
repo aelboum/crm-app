@@ -4602,6 +4602,27 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   new advisory, so a future range change that covers these versions
   again fails CI instead of passing silently.
 
+## 13-A5 — Dated audit exception for picomatch (2026-11-18)
+
+- **Status:** Approved by the owner, 2026-11-18 ("Dated exception
+  (Recommended)"), after CI run 44197373119 on `b2e24a5` failed only at
+  the frontend dependency audit.
+- **Cause:** advisory GHSA-fc5q-39xc-vjpf (picomatch up to 4.0.7, high,
+  denial of service through single-branch repeated extglobs). 4.0.7 is
+  the latest release and no patched version exists. picomatch reaches the
+  frontend only through development tooling: vite 8.3.3 and vitest 5.0.3,
+  directly and through tinyglobby and fdir. `npm audit --omit=dev`
+  reports 0 vulnerabilities. Not caused by the SaaS-OS pin move (K3.11).
+  SaaS-OS accepted the same advisory until 2026-12-17 (its PR #288).
+- **Decision:** `frontend/audit-exceptions.json` lists
+  GHSA-fc5q-39xc-vjpf until 2026-12-17, under the 13-A1 rules: the gate
+  fails on expiry and when the advisory is no longer reported, and the
+  production tree gets no exception.
+- **Residual risk (low):** a denial of service through crafted glob
+  patterns in build and test tools; the patterns come from this
+  repository's own configuration, and no picomatch code ships in the
+  production bundle.
+
 ## P7-B — Consent and suppression (2026-10-28, under M1)
 
 - **Status:** Decided under M1 after the owner's "Go" (2026-10-28) to the
