@@ -1353,6 +1353,28 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Campaign rehearsal on staging (decision P7-R, 2026-11-18, owner: "A")
+
+Deployed `d015929` (CI run 44375966790, 5 of 5; drill before: 15 of 15)
+with `CAMPAIGN_REHEARSAL_WORKSPACES` naming Staging Alpha and Staging
+Beta. Rehearsed as the Alpha Owner (test account) in the browser:
+
+| Step | Result |
+| --- | --- |
+| Tag "Rehearsal 2026-11-18"; contacts Rita and Ravi at `*.rehearsal@example.com`, lead, tagged, consent recorded | 201 / 200 each |
+| Campaign "Rehearsal check", segment: that tag; validate, submit, approve | estimate 2 eligible, 0 excluded; approved |
+| Campaigns page | notice "Rehearsal workspace: ... no email is sent"; buttons Edit, **Queue as a rehearsal**, Cancel campaign |
+| Queue as a rehearsal | status Queued |
+| `leadstack-job@crm_app.email_maintenance` | "campaigns processed 1, failed 0, waiting 0" |
+| Campaign; its emails | `completed`; 2 emails `failed` / `rehearsal`, `sent_at` empty, both to the test addresses; `campaign_queue` empty |
+| Audit | `queued` by the Owner; `completed` by `crm_app.campaign_send` with `rehearsal: true` |
+| Every campaign email on staging | 2, both `failed` |
+| Egress proxy, app, worker logs (15 min) | no errors; no request to Resend |
+
+The test tag, contacts and campaign stay in Staging Alpha as rehearsal
+data. Rollback: remove `CAMPAIGN_REHEARSAL_WORKSPACES` from `app.env` and
+restart app and worker; code to `crm-app:855c200`.
+
 ## Staging deployed at `855c200` (2026-11-18, owner: "Deploy staging")
 
 | Check | Result |
