@@ -17,6 +17,7 @@ from crm_app.settings import (
     email_parent_domain,
     email_sending_enabled,
     inbound_enabled,
+    rehearsal_workspaces,
     signup_enabled,
     signup_limit,
     stream_enabled,
@@ -455,3 +456,25 @@ def test_every_email_switch_is_refused_in_production(flag: str) -> None:
     }
     problems = _problems(Process.WORKER, production)
     assert any(p.startswith(f"{flag}=true is refused in production") for p in problems)
+
+
+REHEARSE_A = "08b4cfb1-bcd7-4c1a-b33a-526c9b0d25eb"
+REHEARSE_B = "0005ecb5-eea9-4ed7-ab46-838feb1d9d6d"
+
+
+def test_campaign_rehearsal_names_workspaces_by_id() -> None:
+    """Decision P7-R: off unless set; only workspace ids, at most 10."""
+    assert rehearsal_workspaces({}) == frozenset()
+    named = rehearsal_workspaces({"CAMPAIGN_REHEARSAL_WORKSPACES": f"{REHEARSE_A}, {REHEARSE_B}"})
+    assert {str(w) for w in named} == {REHEARSE_A, REHEARSE_B}
+    for process in (Process.APP, Process.WORKER):
+        ok = {**PLACEHOLDER_SETTINGS, "CAMPAIGN_REHEARSAL_WORKSPACES": REHEARSE_A}
+        _validate(process, ok)
+        bad = {**PLACEHOLDER_SETTINGS, "CAMPAIGN_REHEARSAL_WORKSPACES": "all"}
+        assert _problems(process, bad) == [
+            "CAMPAIGN_REHEARSAL_WORKSPACES must be a comma-separated list of workspace ids."
+        ]
+    many = ",".join([REHEARSE_A] * 11)
+    assert _problems(
+        Process.APP, {**PLACEHOLDER_SETTINGS, "CAMPAIGN_REHEARSAL_WORKSPACES": many}
+    ) == ["CAMPAIGN_REHEARSAL_WORKSPACES names at most 10 workspaces."]

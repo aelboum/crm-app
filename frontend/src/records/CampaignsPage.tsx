@@ -102,7 +102,11 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
           </div>
         ) : null}
       </div>
-      {list.data && !list.data.sending_available ? (
+      {list.data?.rehearsal ? (
+        <p className="notice" role="note">
+          {t("campaigns.rehearsal")}
+        </p>
+      ) : list.data && !list.data.sending_available ? (
         <p className="notice" role="note">
           {t("campaigns.sendingUnavailable")}
         </p>
@@ -145,6 +149,8 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
               campaign={current}
               canManage={canManage}
               canApprove={canApprove}
+              canQueue={list.data.sending_available || list.data.rehearsal}
+              rehearsal={list.data.rehearsal}
               onEdit={() => {
                 setEditing(current);
               }}
@@ -174,12 +180,16 @@ function Detail({
   campaign,
   canManage,
   canApprove,
+  canQueue,
+  rehearsal,
   onEdit,
 }: {
   workspaceId: string;
   campaign: Campaign;
   canManage: boolean;
   canApprove: boolean;
+  canQueue: boolean;
+  rehearsal: boolean;
   onEdit: () => void;
 }) {
   const t = useT();
@@ -311,6 +321,18 @@ function Detail({
               {t("campaigns.reject")}
             </Button>
           </>
+        ) : null}
+        {canApprove && canQueue && status === "approved" ? (
+          <Button
+            size="sm"
+            variant="primary"
+            isDisabled={step.isPending}
+            onPress={() => {
+              run("queue");
+            }}
+          >
+            {t(rehearsal ? "campaigns.queueRehearsal" : "campaigns.queue")}
+          </Button>
         ) : null}
         {canManage && EDITABLE.includes(status) ? (
           <Button

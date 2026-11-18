@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import re
+import uuid
 from collections.abc import Callable, Mapping
 from enum import StrEnum
 from urllib.parse import SplitResult, urlsplit
@@ -141,6 +142,7 @@ def validate_settings(
     problems.extend(_check_origin(values, require_https=production))
     problems.extend(_check_role_names(env))
     problems.extend(_check_email(env, production=production))
+    problems.extend(_check_rehearsal(env))
     if process is Process.APP:
         problems.extend(_check_invitation_delivery(env))
         problems.extend(_check_signup(env, production=production))
@@ -372,6 +374,38 @@ def email_parent_domain(env: Mapping[str, str] | None = None) -> str | None:
     validation refuses an invalid one, so a value here is well formed."""
     raw = (os.environ if env is None else env).get("EMAIL_PARENT_DOMAIN", "").strip()
     return streams.parent_domain(raw) if raw else None
+
+
+REHEARSAL_SETTING = "CAMPAIGN_REHEARSAL_WORKSPACES"
+
+
+def rehearsal_workspaces(env: Mapping[str, str] | None = None) -> frozenset[uuid.UUID]:
+    """The workspaces whose campaigns are rehearsed (decision P7-R): queued
+    and processed, every email closed unsent. Empty unless set; an entry
+    that is not a workspace id is ignored here and refused at start-up."""
+    raw = (os.environ if env is None else env).get(REHEARSAL_SETTING, "")
+    found: set[uuid.UUID] = set()
+    for part in raw.split(","):
+        try:
+            found.add(uuid.UUID(part.strip()))
+        except ValueError:
+            continue
+    return frozenset(found)
+
+
+def _check_rehearsal(env: Mapping[str, str]) -> list[str]:
+    raw = env.get(REHEARSAL_SETTING, "").strip()
+    if not raw:
+        return []
+    parts = [part.strip() for part in raw.split(",")]
+    for part in parts:
+        try:
+            uuid.UUID(part)
+        except ValueError:
+            return [f"{REHEARSAL_SETTING} must be a comma-separated list of workspace ids."]
+    if len(parts) > 10:
+        return [f"{REHEARSAL_SETTING} names at most 10 workspaces."]
+    return []
 
 
 def stream_enabled(stream: streams.Stream, env: Mapping[str, str] | None = None) -> bool:

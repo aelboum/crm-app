@@ -155,7 +155,9 @@ each one gets its own decision entry, tests and documentation.
    Sending stays disabled: no campaign can be sent until the campaign
    stream is activated. Each campaign email carries one-click unsubscribe
    headers (decision E-H1). A queued campaign is processed by the email
-   maintenance run, 500 new recipients per run (decision P7-S).
+   maintenance run, 500 new recipients per run (decision P7-S). Named test
+   workspaces can rehearse the whole path with every email closed unsent
+   (`CAMPAIGN_REHEARSAL_WORKSPACES`, decision P7-R).
 3. **Customer-owned sending domains — built (P6-D)**; creating domains at Resend is off unless `EMAIL_CUSTOMER_DOMAINS_ENABLED` (refused in production). A workspace registers its own
    domain through the Resend Domains API (product adapter), is shown the
    exact records Resend returns, verifies, and then adds sender identities

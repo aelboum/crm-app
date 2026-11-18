@@ -27,6 +27,12 @@ recipients and unsubscribing.
   of `BATCH` new recipients as the component `crm_app.campaign_send`, on
   behalf of the member who queued it, and removes the row once the
   campaign is finished. It does nothing while sending is unavailable.
+- Rehearsal (decision P7-R): in the workspaces named by
+  `CAMPAIGN_REHEARSAL_WORKSPACES`, and only while real sending is
+  unavailable, a campaign can be queued and processed as usual, but each
+  email is closed as `failed` (`rehearsal`) in the same transaction: no
+  email of a rehearsed campaign can ever be sent, even if sending is
+  switched on later. Every other workspace is unaffected.
 - `unsubscribe` takes a recipient's token from the email's link: it
   suppresses the address (reason `unsubscribed`) and records the
   withdrawal of consent.
@@ -78,7 +84,7 @@ from crm_app.records import (
     StaleVersionError,
     TransactionConflictError,
 )
-from crm_app.settings import stream_enabled
+from crm_app.settings import rehearsal_workspaces, stream_enabled
 
 logger = logging.getLogger(__name__)
 RESOURCE = "crm_app.campaign"
@@ -455,10 +461,21 @@ def sending_available() -> bool:
     return SENDING_AVAILABLE and not _production() and stream_enabled(streams.Stream.CAMPAIGN)
 
 
+def rehearsal(workspace: uuid.UUID) -> bool:
+    """Whether `workspace`'s campaigns are rehearsed (P7-R): it is named in
+    the setting and real sending is unavailable."""
+    return workspace in rehearsal_workspaces() and not sending_available()
+
+
+def queue_available(workspace: uuid.UUID) -> bool:
+    """Whether `workspace` may queue a campaign: to send it, or to rehearse."""
+    return sending_available() or rehearsal(workspace)
+
+
 def queue(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Item:
-    """Queue an approved campaign for sending, if sending is available and
-    the approval still matches its content and audience."""
-    if not sending_available():
+    """Queue an approved campaign for sending (or rehearsal, P7-R), if that
+    is available and the approval still matches its content and audience."""
+    if not queue_available(scope.workspace):
         raise SendingUnavailableError
     # Recorded first, in its own transaction: if queuing rolls back, the
     # maintenance run finds the campaign not queued and removes the row.
@@ -502,8 +519,9 @@ def process(  # noqa: PLR0913 - one campaign and where its links point
     link ends in `/{workspace}#{token}`); `one_click_base` is the `https:`
     address of the public one-click route (`POST /v1/public/unsubscribe`),
     sent as `List-Unsubscribe` and ending in `/{workspace}/{token}`."""
-    if not sending_available():
+    if not queue_available(scope.workspace):
         raise SendingUnavailableError
+    rehearse = rehearsal(scope.workspace)
 
     def business(session: Session) -> tuple[Item, list[uuid.UUID]]:
         row = _load(session, scope, campaign_id, lock=True)
@@ -553,6 +571,8 @@ def process(  # noqa: PLR0913 - one campaign and where its links point
             except InvalidValue:
                 failed += 1
                 continue
+            if rehearse:
+                emails.close_unsent(session, scope.workspace, email_id, "rehearsal")
             session.add(
                 CampaignRecipient(
                     id=uuid.uuid4(),
@@ -574,7 +594,8 @@ def process(  # noqa: PLR0913 - one campaign and where its links point
             return _item(row), queued
         row.status = "partially_completed" if failed else "completed"
         _touch(row)
-        _audit(session, scope, row.status, row, queued=len(queued), failed=failed)
+        extra = {"rehearsal": True} if rehearse else {}
+        _audit(session, scope, row.status, row, queued=len(queued), failed=failed, **extra)
         session.flush()
         return _item(row), queued
 
@@ -654,11 +675,14 @@ def run_queued(*, limit: int = 50, batch: int = BATCH) -> dict[str, Any]:
                 .limit(limit)
             ).all()
         )
-    if not sending_available() or links is None:
+    if links is None:
         totals["waiting"] = len(rows)
         return totals
     unsubscribe_base, one_click_base = links
     for workspace, campaign_id, member in rows:
+        if not queue_available(workspace):
+            totals["waiting"] += 1
+            continue
         scope = Scope(workspace=workspace, actor=member, component=SENDER)
         try:
             name = get_tenant(workspace).name

@@ -13,7 +13,9 @@ import {
  * never offers it; the estimate shows who may receive a campaign and why
  * others may not; steps send the version; only approvers see Approve and
  * Reject; Read-only members only read; editing an approved campaign warns
- * that the approval is withdrawn; refusals say why.
+ * that the approval is withdrawn; refusals say why. In a rehearsal
+ * workspace (decision P7-R) an approver may queue an approved campaign,
+ * labelled as a rehearsal.
  */
 
 const WS = "11111111-2222-4333-8444-555555555555";
@@ -59,6 +61,7 @@ function workspace(
   roles: { manage: boolean; approve: boolean },
   item: Record<string, unknown> = campaign(),
   onWrite?: (method: string, path: string, body: unknown) => Reply,
+  rehearsal = false,
 ): Handler {
   return (method, path, body) => {
     const base = `/v1/workspaces/${WS}`;
@@ -83,7 +86,10 @@ function workspace(
       };
     }
     if (path === `${base}/campaigns`)
-      return { status: 200, body: { items: [item], sending_available: false } };
+      return {
+        status: 200,
+        body: { items: [item], sending_available: false, rehearsal },
+      };
     if (path === `${base}/tags`) {
       return {
         status: 200,
@@ -126,6 +132,34 @@ describe("campaigns", () => {
       within(pane).queryByRole("button", { name: /Send|Queue/ }),
     ).toBeNull();
     expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("queues an approved campaign as a rehearsal where that is allowed", async () => {
+    const user = userEvent.setup();
+    const { headersSent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: true },
+        campaign({ status: "approved", approved: true }),
+        (method, path) =>
+          method === "POST" && path.endsWith("/queue")
+            ? { status: 200, body: campaign({ status: "queued", version: 5 }) }
+            : undefined,
+        true,
+      ),
+    );
+    expect(
+      await screen.findByText(/Rehearsal workspace: .* no email is sent/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Campaigns cannot be sent yet/)).toBeNull();
+    const pane = await openCampaign(user);
+    await user.click(
+      within(pane).getByRole("button", { name: "Queue as a rehearsal" }),
+    );
+    await waitFor(() => {
+      const call = headersSent.find((r) => r.path.endsWith("/queue"));
+      expect(call?.headers["if-match"]).toBe('"4"');
+    });
   });
 
   it("shows who may receive it and why others may not", async () => {

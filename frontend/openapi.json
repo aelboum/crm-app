@@ -2145,6 +2145,11 @@
             "title": "Items",
             "type": "array"
           },
+          "rehearsal": {
+            "default": false,
+            "title": "Rehearsal",
+            "type": "boolean"
+          },
           "sending_available": {
             "title": "Sending Available",
             "type": "boolean"

@@ -1040,6 +1040,32 @@ approval), **Superseded**.
   `tests/integration/test_emails.py` (four tests: no window, window and
   expiry, never ends as not sent, `EmailNotSentError` retried).
 
+## P7-R — Campaign rehearsal in named test workspaces (2026-11-18)
+
+- **Status:** Chosen by the owner, 2026-11-18 ("A", of: A rehearsal
+  without real email; B real sending to the owner's own addresses; C keep
+  it off). Production email sending and real campaigns stay unauthorized.
+- **What:** `CAMPAIGN_REHEARSAL_WORKSPACES` (app and worker; at most 10
+  workspace ids, anything else refused at start-up) names test workspaces.
+  There, and only while real campaign sending is unavailable:
+  1. an approver can queue an approved campaign ("Queue as a rehearsal";
+     the list says the workspace rehearses and nothing is sent);
+  2. the maintenance run processes it as usual (P7-S): recipients, links,
+     unsubscribe tokens and one email row each;
+  3. each email is closed as `failed` with `last_error = rehearsal` in
+     the same transaction, so it is final: no path can send it, even if
+     sending is switched on later (checked by a test that switches it on);
+  4. the campaign's completion entry is audited with `rehearsal: true`.
+- **Why it is safe in `ENVIRONMENT=production` (staging):** it opens no
+  sending path; both sending locks stay as they were. It is limited to the
+  named workspaces; any other workspace still gets 409
+  `campaign_sending_unavailable`.
+- **Tests:** `tests/integration/test_campaigns.py` (named workspace:
+  queued, completed, 3 emails `failed`/`rehearsal`, unsent after sending is
+  switched on, audited; unnamed workspace refused);
+  `tests/unit/test_settings.py` (setting validation);
+  `frontend/src/records/campaigns.test.tsx` (notice and queue button).
+
 ## P7-S — The campaign sending job (2026-11-18, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's instruction, 2026-11-18 ("Go 1

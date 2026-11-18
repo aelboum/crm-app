@@ -3588,6 +3588,11 @@ export interface components {
         CampaignList: {
             /** Items */
             items: components["schemas"]["CampaignOut"][];
+            /**
+             * Rehearsal
+             * @default false
+             */
+            rehearsal: boolean;
             /** Sending Available */
             sending_available: boolean;
         };

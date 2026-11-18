@@ -134,3 +134,19 @@ def test_the_maintenance_run_sends_queued_campaigns_in_batches(probe: Probe) -> 
     assert owner[0] == ["crm_app.campaign.completed", "system", "crm_app.campaign_send", True]
     assert owner[1][0] == "crm_app.campaign.queued"
     assert owner[1][1] == "user"
+
+
+def test_a_named_workspace_rehearses_campaigns_and_nothing_is_sent(probe: Probe) -> None:
+    """Decision P7-R: with sending unavailable, a workspace named in
+    CAMPAIGN_REHEARSAL_WORKSPACES queues and processes a campaign; every
+    email is closed as failed (rehearsal) and stays unsent even once
+    sending is switched on. Another workspace still cannot queue."""
+    r = probe["rehearsal"]
+    assert r["listed"] == [False, True, False]
+    assert r["queued"] == [200, "queued"]
+    assert r["campaign"] == "completed"
+    assert r["emails"] == [["failed", "rehearsal", 3]]
+    assert r["run"][0] >= 1
+    assert r["audit"] == "true"
+    assert r["later"] == ["failed", 0]
+    assert probe["rehearsal_other_workspace"] == {"code": "campaign_sending_unavailable"}

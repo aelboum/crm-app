@@ -43,7 +43,7 @@ def _scalar(workspace: uuid.UUID, sql: str, **values: object) -> Any:
         return session.execute(text(sql), {"t": workspace, **values}).scalar_one()
 
 
-def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
+def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to bottom
     if os.environ.get("ENVIRONMENT") != "test":
         raise SystemExit("campaign_probe runs only with ENVIRONMENT=test")
     for name in ("EMAIL_SENDING_ENABLED", "EMAIL_CAMPAIGN_SENDING_ENABLED", "EMAIL_PARENT_DOMAIN"):
@@ -411,6 +411,97 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             "EMAIL_PARENT_DOMAIN",
         ):
             os.environ.pop(name, None)
+
+        # Rehearsal (decision P7-R), sending unavailable: workspace b is named,
+        # so its campaign is queued and processed, every email closed unsent;
+        # workspace a is not named and still cannot queue.
+        os.environ["CAMPAIGN_REHEARSAL_WORKSPACES"] = str(b.id)
+        os.environ["PUBLIC_APP_ORIGIN"] = "https://app.example.test"
+        try:
+            listed_b = client.get(f"{b_base}/campaigns", headers=auth("other_owner")).json()
+            listed_a = client.get(f"{base}/campaigns", headers=auth()).json()
+            spring = client.post(
+                f"{b_base}/campaigns",
+                json={**draft, "name": "Spring news"},
+                headers=auth("other_owner"),
+            ).json()
+            s_one = f"{b_base}/campaigns/{spring['id']}"
+            for step, version in (("validate", 1), ("submit", 2), ("approve", 3)):
+                client.post(f"{s_one}/{step}", headers=auth("other_owner", version))
+            s_queued = client.post(f"{s_one}/queue", headers=auth("other_owner", 4))
+            rehearsed = campaigns.run_queued(batch=10)
+            # Workspace a is not named: still refused.
+            a_queue = client.post(
+                f"{base}/campaigns/{camp['id']}/queue", headers=auth(version=99)
+            ).json()
+            with tenant_session_scope(b.id) as session:
+                outcomes = [
+                    list(row)
+                    for row in session.execute(
+                        text(
+                            "SELECT m.status, m.last_error, count(*)"
+                            " FROM crm_app.campaign_recipient r"
+                            " JOIN crm_app.email_message m"
+                            " ON m.tenant_id = r.tenant_id AND m.id = r.email_message_id"
+                            " WHERE r.tenant_id = :t AND r.campaign_id = :c"
+                            " GROUP BY m.status, m.last_error"
+                        ),
+                        {"t": b.id, "c": spring["id"]},
+                    )
+                ]
+                one_email = session.execute(
+                    text(
+                        "SELECT email_message_id FROM crm_app.campaign_recipient"
+                        " WHERE tenant_id = :t AND campaign_id = :c LIMIT 1"
+                    ),
+                    {"t": b.id, "c": spring["id"]},
+                ).scalar_one()
+                completed_meta = session.execute(
+                    text(
+                        "SELECT metadata->>'rehearsal' FROM core.audit_log"
+                        " WHERE tenant_id = :t AND resource_id = :c"
+                        " AND action = 'crm_app.campaign.completed'"
+                    ),
+                    {"t": b.id, "c": spring["id"]},
+                ).scalar_one()
+            before = len(recorder.sent)
+            # Even with sending switched on afterwards, a rehearsed email stays unsent.
+            campaigns.SENDING_AVAILABLE = True
+            os.environ["EMAIL_SENDING_ENABLED"] = "true"
+            os.environ["EMAIL_CAMPAIGN_SENDING_ENABLED"] = "true"
+            os.environ["EMAIL_PARENT_DOMAIN"] = "example.test"
+            later = emails.send(b.id, one_email, provider=recorder)
+            result["rehearsal"] = {
+                "listed": [
+                    listed_b["sending_available"],
+                    listed_b["rehearsal"],
+                    listed_a["rehearsal"],
+                ],
+                "queued": [s_queued.status_code, s_queued.json()["status"]],
+                "campaign": _scalar(
+                    b.id,
+                    "SELECT status FROM crm_app.campaign WHERE tenant_id = :t AND id = :c",
+                    c=spring["id"],
+                ),
+                "emails": outcomes,
+                "run": [rehearsed["campaigns"], rehearsed["finished"]],
+                "audit": completed_meta,
+                "later": [later, len(recorder.sent) - before],
+            }
+        finally:
+            campaigns.SENDING_AVAILABLE = False
+            for name in (
+                "CAMPAIGN_REHEARSAL_WORKSPACES",
+                "EMAIL_SENDING_ENABLED",
+                "EMAIL_CAMPAIGN_SENDING_ENABLED",
+                "EMAIL_PARENT_DOMAIN",
+            ):
+                os.environ.pop(name, None)
+            if origin is None:
+                os.environ.pop("PUBLIC_APP_ORIGIN", None)
+            else:
+                os.environ["PUBLIC_APP_ORIGIN"] = origin
+        result["rehearsal_other_workspace"] = a_queue["detail"]
 
         second = client.post(f"{base}/campaigns", json=draft, headers=auth()).json()
         result["cancel"] = [

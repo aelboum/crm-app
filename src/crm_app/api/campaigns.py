@@ -137,6 +137,8 @@ class CampaignOut(BaseModel):
 class CampaignList(BaseModel):
     items: list[CampaignOut]
     sending_available: bool
+    # Campaigns here are rehearsed: queued and processed, never sent (P7-R).
+    rehearsal: bool = False
 
 
 def _scope(context: RequestContext) -> Scope:
@@ -163,6 +165,7 @@ def list_campaigns(context: Read) -> Any:
     return {
         "items": campaigns.list_campaigns(_scope(context)),
         "sending_available": campaigns.sending_available(),
+        "rehearsal": campaigns.rehearsal(context.tenant_id),
     }
 
 

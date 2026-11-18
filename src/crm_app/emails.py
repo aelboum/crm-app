@@ -220,6 +220,19 @@ def queue(  # noqa: PLR0913 - one email's fields
     return email_id
 
 
+def close_unsent(session: Session, workspace: uuid.UUID, email_id: uuid.UUID, code: str) -> None:
+    """Close a just-queued email as `failed` with `code`, in the caller's
+    transaction: final, so nothing ever sends it (a rehearsed campaign,
+    decision P7-R). Its index row is cleared by the next sweep."""
+    row = session.execute(
+        select(EmailMessage)
+        .where(EmailMessage.tenant_id == workspace, EmailMessage.id == email_id)
+        .with_for_update()
+    ).scalar_one()
+    row.status, row.last_error, row.updated_at = "failed", code, _now()
+    _audit(session, row, "failed", error=code)
+
+
 # --- Send --------------------------------------------------------------------------------
 
 
