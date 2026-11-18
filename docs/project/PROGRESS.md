@@ -1353,6 +1353,34 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed at `c94d156` (2026-11-18, owner: "Deploy staging")
+
+From `7423c7a`: SaaS-OS v0.15.0 (K3.10, K3.11), Settings › AI (P9-S), the
+email headers and the unsubscribe page (E-H1). Staging runs
+`ENVIRONMENT=production` with no email switch set, so nothing can be sent
+and campaigns cannot be queued.
+
+| Check | Result |
+| --- | --- |
+| CI on `c94d156` | run 44306022129, 5 of 5 jobs passed |
+| Backup before deploying (`backup_drill.py`) | 14 passed, 1 failed. Passed: both databases backed up, encrypted, restored into a separate PostgreSQL; every table's row count matches (app 127 tables, 1,369 rows; ZITADEL 144, 2,279); RLS identical; the app role safe; one workspace sees none of another's rows. Failed: `audit_digest verify --partial` on the exported worker log, `chain_start_missing`: the worker has run since 2026-11-08 and Docker keeps its last 5 × 10 MB of log, so the export starts at 2026-11-16 and the chain's first record has rotated away. The database is not at fault; staging has no append-only log store (the stand-in is the container log) |
+| Image | built on the VPS, `crm-app:c94d156`, saas-os 0.15.0 |
+| `up -d --wait` | migrate exited 0; app and worker healthy |
+| Migration heads | SaaS-OS `e1f5a8c3b7d9`, product `0045_email_headers`; `email_message.message_id` exists |
+| `/readyz` | 200 |
+| `/app/u/{workspace}` | 200, the app page |
+| `POST /v1/public/unsubscribe/{workspace}/{unknown token}` | 204 (answers alike for unknown links) |
+| `GET /v1/workspaces/{id}/ai`, `/ai/budget` without a session | 401 |
+| App and worker logs, first 10 minutes | no error lines |
+
+Not checked: Settings › AI signed in. Staging's workspaces were created
+before the AI permissions, so their Owners hold none until the permission
+grant migrations run (the two changing ones are in the held-back
+administrative list, which needs the owner's approval). Rollback: the code
+alone can go back to `crm-app:7423c7a`; the SaaS-OS v0.14.0 schema is
+forward-only once used (K3.10), so a full rollback means restoring the
+backup taken above (2026-11-18, before the deploy) and losing later changes.
+
 ## Unsubscribe and threading headers (decision E-H1, 2026-11-18)
 
 Campaign emails carry one-click `List-Unsubscribe` headers; conversation
