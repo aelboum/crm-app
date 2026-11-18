@@ -1382,7 +1382,26 @@ listed only `ai.policy:read`, `ai.policy:manage`, `ai.usage:read` and
 run grants nothing; the audit log has 16 `role_permission.grant` entries.
 AI stays off in both workspaces and no provider is configured.
 
-Not checked: Settings › AI signed in, in a browser. Rollback: the code
+**Settings › AI signed in** (owner: "use the staging test accounts on
+crm-staging.auravox.nl", 2026-11-18), in a headless Chrome with one
+isolated session per test user:
+
+| Check | Result |
+| --- | --- |
+| Alice (Owner, Staging Alpha) opens Settings › AI | page shows AI, Features, "no AI models available yet", Data preferences, Monthly AI budget |
+| Alice turns AI on, reloads | still on (stored on the server) |
+| Alice turns Contact brief on, then off; turns AI off | each switch follows; no error shown |
+| Alice sets a 10 EUR cap, then removes it | "Within budget, 10 EUR"; then "No budget set" |
+| Bob (Owner, Staging Beta) reads Alpha's `/ai`, `/ai/budget`; `PUT /ai/enabled` | 404 `tenant not found` for each |
+| Bob opens Alpha's Settings › AI in the app | "You can't open this workspace" |
+| Bob reads Beta's `/ai` | 200, AI off |
+| Alpha afterwards (as Alice) | AI off, Contact brief off, budget unconfigured |
+| Logs of every staging service, the 25 minutes around the check | no error lines |
+
+Not checked on staging: the Member view (the notice in place of the
+settings). Both staging test users are Owners, so no Member was available;
+the frontend test `aiSettings.test.tsx` and the route tests cover it.
+Rollback: the code
 alone can go back to `crm-app:7423c7a`; the SaaS-OS v0.14.0 schema is
 forward-only once used (K3.10), so a full rollback means restoring the
 backup taken above (2026-11-18, before the deploy) and losing later changes.
