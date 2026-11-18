@@ -261,6 +261,18 @@ PERMISSION_GRANT_MIGRATIONS: tuple[PermissionGrantMigration, ...] = (
         (("crm_app.campaign", "read"),),
         "P7-C: Campaigns (Phase 7C)",
     ),
+    _migration(
+        "crm_app.p9s.ai_settings.owner",
+        Role.OWNER,
+        (("ai.policy", "read"), ("ai.usage", "read")),
+        "P9-S: Workspace AI settings (Phase 9)",
+    ),
+    _migration(
+        "crm_app.p9s.ai_settings.admin",
+        Role.ADMIN,
+        (("ai.policy", "read"), ("ai.usage", "read")),
+        "P9-S: Workspace AI settings (Phase 9)",
+    ),
 )
 
 # Administrative or safeguarded permissions (`role_upgrade.GUARDED`): applied
@@ -349,6 +361,18 @@ ADMINISTRATIVE_MIGRATIONS: tuple[PermissionGrantMigration, ...] = (
         Role.ADMIN,
         (("crm_app.integration", "manage"),),
         "P12-K: Integrations and API keys (Phase 12K)",
+    ),
+    _migration(
+        "crm_app.p9s.ai_settings.administrative.owner",
+        Role.OWNER,
+        (("ai.policy", "manage"), ("ai.budget", "manage")),
+        "P9-S: Workspace AI settings (Phase 9)",
+    ),
+    _migration(
+        "crm_app.p9s.ai_settings.administrative.admin",
+        Role.ADMIN,
+        (("ai.policy", "manage"), ("ai.budget", "manage")),
+        "P9-S: Workspace AI settings (Phase 9)",
     ),
 )
 

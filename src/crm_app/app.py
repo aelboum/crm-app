@@ -27,6 +27,17 @@ if TYPE_CHECKING:
 TITLE = "crm-app"
 
 
+def _register_participants() -> None:
+    """In-process registrations the routes rely on: the product's purge
+    participants, and its AI use cases so a workspace can allow them
+    (decision P9-S). Neither authorizes anything."""
+    from crm_app import ai  # noqa: PLC0415
+    from crm_app.purge import register_purge_participants  # noqa: PLC0415
+
+    register_purge_participants()
+    ai.register()
+
+
 def create_app() -> FastAPI:
     validate_settings(Process.APP)
     # Imported only after validation: SaaS-OS resolves configuration at import time.
@@ -35,6 +46,7 @@ def create_app() -> FastAPI:
     from saas_os.api.v1 import invitation_acceptance_router  # noqa: PLC0415
 
     from crm_app.api.access import router as access_router  # noqa: PLC0415
+    from crm_app.api.ai_settings import router as ai_settings_router  # noqa: PLC0415
     from crm_app.api.appointments import router as appointments_router  # noqa: PLC0415
     from crm_app.api.automations import router as automations_router  # noqa: PLC0415
     from crm_app.api.booking_pages import public_router as public_booking_router  # noqa: PLC0415
@@ -73,10 +85,9 @@ def create_app() -> FastAPI:
     from crm_app.api.websites import router as websites_router  # noqa: PLC0415
     from crm_app.api.workspace_settings import router as settings_router  # noqa: PLC0415
     from crm_app.api.workspaces import router as workspaces_router  # noqa: PLC0415
-    from crm_app.purge import register_purge_participants  # noqa: PLC0415
 
     # A purge run from this process must also purge product data (crm_app.purge).
-    register_purge_participants()
+    _register_participants()
     app = build_platform_app(title=TITLE, version=__version__)
     # Rejected values are personal data: 422 bodies never echo them.
     app.add_exception_handler(RequestValidationError, validation_error)
@@ -87,6 +98,7 @@ def create_app() -> FastAPI:
         workspaces_router,
         settings_router,
         access_router,
+        ai_settings_router,
         members_router,
         notifications_router,
         *record_routers,

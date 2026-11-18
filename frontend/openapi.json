@@ -1,6 +1,39 @@
 {
   "components": {
     "schemas": {
+      "AISettingsOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureOut"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureModels"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/PreferencesOut"
+          }
+        },
+        "required": [
+          "enabled",
+          "features",
+          "preferences",
+          "models"
+        ],
+        "title": "AISettingsOut",
+        "type": "object"
+      },
       "AcceptInvitationRequest": {
         "properties": {
           "token": {
@@ -1619,6 +1652,184 @@
           "can_cancel"
         ],
         "title": "BookingView",
+        "type": "object"
+      },
+      "BudgetIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "warn_thresholds": {
+            "anyOf": [
+              {
+                "items": {
+                  "maximum": 100.0,
+                  "minimum": 1.0,
+                  "type": "integer"
+                },
+                "maxItems": 5,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warn Thresholds"
+          }
+        },
+        "required": [
+          "currency"
+        ],
+        "title": "BudgetIn",
+        "type": "object"
+      },
+      "BudgetOut": {
+        "description": "This UTC month's AI budget. Amounts are SaaS-OS's estimated platform\nspend in `currency` as plain decimal strings, never invoice amounts.",
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "reserved": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserved"
+          },
+          "retained": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained"
+          },
+          "settled": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "threshold_reached": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Reached"
+          },
+          "warn_thresholds": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Warn Thresholds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "state",
+          "currency",
+          "limit",
+          "source",
+          "settled",
+          "reserved",
+          "retained",
+          "remaining",
+          "period_start",
+          "warn_thresholds",
+          "threshold_reached"
+        ],
+        "title": "BudgetOut",
         "type": "object"
       },
       "BulkSkipped": {
@@ -5337,6 +5548,20 @@
         "title": "EmailStatus",
         "type": "object"
       },
+      "EnabledIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "EnabledIn",
+        "type": "object"
+      },
       "EndpointIn": {
         "additionalProperties": false,
         "properties": {
@@ -5428,6 +5653,47 @@
           "excluded"
         ],
         "title": "Estimate",
+        "type": "object"
+      },
+      "FeatureModels": {
+        "properties": {
+          "feature": {
+            "const": "contact_brief",
+            "title": "Feature",
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelOut"
+            },
+            "title": "Models",
+            "type": "array"
+          }
+        },
+        "required": [
+          "feature",
+          "models"
+        ],
+        "title": "FeatureModels",
+        "type": "object"
+      },
+      "FeatureOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "feature": {
+            "const": "contact_brief",
+            "title": "Feature",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feature",
+          "enabled"
+        ],
+        "title": "FeatureOut",
         "type": "object"
       },
       "FieldIn": {
@@ -6896,6 +7162,104 @@
         "title": "MessageOut",
         "type": "object"
       },
+      "ModelIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "feature": {
+            "const": "contact_brief",
+            "title": "Feature",
+            "type": "string"
+          },
+          "model_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}$",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "provider_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}$",
+            "title": "Provider Key",
+            "type": "string"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "maximum": 99.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          }
+        },
+        "required": [
+          "feature",
+          "provider_key",
+          "model_id",
+          "enabled"
+        ],
+        "title": "ModelIn",
+        "type": "object"
+      },
+      "ModelOut": {
+        "properties": {
+          "blocked_by": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocked By",
+            "type": "array"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "granted": {
+            "title": "Granted",
+            "type": "boolean"
+          },
+          "lifecycle": {
+            "title": "Lifecycle",
+            "type": "string"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "provider_key": {
+            "title": "Provider Key",
+            "type": "string"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          }
+        },
+        "required": [
+          "provider_key",
+          "model_id",
+          "lifecycle",
+          "granted",
+          "rank",
+          "eligible",
+          "blocked_by"
+        ],
+        "title": "ModelOut",
+        "type": "object"
+      },
       "NoteIn": {
         "additionalProperties": false,
         "properties": {
@@ -7360,6 +7724,73 @@
           "stages"
         ],
         "title": "PipelineOut",
+        "type": "object"
+      },
+      "PreferencesIn": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_residency": {
+            "items": {
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Allowed Residency",
+            "type": "array"
+          },
+          "exclude_training_use": {
+            "default": true,
+            "title": "Exclude Training Use",
+            "type": "boolean"
+          },
+          "max_retention_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Retention Days"
+          }
+        },
+        "title": "PreferencesIn",
+        "type": "object"
+      },
+      "PreferencesOut": {
+        "properties": {
+          "allowed_residency": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Residency",
+            "type": "array"
+          },
+          "exclude_training_use": {
+            "title": "Exclude Training Use",
+            "type": "boolean"
+          },
+          "max_retention_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Retention Days"
+          }
+        },
+        "required": [
+          "allowed_residency",
+          "max_retention_days",
+          "exclude_training_use"
+        ],
+        "title": "PreferencesOut",
         "type": "object"
       },
       "ProfileIn": {
@@ -12127,6 +12558,443 @@
         "summary": "List Recent Activity",
         "tags": [
           "activity"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/ai": {
+      "get": {
+        "operationId": "get_ai_settings_v1_workspaces__tenant_id__ai_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AISettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ai Settings",
+        "tags": [
+          "ai settings"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/ai/budget": {
+      "get": {
+        "operationId": "get_ai_budget_v1_workspaces__tenant_id__ai_budget_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ai Budget",
+        "tags": [
+          "ai settings"
+        ]
+      },
+      "put": {
+        "operationId": "put_ai_budget_v1_workspaces__tenant_id__ai_budget_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Ai Budget",
+        "tags": [
+          "ai settings"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/ai/enabled": {
+      "put": {
+        "operationId": "put_ai_enabled_v1_workspaces__tenant_id__ai_enabled_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Ai Enabled",
+        "tags": [
+          "ai settings"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/ai/features/{feature}": {
+      "put": {
+        "operationId": "put_ai_feature_v1_workspaces__tenant_id__ai_features__feature__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "feature",
+            "required": true,
+            "schema": {
+              "const": "contact_brief",
+              "title": "Feature",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Ai Feature",
+        "tags": [
+          "ai settings"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/ai/models": {
+      "put": {
+        "description": "Allow or disallow one catalogue model for a feature, and set its\nplace in the order. Two SaaS-OS changes, each its own transaction: if\nthe order is refused after the grant, the grant stands and the refusal\nis returned; the next read shows both.",
+        "operationId": "put_ai_model_v1_workspaces__tenant_id__ai_models_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Ai Model",
+        "tags": [
+          "ai settings"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/ai/preferences": {
+      "put": {
+        "operationId": "put_ai_preferences_v1_workspaces__tenant_id__ai_preferences_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Ai Preferences",
+        "tags": [
+          "ai settings"
         ]
       }
     },

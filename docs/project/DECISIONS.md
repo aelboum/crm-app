@@ -3504,6 +3504,59 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   - the DPIA;
   - production activation.
 
+## P9-S — Workspace AI settings (2026-11-18, under the autonomous mandate)
+
+- **Status:** Built and pushed under the owner's instruction "Go 1"
+  (2026-11-18: "Settings › AI page"). Code only: no AI provider, model,
+  credential or paid usage is configured anywhere, and AI stays off in
+  every workspace. Production AI activation is still not authorized
+  (P9-P restriction 5).
+- **Decision:**
+  1. **Settings › AI** over SaaS-OS's public `saas_os.inference.settings`
+     (v0.15.0, K3.11), through product routes
+     (`crm_app.api.ai_settings`): read the settings; turn AI on or off;
+     allow or disallow a feature; allow or disallow a catalogue model for
+     a feature and set its order; data preferences (no training use,
+     longest retention, allowed data locations); the monthly AI budget
+     and the workspace's own lower cap. SaaS-OS checks the permission
+     again, refuses support access for every change, validates a model at
+     grant time, and writes the workspace's audit row for each change.
+  2. **Permissions:** `ai.policy:read`, `ai.policy:manage`,
+     `ai.usage:read` and `ai.budget:manage` for Owners and Admins only
+     (`crm_app.roles`, PHASE2-PLAN §5.2). Members and Read-only see a
+     notice and send no AI request. `ai.inference:run` is not granted yet:
+     it belongs to the contact-brief slice. `ai.credential:manage` is not
+     granted (SaaS-OS reserves it).
+  3. **Existing workspaces** get the two reads through standard permission
+     grant migrations and the two changes (`ai.policy:manage`,
+     `ai.budget:manage`, administrative) through the held-back
+     administrative list (`crm_app.permission_grants`); neither list has
+     been applied anywhere. New workspaces get all four from the templates.
+  4. **Features:** only the contact brief (`crm.contact_brief`), allowed
+     with the classifications `none` and `tenant_data`, its ceiling.
+     Allowing it does nothing until the contact-brief route exists: no
+     product code calls `run_inference` yet.
+  5. **Users only:** an integration's key (a service account) is refused
+     on every AI route, though it holds none of these permissions anyway.
+  6. **Models:** a model can be switched on only when nothing about the
+     model itself blocks it; reasons from the workspace's own switches
+     (AI off, feature off) or a platform pause do not stop the choice. A
+     newly allowed model is tried after those already allowed. Allowing
+     and ordering are two SaaS-OS changes: if the order is refused after
+     the grant, the grant stands and the refusal is shown.
+- **Verified:** `tests/integration/test_ai_settings_routes.py` (7 tests:
+  defaults; the roles; another workspace's owner answered 404 and its
+  settings untouched; on and off; preferences; invalid input; a model the
+  catalogue lacks; the cap and the budget read; SaaS-OS audit rows);
+  `tests/unit/test_routes.py`, `test_roles.py`,
+  `test_permission_grants.py`; `frontend/src/pages/aiSettings.test.tsx`
+  (5 tests, with an accessibility scan).
+- **Not verified:** allowing a model the catalogue holds and an AI call
+  with it. That needs a platform operator to set up a provider and model
+  (`saas-os-operator ai-*`), which is not authorized; SaaS-OS's own tests
+  cover that path against its fake adapter. The page was not checked in a
+  browser.
+
 ## P8-B — More automation triggers and actions (2026-11-02, under M1)
 
 - **Status:** Decided and built under M1 (owner, 2026-11-01: "proceed" with

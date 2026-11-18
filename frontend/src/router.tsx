@@ -450,7 +450,8 @@ const sectionRoute = createRoute({
     search.section === "tags" ||
     search.section === "fields" ||
     search.section === "pipeline" ||
-    search.section === "suppression"
+    search.section === "suppression" ||
+    search.section === "ai"
       ? { section: search.section }
       : {}),
     ...(typeof search.record === "string" && isWorkspaceId(search.record)

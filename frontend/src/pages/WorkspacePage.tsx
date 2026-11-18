@@ -45,6 +45,7 @@ import { BusinessSettings } from "./BusinessSettings";
 import { FieldSettings } from "./FieldSettings";
 import { PipelineSettings } from "./PipelineSettings";
 import { DomainSettings } from "./DomainSettings";
+import { AISettings } from "./AISettings";
 import { IntegrationSettings } from "./IntegrationSettings";
 import { SendingDomainSettings } from "./SendingDomainSettings";
 import { SuppressionSettings } from "./SuppressionSettings";
@@ -472,6 +473,7 @@ export type SettingsSection =
   | "suppression"
   | "domains"
   | "sending"
+  | "ai"
   | "integrations";
 const BUILT_SECTIONS: readonly string[] = [
   "team",
@@ -483,6 +485,7 @@ const BUILT_SECTIONS: readonly string[] = [
   "suppression",
   "domains",
   "sending",
+  "ai",
   "integrations",
 ];
 
@@ -496,6 +499,7 @@ const SECTION_TEXT: Record<SettingsSection, { title: MessageId; desc: MessageId 
   suppression: { title: "settings.suppression", desc: "settings.suppressionDesc" },
   domains: { title: "settings.domains", desc: "settings.domainsDesc" },
   sending: { title: "settings.sending", desc: "settings.sendingDesc" },
+  ai: { title: "settings.ai", desc: "settings.aiDesc" },
   integrations: { title: "settings.integrations", desc: "settings.integrationsDesc" },
 };
 
@@ -772,6 +776,15 @@ export function SettingsPage({
             <SendingDomainSettings
               workspaceId={workspaceId}
               canEdit={access.data.actions.update_workspace === true}
+            />
+          ) : null}
+          {access.data && section === "ai" ? (
+            <AISettings
+              workspaceId={workspaceId}
+              canRead={access.data.actions.read_ai_settings === true}
+              canManage={access.data.actions.manage_ai_settings === true}
+              canReadUsage={access.data.actions.read_ai_usage === true}
+              canManageBudget={access.data.actions.manage_ai_budget === true}
             />
           ) : null}
           {access.data && section === "integrations" ? (

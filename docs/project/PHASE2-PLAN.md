@@ -224,6 +224,10 @@ check" is enforced by product code in addition to the permission.
 | `api_key:revoke` | ✓ | ✓ | – | – | A | Revoke an integration's key; added by P12-K |
 | `webhook_subscription:create` | ✓ | ✓ | – | – | A | Add a webhook endpoint; added by P12-H |
 | `webhook_subscription:delete` | ✓ | ✓ | – | – | A | Remove a webhook endpoint; added by P12-H |
+| `ai.policy:read` | ✓ | ✓ | – | – | R | See the workspace's AI settings and the models it may choose; added by P9-S |
+| `ai.policy:manage` | ✓ | ✓ | – | – | A | Turn AI on or off, allow features and models, set data preferences (SaaS-OS checks each change; support access never); added by P9-S |
+| `ai.usage:read` | ✓ | ✓ | – | – | R | See AI usage and the monthly AI budget; added by P9-S |
+| `ai.budget:manage` | ✓ | ✓ | – | – | A | Lower the workspace's monthly AI budget, never above the plan's; added by P9-S |
 | `crm_app.workspace:read` | ✓ | ✓ | ✓ | ✓ | R | — |
 | `crm_app.workspace:update` | ✓ | ✓ | – | – | U | Ordinary settings: name, locale, time zone, currency |
 | `crm_app.workspace_security:update` | ✓ | – | – | – | A | Re-confirmation; security-sensitive settings only |

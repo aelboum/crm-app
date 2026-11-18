@@ -49,6 +49,10 @@ CONTACT_BRIEF = UseCase(
     max_parts=2,
     max_input_bytes=ai_brief.MAX_INPUT_BYTES,
 )
+# What a workspace allows the contact brief to carry when it turns the
+# feature on (Settings > AI, decision P9-S): the fixed instructions and the
+# workspace's own data, the use case's ceiling.
+CONTACT_BRIEF_CLASSIFICATIONS: tuple[str, ...] = ("none", "tenant_data")
 
 
 class BriefState(StrEnum):

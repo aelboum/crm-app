@@ -46,6 +46,8 @@ PUBLIC_PACKAGES = frozenset(
         # Permission grant migrations, public since v0.7.0 (ADR 0060; decision K3.7).
         "saas_os.core.permission_grants",
         "saas_os.inference",
+        # A workspace's own AI settings, public since v0.15.0 (decisions K3.11, P9-S).
+        "saas_os.inference.settings",
         "saas_os.contracts",
     }
 )

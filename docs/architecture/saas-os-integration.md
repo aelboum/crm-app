@@ -53,7 +53,9 @@ saas-os @ git+https://github.com/aelboum/saas-os@cdede956dd884fc816b234f1b546ce3
 | `saas-os-local-identity` (console script) | local identity setup | `tests/identity/test_oidc_login.py` (opt-in) |
 
 **Rule:** imports are restricted to package `__init__` exports,
-`saas_os.api.*`, `saas_os.inference` and `saas_os.contracts`. This is
+`saas_os.api.*`, `saas_os.inference` (and its public package
+`saas_os.inference.settings` since v0.15.0, used by Settings › AI,
+decision P9-S) and `saas_os.contracts`. This is
 enforced by `tests/unit/test_import_surface.py`.
 
 The scaffold's own imports of `saas_os.infra.db.config`,

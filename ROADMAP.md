@@ -792,7 +792,7 @@ The UI must not imply that unsupported nodes or actions are executable.
 
 # 14. Phase 9 — AI Assistants and Knowledge
 
-**Status:** Provider direction decided (decision P9-P, 2026-11-09): Groq first under Zero Data Retention and no training, provider independence through SaaS-OS's governed inference, AI off by default and suggestions only. Still blocked before activation: Groq's terms, DPA and EU-transfer check, plans and token limits, SaaS-OS gap 20 (no supported way to turn AI on for a workspace), and production approval. The first slice (contact brief) is planned.
+**Status:** Provider direction decided (decision P9-P, 2026-11-09): Groq first under Zero Data Retention and no training, provider independence through SaaS-OS's governed inference, AI off by default and suggestions only. SaaS-OS gap 20 closed in v0.15.0 (pinned by K3.11), and Settings › AI is built (decision P9-S, 2026-11-18): Owners and Admins turn AI on, allow the contact brief and a model, set data preferences and a monthly cap. Still blocked before activation: Groq's terms, DPA and EU-transfer check, plans and token limits, a platform operator's provider and model setup, and production approval. Next slice: the contact brief.
 
 **Dependency:** Verified SaaS-OS inference capabilities or an explicitly approved product-side integration strategy.
 

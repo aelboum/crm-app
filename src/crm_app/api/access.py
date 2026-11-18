@@ -95,6 +95,11 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "manage_automations": ("crm_app.automation", "manage"),
     # Integrations and API keys (decision P12-K): Owner and Admin.
     "manage_integrations": ("crm_app.integration", "manage"),
+    # Workspace AI settings (decision P9-S): Owner and Admin.
+    "read_ai_settings": ("ai.policy", "read"),
+    "manage_ai_settings": ("ai.policy", "manage"),
+    "read_ai_usage": ("ai.usage", "read"),
+    "manage_ai_budget": ("ai.budget", "manage"),
 }
 
 

@@ -141,6 +141,23 @@ PLATFORM_PERMISSIONS: tuple[Permission, ...] = (
         "Sends workspace events to an HTTPS address an Owner or Admin entered (P12-H).",
     ),
     Permission("webhook_subscription", "delete", Kind.ADMINISTRATIVE, "Stops further deliveries."),
+    # SaaS-OS's tenant AI settings (decision P9-S): `saas_os.inference.settings`
+    # checks each one itself; support access never satisfies a change.
+    Permission("ai.policy", "read", Kind.READ),
+    Permission(
+        "ai.policy",
+        "manage",
+        Kind.ADMINISTRATIVE,
+        "Turning AI on, allowing a feature or a model lets workspace data reach an AI"
+        " provider the platform allows (P9-S).",
+    ),
+    Permission("ai.usage", "read", Kind.READ),
+    Permission(
+        "ai.budget",
+        "manage",
+        Kind.ADMINISTRATIVE,
+        "Only lowers the plan's monthly AI budget, never raises it (P9-S).",
+    ),
 )
 
 PRODUCT_PERMISSIONS: tuple[Permission, ...] = (
@@ -321,6 +338,11 @@ _ADMIN = _MEMBER | _keys(
     "api_key:revoke",
     "webhook_subscription:create",
     "webhook_subscription:delete",
+    # P9-S: the workspace's AI settings, usage and monthly cap.
+    "ai.policy:read",
+    "ai.policy:manage",
+    "ai.usage:read",
+    "ai.budget:manage",
 )
 
 _OWNER = _ADMIN | _keys(

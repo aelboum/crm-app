@@ -1670,3 +1670,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
 /* A workspace the person may not open (staging finding S-15). */
 .refused-page { max-width: 480px; margin: 48px auto; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .refused-title { margin: 0; font-size: 20px; font-weight: 650; }
+
+/* Settings › AI (decision P9-S). */
+.ai-switch { width: auto; }
+.ai-budget { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+.ai-budget dt { color: var(--muted); }
+.ai-budget dd { margin: 0; }

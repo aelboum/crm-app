@@ -1353,6 +1353,27 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Workspace AI settings (decision P9-S, 2026-11-18)
+
+Settings › AI over SaaS-OS's `saas_os.inference.settings`: AI on or off,
+the contact brief, model choice and order, data preferences, the monthly
+budget and the workspace's cap. Owners and Admins only. AI stays off
+everywhere; no provider or model is configured.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/integration/test_ai_settings_routes.py` | 7 passed |
+| `pytest tests/integration` (full) | 916 passed, 1 failed: the Read-only `access` expectation lacked the four new AI actions; updated, and `test_workspace_routes.py` then passed (25) |
+| `pytest tests/unit` | 804 passed |
+| `ruff check` / `ruff format --check` / `pyright` / `lint-imports` | clean / clean / 0 errors / 2 kept, 0 broken |
+| OpenAPI | only additions: six paths, ten schemas |
+| Frontend `typecheck`, `lint`, `build` | clean |
+| Frontend `vitest run --maxWorkers=2` | 368 passed (36 files). With the default worker count on this machine, 1 to 10 unrelated tests hit the 5 s timeout under load; each passes alone |
+
+Not verified: granting a configured model and an AI call (needs a
+platform operator's provider and model, not authorized); the page in a
+browser.
+
 ## SaaS-OS upgrade to v0.15.0 (decision K3.11, 2026-11-17)
 
 On the new pin `cdede95` (v0.15.0, from v0.14.0 `fb842ff`), locally on

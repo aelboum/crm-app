@@ -266,6 +266,17 @@ INTEGRATIONS = {
     "POST /v1/workspaces/{tenant_id}/webhooks": "crm_app.integration:manage",
     "DELETE /v1/workspaces/{tenant_id}/webhooks/{endpoint_id}": "crm_app.integration:manage",
 }
+# Workspace AI settings (decision P9-S): Owner and Admin, by session only.
+_AI = "/v1/workspaces/{tenant_id}/ai"
+AI_SETTINGS = {
+    f"GET {_AI}": "ai.policy:read",
+    f"PUT {_AI}/enabled": "ai.policy:manage",
+    f"PUT {_AI}/features/{{feature}}": "ai.policy:manage",
+    f"PUT {_AI}/preferences": "ai.policy:manage",
+    f"PUT {_AI}/models": "ai.policy:manage",
+    f"GET {_AI}/budget": "ai.usage:read",
+    f"PUT {_AI}/budget": "ai.budget:manage",
+}
 # Conversations (decision P6-C): every role reads; Owner, Admin and Member
 # reply, log messages, add notes, assign and close.
 _CONVERSATIONS = "/v1/workspaces/{tenant_id}/conversations"
@@ -429,7 +440,14 @@ def test_the_directory_needs_only_a_signed_in_person(tmp_path: Path) -> None:
 def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) -> None:
     policies = {k: v for k, v in _product_policies(tmp_path).items() if k != DIRECTORY}
     assert {key: detail for key, (_, detail, _) in policies.items()} == (
-        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS | INTEGRATIONS
+        EXPECTED
+        | RECORDS
+        | INVITATIONS
+        | EXPORTS
+        | CONFIGURATION
+        | SUPPRESSIONS
+        | INTEGRATIONS
+        | AI_SETTINGS
     )
     assert {kind for kind, _, _ in policies.values()} == {"permission"}
     accepting = {key for key, (_, _, accepts_api_key) in policies.items() if accepts_api_key}
@@ -437,14 +455,27 @@ def test_product_routes_require_exactly_the_intended_permission(tmp_path: Path) 
     changing = {key for key in policies if not key.startswith("GET ")}
     assert changing == CHANGING | OWN_PROFILE | {
         key
-        for key in RECORDS | INVITATIONS | CONFIGURATION | EXPORTS | SUPPRESSIONS | INTEGRATIONS
+        for key in RECORDS
+        | INVITATIONS
+        | CONFIGURATION
+        | EXPORTS
+        | SUPPRESSIONS
+        | INTEGRATIONS
+        | AI_SETTINGS
         if not key.startswith("GET ")
     }
 
 
 def test_route_permissions_are_registered() -> None:
     for detail in (
-        EXPECTED | RECORDS | INVITATIONS | EXPORTS | CONFIGURATION | SUPPRESSIONS | INTEGRATIONS
+        EXPECTED
+        | RECORDS
+        | INVITATIONS
+        | EXPORTS
+        | CONFIGURATION
+        | SUPPRESSIONS
+        | INTEGRATIONS
+        | AI_SETTINGS
     ).values():
         resource, _, action = detail.rpartition(":")
         assert (resource, action) in PERMISSIONS
@@ -458,6 +489,15 @@ def test_configuration_is_read_by_every_role_and_changed_by_owners_and_admins() 
         }
         expected = set(Role) if key.startswith("GET ") else {Role.OWNER, Role.ADMIN}
         assert holders == expected, key
+
+
+def test_ai_settings_are_read_and_changed_by_owners_and_admins_only() -> None:
+    for key, detail in AI_SETTINGS.items():
+        resource, _, action = detail.rpartition(":")
+        holders = {
+            role for role, template in ROLE_TEMPLATES.items() if (resource, action) in template
+        }
+        assert holders == {Role.OWNER, Role.ADMIN}, key
 
 
 def test_the_suppression_list_is_read_by_members_and_changed_by_owners_and_admins() -> None:

@@ -183,6 +183,8 @@ STANDARD_DIGESTS: tuple[str, ...] = (
     "3b9d3b3612f8c3023f660ac34df07896e51a5d62aeada5ad00654ae6fac59337",  # pragma: allowlist secret
     "68b04085ec3ed7a7d64fbb36a826dfb90655a3abd342aa363b01deae91510f72",  # pragma: allowlist secret
     "5032f3b3adab8c4ac9bd1f9ad640da392fde9a65854d0d59b4246411486c6642",  # pragma: allowlist secret
+    "6813821cfe75d09d1d1167dde7c80c5b3e5d8b4d4f58790812e4023e99f6f7c0",  # pragma: allowlist secret
+    "94d2b6bafb4be2bc62b56cbec5eeeeb3b642ff65e6624b9f380af8e67428c7a8",  # pragma: allowlist secret
 )
 ADMINISTRATIVE_DIGESTS: tuple[str, ...] = (
     "77c647223d6c367e137d7a550b479922738a16b4bdfe87ea54c6798e862fa3d0",  # pragma: allowlist secret
@@ -199,6 +201,8 @@ ADMINISTRATIVE_DIGESTS: tuple[str, ...] = (
     "6e78ea6f7a397e561ef61ca3e093e196a21875f29748b08cc460b238ab3c3320",  # pragma: allowlist secret
     "0f76f7d48c79b4017f761f905b46201da050b149e3389df1f771afeb5cf608e7",  # pragma: allowlist secret
     "17d6a9ea00549847ef3985e0210108eef49e265dd71c7d6af64c77cb8fb7e31b",  # pragma: allowlist secret
+    "b6a7b89148a4735f1b2c1a2b244c7777adc2b82a55f1a5140a17283801625267",  # pragma: allowlist secret
+    "2c5cf5fc408ff2529a8e8774ce0dac3d99280da19655b6515ebcda6cc042b830",  # pragma: allowlist secret
 )
 
 
