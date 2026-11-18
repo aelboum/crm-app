@@ -4773,7 +4773,10 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 
 - **Status:** Approved by the owner, 2026-11-18 ("Dated exception
   (Recommended)"), after CI run 44197373119 on `b2e24a5` failed only at
-  the frontend dependency audit.
+  the frontend dependency audit. **Closed the same day:** the advisory is
+  no longer reported for the locked tree (CI run 44361552602 on `2865826`;
+  `npm audit`: 0 findings), so the gate asked for the exception to go and
+  `audit-exceptions.json` is empty again.
 - **Cause:** advisory GHSA-fc5q-39xc-vjpf (picomatch up to 4.0.7, high,
   denial of service through single-branch repeated extglobs). 4.0.7 is
   the latest release and no patched version exists. picomatch reaches the
