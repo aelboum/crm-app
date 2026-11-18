@@ -90,6 +90,28 @@ function workspace(
         status: 200,
         body: { items: [item], sending_available: false, rehearsal },
       };
+    if (path === `${base}/campaigns/${ID}/report`) {
+      return {
+        status: 200,
+        body: {
+          campaign_id: ID,
+          status: item.status,
+          recipients: 12,
+          outcomes: {
+            waiting: 0,
+            sent: 3,
+            delivered: 7,
+            bounced: 1,
+            complained: 0,
+            suppressed: 1,
+            not_sent: 0,
+            unknown: 0,
+            rehearsed: 0,
+          },
+          unsubscribed: 2,
+        },
+      };
+    }
     if (path === `${base}/tags`) {
       return {
         status: 200,
@@ -160,6 +182,41 @@ describe("campaigns", () => {
       const call = headersSent.find((r) => r.path.endsWith("/queue"));
       expect(call?.headers["if-match"]).toBe('"4"');
     });
+  });
+
+  it("shows a started campaign's results and says sent is not delivered (P7-RP)", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: false, approve: false },
+        campaign({ status: "completed" }),
+      ),
+    );
+    const pane = await openCampaign(user);
+    const results = await within(pane).findByRole("region", {
+      name: "Results",
+    });
+    await within(results).findByText("Recipients");
+    const row = (label: string) =>
+      within(results).getByText(label).parentElement?.textContent;
+    expect(row("Recipients")).toBe("Recipients12");
+    expect(row("Accepted by the provider")).toBe("Accepted by the provider3");
+    expect(row("Delivered")).toBe("Delivered7");
+    expect(row("Unsubscribed")).toBe("Unsubscribed2");
+    // Outcomes with no email are left out.
+    expect(within(results).queryByText("Marked as spam")).toBeNull();
+    expect(
+      within(results).getByText(/does not mean delivered/),
+    ).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("shows no results before a campaign is queued", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));
+    const pane = await openCampaign(user);
+    expect(within(pane).queryByRole("region", { name: "Results" })).toBeNull();
   });
 
   it("shows who may receive it and why others may not", async () => {

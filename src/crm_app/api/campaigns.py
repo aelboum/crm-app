@@ -3,6 +3,7 @@
     GET    /v1/workspaces/{tenant_id}/campaigns                    crm_app.campaign:read
     POST   /v1/workspaces/{tenant_id}/campaigns                    crm_app.campaign:manage
     GET    /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:read
+    GET    /v1/workspaces/{tenant_id}/campaigns/{id}/report        crm_app.campaign:read
     PATCH  /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/validate      crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/submit        crm_app.campaign:manage
@@ -141,6 +142,27 @@ class CampaignList(BaseModel):
     rehearsal: bool = False
 
 
+class CampaignOutcomes(BaseModel):
+    # `sent` is acceptance by the provider, not delivery.
+    waiting: int
+    sent: int
+    delivered: int
+    bounced: int
+    complained: int
+    suppressed: int
+    not_sent: int
+    unknown: int
+    rehearsed: int
+
+
+class CampaignReport(BaseModel):
+    campaign_id: uuid.UUID
+    status: str
+    recipients: int
+    outcomes: CampaignOutcomes
+    unsubscribed: int
+
+
 def _scope(context: RequestContext) -> Scope:
     return Scope(workspace=context.tenant_id, actor=context.actor_id)
 
@@ -188,6 +210,14 @@ def create_campaign(body: CampaignIn, context: Manage, response: Response) -> An
 def get_campaign(campaign_id: uuid.UUID, context: Read, response: Response) -> Any:
     try:
         return _etag(response, campaigns.get(_scope(context), campaign_id))
+    except RecordError as exc:
+        raise _refusal(exc) from None
+
+
+@router.get(f"{_ONE}/report", response_model=CampaignReport, name="get_campaign_report")
+def get_campaign_report(campaign_id: uuid.UUID, context: Read) -> Any:
+    try:
+        return campaigns.report(_scope(context), campaign_id)
     except RecordError as exc:
         raise _refusal(exc) from None
 

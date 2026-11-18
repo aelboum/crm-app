@@ -966,6 +966,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Campaign Report */
+        get: operations["get_campaign_report_v1_workspaces__tenant_id__campaigns__campaign_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/submit": {
         parameters: {
             query?: never;
@@ -3645,6 +3662,27 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** CampaignOutcomes */
+        CampaignOutcomes: {
+            /** Bounced */
+            bounced: number;
+            /** Complained */
+            complained: number;
+            /** Delivered */
+            delivered: number;
+            /** Not Sent */
+            not_sent: number;
+            /** Rehearsed */
+            rehearsed: number;
+            /** Sent */
+            sent: number;
+            /** Suppressed */
+            suppressed: number;
+            /** Unknown */
+            unknown: number;
+            /** Waiting */
+            waiting: number;
+        };
         /** CampaignPatch */
         CampaignPatch: {
             /** Body */
@@ -3654,6 +3692,21 @@ export interface components {
             segment?: components["schemas"]["SegmentIn"] | null;
             /** Subject */
             subject?: string | null;
+        };
+        /** CampaignReport */
+        CampaignReport: {
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            outcomes: components["schemas"]["CampaignOutcomes"];
+            /** Recipients */
+            recipients: number;
+            /** Status */
+            status: string;
+            /** Unsubscribed */
+            unsubscribed: number;
         };
         /**
          * CompanyCreate
@@ -9029,6 +9082,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_report_v1_workspaces__tenant_id__campaigns__campaign_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignReport"];
                 };
             };
             /** @description Validation Error */

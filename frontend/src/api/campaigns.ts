@@ -17,6 +17,8 @@ export type Campaign = components["schemas"]["CampaignOut"];
 export type CampaignStatus = Campaign["status"];
 export type CampaignInput = components["schemas"]["CampaignIn"];
 export type Step = "validate" | "submit" | "approve" | "cancel" | "queue";
+export type CampaignReport = components["schemas"]["CampaignReport"];
+export type Outcome = keyof CampaignReport["outcomes"];
 
 export const campaignKeys = {
   all: (workspaceId: string) =>
@@ -129,6 +131,29 @@ export function useCampaignStep(workspaceId: string) {
       }
     },
     onSettled: () => refresh(),
+  });
+}
+
+/*
+ * A campaign's results (decision P7-RP): its recipients by email outcome,
+ * counted from stored rows, and unsubscribes. Refreshed every 30 seconds
+ * while it is still being processed.
+ */
+export function useCampaignReport(
+  workspaceId: string,
+  id: string,
+  live: boolean,
+) {
+  return useQuery({
+    queryKey: [...campaignKeys.all(workspaceId), id, "report"],
+    refetchInterval: live ? 30_000 : false,
+    queryFn: async () =>
+      unwrap(
+        await api.GET(
+          "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report",
+          { params: { path: one(workspaceId, id) } },
+        ),
+      ),
   });
 }
 

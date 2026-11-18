@@ -4,7 +4,9 @@ import { type SyntheticEvent, useState } from "react";
 import {
   type Campaign,
   type CampaignStatus,
+  type Outcome,
   type Step,
+  useCampaignReport,
   useCampaigns,
   useCampaignStep,
   useCreateCampaign,
@@ -55,6 +57,76 @@ const EDITABLE: CampaignStatus[] = [
   "approved",
   "rejected",
 ];
+
+// Statuses after queuing: the campaign has recipients and results.
+const STARTED: CampaignStatus[] = [
+  "queued",
+  "processing",
+  "completed",
+  "partially_completed",
+  "failed",
+];
+
+const OUTCOMES: Outcome[] = [
+  "waiting",
+  "sent",
+  "delivered",
+  "bounced",
+  "complained",
+  "suppressed",
+  "not_sent",
+  "unknown",
+  "rehearsed",
+];
+
+function Results({
+  workspaceId,
+  campaign,
+}: {
+  workspaceId: string;
+  campaign: Campaign;
+}) {
+  const t = useT();
+  const live = campaign.status === "queued" || campaign.status === "processing";
+  const report = useCampaignReport(workspaceId, campaign.id, live);
+  const data = report.data;
+  return (
+    <section
+      className="campaign-results"
+      aria-label={t("campaigns.results.label")}
+    >
+      <h3 className="campaign-results-title">{t("campaigns.results.label")}</h3>
+      {report.isPending ? (
+        <Loading />
+      ) : data === undefined ? (
+        <LoadError
+          error={report.error}
+          onRetry={() => {
+            void report.refetch();
+          }}
+        />
+      ) : (
+        <>
+          <dl className="campaign-facts">
+            {[
+              ["recipients", data.recipients] as const,
+              ...OUTCOMES.filter((name) => data.outcomes[name] > 0).map(
+                (name) => [name, data.outcomes[name]] as const,
+              ),
+              ["unsubscribed", data.unsubscribed] as const,
+            ].map(([name, count]) => (
+              <div key={name} className="campaign-results-row">
+                <dt>{t(`campaigns.results.${name}` as MessageId)}</dt>
+                <dd>{count}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="muted">{t("campaigns.results.note")}</p>
+        </>
+      )}
+    </section>
+  );
+}
 
 function failure(error: unknown): MessageId {
   if (error instanceof ApiError) {
@@ -265,6 +337,9 @@ function Detail({
         <p className="inbox-message-text">{campaign.body}</p>
         <p className="muted">{t("campaigns.footerNote")}</p>
       </div>
+      {STARTED.includes(status) ? (
+        <Results workspaceId={workspaceId} campaign={campaign} />
+      ) : null}
       {problem ? (
         <p className="notice error" role="alert">
           {t(failure(problem))}

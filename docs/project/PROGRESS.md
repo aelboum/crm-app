@@ -1353,6 +1353,20 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Campaign results (decision P7-RP, 2026-11-18)
+
+A campaign's detail shows its results once queued: recipients, each email
+outcome that occurred (accepted by the provider, delivered, bounced,
+marked as spam, suppressed, not sent, unknown, rehearsed) and
+unsubscribes, from `GET …/campaigns/{id}/report` (every role). Opens and
+clicks are not tracked.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_campaigns.py` | 13 passed |
+| `npx vitest run` (frontend) | 376 passed |
+| `tsc -b`; `eslint .` | clean |
+
 ## Inbound receiving client (decision P6-R, 2026-11-18)
 
 `crm_app.inbound.ResendReceiving` fetches a received email from Resend's

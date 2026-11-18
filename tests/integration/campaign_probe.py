@@ -464,6 +464,13 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
                     ),
                     {"t": b.id, "c": spring["id"]},
                 ).scalar_one()
+            # Results (decision P7-RP): the Owner of b reads its campaign's
+            # report; workspace a cannot, even with the id.
+            s_report = client.get(f"{s_one}/report", headers=auth("other_owner"))
+            result["report_rehearsal"] = [s_report.status_code, s_report.json()]
+            result["report_cross"] = client.get(
+                f"{base}/campaigns/{spring['id']}/report", headers=auth()
+            ).status_code
             before = len(recorder.sent)
             # Even with sending switched on afterwards, a rehearsed email stays unsent.
             campaigns.SENDING_AVAILABLE = True
@@ -504,6 +511,14 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
         result["rehearsal_other_workspace"] = a_queue["detail"]
 
         second = client.post(f"{base}/campaigns", json=draft, headers=auth()).json()
+        # A Member reads results too; a draft has none. Workspace a's sent campaign:
+        empty = client.get(f"{base}/campaigns/{second['id']}/report", headers=auth("member"))
+        sent = client.get(f"{base}/campaigns/{camp['id']}/report", headers=auth("member"))
+        result["report_draft"] = [empty.status_code, empty.json()]
+        result["report_sent"] = [sent.status_code, sent.json()]
+        result["report_missing"] = client.get(
+            f"{base}/campaigns/{uuid.uuid4()}/report", headers=auth()
+        ).status_code
         result["cancel"] = [
             client.post(
                 f"{base}/campaigns/{second['id']}/cancel", headers=auth("member", 1)

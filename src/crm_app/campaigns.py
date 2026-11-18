@@ -45,6 +45,7 @@ import logging
 import os
 import secrets
 import uuid
+from collections import Counter
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
@@ -76,6 +77,7 @@ from crm_app.models import (
     CampaignRecipient,
     Contact,
     ContactTag,
+    EmailMessage,
 )
 from crm_app.records import (
     RecordError,
@@ -717,6 +719,73 @@ def run_queued(*, limit: int = 50, batch: int = BATCH) -> dict[str, Any]:
             _unregister(campaign_id)
             totals["finished"] += 1
     return totals
+
+
+# --- Results (decision P7-RP) ------------------------------------------------------------------
+
+# Each email status in one result bucket. `sent` is acceptance by the
+# provider, never delivery; opens and clicks are not tracked.
+_OUTCOME = {
+    "queued": "waiting",
+    "sending": "waiting",
+    "sent": "sent",
+    "delivery_delayed": "sent",
+    "delivered": "delivered",
+    "bounced": "bounced",
+    "complained": "complained",
+    "suppressed": "suppressed",
+    "failed": "not_sent",
+    "rejected": "not_sent",
+    "outcome_unknown": "unknown",
+}
+OUTCOMES = (
+    "waiting",
+    "sent",
+    "delivered",
+    "bounced",
+    "complained",
+    "suppressed",
+    "not_sent",
+    "unknown",
+    "rehearsed",
+)
+
+
+def report(scope: Scope, campaign_id: uuid.UUID) -> Item:
+    """What happened to a campaign's recipients, counted from stored rows:
+    each recipient's email by outcome, and unsubscribes from its link."""
+    with tenant_session_scope(scope.workspace) as session:
+        row = _load(session, scope, campaign_id, lock=False)
+        found, status = row.id, row.status
+        rows = session.execute(
+            select(CampaignRecipient.status, EmailMessage.status, EmailMessage.last_error)
+            .outerjoin(
+                EmailMessage,
+                (EmailMessage.tenant_id == CampaignRecipient.tenant_id)
+                & (EmailMessage.id == CampaignRecipient.email_message_id),
+            )
+            .where(
+                CampaignRecipient.tenant_id == scope.workspace,
+                CampaignRecipient.campaign_id == found,
+            )
+        ).all()
+    outcomes: Counter[str] = Counter()
+    unsubscribed = 0
+    for recipient_status, email_status, last_error in rows:
+        unsubscribed += recipient_status == "unsubscribed"
+        if email_status is None:
+            continue
+        if email_status == "failed" and last_error == "rehearsal":
+            outcomes["rehearsed"] += 1
+        else:
+            outcomes[_OUTCOME.get(email_status, "unknown")] += 1
+    return {
+        "campaign_id": found,
+        "status": status,
+        "recipients": len(rows),
+        "outcomes": {name: outcomes[name] for name in OUTCOMES},
+        "unsubscribed": unsubscribed,
+    }
 
 
 # --- Unsubscribe -----------------------------------------------------------------------------

@@ -150,3 +150,23 @@ def test_a_named_workspace_rehearses_campaigns_and_nothing_is_sent(probe: Probe)
     assert r["audit"] == "true"
     assert r["later"] == ["failed", 0]
     assert probe["rehearsal_other_workspace"] == {"code": "campaign_sending_unavailable"}
+
+
+def test_a_campaign_report_counts_outcomes_for_its_workspace_only(probe: Probe) -> None:
+    """Decision P7-RP: every role reads a campaign's results, counted from
+    stored rows; another workspace gets 404 even with the id."""
+    status, report = probe["report_rehearsal"]
+    assert (status, report["status"], report["recipients"]) == (200, "completed", 3)
+    assert report["outcomes"]["rehearsed"] == 3
+    assert sum(report["outcomes"].values()) == 3
+    assert report["unsubscribed"] == 0
+    assert probe["report_cross"] == 404
+    assert probe["report_missing"] == 404
+    status, empty = probe["report_draft"]
+    assert (status, empty["recipients"], empty["unsubscribed"]) == (200, 0, 0)
+    assert set(empty["outcomes"].values()) == {0}
+    # Workspace a's campaign: one email accepted by the provider (not
+    # delivery), and its recipient then used the unsubscribe link.
+    status, sent = probe["report_sent"]
+    assert (status, sent["recipients"], sent["unsubscribed"]) == (200, 1, 1)
+    assert {k: v for k, v in sent["outcomes"].items() if v} == {"sent": 1}

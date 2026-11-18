@@ -2328,6 +2328,59 @@
         "title": "CampaignOut",
         "type": "object"
       },
+      "CampaignOutcomes": {
+        "properties": {
+          "bounced": {
+            "title": "Bounced",
+            "type": "integer"
+          },
+          "complained": {
+            "title": "Complained",
+            "type": "integer"
+          },
+          "delivered": {
+            "title": "Delivered",
+            "type": "integer"
+          },
+          "not_sent": {
+            "title": "Not Sent",
+            "type": "integer"
+          },
+          "rehearsed": {
+            "title": "Rehearsed",
+            "type": "integer"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "suppressed": {
+            "title": "Suppressed",
+            "type": "integer"
+          },
+          "unknown": {
+            "title": "Unknown",
+            "type": "integer"
+          },
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "waiting",
+          "sent",
+          "delivered",
+          "bounced",
+          "complained",
+          "suppressed",
+          "not_sent",
+          "unknown",
+          "rehearsed"
+        ],
+        "title": "CampaignOutcomes",
+        "type": "object"
+      },
       "CampaignPatch": {
         "additionalProperties": false,
         "properties": {
@@ -2379,6 +2432,39 @@
           }
         },
         "title": "CampaignPatch",
+        "type": "object"
+      },
+      "CampaignReport": {
+        "properties": {
+          "campaign_id": {
+            "format": "uuid",
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "outcomes": {
+            "$ref": "#/components/schemas/CampaignOutcomes"
+          },
+          "recipients": {
+            "title": "Recipients",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unsubscribed": {
+            "title": "Unsubscribed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "campaign_id",
+          "status",
+          "recipients",
+          "outcomes",
+          "unsubscribed"
+        ],
+        "title": "CampaignReport",
         "type": "object"
       },
       "CompanyCreate": {
@@ -16164,6 +16250,75 @@
           }
         },
         "summary": "Reject Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report": {
+      "get": {
+        "operationId": "get_campaign_report_v1_workspaces__tenant_id__campaigns__campaign_id__report_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Campaign Report",
         "tags": [
           "campaigns"
         ]

@@ -297,6 +297,7 @@ RECORDS |= {
     "GET /v1/workspaces/{tenant_id}/campaigns": "crm_app.campaign:read",
     "POST /v1/workspaces/{tenant_id}/campaigns": "crm_app.campaign:manage",
     "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:read",
+    "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report": "crm_app.campaign:read",
     "PATCH /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/validate": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/submit": "crm_app.campaign:manage",

@@ -1073,6 +1073,32 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P7-RP — Campaign results (2026-11-18, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "Go 1 then 2 and last 3"
+  (2026-11-18; item 2, "campaign reporting").
+- **Decision:** `GET /v1/workspaces/{id}/campaigns/{campaign_id}/report`
+  (`crm_app.campaign:read`, so every role) counts a campaign's recipients
+  from stored rows: each recipient's email by outcome, and how many used
+  the unsubscribe link. Outcomes: `waiting` (queued, sending), `sent`
+  (accepted by the provider, including `delivery_delayed`; never shown as
+  delivered), `delivered`, `bounced`, `complained`, `suppressed`,
+  `not_sent` (failed, rejected), `unknown` (`outcome_unknown`) and
+  `rehearsed` (closed unsent by P7-R). Another workspace's campaign is a
+  404. SaaS-OS's database surface has no `count`, so rows are counted in
+  Python, as in `crm_app.reports`.
+- **Not included:** opens and clicks. They need tracking pixels or
+  rewritten links, which wait on the owner's tracking decision.
+- **Screen:** a "Results" section in the campaign's detail once it is
+  queued or later, showing only outcomes that occurred, refreshed every 30
+  seconds while queued or processing, with the note that acceptance is not
+  delivery.
+- **Tests:** `tests/integration/test_campaigns.py`
+  (`test_a_campaign_report_counts_outcomes_for_its_workspace_only`: a
+  rehearsed campaign, a sent and unsubscribed one, a draft, another
+  workspace, an unknown id); `frontend/src/records/campaigns.test.tsx`
+  (results shown with an axe scan; none before queuing).
+
 ## P7-R — Campaign rehearsal in named test workspaces (2026-11-18)
 
 - **Status:** Chosen by the owner, 2026-11-18 ("A", of: A rehearsal
