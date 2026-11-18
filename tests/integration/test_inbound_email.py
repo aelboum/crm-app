@@ -76,6 +76,11 @@ def _state(probe: Probe, key: str) -> tuple[Any, ...]:
     return row["status"], row["reason"], row["last_error"], row["waiting"]
 
 
+def test_the_main_pass_goes_through_the_resend_adapter(probe: Probe) -> None:
+    # Emails 1 to 12, each fetched once by id from Resend's receiving API (P6-R).
+    assert probe["adapter_gets"] == [12, True]
+
+
 def test_mail_from_the_contact_joins_its_thread_and_reopens_it(probe: Probe) -> None:
     assert _state(probe, "re_1") == ("routed", None, None, False)
     assert probe["reopened"] == "open"

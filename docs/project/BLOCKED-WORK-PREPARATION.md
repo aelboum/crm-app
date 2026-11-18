@@ -113,6 +113,10 @@ white-label scope; the Stripe account and activation.
 
 ## 3. Inbound email: the HTTP-client limitation
 
+**Resolved (decision P6-R, 2026-11-18):** SaaS-OS v0.10.0 added `get`,
+which the current pin includes; `crm_app.inbound.ResendReceiving` is built
+behind `configured_client()`. The text below is kept as history.
+
 **The limitation (verified):** `saas_os.infra.egress.StrictEgressClient`
 exposes only `post` (client.py:184). Resend's inbound flow sends a signed
 `email.received` webhook with metadata. The message content (text, HTML,

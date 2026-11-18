@@ -1040,6 +1040,39 @@ approval), **Superseded**.
   `tests/integration/test_emails.py` (four tests: no window, window and
   expiry, never ends as not sent, `EmailNotSentError` retried).
 
+## P6-R — The inbound receiving client (2026-11-18, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "Go 1 then 2 and last 3"
+  (2026-11-18; item 1, "inbound email client, code only"). Closes the gap
+  left open in P6-I. Production inbound receiving stays unauthorized
+  (owner, 2026-11-01); nothing is switched on anywhere.
+- **Decision:** option (a) of P6-I, which needed no pin move: SaaS-OS
+  v0.10.0 added `StrictEgressClient.get` with `post`'s policy, and the
+  approved pin (v0.15.0, K3.11) includes it. `crm_app.inbound.ResendReceiving`
+  calls `GET https://api.resend.com/emails/receiving/{id}` through that
+  client (the deployment's egress proxy when one is set), with a 20-second
+  deadline and a 2 MiB answer cap. The JSON goes unchanged to the existing
+  parser (`domains.inbound.received_content`), which keeps only what it can
+  check. The id is checked again before it is put in the URL.
+- **Failures:** 404 `not_found`, another 4xx `refused`, a malformed or
+  oversized answer: final (`failed`). 429 `rate_limited` and 5xx
+  `provider_error` (with `Retry-After` when numeric, at most an hour),
+  401/403 `unauthorized` (a key an operator can fix) and network errors
+  `unreachable`: retried with backoff, then `failed` after eight tries.
+- **Switch:** `configured_client()` returns the adapter only while
+  `EMAIL_INBOUND_ENABLED` is on, `ENVIRONMENT` is not `production` and
+  `RESEND_API_KEY` is set; otherwise received emails wait as `received`,
+  as before. Staging runs with `ENVIRONMENT=production`, so it cannot
+  receive either. Attachments are still listed only, never fetched (no
+  approved malware scanner).
+- **Tests:** `tests/unit/test_inbound_receiving.py` (the request, each
+  failure's code and retry, the switch); `tests/integration/test_inbound_email.py`
+  now runs its main pass of twelve emails through the real adapter over
+  an HTTP double.
+- **Still needed for real inbound:** the owner's authorization, a verified
+  `inbound.` domain with its MX record, the webhook secret, and a
+  retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
+
 ## P7-R — Campaign rehearsal in named test workspaces (2026-11-18)
 
 - **Status:** Chosen by the owner, 2026-11-18 ("A", of: A rehearsal
@@ -3333,7 +3366,7 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   with `crm_app.conversation:reply` (no new permission); accepting adds the
   email to its conversation once; both are audited with ids and the reason
   code. The Inbox shows a "Needs review" panel to those members.
-- **Gap and open decision:** SaaS-OS v0.6.0's egress client sends only
+- **Gap and open decision (closed by P6-R, 2026-11-18):** SaaS-OS v0.6.0's egress client sends only
   POST; Resend's receiving API (`GET /emails/receiving/{id}`) needs GET.
   `crm_app.inbound.configured_client()` therefore returns none, and
   received emails wait as `received` until one is approved. Options for

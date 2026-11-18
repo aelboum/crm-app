@@ -20,19 +20,25 @@
    per email (a unique key on `inbound_email_id`).
 4. Attachments are listed, never fetched.
 
-No real `ReceivingClient` exists yet: SaaS-OS v0.6.0's egress client sends
-only POST, and Resend's receiving API is GET (`EMAIL-ARCHITECTURE.md`, section 1).
-Until one is approved, received emails wait as `received`, nothing is lost,
-and only tests drive processing with a test double. Logs and errors carry
-ids and codes, never addresses, subjects or bodies.
+The receiving client is `ResendReceiving` (decision P6-R): Resend's
+`GET /emails/receiving/{id}` over SaaS-OS's egress client (`get`, since
+SaaS-OS v0.10.0), through the deployment's egress proxy when one is set.
+`configured_client()` returns it only while inbound email is on, outside
+production, with a Resend API key; otherwise received emails wait as
+`received` and nothing is lost. Logs and errors carry ids and codes, never
+addresses, subjects or bodies.
 """
 
 from __future__ import annotations
 
+import asyncio
 import hmac
+import json
 import os
 import secrets
 import uuid
+from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -64,6 +70,10 @@ JOB_NAME = "crm_app_inbound_process"
 BATCH = 50
 MAX_ATTEMPTS = 8
 STALE = timedelta(minutes=10)
+RESEND_RECEIVING_URL = "https://api.resend.com/emails/receiving"
+# A received email's JSON (text, HTML, headers, attachment list); a larger
+# answer is refused and the email ends as `failed`, never half-read.
+MAX_ANSWER_BYTES = 2 * 1024 * 1024
 
 
 class FetchError(Exception):
@@ -86,9 +96,102 @@ class ReceivingClient(Protocol):
         ...
 
 
-def configured_client() -> ReceivingClient | None:
-    """The deployment's receiving client: none yet (see the module note)."""
+def _retry_after(headers: Mapping[str, str]) -> float | None:
+    """`Retry-After` in seconds, when the provider sent a plain number
+    (SaaS-OS lowercases response header names)."""
+    value = headers.get("retry-after")
+    if isinstance(value, str) and value.strip().isdigit():
+        return float(min(int(value.strip()), 3600))
     return None
+
+
+class ResendReceiving:
+    """Resend's receiving API (`GET /emails/receiving/{id}`) over SaaS-OS's
+    egress client (decision P6-R). Answers are untrusted: the JSON goes to
+    `rules.received_content`, which keeps only what it can check."""
+
+    def __init__(self, client: Any = None) -> None:
+        from saas_os.infra.secrets import get_secrets_provider  # noqa: PLC0415
+
+        api_key = get_secrets_provider().get("RESEND_API_KEY")
+        if not api_key or not api_key.isascii() or any(c.isspace() for c in api_key):
+            raise FetchError("not_configured", transient=False)
+        self._api_key = api_key
+        if client is None:
+            from saas_os.infra.egress import (  # noqa: PLC0415
+                StrictEgressClient,
+                StrictEgressPolicy,
+                default_resolver,
+                get_egress_proxy,
+            )
+
+            policy = StrictEgressPolicy(
+                connect_timeout_seconds=10.0,
+                read_timeout_seconds=15.0,
+                max_response_bytes=MAX_ANSWER_BYTES,
+            )
+            proxy = get_egress_proxy()
+            client = (
+                StrictEgressClient(policy, resolver=default_resolver, proxy=proxy)
+                if proxy is not None
+                else StrictEgressClient(policy, resolver=default_resolver)
+            )
+        self._client = client
+
+    def fetch(self, provider_email_id: str) -> object:
+        from saas_os.infra.egress import (  # noqa: PLC0415
+            Deadline,
+            EgressError,
+            EgressResponseTooLargeError,
+        )
+
+        if not rules.valid_email_id(provider_email_id):
+            raise FetchError("invalid_email_id", transient=False)
+        url = f"{RESEND_RECEIVING_URL}/{provider_email_id}"
+        headers = {"Authorization": f"Bearer {self._api_key}", "Accept": "application/json"}
+
+        async def call() -> Any:
+            return await self._client.get(url, headers=headers, deadline=Deadline.after(20))
+
+        try:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                response = asyncio.run(call())
+            else:
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    response = pool.submit(asyncio.run, call()).result()
+        except EgressResponseTooLargeError:
+            raise FetchError("answer_too_large", transient=False) from None
+        except EgressError:
+            raise FetchError("unreachable") from None
+        status = response.status_code
+        if status == 404:
+            raise FetchError("not_found", transient=False)
+        if status == 429:
+            raise FetchError("rate_limited", retry_after=_retry_after(response.headers))
+        if status >= 500:
+            raise FetchError("provider_error", retry_after=_retry_after(response.headers))
+        if status in (401, 403):
+            # A key problem an operator can fix: waits, then ends as `failed`.
+            raise FetchError("unauthorized")
+        if not 200 <= status < 300:
+            raise FetchError("refused", transient=False)
+        try:
+            return json.loads(response.body or b"")
+        except ValueError:
+            raise FetchError("malformed_answer", transient=False) from None
+
+
+def configured_client() -> ReceivingClient | None:
+    """`ResendReceiving` while inbound email is on, outside production and
+    with a Resend API key; otherwise none, and received emails wait."""
+    if not inbound_enabled() or production():
+        return None
+    try:
+        return ResendReceiving()
+    except FetchError:
+        return None
 
 
 def _now() -> datetime:

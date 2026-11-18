@@ -19,7 +19,7 @@ import threading
 import time
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 from fastapi.testclient import TestClient
 from saas_os.core.email import EmailMessage, EmailSendResult
@@ -59,6 +59,46 @@ class Receiving:
         if isinstance(answer, inbound.FetchError):
             raise answer
         return answer
+
+
+class Http:
+    """A double of SaaS-OS's egress client behind `inbound.ResendReceiving`:
+    Resend's answers come from `Receiving`'s dict as HTTP responses."""
+
+    STATUS: ClassVar[dict[str, int]] = {"rate_limited": 429, "not_found": 404}
+
+    def __init__(self, receiving: Receiving) -> None:
+        self.receiving = receiving
+        self.urls: list[str] = []
+
+    async def get(self, url: str, *, headers: dict[str, str], deadline: object) -> Any:
+        from saas_os.infra.egress import EgressResponse  # noqa: PLC0415
+
+        self.urls.append(url)
+        email_id = url.rsplit("/", 1)[-1]
+        with self.receiving.lock:
+            self.receiving.calls.append(email_id)
+        answer = self.receiving.answers[email_id]
+        if isinstance(answer, inbound.FetchError):
+            retry = {"retry-after": str(int(answer.retry_after))} if answer.retry_after else {}
+            return EgressResponse(status_code=self.STATUS[answer.code], headers=retry, body=b"{}")
+        return EgressResponse(status_code=200, headers={}, body=json.dumps(answer).encode())
+
+
+def _resend(receiving: Receiving) -> inbound.ResendReceiving:
+    """The real adapter over `Http`, with a made-up API key."""
+    import saas_os.infra.secrets as secrets_module  # noqa: PLC0415
+
+    class Key:
+        def get(self, name: str) -> str | None:
+            return "re_probe_key" if name == "RESEND_API_KEY" else None  # pragma: allowlist secret
+
+    real = secrets_module.get_secrets_provider
+    secrets_module.get_secrets_provider = Key  # type: ignore[assignment]
+    try:
+        return inbound.ResendReceiving(client=Http(receiving))
+    finally:
+        secrets_module.get_secrets_provider = real
 
 
 class Recorder:
@@ -351,7 +391,12 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         )
         for n in range(2, 13):
             post(f"evt_{RUN}_{n}", _received(f"re_{RUN}_{n}"))
-        counts = inbound.process_due(receiving)
+        # This pass goes through the real Resend adapter (P6-R).
+        adapter = _resend(receiving)
+        counts = inbound.process_due(adapter)
+        urls = adapter._client.urls
+        prefix = f"{inbound.RESEND_RECEIVING_URL}/re_{RUN}_"
+        result["adapter_gets"] = [len(urls), all(u.startswith(prefix) for u in urls)]
         result["counts"] = counts
         result["rows"] = {f"re_{n}": _inbound_row(f"re_{RUN}_{n}") for n in range(1, 13)}
         conversation = client.get(

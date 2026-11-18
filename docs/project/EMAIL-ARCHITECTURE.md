@@ -127,9 +127,9 @@ never retried again).
 Each item below is approved by the owner and will be built in this order;
 each one gets its own decision entry, tests and documentation.
 
-1. **Inbound email (6E.3) — built (P6-I)** except the real receiving
-   client (SaaS-OS's egress client has no GET; decision P6-I lists the
-   options). A separate signed webhook
+1. **Inbound email (6E.3) — built (P6-I)**, with the receiving client
+   `ResendReceiving` over SaaS-OS's egress `get` (decision P6-R); off
+   unless `EMAIL_INBOUND_ENABLED`, never in production. A separate signed webhook
    (`RESEND_INBOUND_WEBHOOK_SECRET`, 404 until set and
    `EMAIL_INBOUND_ENABLED`) stores each `email.received` event once by
    `svix-id` in a global inbound table before anything else, then a durable
@@ -217,8 +217,8 @@ passed, approved by the owner:
    approval workflow verified on the real domain (`List-Unsubscribe`
    headers and the unsubscribe page: built, decision E-H1).
 8. For inbound attachments additionally: an approved malware scanner.
-9. For inbound at all: an approved receiving client (decision P6-I) and a
-   retention period for unmatched rows.
+9. For inbound at all: the receiving client is built (decision P6-R); a
+   retention period for unmatched rows is still needed.
 
 ## 7. DNS readiness checklist (per domain, when a real domain exists)
 

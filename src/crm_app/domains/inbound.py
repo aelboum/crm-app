@@ -226,6 +226,11 @@ def _attachments(value: object) -> tuple[Attachment, ...]:
     return tuple(found)
 
 
+def valid_email_id(value: object) -> bool:
+    """A provider email id this product accepts (and puts in a URL path)."""
+    return isinstance(value, str) and _EMAIL_ID.fullmatch(value) is not None
+
+
 def received_content(answer: object) -> ReceivedContent:
     """The parts of a received email this product keeps, or
     `InboundRejected` for an answer it cannot trust."""

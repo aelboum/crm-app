@@ -1353,6 +1353,21 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Inbound receiving client (decision P6-R, 2026-11-18)
+
+`crm_app.inbound.ResendReceiving` fetches a received email from Resend's
+receiving API through SaaS-OS's egress `get`; it is used only while
+`EMAIL_INBOUND_ENABLED` is on outside production with a Resend key. No
+pin move; nothing switched on; staging (`ENVIRONMENT=production`) cannot
+receive.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/unit/test_inbound_receiving.py tests/unit/test_inbound_rules.py` | passed |
+| `uv run pytest tests/integration/test_inbound_email.py` (main pass through the real adapter) | 18 passed |
+
+Not tested: a real call to Resend (not authorized).
+
 ## Campaign rehearsal on staging (decision P7-R, 2026-11-18, owner: "A")
 
 Deployed `d015929` (CI run 44375966790, 5 of 5; drill before: 15 of 15)
