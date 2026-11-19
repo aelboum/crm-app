@@ -1353,6 +1353,27 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed at `c7ef73e` (2026-11-19, owner: "Go 1 then 2")
+
+From `2ad0d63`: archived campaigns (P7-AR, migration
+`0047_campaign_archive`) and the results line in the campaign list.
+
+| Check | Result |
+| --- | --- |
+| CI on `1122c6c`, `c7ef73e` | passed (5 of 5 jobs on `c7ef73e`) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | 0 new lines (34 kept); **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:c7ef73e`; `VERSION=c7ef73e` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| Migration heads | `0047_campaign_archive` (columns `archived_at`, `archived_by_user_id` present), SaaS-OS `e1f5a8c3b7d9` |
+| `/readyz` | 200 |
+| Signed in as the Alpha Owner (test account) | list line "2 recipients · Rehearsed, not sent 2"; Archive on "Rehearsal check" hid it ("No campaigns yet"); "Show archived" lists it with its results |
+| Database after | the campaign `completed`, archived; one `crm_app.campaign.archived` audit entry |
+| App and worker logs, first 10 minutes | no error lines |
+
+"Rehearsal check" stays archived (Unarchive restores it). Rollback: code to
+`crm-app:2ad0d63` (it ignores the two new columns); a full rollback
+restores the backup taken above.
+
 ## Campaign results in the list (decision P7-RP, 2026-11-19)
 
 Each started campaign in the campaign list shows one line, for example
