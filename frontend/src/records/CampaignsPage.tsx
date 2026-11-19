@@ -1,4 +1,4 @@
-import { Plus, Tag, User, X } from "lucide-react";
+import { Plus, Search, Tag, User, X } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 
 import {
@@ -26,6 +26,7 @@ import { useT } from "../i18n/useT";
 import { TemplatePicker, TemplatesPanel } from "./EmailTemplates";
 import { CompanyPicker } from "./CompanyPicker";
 import { FilterMenu, ownerOptions, stageLabel } from "./parts";
+import { useDebounced } from "./useDebounced";
 
 /*
  * Campaigns (decision P7-C): drafts with a subject, a plain-text body and
@@ -56,6 +57,21 @@ const EDITABLE: CampaignStatus[] = [
   "awaiting_approval",
   "approved",
   "rejected",
+];
+
+// Every status, in workflow order, for the list's filter (decision P7-CL).
+const STATUSES: CampaignStatus[] = [
+  "draft",
+  "validated",
+  "awaiting_approval",
+  "approved",
+  "queued",
+  "processing",
+  "completed",
+  "partially_completed",
+  "failed",
+  "rejected",
+  "cancelled",
 ];
 
 // Statuses after queuing: the campaign has recipients and results.
@@ -181,10 +197,15 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
   const canManage = actions?.manage_campaigns === true;
   const canApprove = actions?.approve_campaigns === true;
   const [archived, setArchived] = useState(false);
-  const list = useCampaigns(workspaceId, true, archived);
+  const [status, setStatus] = useState<CampaignStatus | null>(null);
+  const [search, setSearch] = useState("");
+  const query = useDebounced(search);
+  const list = useCampaigns(workspaceId, { archived, status, search: query });
   const [editing, setEditing] = useState<Campaign | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const items = list.data?.items ?? [];
+  const firstPage = list.data?.pages[0];
+  const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  const filtered = status !== null || query.trim() !== "";
   const current = items.find((item) => item.id === selected) ?? null;
 
   return (
@@ -222,21 +243,69 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
           {t("campaigns.archivedNote")}
         </p>
       ) : null}
-      {list.data?.rehearsal ? (
+      {firstPage?.rehearsal ? (
         <p className="notice" role="note">
           {t("campaigns.rehearsal")}
         </p>
-      ) : list.data && !list.data.sending_available ? (
+      ) : firstPage && !firstPage.sending_available ? (
         <p className="notice" role="note">
           {t("campaigns.sendingUnavailable")}
         </p>
       ) : null}
+      <div className="records-toolbar">
+        <label className="search-box">
+          <Search size={14} aria-hidden="true" />
+          <span className="sr-only">{t("campaigns.search")}</span>
+          <input
+            type="search"
+            value={search}
+            placeholder={t("campaigns.search")}
+            maxLength={120}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setSelected(null);
+            }}
+          />
+        </label>
+        <label className="field campaign-status-filter">
+          <span className="sr-only">{t("campaigns.field.status")}</span>
+          <select
+            className="form-input"
+            value={status ?? ""}
+            onChange={(event) => {
+              setStatus(
+                event.target.value === ""
+                  ? null
+                  : (event.target.value as CampaignStatus),
+              );
+              setSelected(null);
+            }}
+          >
+            <option value="">{t("campaigns.allStatuses")}</option>
+            {STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {t(`campaigns.status.${value}` as MessageId)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {firstPage && filtered ? (
+          <span className="muted" role="status">
+            {t("campaigns.matches", { count: firstPage.total })}
+          </span>
+        ) : null}
+      </div>
       {list.isError ? (
         <LoadError error={list.error} onRetry={() => void list.refetch()} />
       ) : list.isPending ? (
         <Loading />
       ) : items.length === 0 ? (
-        archived ? (
+        filtered ? (
+          <EmptyState
+            title={t("campaigns.noMatch")}
+            body={t("campaigns.noMatchBody")}
+          />
+        ) : archived ? (
           <EmptyState
             title={t("campaigns.archivedEmpty")}
             body={t("campaigns.archivedEmptyBody")}
@@ -249,6 +318,7 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
         )
       ) : (
         <div className="campaigns">
+          <div className="campaign-list">
           <ul className="campaign-items" aria-label={t("campaigns.listLabel")}>
             {items.map((item) => (
               <li key={item.id}>
@@ -272,6 +342,18 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
               </li>
             ))}
           </ul>
+          {list.hasNextPage ? (
+            <div className="records-footer">
+              <Button
+                size="sm"
+                onPress={() => void list.fetchNextPage()}
+                isDisabled={list.isFetchingNextPage}
+              >
+                {t("records.loadMore")}
+              </Button>
+            </div>
+          ) : null}
+          </div>
           {current ? (
             <Detail
               key={`${current.id}:${String(current.version)}`}
@@ -279,8 +361,11 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
               campaign={current}
               canManage={canManage}
               canApprove={canApprove}
-              canQueue={list.data.sending_available || list.data.rehearsal}
-              rehearsal={list.data.rehearsal}
+              canQueue={
+                (firstPage?.sending_available ?? false) ||
+                (firstPage?.rehearsal ?? false)
+              }
+              rehearsal={firstPage?.rehearsal ?? false}
               onEdit={() => {
                 setEditing(current);
               }}

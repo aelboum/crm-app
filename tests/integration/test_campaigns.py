@@ -125,6 +125,20 @@ def test_only_finished_campaigns_are_archived_and_hidden_from_the_list(probe: Pr
     assert archive["audit"] == 2
 
 
+def test_the_list_is_searched_filtered_and_paged_newest_first(probe: Probe) -> None:
+    """Decision P7-CL: `search` matches part of the name ignoring case,
+    `status` keeps one state, pages follow `next_cursor`, a cursor is
+    refused with other filters, and other workspaces' campaigns never show."""
+    paging = probe["paging"]
+    assert paging["first"] == [["ZEBRA three", "Zebra two"], 3]
+    assert paging["rest"] == [["Zebra one"], None]
+    assert paging["cancelled"] == [True, True]
+    # A literal "%" matches no name: it is not a wildcard.
+    assert paging["drafts"] == 0
+    assert paging["refused"] == ["invalid_cursor", "invalid_search", 422, 422]
+    assert paging["other"] == 0
+
+
 def test_other_workspaces_see_nothing_and_audit_holds_no_text(probe: Probe) -> None:
     assert probe["isolation"] == [0, 404, 404]
     assert probe["audit_text"] == 0

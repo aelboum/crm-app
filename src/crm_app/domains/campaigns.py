@@ -81,6 +81,17 @@ class StepRefused(ValueError):
         self.status = status
 
 
+def search(value: str | None) -> str | None:
+    """A campaign-name search term (decision P7-CL): trimmed; blank is none;
+    at most a name's length, without control characters."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if len(trimmed) > NAME_MAX or _SUBJECT_CONTROL.search(trimmed):
+        raise InvalidValue(f"search: at most {NAME_MAX} characters, no control characters")
+    return trimmed or None
+
+
 def after(step: str, status: str) -> str:
     """The state after `step`, or `StepRefused`."""
     sources, target = TRANSITIONS[step]

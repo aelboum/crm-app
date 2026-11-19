@@ -15,6 +15,9 @@
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/queue         crm_app.campaign:approve
     POST   /v1/public/unsubscribe/{workspace_id}/{token}           public, one-click
 
+The list is paged, newest first (decision P7-CL): `limit` (at most 100),
+`cursor`, `archived`, `status` and `search` (part of the name).
+
 Every change needs `If-Match`. Editing returns a campaign to draft and
 clears its approval. Queuing answers 409 `campaign_sending_unavailable`
 unless campaign sending is available (the campaign stream switched on,
@@ -32,7 +35,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 from saas_os.api.auth.config import get_auth_http_config, resolve_client_address
@@ -44,6 +47,8 @@ from crm_app import campaigns
 from crm_app.api.forms import _limited
 from crm_app.api.records import IfMatch, _http, _version
 from crm_app.domains import campaigns as rules
+from crm_app.domains import paging
+from crm_app.domains.records import InvalidValue
 from crm_app.records import RecordError, Scope
 
 router = APIRouter(prefix="/v1/workspaces", tags=["campaigns"])
@@ -138,8 +143,39 @@ class CampaignOut(BaseModel):
     version: int
 
 
+Status = Literal[
+    "draft",
+    "validated",
+    "awaiting_approval",
+    "approved",
+    "queued",
+    "processing",
+    "completed",
+    "partially_completed",
+    "failed",
+    "rejected",
+    "cancelled",
+]
+
+
+class ListParams(BaseModel):
+    """The campaign list's filters and page (decision P7-CL)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(default=50, ge=1, le=campaigns.LIST_LIMIT)
+    cursor: str | None = Field(default=None, max_length=paging.CURSOR_MAX)
+    archived: bool = False
+    status: Status | None = None
+    search: str | None = Field(default=None, max_length=4 * rules.NAME_MAX)
+
+
 class CampaignList(BaseModel):
     items: list[CampaignOut]
+    # Newest first; `next_cursor` fetches the next page with the same filters.
+    next_cursor: str | None = None
+    total: int = 0
+    total_capped: bool = False
     sending_available: bool
     # Campaigns here are rehearsed: queued and processed, never sent (P7-R).
     rehearsal: bool = False
@@ -186,9 +222,27 @@ _ONE = f"{_LIST}/{{campaign_id}}"
 
 
 @router.get(_LIST, response_model=CampaignList, name="list_campaigns")
-def list_campaigns(context: Read, archived: bool = False) -> Any:
+def list_campaigns(context: Read, params: Annotated[ListParams, Query()]) -> Any:
+    try:
+        term = rules.search(params.search)
+    except InvalidValue:
+        raise HTTPException(422, detail={"code": "invalid_search"}) from None
+    query = campaigns.ListQuery(
+        limit=params.limit,
+        cursor=params.cursor,
+        archived=params.archived,
+        status=params.status,
+        search=term,
+    )
+    try:
+        page = campaigns.list_campaigns(_scope(context), query)
+    except paging.InvalidCursor:
+        raise HTTPException(400, detail={"code": "invalid_cursor"}) from None
     return {
-        "items": campaigns.list_campaigns(_scope(context), archived=archived),
+        "items": page.items,
+        "next_cursor": page.next_cursor,
+        "total": page.total,
+        "total_capped": page.total_capped,
         "sending_available": campaigns.sending_available(),
         "rehearsal": campaigns.rehearsal(context.tenant_id),
     }

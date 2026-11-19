@@ -3639,6 +3639,8 @@ export interface components {
         CampaignList: {
             /** Items */
             items: components["schemas"]["CampaignOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
             /**
              * Rehearsal
              * @default false
@@ -3646,6 +3648,16 @@ export interface components {
             rehearsal: boolean;
             /** Sending Available */
             sending_available: boolean;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+            /**
+             * Total Capped
+             * @default false
+             */
+            total_capped: boolean;
         };
         /** CampaignOut */
         CampaignOut: {
@@ -8847,7 +8859,11 @@ export interface operations {
     list_campaigns_v1_workspaces__tenant_id__campaigns_get: {
         parameters: {
             query?: {
+                limit?: number;
+                cursor?: string | null;
                 archived?: boolean;
+                status?: ("draft" | "validated" | "awaiting_approval" | "approved" | "queued" | "processing" | "completed" | "partially_completed" | "failed" | "rejected" | "cancelled") | null;
+                search?: string | null;
             };
             header?: {
                 authorization?: string | null;

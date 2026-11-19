@@ -579,6 +579,34 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
                 c=second["id"],
             ),
         }
+        # The list's filters and pages (decision P7-CL), newest first.
+        for name in ("Zebra one", "Zebra two", "ZEBRA three"):
+            client.post(f"{base}/campaigns", json={**draft, "name": name}, headers=auth())
+
+        def page(query: str) -> Any:
+            return client.get(f"{base}/campaigns?{query}", headers=auth("reader"))
+
+        first = page("search=zebra&limit=2").json()
+        rest = page(f"search=zebra&limit=2&cursor={first['next_cursor']}").json()
+        cancelled = page("status=cancelled").json()["items"]
+        result["paging"] = {
+            "first": [[i["name"] for i in first["items"]], first["total"]],
+            "rest": [[i["name"] for i in rest["items"]], rest["next_cursor"]],
+            "cancelled": [
+                {i["status"] for i in cancelled} == {"cancelled"},
+                second["id"] in [i["id"] for i in cancelled],
+            ],
+            "drafts": page("status=draft&search=%25").json()["total"],
+            "refused": [
+                page(f"status=draft&cursor={first['next_cursor']}").json()["detail"]["code"],
+                page("search=" + "x" * 121).json()["detail"]["code"],
+                page("status=sent").status_code,
+                page("limit=101").status_code,
+            ],
+            "other": client.get(
+                f"/v1/workspaces/{b.id}/campaigns?search=zebra", headers=auth("other_owner")
+            ).json()["total"],
+        }
         result["audit_text"] = _scalar(
             a.id,
             "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"

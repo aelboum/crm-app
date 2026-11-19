@@ -50,6 +50,7 @@ import secrets
 import uuid
 from collections import Counter
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -73,6 +74,7 @@ from saas_os.infra.db import (
 from crm_app import emails, suppression, system_audit
 from crm_app.domains import campaigns as rules
 from crm_app.domains import email_streams as streams
+from crm_app.domains import paging
 from crm_app.domains.records import STAGES, InvalidValue
 from crm_app.models import (
     Campaign,
@@ -83,11 +85,14 @@ from crm_app.models import (
     EmailMessage,
 )
 from crm_app.records import (
+    TOTAL_CAP,
     RecordError,
     RecordNotFoundError,
     Scope,
     StaleVersionError,
     TransactionConflictError,
+    _after,
+    _OrderKey,
 )
 from crm_app.settings import rehearsal_workspaces, stream_enabled
 
@@ -98,7 +103,7 @@ SENDER = "crm_app.campaign_send"
 # New recipients added per campaign per maintenance run; the rest wait for
 # the next run (every 2 minutes).
 BATCH = 500
-LIST_LIMIT = 100
+LIST_LIMIT = 100  # the most campaigns one page holds (decision P7-CL)
 AUDIENCE_MAX = 50_000
 # Bulk mail needs `List-Unsubscribe` and `List-Unsubscribe-Post` headers,
 # which SaaS-OS v0.6.0 cannot set (EMAIL-ARCHITECTURE.md, section 1).
@@ -235,18 +240,80 @@ def _touch(row: Campaign) -> None:
 # --- Reads ---------------------------------------------------------------------------------
 
 
-def list_campaigns(scope: Scope, *, archived: bool = False) -> list[Item]:
-    """The workspace's campaigns: by default those not archived; with
-    `archived`, only the archived ones."""
-    shown = Campaign.archived_at.is_not(None) if archived else Campaign.archived_at.is_(None)
+@dataclass(frozen=True)
+class ListQuery:
+    """A validated list request (decision P7-CL); the API checked each value."""
+
+    limit: int = 50
+    cursor: str | None = None
+    archived: bool = False
+    status: str | None = None
+    search: str | None = None
+
+
+@dataclass(frozen=True)
+class Page:
+    items: list[Item]
+    next_cursor: str | None
+    total: int
+    total_capped: bool
+
+
+def _escaped(term: str) -> str:
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def list_campaigns(scope: Scope, query: ListQuery | None = None) -> Page:
+    """The workspace's campaigns, newest first: by default those not
+    archived, with `archived` only the archived ones; `status` keeps one
+    state and `search` matches part of the name, ignoring case. Raises
+    `paging.InvalidCursor` for another filter's cursor."""
+    query = query or ListQuery()
+    filters = paging.filter_hash(
+        {"archived": query.archived, "status": query.status, "search": query.search}
+    )
+    after = (
+        paging.decode(query.cursor, "campaign", "created_at", "desc", filters)
+        if query.cursor
+        else None
+    )
+    keys = [
+        _OrderKey(Campaign.created_at, Campaign.created_at, "created_at"),
+        _OrderKey(Campaign.id, Campaign.id, "id"),
+    ]
+    conditions: list[Any] = [
+        Campaign.tenant_id == scope.workspace,
+        Campaign.archived_at.is_not(None) if query.archived else Campaign.archived_at.is_(None),
+    ]
+    if query.status is not None:
+        conditions.append(Campaign.status == query.status)
+    if query.search:
+        conditions.append(Campaign.name.ilike(f"%{_escaped(query.search)}%", escape="\\"))
     with tenant_session_scope(scope.workspace) as session:
-        rows = session.execute(
-            select(Campaign)
-            .where(Campaign.tenant_id == scope.workspace, shown)
-            .order_by(Campaign.updated_at.desc(), Campaign.id.desc())
-            .limit(LIST_LIMIT)
-        ).scalars()
-        return [_item(row) for row in rows]
+        counted = session.execute(select(Campaign.id).where(*conditions).limit(TOTAL_CAP + 1)).all()
+        statement = select(Campaign).where(*conditions)
+        if after is not None:
+            statement = statement.where(_after(keys, after, ascending=False))
+        rows = list(
+            session.execute(
+                statement.order_by(Campaign.created_at.desc(), Campaign.id.desc()).limit(
+                    query.limit + 1
+                )
+            ).scalars()
+        )
+        items = [_item(row) for row in rows[: query.limit]]
+    next_cursor = None
+    if len(rows) > query.limit and items:
+        last = items[-1]
+        next_cursor = paging.encode(
+            "campaign", "created_at", "desc", filters, (last["created_at"], last["id"])
+        )
+    return Page(
+        items=items,
+        next_cursor=next_cursor,
+        total=min(len(counted), TOTAL_CAP),
+        total_capped=len(counted) > TOTAL_CAP,
+    )
 
 
 def get(scope: Scope, campaign_id: uuid.UUID) -> Item:

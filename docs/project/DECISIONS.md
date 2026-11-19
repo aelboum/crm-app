@@ -1073,6 +1073,24 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P7-CL — Campaign list search, filter and paging (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "Go 1 then 2" (2026-11-19; item 2,
+  "campaign list search and filter").
+- **Decision:** `GET …/campaigns` is paged newest first by creation time
+  (it was the 100 most recently updated): `limit` (default 50, at most
+  100), `cursor` (refused with other filters, `invalid_cursor`),
+  `archived`, `status` (one state) and `search` (part of the name,
+  ignoring case, at most 120 characters; `%` and `_` are literal). The
+  answer adds `next_cursor`, `total` and `total_capped` (counted up to
+  10,000) and keeps `sending_available` and `rehearsal`. The screen has a
+  search box, a status menu, a match count and "Load more".
+- **Why creation time:** a cursor over a value that changes (the last
+  update) would skip or repeat campaigns edited while paging.
+- **Tests:** `tests/integration/test_campaigns.py`
+  (`test_the_list_is_searched_filtered_and_paged_newest_first`);
+  `frontend/src/records/campaigns.test.tsx` (search and status; next page).
+
 ## P7-AR — Archived campaigns (2026-11-19, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's "Go 1 then 2" (2026-11-19; item 1,

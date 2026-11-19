@@ -69,6 +69,8 @@ ORDER_KEYS: Mapping[str, Mapping[str, Sequence[str]]] = {
     "conversation": {"last_message_at": ("datetime", "uuid")},
     # A member's notifications, newest first (decision N-1).
     "notification": {"created_at": ("datetime", "uuid")},
+    # Campaigns, newest first (decision P7-CL).
+    "campaign": {"created_at": ("datetime", "uuid")},
 }
 
 Value = str | datetime | date | Decimal | int | uuid.UUID | None

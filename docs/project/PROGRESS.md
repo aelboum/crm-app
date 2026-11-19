@@ -1353,6 +1353,20 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Campaign list search, filter and paging (decision P7-CL, 2026-11-19)
+
+The campaign list has a name search, a status menu, a match count and
+"Load more" (pages of 50, newest first). No migration.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_campaigns.py tests/unit/test_routes.py tests/unit/test_paging*.py` | 51 passed |
+| `uv run pytest tests/unit` (no environment) | 812 passed |
+| `npx vitest run --maxWorkers=2` | 37 files, 383 passed |
+| `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
+
+Not deployed to staging.
+
 ## Staging deployed at `c7ef73e` (2026-11-19, owner: "Go 1 then 2")
 
 From `2ad0d63`: archived campaigns (P7-AR, migration

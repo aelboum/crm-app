@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { api, ApiError, unwrap } from "./client";
 import { ifMatch, unwrapWrite, where } from "./records";
@@ -34,22 +39,43 @@ export const campaignKeys = {
     ["workspace", workspaceId, "campaigns"] as const,
 };
 
-export function useCampaigns(
-  workspaceId: string,
-  enabled = true,
-  archived = false,
-) {
-  return useQuery({
-    queryKey: archived
-      ? [...campaignKeys.all(workspaceId), "archived"]
-      : campaignKeys.all(workspaceId),
-    enabled,
-    queryFn: async () =>
+/*
+ * The list's filters (decision P7-CL): archived or current, one status,
+ * and part of the name. Pages of 50, newest first; `fetchNextPage` follows
+ * the server's cursor.
+ */
+export type CampaignFilters = {
+  archived: boolean;
+  status: CampaignStatus | null;
+  search: string;
+};
+
+export type CampaignPage = components["schemas"]["CampaignList"];
+
+export function useCampaigns(workspaceId: string, filters: CampaignFilters) {
+  const search = filters.search.trim();
+  return useInfiniteQuery({
+    queryKey: [
+      ...campaignKeys.all(workspaceId),
+      "list",
+      filters.archived,
+      filters.status,
+      search,
+    ],
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last: CampaignPage) => last.next_cursor ?? undefined,
+    queryFn: async ({ pageParam }): Promise<CampaignPage> =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/campaigns", {
           params: {
             path: where(workspaceId),
-            query: archived ? { archived: true } : {},
+            query: {
+              limit: 50,
+              ...(filters.archived ? { archived: true } : {}),
+              ...(filters.status ? { status: filters.status } : {}),
+              ...(search ? { search } : {}),
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
           },
         }),
       ),

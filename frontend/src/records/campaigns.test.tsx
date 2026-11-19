@@ -85,16 +85,26 @@ function workspace(
         },
       };
     }
-    if (path === `${base}/campaigns`)
+    if (path.startsWith(`${base}/campaigns?`)) {
+      const query = new URLSearchParams(path.split("?")[1]);
+      const name = String(item.name).toLowerCase();
+      const shown =
+        query.get("archived") !== "true" &&
+        (query.get("status") ?? item.status) === item.status &&
+        name.includes((query.get("search") ?? "").toLowerCase());
+      const items = shown ? [item] : [];
       return {
         status: 200,
-        body: { items: [item], sending_available: false, rehearsal },
+        body: {
+          items,
+          next_cursor: null,
+          total: items.length,
+          total_capped: false,
+          sending_available: false,
+          rehearsal,
+        },
       };
-    if (path === `${base}/campaigns?archived=true`)
-      return {
-        status: 200,
-        body: { items: [], sending_available: false, rehearsal },
-      };
+    }
     if (path === `${base}/campaigns/${ID}/report`) {
       return {
         status: 200,
@@ -286,6 +296,53 @@ describe("campaigns", () => {
     const list = await screen.findByRole("list", { name: "Campaigns" });
     await within(list).findByText("Autumn news");
     expect(within(list).queryByText(/recipient/)).toBeNull();
+  });
+
+  it("searches by name and filters by status, and says when nothing matches (P7-CL)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace({ manage: false, approve: false }),
+    );
+    const list = await screen.findByRole("list", { name: "Campaigns" });
+    expect(within(list).getByText("Autumn news")).toBeInTheDocument();
+    await user.type(screen.getByRole("searchbox", { name: "Search campaigns" }), "autumn");
+    expect(await screen.findByText("1 campaign")).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Status" }), "Draft");
+    expect(await screen.findByText("No campaigns match")).toBeInTheDocument();
+    const last = sent.filter((r) => r.path.includes("/campaigns?")).at(-1);
+    expect(last?.path).toContain("status=draft");
+    expect(last?.path).toContain("search=autumn");
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("loads the next page of campaigns from the cursor", async () => {
+    const user = userEvent.setup();
+    const second = campaign({ id: "ca000000-0000-4000-8000-000000000002", name: "Winter news" });
+    const base = workspace({ manage: false, approve: false });
+    const { sent } = renderApp(`/w/${WS}/campaigns`, (method, path, body) => {
+      if (method === "GET" && path.startsWith(`/v1/workspaces/${WS}/campaigns?`)) {
+        const next = path.includes("cursor=c2");
+        return {
+          status: 200,
+          body: {
+            items: [next ? second : campaign()],
+            next_cursor: next ? null : "c2",
+            total: 2,
+            total_capped: false,
+            sending_available: false,
+            rehearsal: false,
+          },
+        };
+      }
+      return base(method, path, body);
+    });
+    const list = await screen.findByRole("list", { name: "Campaigns" });
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    expect(await within(list).findByText("Winter news")).toBeInTheDocument();
+    expect(within(list).getByText("Autumn news")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+    expect(sent.some((r) => r.path.includes("cursor=c2"))).toBe(true);
   });
 
   it("shows no results before a campaign is queued", async () => {
