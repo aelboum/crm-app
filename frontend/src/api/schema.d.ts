@@ -966,6 +966,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview Campaign */
+        get: operations["preview_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/queue": {
         parameters: {
             query?: never;
@@ -1038,6 +1055,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Schedule Campaign */
+        post: operations["schedule_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__schedule_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/submit": {
         parameters: {
             query?: never;
@@ -1066,6 +1100,23 @@ export interface paths {
         put?: never;
         /** Unarchive Campaign */
         post: operations["unarchive_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/unschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unschedule Campaign */
+        post: operations["unschedule_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__unschedule_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3728,6 +3779,8 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Scheduled At */
+            scheduled_at?: string | null;
             segment: components["schemas"]["SegmentOut"];
             /**
              * Status
@@ -3778,6 +3831,30 @@ export interface components {
             segment?: components["schemas"]["SegmentIn"] | null;
             /** Subject */
             subject?: string | null;
+        };
+        /** CampaignPreview */
+        CampaignPreview: {
+            /**
+             * Audience
+             * @enum {string}
+             */
+            audience: "eligible" | "excluded" | "outside";
+            /** Body */
+            body: string;
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Reason */
+            reason: string | null;
+            /** Subject */
+            subject: string;
         };
         /** CampaignReport */
         CampaignReport: {
@@ -6061,6 +6138,14 @@ export interface components {
             steps: components["schemas"]["StepOut"][];
             /** Version */
             version: number;
+        };
+        /** ScheduleIn */
+        ScheduleIn: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
         };
         /** SegmentIn */
         SegmentIn: {
@@ -9192,6 +9277,42 @@ export interface operations {
             };
         };
     };
+    preview_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__preview_get: {
+        parameters: {
+            query: {
+                contact_id: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     queue_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__queue_post: {
         parameters: {
             query?: never;
@@ -9341,6 +9462,45 @@ export interface operations {
             };
         };
     };
+    schedule_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__schedule_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     submit_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__submit_post: {
         parameters: {
             query?: never;
@@ -9377,6 +9537,41 @@ export interface operations {
         };
     };
     unarchive_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unschedule_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__unschedule_post: {
         parameters: {
             query?: never;
             header?: {

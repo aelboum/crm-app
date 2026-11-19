@@ -100,8 +100,9 @@ C="sudo docker compose --env-file deploy/staging/.local/compose.env   -f deploy/
   repository; nothing is published.
 - **Test accounts:** disposable users and their passwords are in
   `.local/test-users.env`; never reuse them anywhere else. `alice@`
-  (Owner of Staging Alpha), `bob@` (Owner of Staging Beta) and `carol@`
-  (Member of Staging Alpha, joined by invitation on 2026-11-19).
+  (Owner of Staging Alpha), `bob@` (Owner of Staging Beta), `carol@`
+  (Member of Staging Alpha) and `dave@` (Read-only in Staging Alpha); carol
+  and dave joined by invitation on 2026-11-19.
 
 ## 2. Deploying a new version
 

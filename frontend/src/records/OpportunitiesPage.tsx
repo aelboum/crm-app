@@ -43,7 +43,7 @@ import { useDebounced } from "./useDebounced";
  * metrics are those the API computes (open value, weighted forecast, open
  * deals), not "Avg. days in stage" or "Won this month"; cards can be dragged
  * between columns, and the drawer's stage buttons do the same from the
- * keyboard; members show by ID because member names are not stored.
+ * keyboard; members show by their display name, or by ID until they add one.
  */
 
 type View = "board" | "table";

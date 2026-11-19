@@ -303,6 +303,7 @@ RECORDS |= {
     "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:read",
     "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report": "crm_app.campaign:read",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/duplicate": "crm_app.campaign:manage",
+    "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/preview": "crm_app.campaign:read",
     "PATCH /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/validate": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/submit": "crm_app.campaign:manage",
@@ -312,6 +313,10 @@ RECORDS |= {
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/approve": "crm_app.campaign:approve",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/reject": "crm_app.campaign:approve",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/queue": "crm_app.campaign:approve",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/schedule": "crm_app.campaign:approve",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/unschedule": (
+        "crm_app.campaign:approve"
+    ),
     # P6-I: quarantined inbound email, for members who may reply.
     "GET /v1/workspaces/{tenant_id}/conversation-reviews": "crm_app.conversation:reply",
     "POST /v1/workspaces/{tenant_id}/conversation-reviews/{review_id}/accept": (

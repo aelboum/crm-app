@@ -80,10 +80,10 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
             return str(client.post(f"{base}/contacts", json=body, headers=auth()).json()["id"])
 
         ada = contact("Ada", "ada@example.test")
-        contact("Grace", "grace@example.test")  # no consent: excluded
+        grace = contact("Grace", "grace@example.test")  # no consent: excluded
         mal = contact("Mal", "mal@example.test")
         contact("Phoneonly", None)
-        contact("Cust", "cust@example.test", stage="customer")
+        cust = contact("Cust", "cust@example.test", stage="customer")
         for person in (ada, mal):
             suppression.record_consent(owner_scope, uuid.UUID(person), "Yes, email me news.")
         suppression.add(owner_scope, ["mal@example.test"], reason="manual", note=None)
@@ -115,6 +115,36 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
             client.post(f"{base}/campaigns", json=draft, headers=auth("outsider")).status_code,
         ]
         result["no_version"] = client.post(f"{one}/validate", headers=auth("member")).status_code
+
+        # Preview for one contact (decision P7-PV): read-only, any role.
+        def preview(contact_id: str, caller: str = "reader", target: str = one) -> Any:
+            return client.get(
+                f"{target}/preview", params={"contact_id": contact_id}, headers=auth(caller)
+            )
+
+        shown = preview(ada).json()
+        result["preview"] = {
+            "ada": [
+                shown["subject"],
+                shown["body"].startswith("Hello Ada,"),
+                "[unsubscribe link]" in shown["body"],
+                shown["audience"],
+                shown["reason"],
+            ],
+            "others": [
+                [preview(person).json()[k] for k in ("audience", "reason")]
+                for person in (grace, mal, cust)
+            ],
+            "refused": [
+                preview(str(uuid.uuid4())).json()["detail"]["code"],
+                client.get(
+                    f"/v1/workspaces/{b.id}/campaigns/{camp['id']}/preview",
+                    params={"contact_id": ada},
+                    headers=auth("other_owner"),
+                ).status_code,
+                client.get(f"{one}/preview", headers=auth()).status_code,
+            ],
+        }
 
         validated = client.post(f"{one}/validate", headers=auth("member", 1)).json()
         result["validated"] = [validated["status"], validated["estimate"]]

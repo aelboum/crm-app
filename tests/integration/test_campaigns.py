@@ -50,6 +50,22 @@ def test_members_draft_and_bad_content_or_access_is_refused(probe: Probe) -> Non
     assert probe["no_version"] == 428
 
 
+def test_a_campaign_is_previewed_for_one_contact(probe: Probe) -> None:
+    """Decision P7-PV: the contact's values and the footer with a stand-in
+    link; whether they are in the audience and may receive it; a
+    Read-only member may preview; an unknown contact or another workspace
+    is a 404 and the contact is required."""
+    preview = probe["preview"]
+    assert preview["ada"] == ["News for Ada", True, True, "eligible", None]
+    # Grace has no consent, Mal is suppressed, Cust is not a lead.
+    assert preview["others"] == [
+        ["excluded", "no_consent"],
+        ["excluded", "suppressed"],
+        ["outside", None],
+    ]
+    assert preview["refused"] == ["contact_not_found", 404, 422]
+
+
 def test_the_estimate_counts_only_contacts_who_may_receive_it(probe: Probe) -> None:
     status, estimate = probe["validated"]
     assert status == "validated"

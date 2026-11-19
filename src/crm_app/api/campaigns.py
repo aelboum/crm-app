@@ -5,6 +5,7 @@
     GET    /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:read
     GET    /v1/workspaces/{tenant_id}/campaigns/{id}/report        crm_app.campaign:read
     GET    /v1/workspaces/{tenant_id}/campaigns/{id}/results.csv   crm_app.crm_data:export
+    GET    /v1/workspaces/{tenant_id}/campaigns/{id}/preview       crm_app.campaign:read
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/duplicate     crm_app.campaign:manage
     PATCH  /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/validate      crm_app.campaign:manage
@@ -15,6 +16,8 @@
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/approve       crm_app.campaign:approve
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/reject        crm_app.campaign:approve
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/queue         crm_app.campaign:approve
+    POST   /v1/workspaces/{tenant_id}/campaigns/{id}/schedule      crm_app.campaign:approve
+    POST   /v1/workspaces/{tenant_id}/campaigns/{id}/unschedule    crm_app.campaign:approve
     POST   /v1/public/unsubscribe/{workspace_id}/{token}           public, one-click
 
 The list is paged (decision P7-CL): `order` (`created_at`, newest first,
@@ -26,14 +29,18 @@ P7-SO), `limit` (at most 100), `cursor`, `archived`, `status` and `search`
 personal data, so only Owners and Admins (`crm_app.crm_data:export`, like
 the contact export), with the contact export's per-user limit on its own
 budget. `duplicate` copies a campaign's subject, body and audience into a
-new draft (decision P7-DU).
+new draft (decision P7-DU). `preview?contact_id=` shows the campaign as
+that contact would receive it, and whether they are in the audience and
+may receive it (decision P7-PV); nothing is sent.
 
 Every change needs `If-Match`. Editing returns a campaign to draft and
 clears its approval. Queuing answers 409 `campaign_sending_unavailable`
 unless campaign sending is available (the campaign stream switched on,
 never in production). A queued campaign is processed by the email
 maintenance run (`campaigns.run_queued`, decision P7-S), never by a
-route. The unsubscribe route takes the token from a
+route. `schedule` sets when an approved campaign is queued instead (decision
+P7-SC: 5 minutes to 90 days ahead, under the same conditions as queuing);
+editing, cancelling or `unschedule` clears it. The unsubscribe route takes the token from a
 recipient's link; it answers 204 whether or not the token is known, so it
 reveals nothing, and is limited per client address.
 """
@@ -109,6 +116,13 @@ class DuplicateIn(BaseModel):
     name: str | None = Field(default=None, max_length=4 * rules.NAME_MAX)
 
 
+class ScheduleIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # With its offset; from 5 minutes to 90 days ahead.
+    at: datetime
+
+
 class RejectIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -156,6 +170,8 @@ class CampaignOut(BaseModel):
     submitted_at: datetime | None
     decision_note: str | None
     archived_at: datetime | None = None
+    # When an approved campaign is to be queued (decision P7-SC).
+    scheduled_at: datetime | None = None
     created_by_user_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
@@ -199,6 +215,18 @@ class CampaignList(BaseModel):
     sending_available: bool
     # Campaigns here are rehearsed: queued and processed, never sent (P7-R).
     rehearsal: bool = False
+
+
+class CampaignPreview(BaseModel):
+    campaign_id: uuid.UUID
+    contact_id: uuid.UUID
+    subject: str
+    # With the footer; the unsubscribe link is a stand-in.
+    body: str
+    # In the audience and may receive it; in it but excluded (`reason`);
+    # or not in the audience at all.
+    audience: Literal["eligible", "excluded", "outside"]
+    reason: str | None
 
 
 class CampaignOutcomes(BaseModel):
@@ -342,6 +370,14 @@ def duplicate_campaign(
     return _etag(response, item)
 
 
+@router.get(f"{_ONE}/preview", response_model=CampaignPreview, name="preview_campaign")
+def preview_campaign(campaign_id: uuid.UUID, contact_id: uuid.UUID, context: Read) -> Any:
+    try:
+        return campaigns.preview(_scope(context), campaign_id, contact_id)
+    except RecordError as exc:
+        raise _refusal(exc) from None
+
+
 @router.patch(_ONE, response_model=CampaignOut, name="update_campaign")
 def update_campaign(
     campaign_id: uuid.UUID,
@@ -441,6 +477,31 @@ def queue_campaign(
     campaign_id: uuid.UUID, context: Approve, response: Response, if_match: IfMatch = None
 ) -> Any:
     return _step(campaigns.queue, campaign_id, context, response, if_match)
+
+
+@router.post(f"{_ONE}/schedule", response_model=CampaignOut, name="schedule_campaign")
+def schedule_campaign(
+    campaign_id: uuid.UUID,
+    body: ScheduleIn,
+    context: Approve,
+    response: Response,
+    if_match: IfMatch = None,
+) -> Any:
+    expected = _version(if_match)
+    try:
+        item = campaigns.schedule(
+            _scope(context), campaign_id, at=body.at, expected_version=expected
+        )
+    except RecordError as exc:
+        raise _refusal(exc) from None
+    return _etag(response, item)
+
+
+@router.post(f"{_ONE}/unschedule", response_model=CampaignOut, name="unschedule_campaign")
+def unschedule_campaign(
+    campaign_id: uuid.UUID, context: Approve, response: Response, if_match: IfMatch = None
+) -> Any:
+    return _step(campaigns.unschedule, campaign_id, context, response, if_match)
 
 
 _public = Depends(

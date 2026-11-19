@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0047_campaign_archive` own the
+Migrations `0002_contacts_companies` to `0048_campaign_schedule` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -627,6 +627,8 @@ class CampaignQueue(Base):
     workspace_id: Mapped[uuid.UUID] = mapped_column()
     queued_by: Mapped[uuid.UUID] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # A scheduled campaign waits until then (P7-SC); empty: at once.
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Form(Base):
@@ -1149,6 +1151,9 @@ class Campaign(Base):
     # Migration 0047 (P7-AR): set together on a finished campaign only.
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     archived_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    # When an approved campaign is to be queued, and by whom (P7-SC).
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    scheduled_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

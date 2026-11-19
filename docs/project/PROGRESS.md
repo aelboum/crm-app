@@ -1353,6 +1353,36 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Scheduling, preview, member names and a Read-only test user (2026-11-19, owner: "go ahead with all 4")
+
+Decisions P7-SC (scheduled campaigns, migration `0048_campaign_schedule`),
+P7-PV (preview for one contact) and the M-P1 follow-up ("Add your name").
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest` integration: crm tables, note/activity tables, foundation, campaigns, campaign schedule | 106 passed |
+| `uv run pytest tests/unit` (no environment) | 812 passed |
+| `npx vitest run --maxWorkers=2` | 37 files, 394 passed |
+| `tsc -b`; `eslint .`; `ruff`; `pyright`; Prettier on `api/campaigns.ts` | clean |
+
+Not deployed to staging.
+
+**Read-only test user on staging.** `dave@crm-staging.auravox.nl`, created
+like carol (ZITADEL v2 user API, login client token, email verified;
+password in `.local/test-users.env` as `DAVE_*`, never printed), joined
+Staging Alpha through alice's manual-mode invitation (no email) and was
+given the Read-only role. Checked as dave (staging at `4a82f68`):
+
+| Check | Result |
+| --- | --- |
+| `GET …/access` | roles `["Read-only"]`; only read actions true |
+| Contacts | list 200; Import and Export disabled ("Only Owners and Admins…"); no New contact; `export.csv` 403 |
+| Campaigns | list and report 200; `results.csv` 403; no New campaign or New template; the archived campaign's detail has no buttons |
+| Invitations | 403 |
+
+alice also set her own display name ("Alice Owner") under My profile on
+staging; the Team list then showed it instead of her member ID.
+
 ## Staging deployed at `4a82f68` (2026-11-19, owner: "Go ahead")
 
 From `f90b4e8`: campaign results CSV (P7-RX), duplicate (P7-DU) and list

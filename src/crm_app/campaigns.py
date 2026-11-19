@@ -33,6 +33,11 @@ recipients and unsubscribing.
   email is closed as `failed` (`rehearsal`) in the same transaction: no
   email of a rehearsed campaign can ever be sent, even if sending is
   switched on later. Every other workspace is unaffected.
+- `schedule` (only `crm_app.campaign:approve`, decision P7-SC) sets when an
+  approved campaign is queued, under the same conditions as `queue`; the
+  queue row waits until then (`due_at`) and the maintenance run queues it
+  as the member who scheduled it. Editing, cancelling and `unschedule`
+  clear the time; a campaign that is no longer approved is never started.
 - `archive` hides a finished campaign from the list and `unarchive` shows
   it again (decision P7-AR, `crm_app.campaign:manage`); nothing about the
   campaign, its recipients, emails, results or audit is removed.
@@ -51,7 +56,7 @@ import uuid
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from saas_os.core.tenancy import (
@@ -106,6 +111,9 @@ SENDER = "crm_app.campaign_send"
 BATCH = 500
 LIST_LIMIT = 100  # the most campaigns one page holds (decision P7-CL)
 AUDIENCE_MAX = 50_000
+# How far ahead a campaign may be scheduled (decision P7-SC).
+SCHEDULE_MIN = timedelta(minutes=5)
+SCHEDULE_MAX = timedelta(days=90)
 # Bulk mail needs `List-Unsubscribe` and `List-Unsubscribe-Post` headers,
 # which SaaS-OS v0.6.0 cannot set (EMAIL-ARCHITECTURE.md, section 1).
 # True since decision E-H1: campaign emails carry one-click unsubscribe
@@ -204,6 +212,7 @@ def _item(row: Campaign) -> Item:
         "submitted_at": row.submitted_at,
         "decision_note": row.decision_note,
         "archived_at": row.archived_at,
+        "scheduled_at": row.scheduled_at,
         "created_by_user_id": row.created_by_user_id,
         "created_at": row.created_at,
         "updated_at": row.updated_at,
@@ -329,10 +338,14 @@ def get(scope: Scope, campaign_id: uuid.UUID) -> Item:
 # --- Audience ------------------------------------------------------------------------------
 
 
-def _audience(session: Session, scope: Scope, audience: rules.Segment) -> list[Contact]:
+def _audience(
+    session: Session, scope: Scope, audience: rules.Segment, *, only: uuid.UUID | None = None
+) -> list[Contact]:
     query = select(Contact).where(
         Contact.tenant_id == scope.workspace, Contact.archived_at.is_(None)
     )
+    if only is not None:
+        query = query.where(Contact.id == only)
     if audience.stages:
         query = query.where(Contact.lifecycle_stage.in_(audience.stages))
     if audience.owner_ids:
@@ -381,6 +394,58 @@ def _eligible(
         else:
             result.exclude(reason or "no_email")
     return result, chosen
+
+
+class PreviewContactNotFoundError(RecordError):
+    """The contact to preview for is not in this workspace."""
+
+    status, code = 404, "contact_not_found"
+
+
+# Stands in for a recipient's own unsubscribe link, which exists only once
+# the campaign is processed.
+PREVIEW_LINK = "[unsubscribe link]"
+
+
+def preview(scope: Scope, campaign_id: uuid.UUID, contact_id: uuid.UUID) -> Item:
+    """The campaign as one contact would receive it (decision P7-PV): the
+    subject and body with the contact's values, the footer with a stand-in
+    for the unsubscribe link, and whether the contact is in the audience
+    and may receive it. Reads only; nothing is queued or sent."""
+    with tenant_session_scope(scope.workspace) as session:
+        row = _load(session, scope, campaign_id, lock=False)
+        contact = session.execute(
+            select(Contact).where(Contact.tenant_id == scope.workspace, Contact.id == contact_id)
+        ).scalar_one_or_none()
+        if contact is None:
+            raise PreviewContactNotFoundError
+        audience = _segment(row.segment)
+        if not _audience(session, scope, audience, only=contact.id):
+            standing, reason = "outside", None
+        else:
+            email = (contact.email or "").strip().lower() or None
+            reason = rules.eligibility_reason(
+                email=email,
+                suppressed=bool(email)
+                and not suppression.may_send(
+                    session, scope.workspace, email or "", None, marketing=False
+                ),
+                consent=suppression.consent_state(session, scope.workspace, contact.id),
+                seen=False,
+            )
+            standing = "eligible" if reason is None and email else "excluded"
+            reason = None if standing == "eligible" else (reason or "no_email")
+        values = {"first_name": contact.first_name, "last_name": contact.last_name}
+        subject, body = row.subject, row.body
+    name = get_tenant(scope.workspace).name
+    return {
+        "campaign_id": campaign_id,
+        "contact_id": contact_id,
+        "subject": rules.render(subject, values),
+        "body": rules.render(body, values) + rules.footer(name, PREVIEW_LINK),
+        "audience": standing,
+        "reason": reason,
+    }
 
 
 # --- Writes --------------------------------------------------------------------------------
@@ -482,6 +547,7 @@ def update(
         row.submitted_by_user_id = row.submitted_at = None
         row.approved_hash = row.approved_by_user_id = row.approved_at = None
         row.decision_note = None
+        row.scheduled_at = row.scheduled_by_user_id = None
         _touch(row)
         _audit(
             session,
@@ -568,6 +634,7 @@ def cancel(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> It
         _checked(row, expected_version)
         _step(row, "cancel")
         row.cancelled_by_user_id, row.cancelled_at = scope.actor, _now()
+        row.scheduled_at = row.scheduled_by_user_id = None
         _touch(row)
         _audit(session, scope, "cancelled", row)
         return _item(row)
@@ -629,9 +696,18 @@ def queue_available(workspace: uuid.UUID) -> bool:
     return sending_available() or rehearsal(workspace)
 
 
+def _exists(scope: Scope, campaign_id: uuid.UUID) -> None:
+    """`RecordNotFoundError` unless the campaign is in the caller's
+    workspace: checked before the global queue row is written, so no
+    workspace can add or replace a row for another's campaign."""
+    with tenant_session_scope(scope.workspace) as session:
+        _load(session, scope, campaign_id, lock=False)
+
+
 def queue(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Item:
     """Queue an approved campaign for sending (or rehearsal, P7-R), if that
     is available and the approval still matches its content and audience."""
+    _exists(scope, campaign_id)
     if not queue_available(scope.workspace):
         raise SendingUnavailableError
     # Recorded first, in its own transaction: if queuing rolls back, the
@@ -646,9 +722,83 @@ def queue(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Ite
             raise ApprovalOutdatedError
         _step(row, "queue")
         row.queued_at = _now()
+        # Queuing now replaces a schedule.
+        row.scheduled_at = row.scheduled_by_user_id = None
         _touch(row)
         _audit(session, scope, "queued", row, approved_hash=row.approved_hash)
         return _item(row)
+
+    return _transaction(scope, business)
+
+
+def schedule(scope: Scope, campaign_id: uuid.UUID, *, at: datetime, expected_version: int) -> Item:
+    """Queue an approved campaign at `at` instead of now (decision P7-SC):
+    refused unless queuing is available and the approval still matches, and
+    for a time less than `SCHEDULE_MIN` or more than `SCHEDULE_MAX` ahead.
+    Scheduling again replaces the time."""
+    if at.tzinfo is None:
+        raise CampaignRuleError("schedule: a time with its offset")
+    now = _now()
+    if not now + SCHEDULE_MIN <= at <= now + SCHEDULE_MAX:
+        raise CampaignRuleError("schedule: from 5 minutes to 90 days ahead")
+    _exists(scope, campaign_id)
+    if not queue_available(scope.workspace):
+        raise SendingUnavailableError
+    # Recorded first, like `queue`: a row whose campaign is not scheduled
+    # is removed by the maintenance run.
+    _register(scope.workspace, campaign_id, scope.actor, due_at=at)
+
+    def business(session: Session) -> Item:
+        row = _load(session, scope, campaign_id, lock=True)
+        _checked(row, expected_version)
+        if row.status != "approved":
+            raise CampaignStateError(f"schedule: not from {row.status}")
+        current = rules.content_hash(row.name, row.subject, row.body, _segment(row.segment))
+        if row.approved_hash is None or current != row.approved_hash:
+            raise ApprovalOutdatedError
+        row.scheduled_at, row.scheduled_by_user_id = at, scope.actor
+        _touch(row)
+        _audit(session, scope, "scheduled", row, scheduled_at=at.isoformat())
+        return _item(row)
+
+    return _transaction(scope, business)
+
+
+def unschedule(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Item:
+    """Clear a scheduled campaign's time; it stays approved."""
+
+    def business(session: Session) -> Item:
+        row = _load(session, scope, campaign_id, lock=True)
+        _checked(row, expected_version)
+        if row.scheduled_at is None:
+            raise CampaignStateError("unschedule: not scheduled")
+        row.scheduled_at = row.scheduled_by_user_id = None
+        _touch(row)
+        _audit(session, scope, "unscheduled", row)
+        return _item(row)
+
+    item = _transaction(scope, business)
+    _unregister(campaign_id)
+    return item
+
+
+def _start_scheduled(scope: Scope, campaign_id: uuid.UUID) -> bool:
+    """Queue a due scheduled campaign, as the member who scheduled it;
+    False when it is no longer approved and scheduled."""
+
+    def business(session: Session) -> bool:
+        row = _load(session, scope, campaign_id, lock=True)
+        if row.status != "approved" or row.scheduled_at is None:
+            return False
+        current = rules.content_hash(row.name, row.subject, row.body, _segment(row.segment))
+        if row.approved_hash is None or current != row.approved_hash:
+            return False
+        _step(row, "queue")
+        row.queued_at = _now()
+        row.scheduled_at = row.scheduled_by_user_id = None
+        _touch(row)
+        _audit(session, scope, "queued", row, approved_hash=row.approved_hash, scheduled=True)
+        return True
 
     return _transaction(scope, business)
 
@@ -763,16 +913,35 @@ def process(  # noqa: PLR0913 - one campaign and where its links point
 # --- The sending queue (decision P7-S) ----------------------------------------------------
 
 
-def _register(workspace: uuid.UUID, campaign_id: uuid.UUID, member: uuid.UUID) -> None:
+def _register(
+    workspace: uuid.UUID,
+    campaign_id: uuid.UUID,
+    member: uuid.UUID,
+    *,
+    due_at: datetime | None = None,
+) -> None:
+    """Record the campaign in the queue. A row with another time (a new
+    schedule, or queuing a scheduled campaign at once) is replaced, so the
+    latest time and member count."""
     try:
         with session_scope() as session:
-            if session.get(CampaignQueue, campaign_id) is None:
+            existing = session.get(CampaignQueue, campaign_id)
+            if (
+                existing is not None
+                and existing.workspace_id == workspace
+                and existing.due_at != due_at
+            ):
+                session.delete(existing)
+                session.flush()
+                existing = None
+            if existing is None:
                 session.add(
                     CampaignQueue(
                         campaign_id=campaign_id,
                         workspace_id=workspace,
                         queued_by=member,
                         created_at=_now(),
+                        due_at=due_at,
                     )
                 )
     except IntegrityError:
@@ -809,7 +978,9 @@ def _links() -> tuple[str, str] | None:
 _UNFINISHED = ("queued", "processing")
 
 
-def run_queued(*, limit: int = 50, batch: int = BATCH) -> dict[str, Any]:
+def run_queued(
+    *, limit: int = 50, batch: int = BATCH, now: datetime | None = None
+) -> dict[str, Any]:
     """Process the queued campaigns, `batch` new recipients each. Returns
     counts and the emails queued, as (workspace, email) pairs, for the
     caller to hand to the worker. Nothing happens while sending is
@@ -822,13 +993,23 @@ def run_queued(*, limit: int = 50, batch: int = BATCH) -> dict[str, Any]:
         "emails": [],
     }
     links = _links()
+    moment = now or _now()
     with session_scope() as session:
         rows = list(
             session.execute(
                 select(
-                    CampaignQueue.workspace_id, CampaignQueue.campaign_id, CampaignQueue.queued_by
+                    CampaignQueue.workspace_id,
+                    CampaignQueue.campaign_id,
+                    CampaignQueue.queued_by,
+                    CampaignQueue.due_at,
                 )
-                .order_by(CampaignQueue.created_at, CampaignQueue.campaign_id)
+                # A scheduled campaign waits until it is due (P7-SC).
+                .where(CampaignQueue.due_at.is_(None) | (CampaignQueue.due_at <= moment))
+                .order_by(
+                    CampaignQueue.due_at.asc().nulls_first(),
+                    CampaignQueue.created_at,
+                    CampaignQueue.campaign_id,
+                )
                 .limit(limit)
             ).all()
         )
@@ -836,12 +1017,16 @@ def run_queued(*, limit: int = 50, batch: int = BATCH) -> dict[str, Any]:
         totals["waiting"] = len(rows)
         return totals
     unsubscribe_base, one_click_base = links
-    for workspace, campaign_id, member in rows:
+    for workspace, campaign_id, member, due_at in rows:
         if not queue_available(workspace):
             totals["waiting"] += 1
             continue
         scope = Scope(workspace=workspace, actor=member, component=SENDER)
         try:
+            if due_at is not None and not _start_scheduled(scope, campaign_id):
+                _unregister(campaign_id)  # Edited, cancelled or unscheduled since.
+                totals["finished"] += 1
+                continue
             name = get_tenant(workspace).name
             item = process(
                 scope,

@@ -1073,6 +1073,56 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P7-SC — Scheduled campaigns (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "go ahead with all 4" (2026-11-19;
+  item 3). Migration `0048_campaign_schedule`.
+- **Decision:** `POST …/campaigns/{id}/schedule` (`crm_app.campaign:approve`,
+  `If-Match`, body `{"at": …}` with an offset) sets when an approved
+  campaign is queued: from 5 minutes to 90 days ahead, only while queuing
+  is available (real sending or a rehearsal workspace, as for `queue`) and
+  only while the approval still matches. The campaign keeps `approved` and
+  gains `scheduled_at` and `scheduled_by_user_id`; the global queue row
+  gets `due_at`, and the email maintenance run starts the campaign once it
+  is due, as the member who scheduled it (audit `queued` with
+  `scheduled: true`). Editing (back to draft), cancelling, queuing at once
+  and `unschedule` clear the time; the database refuses a time on a
+  campaign that is not approved. Scheduling again replaces the time.
+- **Found while building it:** `queue` wrote the global queue row before
+  checking that the campaign belongs to the caller's workspace. It now
+  checks first, and a row is only ever replaced by its own workspace, so
+  no workspace can add or replace another's row.
+- **Tests:** `tests/integration/test_campaign_schedule.py` (refusals,
+  starts only when due, edit/unschedule/queue-now); `campaigns.test.tsx`
+  (schedule with the version; Unschedule; none for Members).
+
+## P7-PV — Campaign preview for one contact (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "go ahead with all 4" (item 2).
+- **Decision:** `GET …/campaigns/{id}/preview?contact_id=`
+  (`crm_app.campaign:read`) returns the subject and body with that
+  contact's values, the footer with "[unsubscribe link]" standing in for
+  the recipient's own link (made only when processed), and whether the
+  contact is `eligible`, `excluded` (with the estimate's reason) or
+  `outside` the audience. It reads only; nothing is queued or sent. The
+  campaign detail has "Preview for a contact" with the contact search.
+- **Tests:** `test_a_campaign_is_previewed_for_one_contact`;
+  `campaigns.test.tsx` (preview; the Read-only test now names the chooser).
+
+## M-P1 follow-up — Asking members to add their name (2026-11-19)
+
+- **Status:** Implemented on the owner's "go ahead with all 4" (item 1).
+- **Finding:** names were already stored (decision M-P1: each member sets
+  their own display name under My profile; Owners and Admins also see an
+  invited member's address). The Team note still said names were "not
+  stored yet", and nothing asked members to add one, so most showed by ID.
+  SaaS-OS stores no name or email for a user, so there is nothing more to
+  read from it.
+- **Decision:** the caller's own row shows "Add your name" when they have
+  none, opening My profile; the note now says members without a name show
+  by ID and each adds their own. Nobody sets another member's name.
+- **Tests:** `frontend/src/pages/WorkspacePage.test.tsx`.
+
 ## P7-RX — Campaign results as CSV (2026-11-19, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's "Go 1, 2,3 and 4" (2026-11-19;

@@ -128,12 +128,15 @@ function MemberRow({
   access,
   invitation,
   onAction,
+  onAddName,
 }: {
   member: Member;
   access: Access;
   /** The accepted invitation this member joined with, if the caller may see it. */
   invitation: Invitation | undefined;
   onAction: (pending: Pending) => void;
+  /** Opens My profile, where members add their own display name (M-P1). */
+  onAddName: () => void;
 }) {
   const t = useT();
   const isSelf = member.membership_id === access.membership_id;
@@ -160,6 +163,11 @@ function MemberRow({
           )}
           {isSelf ? <Badge tone="accent">{t("members.you")}</Badge> : null}
           {awaiting ? <Badge tone="pending">{t("members.awaitingRole")}</Badge> : null}
+          {isSelf && !member.display_name ? (
+            <AriaButton className="text-button" onPress={onAddName}>
+              {t("members.addName")}
+            </AriaButton>
+          ) : null}
         </div>
         <div className="member-sub">
           {member.status === "active" ? (
@@ -196,7 +204,15 @@ function MemberRow({
   );
 }
 
-function MembersCard({ workspaceId, access }: { workspaceId: string; access: Access }) {
+function MembersCard({
+  workspaceId,
+  access,
+  onAddName,
+}: {
+  workspaceId: string;
+  access: Access;
+  onAddName: () => void;
+}) {
   const t = useT();
   const [offset, setOffset] = useState(0);
   const canRead = access.actions.read_members === true;
@@ -265,6 +281,7 @@ function MembersCard({ workspaceId, access }: { workspaceId: string; access: Acc
                 member={member}
                 access={access}
                 invitation={joinedBy.get(member.user_id)}
+                onAddName={onAddName}
                 onAction={(next) => {
                   change.reset();
                   if (next.action.confirm) setPending(next);
@@ -798,7 +815,13 @@ export function SettingsPage({
           ) : null}
           {access.data && section === "team" ? (
             <>
-              <MembersCard workspaceId={workspaceId} access={access.data} />
+              <MembersCard
+                workspaceId={workspaceId}
+                access={access.data}
+                onAddName={() => {
+                  onSelect("profile");
+                }}
+              />
               <RolePermissions />
             </>
           ) : null}

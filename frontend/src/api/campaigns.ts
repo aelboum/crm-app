@@ -32,7 +32,8 @@ export type Step =
   | "cancel"
   | "queue"
   | "archive"
-  | "unarchive";
+  | "unarchive"
+  | "unschedule";
 export type CampaignReport = components["schemas"]["CampaignReport"];
 export type Outcome = keyof CampaignReport["outcomes"];
 
@@ -196,6 +197,13 @@ export function useCampaignStep(workspaceId: string) {
               params,
             ),
           );
+        case "unschedule":
+          return unwrapWrite(
+            await api.POST(
+              "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/unschedule",
+              params,
+            ),
+          );
       }
     },
     onSettled: () => refresh(),
@@ -220,6 +228,68 @@ export function useCampaignReport(
         await api.GET(
           "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report",
           { params: { path: one(workspaceId, id) } },
+        ),
+      ),
+  });
+}
+
+/*
+ * Queue an approved campaign at a later time (decision P7-SC): Owners and
+ * Admins, from 5 minutes to 90 days ahead, under the same conditions as
+ * queuing now. Editing, cancelling or Unschedule clears the time.
+ */
+export function useScheduleCampaign(workspaceId: string) {
+  const refresh = useRefresh(workspaceId);
+  return useMutation<
+    Campaign,
+    ApiError,
+    { id: string; version: number; at: string }
+  >({
+    mutationFn: async ({ id, version, at }) =>
+      unwrapWrite(
+        await api.POST(
+          "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/schedule",
+          {
+            params: { path: one(workspaceId, id), header: ifMatch(version) },
+            body: { at },
+          },
+        ),
+      ),
+    onSettled: () => refresh(),
+  });
+}
+
+export type CampaignPreview = components["schemas"]["CampaignPreview"];
+
+/*
+ * The campaign as one contact would receive it (decision P7-PV), and
+ * whether they are in the audience and may receive it. Nothing is sent.
+ */
+export function useCampaignPreview(
+  workspaceId: string,
+  id: string,
+  contactId: string | null,
+  version: number,
+) {
+  return useQuery({
+    queryKey: [
+      ...campaignKeys.all(workspaceId),
+      id,
+      "preview",
+      contactId,
+      version,
+    ],
+    enabled: contactId !== null,
+    queryFn: async (): Promise<CampaignPreview> =>
+      unwrap(
+        await api.GET(
+          "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/preview",
+          {
+            params: {
+              path: one(workspaceId, id),
+              query: { contact_id: contactId ?? "" },
+            },
+          },
         ),
       ),
   });

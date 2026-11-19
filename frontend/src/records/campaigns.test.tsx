@@ -458,6 +458,145 @@ describe("campaigns", () => {
     expect(within(results).queryByRole("button", { name: "Download CSV" })).toBeNull();
   });
 
+  it("previews the campaign for a chosen contact and says if they may receive it (P7-PV)", async () => {
+    const user = userEvent.setup();
+    const SAM = "c0000000-0000-4000-8000-000000000005";
+    const sam = {
+      id: SAM,
+      first_name: "Sam",
+      last_name: "Jansen",
+      email: "sam@example.test",
+      phone: null,
+      job_title: null,
+      city: null,
+      lifecycle_stage: "lead",
+      source: "manual",
+      company_id: null,
+      company: null,
+      owner_user_id: null,
+      created_at: stamp,
+      updated_at: stamp,
+      created_by_user_id: ME,
+      updated_by_user_id: ME,
+      version: 1,
+      archived_at: null,
+      tags: [],
+      custom_fields: {},
+    };
+    const base = workspace({ manage: false, approve: false });
+    const { sent } = renderApp(`/w/${WS}/campaigns`, (method, path, body) => {
+      if (path.startsWith(`/v1/workspaces/${WS}/contacts?`)) {
+        return {
+          status: 200,
+          body: { items: [sam], next_cursor: null, total: 1, total_capped: false },
+        };
+      }
+      if (path.startsWith(`/v1/workspaces/${WS}/campaigns/${ID}/preview?`)) {
+        return {
+          status: 200,
+          body: {
+            campaign_id: ID,
+            contact_id: SAM,
+            subject: "News for Sam",
+            body: "Hello Sam,\nour autumn update.\n\n--\nYou receive this email from Acme.\nUnsubscribe: [unsubscribe link]",
+            audience: "excluded",
+            reason: "no_consent",
+          },
+        };
+      }
+      return base(method, path, body);
+    });
+    const pane = await openCampaign(user);
+    const region = within(pane).getByRole("region", { name: "Preview" });
+    await user.click(within(region).getByRole("button", { name: "Choose a contact" }));
+    await user.click(await within(region).findByRole("option", { name: /Sam Jansen/ }));
+    expect(await within(region).findByText("News for Sam")).toBeInTheDocument();
+    expect(
+      within(region).getByText("In the audience, but will not receive it: no marketing consent."),
+    ).toBeInTheDocument();
+    expect(sent.some((r) => r.path.includes(`/preview?contact_id=${SAM}`))).toBe(true);
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("schedules an approved campaign with the version and a time (P7-SC)", async () => {
+    const user = userEvent.setup();
+    const { headersSent, sent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: true },
+        campaign({ status: "approved", approved: true }),
+        (method, path) =>
+          method === "POST" && path.endsWith("/schedule")
+            ? {
+                status: 200,
+                body: campaign({
+                  status: "approved",
+                  approved: true,
+                  scheduled_at: "2026-12-01T09:00:00+00:00",
+                  version: 5,
+                }),
+              }
+            : undefined,
+        true,
+      ),
+    );
+    const pane = await openCampaign(user);
+    await user.click(within(pane).getByRole("button", { name: "Schedule" }));
+    const input = within(pane).getByLabelText("Queue at");
+    await user.type(input, "2026-12-01T10:00");
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(within(pane).getByRole("button", { name: "Save schedule" }));
+    await waitFor(() => {
+      const call = headersSent.find((r) => r.path.endsWith("/schedule"));
+      expect(call?.headers["if-match"]).toBe('"4"');
+    });
+    const body = sent.find((r) => r.path.endsWith("/schedule"))?.body as { at: string };
+    expect(body.at).toBe(new Date("2026-12-01T10:00").toISOString());
+  });
+
+  it("shows when a campaign is scheduled and unschedules it", async () => {
+    const user = userEvent.setup();
+    const { headersSent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: true },
+        campaign({
+          status: "approved",
+          approved: true,
+          scheduled_at: "2026-12-01T09:00:00+00:00",
+        }),
+        (method, path) =>
+          method === "POST" && path.endsWith("/unschedule")
+            ? { status: 200, body: campaign({ status: "approved", approved: true, version: 5 }) }
+            : undefined,
+        true,
+      ),
+    );
+    const pane = await openCampaign(user);
+    expect(within(pane).getByText("Scheduled for")).toBeInTheDocument();
+    expect(within(pane).queryByRole("button", { name: "Schedule" })).toBeNull();
+    await user.click(within(pane).getByRole("button", { name: "Unschedule" }));
+    await waitFor(() => {
+      const call = headersSent.find((r) => r.path.endsWith("/unschedule"));
+      expect(call?.headers["if-match"]).toBe('"4"');
+    });
+  });
+
+  it("offers Members no scheduling", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: false },
+        campaign({ status: "approved", approved: true }),
+        undefined,
+        true,
+      ),
+    );
+    const pane = await openCampaign(user);
+    expect(within(pane).queryByRole("button", { name: "Schedule" })).toBeNull();
+  });
+
   it("shows no results before a campaign is queued", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));
@@ -667,6 +806,9 @@ describe("campaigns", () => {
     );
     const pane = await openCampaign(user);
     expect(screen.queryByRole("button", { name: "New campaign" })).toBeNull();
-    expect(within(pane).queryByRole("button")).toBeNull();
+    // Only the preview's contact chooser, which reads (P7-PV); no step.
+    expect(within(pane).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Choose a contact",
+    ]);
   });
 });

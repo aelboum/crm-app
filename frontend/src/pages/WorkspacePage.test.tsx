@@ -63,6 +63,17 @@ describe("workspace members", () => {
     expect(await accessibilityViolations()).toEqual([]);
   });
 
+  it("asks a member without a name to add one, and opens My profile", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/settings`, workspace({ roles: ["Owner"], actions: ALL }));
+    await screen.findByText("3 members");
+    // Only on the caller's own row: nobody sets another member's name.
+    expect(within(rowFor(OTHER_OWNER)).queryByRole("button", { name: "Add your name" })).toBeNull();
+    expect(screen.getByText(/Each member adds their own under My profile/)).toBeInTheDocument();
+    await user.click(within(rowFor(ME)).getByRole("button", { name: "Add your name" }));
+    expect(await screen.findByRole("heading", { name: "My profile" })).toBeInTheDocument();
+  });
+
   it("offers an Admin no action on an Owner", async () => {
     renderApp(
       `/w/${WS}/settings`,

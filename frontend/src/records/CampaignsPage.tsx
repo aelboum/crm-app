@@ -1,5 +1,6 @@
 import { Download, Plus, Search, Tag, User, X } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
+import { useIntl } from "react-intl";
 
 import {
   type Campaign,
@@ -10,10 +11,12 @@ import {
   type Step,
   useCampaignReport,
   useCampaigns,
+  useCampaignPreview,
   useCampaignStep,
   useCreateCampaign,
   useDuplicateCampaign,
   useRejectCampaign,
+  useScheduleCampaign,
   useUpdateCampaign,
 } from "../api/campaigns";
 import { ApiError } from "../api/client";
@@ -28,7 +31,7 @@ import { Dialog } from "../components/ui/Dialog";
 import type { MessageId } from "../i18n/en";
 import { useT } from "../i18n/useT";
 import { TemplatePicker, TemplatesPanel } from "./EmailTemplates";
-import { CompanyPicker } from "./CompanyPicker";
+import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
 import { FilterMenu, ownerOptions, stageLabel } from "./parts";
 import { useDebounced } from "./useDebounced";
 
@@ -466,6 +469,137 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+// The campaign as one chosen contact would receive it (decision P7-PV).
+function Preview({
+  workspaceId,
+  campaign,
+}: {
+  workspaceId: string;
+  campaign: Campaign;
+}) {
+  const t = useT();
+  const [picked, setPicked] = useState<PickedCompany | null>(null);
+  const preview = useCampaignPreview(
+    workspaceId,
+    campaign.id,
+    picked?.id ?? null,
+    campaign.version,
+  );
+  const data = preview.data;
+  return (
+    <section
+      className="campaign-results"
+      aria-label={t("campaigns.preview.region")}
+    >
+      <CompanyPicker
+        workspaceId={workspaceId}
+        id={`campaign-preview-${campaign.id}`}
+        kind="contacts"
+        label={t("campaigns.preview.label")}
+        selected={picked}
+        onChange={setPicked}
+        noneText={t("campaigns.preview.none")}
+        chooseText={t("campaigns.preview.choose")}
+      />
+      {picked === null ? null : preview.isPending ? (
+        <Loading />
+      ) : data === undefined ? (
+        <LoadError
+          error={preview.error}
+          onRetry={() => {
+            void preview.refetch();
+          }}
+        />
+      ) : (
+        <>
+          <p className="notice" role="status">
+            {data.audience === "eligible"
+              ? t("campaigns.preview.eligible")
+              : data.audience === "outside"
+                ? t("campaigns.preview.outside")
+                : t("campaigns.preview.excluded", {
+                    reason: t(
+                      `campaigns.preview.reason.${data.reason ?? "no_email"}` as MessageId,
+                    ),
+                  })}
+          </p>
+          <div className="campaign-preview">
+            <p className="campaign-preview-subject">{data.subject}</p>
+            <p className="inbox-message-text">{data.body}</p>
+          </div>
+          <p className="muted">{t("campaigns.preview.note")}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function Scheduler({
+  workspaceId,
+  campaign,
+  onDone,
+}: {
+  workspaceId: string;
+  campaign: Campaign;
+  onDone: () => void;
+}) {
+  const t = useT();
+  const schedule = useScheduleCampaign(workspaceId);
+  const [at, setAt] = useState("");
+  const inputId = `campaign-schedule-${campaign.id}`;
+  return (
+    <form
+      className="campaign-reject"
+      onSubmit={(event: SyntheticEvent) => {
+        event.preventDefault();
+        schedule.mutate(
+          {
+            id: campaign.id,
+            version: campaign.version,
+            at: new Date(at).toISOString(),
+          },
+          { onSuccess: onDone },
+        );
+      }}
+    >
+      <label className="field" htmlFor={inputId}>
+        <span className="field-label">{t("campaigns.scheduleAt")}</span>
+      </label>
+      <input
+        id={inputId}
+        className="form-input"
+        type="datetime-local"
+        required
+        value={at}
+        aria-describedby={`${inputId}-hint`}
+        onChange={(event) => {
+          setAt(event.target.value);
+        }}
+      />
+      <p id={`${inputId}-hint`} className="muted">
+        {t("campaigns.scheduleHint")}
+      </p>
+      {schedule.error ? (
+        <p className="notice error" role="alert">
+          {t(
+            schedule.error.code === "invalid_campaign"
+              ? "campaigns.error.schedule"
+              : failure(schedule.error),
+          )}
+        </p>
+      ) : null}
+      <Button
+        size="sm"
+        type="submit"
+        variant="primary"
+        isDisabled={!at || schedule.isPending}
+      >
+        {t("campaigns.scheduleSave")}
+      </Button>
+    </form>
+  );
+}
+
 function Detail({
   workspaceId,
   campaign,
@@ -491,8 +625,10 @@ function Detail({
   const step = useCampaignStep(workspaceId);
   const reject = useRejectCampaign(workspaceId);
   const duplicate = useDuplicateCampaign(workspaceId);
+  const intl = useIntl();
   const [note, setNote] = useState("");
   const [rejecting, setRejecting] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const problem = step.error ?? reject.error ?? duplicate.error;
   const run = (name: Step) => {
     step.mutate({ id: campaign.id, version: campaign.version, step: name });
@@ -546,6 +682,22 @@ function Detail({
             </dd>
           </>
         ) : null}
+        {campaign.scheduled_at ? (
+          <>
+            <dt>{t("campaigns.field.scheduled")}</dt>
+            <dd>
+              <time dateTime={campaign.scheduled_at}>
+                {intl.formatDate(new Date(campaign.scheduled_at), {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </time>
+            </dd>
+          </>
+        ) : null}
         {campaign.decision_note ? (
           <>
             <dt>{t("campaigns.field.note")}</dt>
@@ -561,6 +713,7 @@ function Detail({
         <p className="inbox-message-text">{campaign.body}</p>
         <p className="muted">{t("campaigns.footerNote")}</p>
       </div>
+      <Preview workspaceId={workspaceId} campaign={campaign} />
       {STARTED.includes(status) ? (
         <Results
           workspaceId={workspaceId}
@@ -637,6 +790,29 @@ function Detail({
             {t(rehearsal ? "campaigns.queueRehearsal" : "campaigns.queue")}
           </Button>
         ) : null}
+        {canApprove && canQueue && status === "approved" ? (
+          campaign.scheduled_at ? (
+            <Button
+              size="sm"
+              isDisabled={step.isPending}
+              onPress={() => {
+                run("unschedule");
+              }}
+            >
+              {t("campaigns.unschedule")}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              aria-expanded={scheduling}
+              onPress={() => {
+                setScheduling(!scheduling);
+              }}
+            >
+              {t("campaigns.schedule")}
+            </Button>
+          )
+        ) : null}
         {canManage && EDITABLE.includes(status) ? (
           <Button
             size="sm"
@@ -674,6 +850,15 @@ function Detail({
           </Button>
         ) : null}
       </div>
+      {scheduling && !campaign.scheduled_at && status === "approved" ? (
+        <Scheduler
+          workspaceId={workspaceId}
+          campaign={campaign}
+          onDone={() => {
+            setScheduling(false);
+          }}
+        />
+      ) : null}
       {rejecting ? (
         <form
           className="campaign-reject"
