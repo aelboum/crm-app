@@ -1353,6 +1353,25 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed at `2ad0d63` (2026-11-19, owner: "Go ahead")
+
+From `d015929`: the inbound receiving client (P6-R; off, staging cannot
+receive) and campaign results (P7-RP). No migration in the release.
+
+| Check | Result |
+| --- | --- |
+| CI on `2ad0d63` | run 44411565528 passed |
+| Before: `audit_store.sh collect`; `backup_drill.py` | 0 new lines (32 kept); **15 passed, 0 failed** (254 digest windows, no findings); this backup is the rollback point |
+| Image | built on the VPS, `crm-app:2ad0d63`; `VERSION=2ad0d63`; app and worker run it |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `/readyz`; `GET .../campaigns/{id}/report` without a session | 200; 401 |
+| Email switches in `app.env` | none set; `CAMPAIGN_REHEARSAL_WORKSPACES` kept |
+| Signed in as the Alpha Owner (test account), campaign "Rehearsal check" | Results: recipients 2, rehearsed (not sent) 2, unsubscribed 0, with the note that acceptance is not delivery |
+| App and worker logs, first 3 minutes | no error lines |
+
+Rollback: code only, `sudo docker tag crm-app:d015929 crm-app:staging` and
+`$C up -d --wait app worker`.
+
 ## Rehearsal data removed from staging (2026-11-18, owner: "last 3")
 
 Signed in as the Staging Alpha Owner (test account), through the app:
