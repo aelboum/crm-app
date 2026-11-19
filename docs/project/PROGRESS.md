@@ -1353,6 +1353,19 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Campaign results in the list (decision P7-RP, 2026-11-19)
+
+Each started campaign in the campaign list shows one line, for example
+"12 recipients · Delivered 7 · Bounced 1", from the campaign's report;
+frontend only.
+
+| Check | Result |
+| --- | --- |
+| `npx vitest run --maxWorkers=2` | 37 files, 381 passed |
+| `tsc -b`; `eslint .` | clean |
+
+Not deployed to staging.
+
 ## Archived campaigns (decision P7-AR, 2026-11-19)
 
 A finished or cancelled campaign can be archived from its detail and

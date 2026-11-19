@@ -1110,6 +1110,10 @@ approval), **Superseded**.
   Python, as in `crm_app.reports`.
 - **Not included:** opens and clicks. They need tracking pixels or
   rewritten links, which wait on the owner's tracking decision.
+- **List summary** (2026-11-19, owner's "Go 1 then 2", item 2): each
+  started campaign in the list shows one line, recipients and each outcome
+  that occurred, from the same report (one request per started campaign
+  shown, at most 100; archiving keeps the list short). No new route.
 - **Screen:** a "Results" section in the campaign's detail once it is
   queued or later, showing only outcomes that occurred, refreshed every 30
   seconds while queued or processing, with the note that acceptance is not

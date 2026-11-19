@@ -136,6 +136,31 @@ function Results({
   );
 }
 
+// A started campaign's results in one line of the list (decision P7-RP,
+// list summary): recipients and each outcome that occurred. It shares the
+// detail's query, so opening the campaign needs no second request. Nothing
+// is shown while loading or on an error; the detail reports those.
+function ListResults({
+  workspaceId,
+  campaign,
+}: {
+  workspaceId: string;
+  campaign: Campaign;
+}) {
+  const t = useT();
+  const live = campaign.status === "queued" || campaign.status === "processing";
+  const data = useCampaignReport(workspaceId, campaign.id, live).data;
+  if (data === undefined) return null;
+  const parts = [
+    t("campaigns.results.count", { count: data.recipients }),
+    ...OUTCOMES.filter((name) => data.outcomes[name] > 0).map(
+      (name) =>
+        `${t(`campaigns.results.${name}` as MessageId)} ${String(data.outcomes[name])}`,
+    ),
+  ];
+  return <span className="muted campaign-item-results">{parts.join(" · ")}</span>;
+}
+
 function failure(error: unknown): MessageId {
   if (error instanceof ApiError) {
     if (error.code === "stale_version") return "campaigns.error.stale";
@@ -240,6 +265,9 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
                     {t(`campaigns.status.${item.status}` as MessageId)}
                   </Badge>
                   <span className="muted">{item.subject}</span>
+                  {STARTED.includes(item.status) ? (
+                    <ListResults workspaceId={workspaceId} campaign={item} />
+                  ) : null}
                 </button>
               </li>
             ))}

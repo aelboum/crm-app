@@ -1585,6 +1585,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .campaign-item { width: 100%; text-align: left; display: grid; justify-items: start; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; overflow-wrap: anywhere; }
 .campaign-item.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .campaign-item-name { font-weight: 600; }
+.campaign-item-results { font-size: 12px; }
 .campaign-detail { border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-wrap: anywhere; }
 .campaign-detail-title { margin: 0 0 8px; font-size: 1.05rem; }
 .campaign-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 10px; }

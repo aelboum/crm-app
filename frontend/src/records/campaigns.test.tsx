@@ -268,6 +268,26 @@ describe("campaigns", () => {
     expect(await accessibilityViolations()).toEqual([]);
   });
 
+  it("sums up a started campaign's results in the list", async () => {
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace({ manage: false, approve: false }, campaign({ status: "completed" })),
+    );
+    const list = await screen.findByRole("list", { name: "Campaigns" });
+    expect(
+      await within(list).findByText(
+        "12 recipients · Accepted by the provider 3 · Delivered 7 · Bounced 1 · Not sent: suppressed 1",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no list summary before a campaign is queued", async () => {
+    renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));
+    const list = await screen.findByRole("list", { name: "Campaigns" });
+    await within(list).findByText("Autumn news");
+    expect(within(list).queryByText(/recipient/)).toBeNull();
+  });
+
   it("shows no results before a campaign is queued", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));

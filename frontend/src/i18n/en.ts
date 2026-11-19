@@ -127,6 +127,7 @@ export const en = {
   "campaigns.archivedEmptyBody": "Finished or cancelled campaigns you archive appear here.",
   "campaigns.results.label": "Results",
   "campaigns.results.recipients": "Recipients",
+  "campaigns.results.count": "{count, plural, one {# recipient} other {# recipients}}",
   "campaigns.results.waiting": "Waiting to send",
   "campaigns.results.sent": "Accepted by the provider",
   "campaigns.results.delivered": "Delivered",
