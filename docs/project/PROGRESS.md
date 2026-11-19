@@ -1353,6 +1353,24 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed at `f90b4e8` (2026-11-19, owner: "Go ahead")
+
+From `c7ef73e`: campaign list search, filter and paging (P7-CL). No
+migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `f90b4e8` | passed (5 of 5 jobs, run 44468316590) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:f90b4e8`; `VERSION=f90b4e8` |
+| `$C up -d --wait` | every service healthy |
+| Migration head | `0047_campaign_archive` (unchanged) |
+| `/readyz` | 200 |
+| Signed in as the Alpha Owner (test account) | archived list, search "rehears": "1 campaign", "Rehearsal check" with its results line; status "Cancelled": "0 campaigns", "No campaigns match" |
+| App log, first 5 minutes | no error lines |
+
+Rollback: code to `crm-app:c7ef73e`.
+
 ## Campaign list search, filter and paging (decision P7-CL, 2026-11-19)
 
 The campaign list has a name search, a status menu, a match count and
@@ -1365,7 +1383,7 @@ The campaign list has a name search, a status menu, a match count and
 | `npx vitest run --maxWorkers=2` | 37 files, 383 passed |
 | `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
 
-Not deployed to staging.
+Deployed to staging at `f90b4e8` (above).
 
 ## Staging deployed at `c7ef73e` (2026-11-19, owner: "Go 1 then 2")
 
