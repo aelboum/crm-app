@@ -607,6 +607,113 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
                 f"/v1/workspaces/{b.id}/campaigns?search=zebra", headers=auth("other_owner")
             ).json()["total"],
         }
+        # Other orders (decision P7-SO): by name A to Z, then last updated.
+        by_name = page("search=zebra&order=name&limit=2").json()
+        by_name_rest = page(
+            f"search=zebra&order=name&limit=2&cursor={by_name['next_cursor']}"
+        ).json()
+        zebra_one = next(i for i in first["items"] + rest["items"] if i["name"] == "Zebra one")
+        client.patch(
+            f"{base}/campaigns/{zebra_one['id']}",
+            json={"name": "Zebra uno"},
+            headers=auth(version=zebra_one["version"]),
+        )
+        by_update = page("search=zebra&order=updated_at").json()
+        result["ordering"] = {
+            "name": [i["name"] for i in by_name["items"] + by_name_rest["items"]],
+            "name_last": by_name_rest["next_cursor"],
+            "updated": by_update["items"][0]["name"],
+            "refused": [
+                page(f"search=zebra&order=name&cursor={first['next_cursor']}").json()["detail"][
+                    "code"
+                ],
+                page("order=status").status_code,
+            ],
+        }
+
+        # Results as CSV (decision P7-RX): Owners and Admins only.
+        csv_one = f"{one}/results.csv"
+        got = client.get(csv_one, headers=auth())
+        lines = got.content.decode("utf-8").lstrip("﻿").split("\r\n")
+        header, first_row = lines[0], lines[1].split(",")
+        result["results_csv"] = {
+            "owner": [
+                got.status_code,
+                got.headers["content-type"],
+                re.fullmatch(
+                    r'attachment; filename="campaign-results-\d{4}-\d{2}-\d{2}\.csv"',
+                    got.headers["content-disposition"],
+                )
+                is not None,
+                got.headers["cache-control"],
+            ],
+            "header": header,
+            "row": [first_row[0], first_row[1] == ada, first_row[2], first_row[4] != ""],
+            "rows": len([line for line in lines[1:] if line]),
+            "refused": [
+                client.get(csv_one, headers=auth("member")).status_code,
+                client.get(csv_one, headers=auth("reader")).status_code,
+                client.get(
+                    f"/v1/workspaces/{b.id}/campaigns/{camp['id']}/results.csv",
+                    headers=auth("other_owner"),
+                ).status_code,
+                client.get(
+                    f"{base}/campaigns/{uuid.uuid4()}/results.csv", headers=auth()
+                ).status_code,
+            ],
+            "audit": _scalar(
+                a.id,
+                "SELECT string_agg(metadata->>'row_count', ',') FROM core.audit_log"
+                " WHERE tenant_id = :t AND action = 'crm_app.campaign.results_exported'",
+            ),
+        }
+
+        # Duplicating (decision P7-DU): a new draft with the same content.
+        copied = client.post(f"{one}/duplicate", json={}, headers=auth("member"))
+        copy = copied.json()
+        named = client.post(f"{one}/duplicate", json={"name": "Winter news"}, headers=auth())
+        long_one = client.post(
+            f"{base}/campaigns", json={**draft, "name": "y" * 120}, headers=auth()
+        ).json()
+        long_copy = client.post(
+            f"{base}/campaigns/{long_one['id']}/duplicate", json={}, headers=auth()
+        ).json()
+        source = client.get(one, headers=auth()).json()
+        result["duplicate"] = {
+            "copy": [
+                copied.status_code,
+                copied.headers.get("etag"),
+                copy["status"],
+                copy["name"],
+                copy["subject"] == source["subject"],
+                copy["body"] == source["body"],
+                copy["segment"] == source["segment"],
+                copy["estimate"],
+                copy["approved"],
+                copy["id"] != source["id"],
+            ],
+            "source_status": source["status"],
+            "named": [named.status_code, named.json()["name"]],
+            "long": [len(long_copy["name"]), long_copy["name"].endswith(" (copy)")],
+            "refused": [
+                client.post(f"{one}/duplicate", json={}, headers=auth("reader")).status_code,
+                client.post(
+                    f"/v1/workspaces/{b.id}/campaigns/{camp['id']}/duplicate",
+                    json={},
+                    headers=auth("other_owner"),
+                ).status_code,
+                client.post(f"{one}/duplicate", json={"name": "x" * 121}, headers=auth()).json()[
+                    "detail"
+                ]["code"],
+                client.post(f"{one}/duplicate", json={"status": "x"}, headers=auth()).status_code,
+            ],
+            "audit": _scalar(
+                a.id,
+                "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"
+                " AND action = 'crm_app.campaign.created' AND metadata->>'duplicated_from' = :c",
+                c=camp["id"],
+            ),
+        }
         result["audit_text"] = _scalar(
             a.id,
             "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"

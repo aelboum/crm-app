@@ -949,6 +949,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Campaign */
+        post: operations["duplicate_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/queue": {
         parameters: {
             query?: never;
@@ -992,6 +1009,27 @@ export interface paths {
         };
         /** Get Campaign Report */
         get: operations["get_campaign_report_v1_workspaces__tenant_id__campaigns__campaign_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/results.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Campaign Results
+         * @description Each recipient's address, contact, outcome and times as CSV (UTF-8
+         *     with a byte-order mark, CRLF records). Nothing is stored.
+         */
+        get: operations["export_campaign_results_v1_workspaces__tenant_id__campaigns__campaign_id__results_csv_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4794,6 +4832,11 @@ export interface components {
             verified_at: string | null;
             /** Version */
             version: number;
+        };
+        /** DuplicateIn */
+        DuplicateIn: {
+            /** Name */
+            name?: string | null;
         };
         /**
          * EmailStatus
@@ -8861,6 +8904,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 cursor?: string | null;
+                order?: "created_at" | "updated_at" | "name";
                 archived?: boolean;
                 status?: ("draft" | "validated" | "awaiting_approval" | "approved" | "queued" | "processing" | "completed" | "partially_completed" | "failed" | "rejected" | "cancelled") | null;
                 search?: string | null;
@@ -9110,6 +9154,44 @@ export interface operations {
             };
         };
     };
+    duplicate_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     queue_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__queue_post: {
         parameters: {
             query?: never;
@@ -9215,6 +9297,47 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    export_campaign_results_v1_workspaces__tenant_id__campaigns__campaign_id__results_csv_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Export limit reached; see Retry-After. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

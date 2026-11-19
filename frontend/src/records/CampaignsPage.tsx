@@ -1,19 +1,23 @@
-import { Plus, Search, Tag, User, X } from "lucide-react";
+import { Download, Plus, Search, Tag, User, X } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 
 import {
   type Campaign,
+  type CampaignOrder,
   type CampaignStatus,
+  exportCampaignResults,
   type Outcome,
   type Step,
   useCampaignReport,
   useCampaigns,
   useCampaignStep,
   useCreateCampaign,
+  useDuplicateCampaign,
   useRejectCampaign,
   useUpdateCampaign,
 } from "../api/campaigns";
 import { ApiError } from "../api/client";
+import { ExportError, fileDownload } from "../api/exportContacts";
 import { useAccess, useMe, useMembers } from "../api/queries";
 import { useCompany } from "../api/records";
 import { useTags } from "../api/tags";
@@ -91,6 +95,9 @@ const FINISHED: CampaignStatus[] = [
   "cancelled",
 ];
 
+// The list's orders (decision P7-SO).
+const ORDERS: CampaignOrder[] = ["created_at", "updated_at", "name"];
+
 const OUTCOMES: Outcome[] = [
   "waiting",
   "sent",
@@ -106,14 +113,36 @@ const OUTCOMES: Outcome[] = [
 function Results({
   workspaceId,
   campaign,
+  canExport,
 }: {
   workspaceId: string;
   campaign: Campaign;
+  canExport: boolean;
 }) {
   const t = useT();
   const live = campaign.status === "queued" || campaign.status === "processing";
   const report = useCampaignReport(workspaceId, campaign.id, live);
   const data = report.data;
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<MessageId | null>(null);
+  const download = () => {
+    setBusy(true);
+    setFailed(null);
+    exportCampaignResults(workspaceId, campaign.id)
+      .then(({ blob, fileName }) => {
+        fileDownload.save(blob, fileName);
+      })
+      .catch((error: unknown) => {
+        setFailed(
+          error instanceof ExportError && error.status === 429
+            ? "campaigns.results.csvLimit"
+            : "campaigns.results.csvFailed",
+        );
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  };
   return (
     <section
       className="campaign-results"
@@ -146,6 +175,22 @@ function Results({
             ))}
           </dl>
           <p className="muted">{t("campaigns.results.note")}</p>
+          {canExport && data.recipients > 0 ? (
+            <div className="campaign-results-csv">
+              <Button size="sm" isDisabled={busy} onPress={download}>
+                <Download size={13} aria-hidden="true" />
+                {t("campaigns.results.csv")}
+              </Button>
+              <span className="sr-only" role="status">
+                {busy ? t("campaigns.results.csvRunning") : ""}
+              </span>
+            </div>
+          ) : null}
+          {failed ? (
+            <p className="notice error" role="alert">
+              {t(failed)}
+            </p>
+          ) : null}
         </>
       )}
     </section>
@@ -196,11 +241,18 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
   const actions = access.data?.actions;
   const canManage = actions?.manage_campaigns === true;
   const canApprove = actions?.approve_campaigns === true;
+  const canExport = actions?.export_records === true;
+  const [order, setOrder] = useState<CampaignOrder>("created_at");
   const [archived, setArchived] = useState(false);
   const [status, setStatus] = useState<CampaignStatus | null>(null);
   const [search, setSearch] = useState("");
   const query = useDebounced(search);
-  const list = useCampaigns(workspaceId, { archived, status, search: query });
+  const list = useCampaigns(workspaceId, {
+    order,
+    archived,
+    status,
+    search: query,
+  });
   const [editing, setEditing] = useState<Campaign | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const firstPage = list.data?.pages[0];
@@ -289,6 +341,22 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
             ))}
           </select>
         </label>
+        <label className="field campaign-status-filter">
+          <span className="sr-only">{t("campaigns.sort")}</span>
+          <select
+            className="form-input"
+            value={order}
+            onChange={(event) => {
+              setOrder(event.target.value as CampaignOrder);
+            }}
+          >
+            {ORDERS.map((value) => (
+              <option key={value} value={value}>
+                {t(`campaigns.order.${value}` as MessageId)}
+              </option>
+            ))}
+          </select>
+        </label>
         {firstPage && filtered ? (
           <span className="muted" role="status">
             {t("campaigns.matches", { count: firstPage.total })}
@@ -361,6 +429,7 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
               campaign={current}
               canManage={canManage}
               canApprove={canApprove}
+              canExport={canExport}
               canQueue={
                 (firstPage?.sending_available ?? false) ||
                 (firstPage?.rehearsal ?? false)
@@ -368,6 +437,13 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
               rehearsal={firstPage?.rehearsal ?? false}
               onEdit={() => {
                 setEditing(current);
+              }}
+              onDuplicated={(copy) => {
+                // The copy is a new draft: show the current list, unfiltered.
+                setArchived(false);
+                setStatus(null);
+                setSearch("");
+                setSelected(copy.id);
               }}
             />
           ) : (
@@ -395,24 +471,29 @@ function Detail({
   campaign,
   canManage,
   canApprove,
+  canExport,
   canQueue,
   rehearsal,
   onEdit,
+  onDuplicated,
 }: {
   workspaceId: string;
   campaign: Campaign;
   canManage: boolean;
   canApprove: boolean;
+  canExport: boolean;
   canQueue: boolean;
   rehearsal: boolean;
   onEdit: () => void;
+  onDuplicated: (copy: Campaign) => void;
 }) {
   const t = useT();
   const step = useCampaignStep(workspaceId);
   const reject = useRejectCampaign(workspaceId);
+  const duplicate = useDuplicateCampaign(workspaceId);
   const [note, setNote] = useState("");
   const [rejecting, setRejecting] = useState(false);
-  const problem = step.error ?? reject.error;
+  const problem = step.error ?? reject.error ?? duplicate.error;
   const run = (name: Step) => {
     step.mutate({ id: campaign.id, version: campaign.version, step: name });
   };
@@ -481,7 +562,11 @@ function Detail({
         <p className="muted">{t("campaigns.footerNote")}</p>
       </div>
       {STARTED.includes(status) ? (
-        <Results workspaceId={workspaceId} campaign={campaign} />
+        <Results
+          workspaceId={workspaceId}
+          campaign={campaign}
+          canExport={canExport}
+        />
       ) : null}
       {problem ? (
         <p className="notice error" role="alert">
@@ -572,6 +657,20 @@ function Detail({
             }}
           >
             {t(campaign.archived_at ? "campaigns.unarchive" : "campaigns.archive")}
+          </Button>
+        ) : null}
+        {canManage ? (
+          <Button
+            size="sm"
+            isDisabled={duplicate.isPending}
+            onPress={() => {
+              duplicate.mutate(
+                { id: campaign.id },
+                { onSuccess: onDuplicated },
+              );
+            }}
+          >
+            {t("campaigns.duplicate")}
           </Button>
         ) : null}
       </div>

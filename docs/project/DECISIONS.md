@@ -1073,6 +1073,51 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P7-RX — Campaign results as CSV (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "Go 1, 2,3 and 4" (2026-11-19;
+  item 1).
+- **Decision:** `GET …/campaigns/{id}/results.csv` lists each recipient in
+  the order they were added: `email`, `contact_id`, `outcome` (the
+  report's buckets, `rehearsed` included), `added_at`, `unsubscribed_at`.
+  The file holds addresses, so it needs `crm_app.crm_data:export` (Owners
+  and Admins), like the contact export, with the same limit of 10 per user
+  per hour on its own budget. Cells are protected against spreadsheet
+  formulas and the file is UTF-8 with a byte-order mark, as in slice 3E1.
+  Each export is audited (`crm_app.campaign.results_exported`) with the
+  row count only. The Results card shows "Download CSV" to those who may
+  export, once there are recipients.
+- **Tests:** `tests/integration/test_campaigns.py`
+  (`test_results_are_exported_as_csv_for_owners_and_admins`);
+  `frontend/src/records/campaigns.test.tsx` (download; limit message; no
+  button for Members).
+
+## P7-DU — Duplicate a campaign (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "Go 1, 2,3 and 4" (item 3).
+- **Decision:** `POST …/campaigns/{id}/duplicate`
+  (`crm_app.campaign:manage`) creates a new draft with the original's
+  subject, body and audience, from any state, archived included. Nothing
+  else is copied: no estimate, approval, recipients or results, so the copy
+  goes through validation and approval again. The name defaults to the
+  original's followed by " (copy)", shortened to fit 120 characters; a
+  `name` may be given. The audit entry is `crm_app.campaign.created` with
+  `duplicated_from`. The detail has a Duplicate button and opens the copy.
+- **Tests:** `test_a_campaign_is_duplicated_into_a_new_draft`;
+  `campaigns.test.tsx` (duplicate; none for Read-only members).
+
+## P7-SO — Campaign list orders (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "Go 1, 2,3 and 4" (item 4).
+- **Decision:** the list takes `order`: `created_at` (newest first, the
+  default), `updated_at` (last updated first) or `name` (A to Z, with the
+  collation the contact and company lists use). A cursor is tied to its
+  order. Paging by the last update can skip or repeat a campaign edited
+  while paging (P7-CL's reason for its default); that is accepted for this
+  optional order, as in the contact list.
+- **Tests:** `test_the_list_is_ordered_by_name_or_last_update`;
+  `campaigns.test.tsx` (sort menu).
+
 ## P7-CL — Campaign list search, filter and paging (2026-11-19, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's "Go 1 then 2" (2026-11-19; item 2,

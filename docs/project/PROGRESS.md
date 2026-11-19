@@ -1353,6 +1353,21 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Campaign results CSV, duplicate and list orders (decisions P7-RX, P7-DU, P7-SO, 2026-11-19)
+
+The Results card downloads each recipient's outcome as CSV (Owners and
+Admins); any campaign can be duplicated into a new draft; the list sorts
+by newest, last updated or name. No migration.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_campaigns.py` | 17 passed |
+| `uv run pytest tests/unit` (no environment) | 812 passed |
+| `npx vitest run --maxWorkers=2` | 37 files, 389 passed |
+| `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
+
+Not deployed to staging.
+
 ## Staging deployed at `f90b4e8` (2026-11-19, owner: "Go ahead")
 
 From `c7ef73e`: campaign list search, filter and paging (P7-CL). No

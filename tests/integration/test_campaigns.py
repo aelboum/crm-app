@@ -139,6 +139,55 @@ def test_the_list_is_searched_filtered_and_paged_newest_first(probe: Probe) -> N
     assert paging["other"] == 0
 
 
+def test_the_list_is_ordered_by_name_or_last_update(probe: Probe) -> None:
+    """Decision P7-SO: `order=name` sorts A to Z ignoring case and pages on;
+    `order=updated_at` puts the last edited first; a cursor from another
+    order and an unknown order are refused."""
+    ordering = probe["ordering"]
+    assert ordering["name"] == ["Zebra one", "ZEBRA three", "Zebra two"]
+    assert ordering["name_last"] is None
+    assert ordering["updated"] == "Zebra uno"
+    assert ordering["refused"] == ["invalid_cursor", 422]
+
+
+def test_results_are_exported_as_csv_for_owners_and_admins(probe: Probe) -> None:
+    """Decision P7-RX: each recipient's address and outcome, as the contact
+    export does it; Members and Read-only members are refused, another
+    workspace sees a 404, and the audit holds the row count only."""
+    csv = probe["results_csv"]
+    assert csv["owner"] == [200, "text/csv; charset=utf-8", True, "no-store"]
+    assert csv["header"] == "email,contact_id,outcome,added_at,unsubscribed_at"
+    # Ada's email was accepted by the provider, then she unsubscribed.
+    assert csv["row"] == ["ada@example.test", True, "sent", True]
+    assert csv["rows"] == 1
+    assert csv["refused"] == [403, 403, 404, 404]
+    assert csv["audit"] == "1"
+
+
+def test_a_campaign_is_duplicated_into_a_new_draft(probe: Probe) -> None:
+    """Decision P7-DU: the copy has the subject, body and audience, none of
+    the estimate or approval; any state may be copied; refused for
+    Read-only members and other workspaces."""
+    dup = probe["duplicate"]
+    assert dup["copy"] == [
+        201,
+        '"1"',
+        "draft",
+        "Autumn news (copy)",
+        True,
+        True,
+        True,
+        None,
+        False,
+        True,
+    ]
+    assert dup["source_status"] == "completed"
+    assert dup["named"] == [201, "Winter news"]
+    assert dup["long"] == [120, True]
+    assert dup["refused"] == [403, 404, "invalid_campaign", 422]
+    assert dup["audit"] == 2
+
+
 def test_other_workspaces_see_nothing_and_audit_holds_no_text(probe: Probe) -> None:
     assert probe["isolation"] == [0, 404, 404]
     assert probe["audit_text"] == 0

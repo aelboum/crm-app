@@ -85,6 +85,7 @@ from crm_app.models import (
     EmailMessage,
 )
 from crm_app.records import (
+    ORDER_COLLATION,
     TOTAL_CAP,
     RecordError,
     RecordNotFoundError,
@@ -246,6 +247,7 @@ class ListQuery:
 
     limit: int = 50
     cursor: str | None = None
+    order: str = "created_at"  # a key of `rules.ORDERS`
     archived: bool = False
     status: str | None = None
     search: str | None = None
@@ -263,24 +265,32 @@ def _escaped(term: str) -> str:
     return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def _keys(order: str) -> list[_OrderKey]:
+    identity = _OrderKey(Campaign.id, Campaign.id, "id")
+    if order == "name":
+        return [_OrderKey(Campaign.name.collate(ORDER_COLLATION), Campaign.name, "name"), identity]
+    column = getattr(Campaign, order)
+    return [_OrderKey(column, column, order), identity]
+
+
 def list_campaigns(scope: Scope, query: ListQuery | None = None) -> Page:
-    """The workspace's campaigns, newest first: by default those not
-    archived, with `archived` only the archived ones; `status` keeps one
-    state and `search` matches part of the name, ignoring case. Raises
-    `paging.InvalidCursor` for another filter's cursor."""
+    """The workspace's campaigns in `order` (newest first by default, the
+    last updated first, or by name A to Z): by default those not archived,
+    with `archived` only the archived ones; `status` keeps one state and
+    `search` matches part of the name, ignoring case. Raises
+    `paging.InvalidCursor` for another order's or filter's cursor."""
     query = query or ListQuery()
+    direction = rules.ORDERS[query.order]
+    ascending = direction == "asc"
     filters = paging.filter_hash(
         {"archived": query.archived, "status": query.status, "search": query.search}
     )
     after = (
-        paging.decode(query.cursor, "campaign", "created_at", "desc", filters)
+        paging.decode(query.cursor, "campaign", query.order, direction, filters)
         if query.cursor
         else None
     )
-    keys = [
-        _OrderKey(Campaign.created_at, Campaign.created_at, "created_at"),
-        _OrderKey(Campaign.id, Campaign.id, "id"),
-    ]
+    keys = _keys(query.order)
     conditions: list[Any] = [
         Campaign.tenant_id == scope.workspace,
         Campaign.archived_at.is_not(None) if query.archived else Campaign.archived_at.is_(None),
@@ -293,20 +303,15 @@ def list_campaigns(scope: Scope, query: ListQuery | None = None) -> Page:
         counted = session.execute(select(Campaign.id).where(*conditions).limit(TOTAL_CAP + 1)).all()
         statement = select(Campaign).where(*conditions)
         if after is not None:
-            statement = statement.where(_after(keys, after, ascending=False))
-        rows = list(
-            session.execute(
-                statement.order_by(Campaign.created_at.desc(), Campaign.id.desc()).limit(
-                    query.limit + 1
-                )
-            ).scalars()
-        )
+            statement = statement.where(_after(keys, after, ascending=ascending))
+        ordering = [key.expression.asc() if ascending else key.expression.desc() for key in keys]
+        rows = list(session.execute(statement.order_by(*ordering).limit(query.limit + 1)).scalars())
         items = [_item(row) for row in rows[: query.limit]]
     next_cursor = None
     if len(rows) > query.limit and items:
         last = items[-1]
         next_cursor = paging.encode(
-            "campaign", "created_at", "desc", filters, (last["created_at"], last["id"])
+            "campaign", query.order, direction, filters, (last[query.order], last["id"])
         )
     return Page(
         items=items,
@@ -404,6 +409,47 @@ def create(scope: Scope, *, name: str, subject: str, body: str, segment: dict[st
         session.add(row)
         session.flush()
         _audit(session, scope, "created", row, content_hash=row.content_hash)
+        return _item(row)
+
+    return _transaction(scope, business)
+
+
+def duplicate(scope: Scope, campaign_id: uuid.UUID, *, name: str | None = None) -> Item:
+    """A new draft with a campaign's subject, body and audience (decision
+    P7-DU), in any state of the original; nothing else is copied: no
+    estimate, approval, recipients or results. `name` defaults to the
+    original's name followed by " (copy)", shortened to fit."""
+
+    def business(session: Session) -> Item:
+        source = _load(session, scope, campaign_id, lock=False)
+        title = name if name is not None else rules.copy_name(source.name)
+        clean = _content(title, source.subject, source.body)
+        audience = _segment(source.segment)
+        now = _now()
+        row = Campaign(
+            id=uuid.uuid4(),
+            tenant_id=scope.workspace,
+            name=clean[0],
+            subject=clean[1],
+            body=clean[2],
+            segment=audience.as_dict(),
+            status="draft",
+            content_hash=rules.content_hash(*clean, audience),
+            created_by_user_id=scope.actor,
+            created_at=now,
+            updated_at=now,
+            version=1,
+        )
+        session.add(row)
+        session.flush()
+        _audit(
+            session,
+            scope,
+            "created",
+            row,
+            content_hash=row.content_hash,
+            duplicated_from=str(source.id),
+        )
         return _item(row)
 
     return _transaction(scope, business)
@@ -895,6 +941,57 @@ def report(scope: Scope, campaign_id: uuid.UUID) -> Item:
         "outcomes": {name: outcomes[name] for name in OUTCOMES},
         "unsubscribed": unsubscribed,
     }
+
+
+RESULT_COLUMNS = ("email", "contact_id", "outcome", "added_at", "unsubscribed_at")
+
+
+def results(scope: Scope, campaign_id: uuid.UUID) -> list[Item]:
+    """Each recipient of a campaign with the outcome its report counts them
+    under (decision P7-RX), in the order they were added. At most
+    `AUDIENCE_MAX` rows exist per campaign. The export is audited with the
+    row count, never addresses."""
+    with tenant_session_scope(scope.workspace) as session:
+        row = _load(session, scope, campaign_id, lock=False)
+        found = session.execute(
+            select(
+                CampaignRecipient.email,
+                CampaignRecipient.contact_id,
+                CampaignRecipient.created_at,
+                CampaignRecipient.unsubscribed_at,
+                EmailMessage.status,
+                EmailMessage.last_error,
+            )
+            .outerjoin(
+                EmailMessage,
+                (EmailMessage.tenant_id == CampaignRecipient.tenant_id)
+                & (EmailMessage.id == CampaignRecipient.email_message_id),
+            )
+            .where(
+                CampaignRecipient.tenant_id == scope.workspace,
+                CampaignRecipient.campaign_id == row.id,
+            )
+            .order_by(CampaignRecipient.created_at, CampaignRecipient.id)
+        ).all()
+        _audit(session, scope, "results_exported", row, row_count=len(found))
+    items: list[Item] = []
+    for email, contact_id, added_at, unsubscribed_at, email_status, last_error in found:
+        if email_status is None:
+            outcome = "unknown"
+        elif email_status == "failed" and last_error == "rehearsal":
+            outcome = "rehearsed"
+        else:
+            outcome = _OUTCOME.get(email_status, "unknown")
+        items.append(
+            {
+                "email": email,
+                "contact_id": contact_id,
+                "outcome": outcome,
+                "added_at": added_at,
+                "unsubscribed_at": unsubscribed_at,
+            }
+        )
+    return items
 
 
 # --- Unsubscribe -----------------------------------------------------------------------------

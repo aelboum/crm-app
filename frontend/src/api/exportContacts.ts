@@ -28,7 +28,7 @@ export class ExportError extends Error {
 const SAFE_NAME = /filename="([A-Za-z0-9._-]{1,100})"/;
 
 /** The server's file name when it is a plain, safe one; otherwise a fixed name. */
-export function fileNameFrom(disposition: string | null, kind: ExportKind = "contacts"): string {
+export function fileNameFrom(disposition: string | null, kind: string = "contacts"): string {
   const match = disposition ? SAFE_NAME.exec(disposition) : null;
   const name = match?.[1];
   return name && name.endsWith(".csv") && !name.startsWith(".") ? name : `${kind}.csv`;

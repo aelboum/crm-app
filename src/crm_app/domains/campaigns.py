@@ -92,6 +92,20 @@ def search(value: str | None) -> str | None:
     return trimmed or None
 
 
+COPY_SUFFIX = " (copy)"
+
+# The list's orders (decision P7-CL, P7-SO): each with its direction; the
+# row ID breaks ties.
+ORDERS: Mapping[str, str] = {"created_at": "desc", "updated_at": "desc", "name": "asc"}
+
+
+def copy_name(original: str) -> str:
+    """A duplicate's default name (decision P7-DU): the original's, shortened
+    to leave room, followed by " (copy)"."""
+    room = NAME_MAX - len(COPY_SUFFIX)
+    return original[:room].rstrip() + COPY_SUFFIX
+
+
 def after(step: str, status: str) -> str:
     """The state after `step`, or `StepRefused`."""
     sources, target = TRANSITIONS[step]

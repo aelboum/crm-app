@@ -4,6 +4,8 @@
     POST   /v1/workspaces/{tenant_id}/campaigns                    crm_app.campaign:manage
     GET    /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:read
     GET    /v1/workspaces/{tenant_id}/campaigns/{id}/report        crm_app.campaign:read
+    GET    /v1/workspaces/{tenant_id}/campaigns/{id}/results.csv   crm_app.crm_data:export
+    POST   /v1/workspaces/{tenant_id}/campaigns/{id}/duplicate     crm_app.campaign:manage
     PATCH  /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/validate      crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/submit        crm_app.campaign:manage
@@ -15,8 +17,16 @@
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/queue         crm_app.campaign:approve
     POST   /v1/public/unsubscribe/{workspace_id}/{token}           public, one-click
 
-The list is paged, newest first (decision P7-CL): `limit` (at most 100),
-`cursor`, `archived`, `status` and `search` (part of the name).
+The list is paged (decision P7-CL): `order` (`created_at`, newest first,
+the default; `updated_at`, last updated first; `name`, A to Z; decision
+P7-SO), `limit` (at most 100), `cursor`, `archived`, `status` and `search`
+(part of the name).
+
+`results.csv` lists each recipient's address and outcome (decision P7-RX):
+personal data, so only Owners and Admins (`crm_app.crm_data:export`, like
+the contact export), with the contact export's per-user limit on its own
+budget. `duplicate` copies a campaign's subject, body and audience into a
+new draft (decision P7-DU).
 
 Every change needs `If-Match`. Editing returns a campaign to draft and
 clears its approval. Queuing answers 409 `campaign_sending_unavailable`
@@ -32,7 +42,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
@@ -45,8 +55,9 @@ from saas_os.api.route_policy import public_route
 
 from crm_app import campaigns
 from crm_app.api.forms import _limited
-from crm_app.api.records import IfMatch, _http, _version
+from crm_app.api.records import IfMatch, _count_export, _http, _version
 from crm_app.domains import campaigns as rules
+from crm_app.domains import export as csv_export
 from crm_app.domains import paging
 from crm_app.domains.records import InvalidValue
 from crm_app.records import RecordError, Scope
@@ -58,6 +69,7 @@ RESOURCE = "crm_app.campaign"
 Read = Annotated[RequestContext, Depends(require_permission(RESOURCE, "read"))]
 Manage = Annotated[RequestContext, Depends(require_permission(RESOURCE, "manage"))]
 Approve = Annotated[RequestContext, Depends(require_permission(RESOURCE, "approve"))]
+Export = Annotated[RequestContext, Depends(require_permission("crm_app.crm_data", "export"))]
 
 _TOKEN = re.compile(r"[0-9a-f]{32}")
 
@@ -88,6 +100,13 @@ class CampaignPatch(BaseModel):
     subject: str | None = Field(default=None, max_length=4 * rules.SUBJECT_MAX)
     body: str | None = Field(default=None, max_length=2 * rules.BODY_MAX)
     segment: SegmentIn | None = None
+
+
+class DuplicateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # The new draft's name; the original's followed by " (copy)" when absent.
+    name: str | None = Field(default=None, max_length=4 * rules.NAME_MAX)
 
 
 class RejectIn(BaseModel):
@@ -165,6 +184,7 @@ class ListParams(BaseModel):
 
     limit: int = Field(default=50, ge=1, le=campaigns.LIST_LIMIT)
     cursor: str | None = Field(default=None, max_length=paging.CURSOR_MAX)
+    order: Literal["created_at", "updated_at", "name"] = "created_at"
     archived: bool = False
     status: Status | None = None
     search: str | None = Field(default=None, max_length=4 * rules.NAME_MAX)
@@ -230,6 +250,7 @@ def list_campaigns(context: Read, params: Annotated[ListParams, Query()]) -> Any
     query = campaigns.ListQuery(
         limit=params.limit,
         cursor=params.cursor,
+        order=params.order,
         archived=params.archived,
         status=params.status,
         search=term,
@@ -277,6 +298,48 @@ def get_campaign_report(campaign_id: uuid.UUID, context: Read) -> Any:
         return campaigns.report(_scope(context), campaign_id)
     except RecordError as exc:
         raise _refusal(exc) from None
+
+
+@router.get(
+    f"{_ONE}/results.csv",
+    response_class=Response,
+    responses={
+        200: {"content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}}},
+        429: {"description": "Export limit reached; see Retry-After."},
+    },
+    name="export_campaign_results",
+)
+async def export_campaign_results(campaign_id: uuid.UUID, context: Export) -> Response:
+    """Each recipient's address, contact, outcome and times as CSV (UTF-8
+    with a byte-order mark, CRLF records). Nothing is stored."""
+    await _count_export(context, "crm-campaign-results-export")
+    try:
+        rows = await run_in_threadpool(campaigns.results, _scope(context), campaign_id)
+    except RecordError as exc:
+        raise _refusal(exc) from None
+    content = await run_in_threadpool(csv_export.to_csv, campaigns.RESULT_COLUMNS, rows)
+    file_name = csv_export.filename("campaign-results", datetime.now(UTC).date())
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{file_name}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.post(
+    f"{_ONE}/duplicate", status_code=201, response_model=CampaignOut, name="duplicate_campaign"
+)
+def duplicate_campaign(
+    campaign_id: uuid.UUID, body: DuplicateIn, context: Manage, response: Response
+) -> Any:
+    try:
+        item = campaigns.duplicate(_scope(context), campaign_id, name=body.name)
+    except RecordError as exc:
+        raise _refusal(exc) from None
+    return _etag(response, item)
 
 
 @router.patch(_ONE, response_model=CampaignOut, name="update_campaign")

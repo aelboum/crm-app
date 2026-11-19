@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { fileDownload } from "../api/exportContacts";
 import {
   accessibilityViolations,
   type Handler,
@@ -81,6 +82,7 @@ function workspace(
             read_campaigns: true,
             manage_campaigns: roles.manage,
             approve_campaigns: roles.approve,
+            export_records: roles.approve,
           },
         },
       };
@@ -343,6 +345,117 @@ describe("campaigns", () => {
     expect(within(list).getByText("Autumn news")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(sent.some((r) => r.path.includes("cursor=c2"))).toBe(true);
+  });
+
+  it("sorts by name or last update, newest first by default (P7-SO)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace({ manage: false, approve: false }),
+    );
+    await screen.findByRole("list", { name: "Campaigns" });
+    const lists = () => sent.filter((r) => r.path.includes("/campaigns?"));
+    expect(lists().at(-1)?.path).not.toContain("order=");
+    const sort = screen.getByRole("combobox", { name: "Sort" });
+    expect(sort).toHaveValue("created_at");
+    await user.selectOptions(sort, "Name A to Z");
+    await waitFor(() => {
+      expect(lists().at(-1)?.path).toContain("order=name");
+    });
+    await user.selectOptions(sort, "Last updated");
+    await waitFor(() => {
+      expect(lists().at(-1)?.path).toContain("order=updated_at");
+    });
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("duplicates a campaign into a new draft (P7-DU)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: false },
+        campaign({ status: "completed" }),
+        (method, path) =>
+          method === "POST" && path.endsWith("/duplicate")
+            ? {
+                status: 201,
+                body: campaign({
+                  id: "ca000000-0000-4000-8000-000000000009",
+                  name: "Autumn news (copy)",
+                  status: "draft",
+                  estimate: null,
+                  version: 1,
+                }),
+              }
+            : undefined,
+      ),
+    );
+    const pane = await openCampaign(user);
+    await user.click(within(pane).getByRole("button", { name: "Duplicate" }));
+    await waitFor(() => {
+      const call = sent.find((r) => r.path.endsWith(`/campaigns/${ID}/duplicate`));
+      expect(call?.method).toBe("POST");
+      expect(call?.body).toEqual({});
+    });
+  });
+
+  it("offers Read-only members no duplicate", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/campaigns`, workspace({ manage: false, approve: false }));
+    const pane = await openCampaign(user);
+    expect(within(pane).queryByRole("button", { name: "Duplicate" })).toBeNull();
+  });
+
+  it("downloads a campaign's results as CSV for those who may export (P7-RX)", async () => {
+    const user = userEvent.setup();
+    const save = vi
+      .spyOn(fileDownload, "save")
+      .mockImplementation(() => undefined);
+    const base = workspace({ manage: true, approve: true }, campaign({ status: "completed" }));
+    const { sent } = renderApp(`/w/${WS}/campaigns`, (method, path, body) =>
+      path.endsWith(`/campaigns/${ID}/results.csv`)
+        ? { status: 200, body: "email,contact_id,outcome,added_at,unsubscribed_at" }
+        : base(method, path, body),
+    );
+    const pane = await openCampaign(user);
+    const results = await within(pane).findByRole("region", { name: "Results" });
+    await user.click(await within(results).findByRole("button", { name: "Download CSV" }));
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+    expect(save.mock.calls[0]?.[1]).toBe("campaign-results.csv");
+    expect(sent.some((r) => r.path.endsWith("/results.csv"))).toBe(true);
+    expect(await accessibilityViolations()).toEqual([]);
+    save.mockRestore();
+  });
+
+  it("says when the results download is refused for too many tries", async () => {
+    const user = userEvent.setup();
+    const base = workspace({ manage: true, approve: true }, campaign({ status: "completed" }));
+    renderApp(`/w/${WS}/campaigns`, (method, path, body) =>
+      path.endsWith("/results.csv")
+        ? { status: 429, body: { detail: { code: "rate_limited" } } }
+        : base(method, path, body),
+    );
+    const pane = await openCampaign(user);
+    const results = await within(pane).findByRole("region", { name: "Results" });
+    await user.click(await within(results).findByRole("button", { name: "Download CSV" }));
+    expect(await within(results).findByRole("alert")).toHaveTextContent(
+      "Too many downloads for now",
+    );
+  });
+
+  it("offers no results download to Members", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace({ manage: true, approve: false }, campaign({ status: "completed" })),
+    );
+    const pane = await openCampaign(user);
+    const results = await within(pane).findByRole("region", { name: "Results" });
+    await within(results).findByText("Recipients");
+    expect(within(results).queryByRole("button", { name: "Download CSV" })).toBeNull();
   });
 
   it("shows no results before a campaign is queued", async () => {

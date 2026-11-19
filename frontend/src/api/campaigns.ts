@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 
 import { api, ApiError, unwrap } from "./client";
+import { ExportError, fileNameFrom } from "./exportContacts";
 import { ifMatch, unwrapWrite, where } from "./records";
 import type { components } from "./schema";
 
@@ -17,7 +18,8 @@ import type { components } from "./schema";
  * approval. Queuing is refused while campaign sending is unavailable,
  * which the list reports as `sending_available`. Finished campaigns can be
  * archived and unarchived (decision P7-AR, `manage_campaigns`): archived
- * ones are listed only on request (`archived`).
+ * ones are listed only on request (`archived`). Any campaign can be
+ * duplicated into a new draft (decision P7-DU, `manage_campaigns`).
  */
 
 export type Campaign = components["schemas"]["CampaignOut"];
@@ -41,10 +43,14 @@ export const campaignKeys = {
 
 /*
  * The list's filters (decision P7-CL): archived or current, one status,
- * and part of the name. Pages of 50, newest first; `fetchNextPage` follows
- * the server's cursor.
+ * and part of the name. Pages of 50 in `order` (decision P7-SO: newest
+ * first, last updated first, or by name); `fetchNextPage` follows the
+ * server's cursor.
  */
+export type CampaignOrder = "created_at" | "updated_at" | "name";
+
 export type CampaignFilters = {
+  order: CampaignOrder;
   archived: boolean;
   status: CampaignStatus | null;
   search: string;
@@ -58,6 +64,7 @@ export function useCampaigns(workspaceId: string, filters: CampaignFilters) {
     queryKey: [
       ...campaignKeys.all(workspaceId),
       "list",
+      filters.order,
       filters.archived,
       filters.status,
       search,
@@ -71,6 +78,9 @@ export function useCampaigns(workspaceId: string, filters: CampaignFilters) {
             path: where(workspaceId),
             query: {
               limit: 50,
+              ...(filters.order !== "created_at"
+                ? { order: filters.order }
+                : {}),
               ...(filters.archived ? { archived: true } : {}),
               ...(filters.status ? { status: filters.status } : {}),
               ...(search ? { search } : {}),
@@ -213,6 +223,53 @@ export function useCampaignReport(
         ),
       ),
   });
+}
+
+/** A new draft with the campaign's subject, body and audience (P7-DU). */
+export function useDuplicateCampaign(workspaceId: string) {
+  const refresh = useRefresh(workspaceId);
+  return useMutation<Campaign, ApiError, { id: string }>({
+    mutationFn: async ({ id }) =>
+      unwrapWrite(
+        await api.POST(
+          "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/duplicate",
+          { params: { path: one(workspaceId, id) }, body: {} },
+        ),
+      ),
+    onSuccess: () => refresh(),
+  });
+}
+
+/*
+ * A campaign's recipients and outcomes as CSV (decision P7-RX): Owners and
+ * Admins (`export_records`), counted against a limit per user, so never
+ * retried automatically.
+ */
+export async function exportCampaignResults(
+  workspaceId: string,
+  id: string,
+): Promise<{ blob: Blob; fileName: string }> {
+  let result;
+  try {
+    result = await api.GET(
+      "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/results.csv",
+      { params: { path: one(workspaceId, id) }, parseAs: "blob" },
+    );
+  } catch {
+    throw new ExportError(0, null);
+  }
+  const { response } = result;
+  const data: unknown = result.data;
+  if (!response.ok || !(data instanceof Blob)) {
+    throw new ExportError(response.status, null);
+  }
+  return {
+    blob: data,
+    fileName: fileNameFrom(
+      response.headers.get("Content-Disposition"),
+      "campaign-results",
+    ),
+  };
 }
 
 export function useRejectCampaign(workspaceId: string) {

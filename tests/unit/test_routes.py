@@ -139,6 +139,10 @@ EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 EXPORTS = {
     "GET /v1/workspaces/{tenant_id}/contacts/export.csv": "crm_app.crm_data:export",
     "GET /v1/workspaces/{tenant_id}/companies/export.csv": "crm_app.crm_data:export",
+    # P7-RX: a campaign's recipients and their outcomes hold addresses.
+    "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/results.csv": (
+        "crm_app.crm_data:export"
+    ),
 }
 
 # Tags (decision P3-C 4): every role reads the vocabulary; changing it is
@@ -298,6 +302,7 @@ RECORDS |= {
     "POST /v1/workspaces/{tenant_id}/campaigns": "crm_app.campaign:manage",
     "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:read",
     "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report": "crm_app.campaign:read",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/duplicate": "crm_app.campaign:manage",
     "PATCH /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/validate": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/submit": "crm_app.campaign:manage",

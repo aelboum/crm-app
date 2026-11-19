@@ -5847,6 +5847,25 @@
         "title": "DomainOut",
         "type": "object"
       },
+      "DuplicateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 480,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "DuplicateIn",
+        "type": "object"
+      },
       "EmailStatus": {
         "description": "A contact's email status (P7-B 6, 10).",
         "properties": {
@@ -15695,6 +15714,21 @@
           },
           {
             "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "created_at",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "name"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "archived",
             "required": false,
             "schema": {
@@ -16278,6 +16312,85 @@
         ]
       }
     },
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/duplicate": {
+      "post": {
+        "operationId": "duplicate_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__duplicate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Duplicate Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
     "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/queue": {
       "post": {
         "operationId": "queue_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__queue_post",
@@ -16522,6 +16635,80 @@
           }
         },
         "summary": "Get Campaign Report",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/results.csv": {
+      "get": {
+        "description": "Each recipient's address, contact, outcome and times as CSV (UTF-8\nwith a byte-order mark, CRLF records). Nothing is stored.",
+        "operationId": "export_campaign_results_v1_workspaces__tenant_id__campaigns__campaign_id__results_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Export limit reached; see Retry-After."
+          }
+        },
+        "summary": "Export Campaign Results",
         "tags": [
           "campaigns"
         ]
