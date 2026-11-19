@@ -1369,6 +1369,24 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Calendar range and removing deleted tags (2026-11-19, owner: "go 1 then 2 and 3")
+
+Decisions P7-SC follow-up (the list's `scheduled_from` and `scheduled_to`;
+the calendar sends its range) and P7-ST follow-up
+(`POST /campaigns/{id}/remove-deleted-tags`, confirmed first). No
+migration.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest` integration: campaigns, campaign schedule | 24 passed |
+| `uv run pytest tests/unit` (no environment) | 812 passed |
+| `npx vitest run --maxWorkers=2` | 37 files, 401 passed |
+| `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
+
+`CalendarPage.tsx` and `CampaignsPage.tsx` already failed the Prettier
+check before this change, and their formatting is left as it was. Not
+deployed to staging.
+
 ## Staging deployed at `ac22cc3` (2026-11-19, owner: "go 1 then 2 and 3")
 
 From `2365891`: a name suggested when inviting (M-P2, migration

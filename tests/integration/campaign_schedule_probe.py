@@ -160,6 +160,29 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             _queue_row(autumn) is None,
         ]
         schedule(a_one, at, version=6)
+
+        # The calendar's range (P7-SC): scheduled at or after `scheduled_from`
+        # and before `scheduled_to`; another workspace sees none of them.
+        def in_range(start: datetime, end: datetime, caller: str = "owner") -> Any:
+            target = base if caller == "owner" else f"/v1/workspaces/{b.id}"
+            return client.get(
+                f"{target}/campaigns",
+                params={"scheduled_from": start.isoformat(), "scheduled_to": end.isoformat()},
+                headers=auth(caller),
+            )
+
+        result["range"] = [
+            [i["name"] for i in in_range(now, at + timedelta(minutes=1)).json()["items"]],
+            in_range(now, at).json()["items"],
+            in_range(at, at + timedelta(minutes=1)).json()["total"],
+            in_range(now, at + timedelta(minutes=1), "other_owner").json()["items"],
+            in_range(at, now).json()["detail"]["code"],
+            client.get(
+                f"{base}/campaigns",
+                params={"scheduled_from": now.replace(tzinfo=None).isoformat()},
+                headers=auth(),
+            ).status_code,
+        ]
         queued = client.post(f"{a_one}/queue", headers=auth(version=7)).json()
         result["queued_now"] = [
             queued["status"],

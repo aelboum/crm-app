@@ -608,19 +608,18 @@ function ScheduledCampaigns({
 }) {
   const t = useT();
   const intl = useIntl();
+  // The server keeps only those scheduled in the range shown.
   const list = useCampaigns(workspaceId, {
     order: "created_at",
     archived: false,
     status: "approved",
     search: "",
+    scheduledFrom: from.toISOString(),
+    scheduledTo: to.toISOString(),
   });
-  const items = (list.data?.pages.flatMap((page) => page.items) ?? [])
-    .filter((c) => {
-      if (!c.scheduled_at) return false;
-      const at = new Date(c.scheduled_at);
-      return at >= from && at < to;
-    })
-    .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""));
+  const items = (list.data?.pages.flatMap((page) => page.items) ?? []).sort(
+    (a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""),
+  );
   return (
     <>
       <h2 className="calendar-side-title">{t("calendar.campaigns")}</h2>
@@ -654,6 +653,17 @@ function ScheduledCampaigns({
       ) : list.isPending ? null : (
         <p className="muted calendar-side-empty">{t("calendar.noCampaigns")}</p>
       )}
+      {list.hasNextPage ? (
+        <Button
+          size="sm"
+          isDisabled={list.isFetchingNextPage}
+          onPress={() => {
+            void list.fetchNextPage();
+          }}
+        >
+          {t("calendar.moreCampaigns")}
+        </Button>
+      ) : null}
     </>
   );
 }

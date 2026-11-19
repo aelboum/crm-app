@@ -290,6 +290,10 @@ class ListQuery:
     archived: bool = False
     status: str | None = None
     search: str | None = None
+    # Only campaigns scheduled at or after `scheduled_from` and before
+    # `scheduled_to` (decision P7-SC, the calendar); either may be omitted.
+    scheduled_from: datetime | None = None
+    scheduled_to: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -315,14 +319,21 @@ def _keys(order: str) -> list[_OrderKey]:
 def list_campaigns(scope: Scope, query: ListQuery | None = None) -> Page:
     """The workspace's campaigns in `order` (newest first by default, the
     last updated first, or by name A to Z): by default those not archived,
-    with `archived` only the archived ones; `status` keeps one state and
-    `search` matches part of the name, ignoring case. Raises
+    with `archived` only the archived ones; `status` keeps one state,
+    `search` matches part of the name, ignoring case, and `scheduled_from`
+    and `scheduled_to` keep those scheduled within that range. Raises
     `paging.InvalidCursor` for another order's or filter's cursor."""
     query = query or ListQuery()
     direction = rules.ORDERS[query.order]
     ascending = direction == "asc"
     filters = paging.filter_hash(
-        {"archived": query.archived, "status": query.status, "search": query.search}
+        {
+            "archived": query.archived,
+            "status": query.status,
+            "search": query.search,
+            "scheduled_from": query.scheduled_from,
+            "scheduled_to": query.scheduled_to,
+        }
     )
     after = (
         paging.decode(query.cursor, "campaign", query.order, direction, filters)
@@ -338,6 +349,10 @@ def list_campaigns(scope: Scope, query: ListQuery | None = None) -> Page:
         conditions.append(Campaign.status == query.status)
     if query.search:
         conditions.append(Campaign.name.ilike(f"%{_escaped(query.search)}%", escape="\\"))
+    if query.scheduled_from is not None:
+        conditions.append(Campaign.scheduled_at >= query.scheduled_from)
+    if query.scheduled_to is not None:
+        conditions.append(Campaign.scheduled_at < query.scheduled_to)
     with tenant_session_scope(scope.workspace) as session:
         counted = session.execute(select(Campaign.id).where(*conditions).limit(TOTAL_CAP + 1)).all()
         statement = select(Campaign).where(*conditions)
@@ -553,6 +568,43 @@ def duplicate(scope: Scope, campaign_id: uuid.UUID, *, name: str | None = None) 
     return _transaction(scope, business)
 
 
+def _changed(
+    session: Session,
+    scope: Scope,
+    row: Campaign,
+    content: tuple[str, str, str],
+    audience: rules.Segment,
+    **audit: Any,
+) -> Item:
+    """Store an edit: back to `draft`, without its estimate, submission,
+    approval or schedule; audited as `updated`. Unchanged content is left
+    as it is."""
+    name, subject, body = content
+    new_hash = rules.content_hash(name, subject, body, audience)
+    if new_hash == row.content_hash:
+        return _item(row)
+    was = row.status
+    row.name, row.subject, row.body = name, subject, body
+    row.segment, row.content_hash = audience.as_dict(), new_hash
+    row.status, row.estimate, row.validated_at = "draft", None, None
+    row.submitted_by_user_id = row.submitted_at = None
+    row.approved_hash = row.approved_by_user_id = row.approved_at = None
+    row.decision_note = None
+    row.scheduled_at = row.scheduled_by_user_id = None
+    _touch(row)
+    _audit(
+        session,
+        scope,
+        "updated",
+        row,
+        previous_status=was,
+        approval_cleared=was in ("awaiting_approval", "approved"),
+        content_hash=new_hash,
+        **audit,
+    )
+    return _item(row)
+
+
 def update(
     scope: Scope, campaign_id: uuid.UUID, changes: dict[str, Any], *, expected_version: int
 ) -> Item:
@@ -564,34 +616,47 @@ def update(
         _checked(row, expected_version)
         if row.status not in rules.EDITABLE:
             raise CampaignStateError(f"edit: not from {row.status}")
-        name, subject, body = _content(
+        content = _content(
             changes.get("name", row.name),
             changes.get("subject", row.subject),
             changes.get("body", row.body),
         )
         audience = _segment(changes.get("segment", row.segment))
-        new_hash = rules.content_hash(name, subject, body, audience)
-        if new_hash == row.content_hash:
-            return _item(row)
-        was = row.status
-        row.name, row.subject, row.body = name, subject, body
-        row.segment, row.content_hash = audience.as_dict(), new_hash
-        row.status, row.estimate, row.validated_at = "draft", None, None
-        row.submitted_by_user_id = row.submitted_at = None
-        row.approved_hash = row.approved_by_user_id = row.approved_at = None
-        row.decision_note = None
-        row.scheduled_at = row.scheduled_by_user_id = None
-        _touch(row)
-        _audit(
+        return _changed(session, scope, row, content, audience)
+
+    return _transaction(scope, business)
+
+
+def remove_deleted_tags(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Item:
+    """Take the deleted tags out of a campaign's audience (decision P7-ST
+    follow-up): an edit like any other, so the campaign returns to `draft`
+    and needs its audience checked and approved again. Refused when no tag
+    was deleted, or when nothing else would be left to choose contacts by."""
+
+    def business(session: Session) -> Item:
+        row = _load(session, scope, campaign_id, lock=True)
+        _checked(row, expected_version)
+        if row.status not in rules.EDITABLE:
+            raise CampaignStateError(f"edit: not from {row.status}")
+        gone = set(_missing_tags(session, scope.workspace, [row]).get(row.id, []))
+        if not gone:
+            raise CampaignRuleError("segment: no tag in the audience was deleted")
+        segment = dict(row.segment or {})
+        segment["tag_ids"] = [t for t in segment.get("tag_ids", []) if str(t) not in gone]
+        try:
+            audience = _segment(segment)
+        except CampaignRuleError:
+            raise CampaignRuleError(
+                "segment: only deleted tags choose this audience; edit the audience"
+            ) from None
+        return _changed(
             session,
             scope,
-            "updated",
             row,
-            previous_status=was,
-            approval_cleared=was in ("awaiting_approval", "approved"),
-            content_hash=new_hash,
+            (row.name, row.subject, row.body),
+            audience,
+            removed_deleted_tags=len(gone),
         )
-        return _item(row)
 
     return _transaction(scope, business)
 

@@ -15909,6 +15909,40 @@
             }
           },
           {
+            "in": "query",
+            "name": "scheduled_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scheduled From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheduled_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scheduled To"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -16770,6 +16804,92 @@
           }
         },
         "summary": "Reject Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/remove-deleted-tags": {
+      "post": {
+        "description": "Take deleted tags out of the audience; the campaign returns to\ndraft (decision P7-ST follow-up).",
+        "operationId": "remove_deleted_campaign_tags_v1_workspaces__tenant_id__campaigns__campaign_id__remove_deleted_tags_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Deleted Campaign Tags",
         "tags": [
           "campaigns"
         ]

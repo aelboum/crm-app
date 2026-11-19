@@ -33,7 +33,8 @@ export type Step =
   | "queue"
   | "archive"
   | "unarchive"
-  | "unschedule";
+  | "unschedule"
+  | "remove_deleted_tags";
 export type CampaignReport = components["schemas"]["CampaignReport"];
 export type Outcome = keyof CampaignReport["outcomes"];
 
@@ -55,6 +56,9 @@ export type CampaignFilters = {
   archived: boolean;
   status: CampaignStatus | null;
   search: string;
+  /** Only those scheduled in [scheduledFrom, scheduledTo), ISO times. */
+  scheduledFrom?: string;
+  scheduledTo?: string;
 };
 
 export type CampaignPage = components["schemas"]["CampaignList"];
@@ -69,6 +73,8 @@ export function useCampaigns(workspaceId: string, filters: CampaignFilters) {
       filters.archived,
       filters.status,
       search,
+      filters.scheduledFrom ?? null,
+      filters.scheduledTo ?? null,
     ],
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: CampaignPage) => last.next_cursor ?? undefined,
@@ -85,6 +91,12 @@ export function useCampaigns(workspaceId: string, filters: CampaignFilters) {
               ...(filters.archived ? { archived: true } : {}),
               ...(filters.status ? { status: filters.status } : {}),
               ...(search ? { search } : {}),
+              ...(filters.scheduledFrom
+                ? { scheduled_from: filters.scheduledFrom }
+                : {}),
+              ...(filters.scheduledTo
+                ? { scheduled_to: filters.scheduledTo }
+                : {}),
               ...(pageParam ? { cursor: pageParam } : {}),
             },
           },
@@ -201,6 +213,13 @@ export function useCampaignStep(workspaceId: string) {
           return unwrapWrite(
             await api.POST(
               "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/unschedule",
+              params,
+            ),
+          );
+        case "remove_deleted_tags":
+          return unwrapWrite(
+            await api.POST(
+              "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/remove-deleted-tags",
               params,
             ),
           );

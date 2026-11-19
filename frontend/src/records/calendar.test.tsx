@@ -190,14 +190,18 @@ describe("calendar", () => {
       updated_at: at(8),
       version: 5,
     };
-    const later = { ...scheduled, id: "ca000000-0000-4000-8000-000000000002", name: "Spring news", scheduled_at: at(9, 0, 60) };
+    const next = { ...scheduled, id: "ca000000-0000-4000-8000-000000000002", name: "Autumn news", scheduled_at: at(16) };
+    const user = userEvent.setup();
     const { sent } = renderApp(`/w/${WS}/calendar`, (method, path, body) => {
       if (path.startsWith(`/v1/workspaces/${WS}/campaigns?`)) {
+        // The server keeps those scheduled in the range; the second page
+        // comes with the cursor.
+        const second = path.includes("cursor=c1");
         return {
           status: 200,
           body: {
-            items: [scheduled, later],
-            next_cursor: null,
+            items: second ? [next] : [scheduled],
+            next_cursor: second ? null : "c1",
             total: 2,
             total_capped: false,
             sending_available: false,
@@ -209,14 +213,18 @@ describe("calendar", () => {
     });
     const list = await screen.findByRole("list", { name: "Scheduled campaigns" });
     expect(within(list).getByText("Winter news")).toBeInTheDocument();
-    // Outside the week in view.
-    expect(within(list).queryByText("Spring news")).toBeNull();
     expect(within(list).getByRole("link", { name: /Winter news/ })).toHaveAttribute(
       "href",
       `/app/w/${WS}/campaigns`,
     );
-    expect(sent.some((r) => r.path.includes("/campaigns?") && r.path.includes("status=approved"))).toBe(true);
+    const asked = sent.find((r) => r.path.includes("/campaigns?"))?.path ?? "";
+    expect(asked).toContain("status=approved");
+    expect(asked).toContain("scheduled_from=");
+    expect(asked).toContain("scheduled_to=");
     expect(await accessibilityViolations()).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Show more campaigns" }));
+    expect(await within(list).findByText("Autumn news")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show more campaigns" })).toBeNull();
   });
 
   it("asks for no campaigns without permission to read them", async () => {

@@ -770,6 +770,52 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
                 "detail"
             ],
         }
+        # Removing the deleted tags (P7-ST follow-up): refused while they are
+        # the only filter; with another filter left, the campaign is a draft
+        # again with that filter only.
+        only_deleted = client.post(
+            f"{stale_one}/remove-deleted-tags", headers=auth(version=1)
+        ).json()["detail"]
+        mixed = client.post(
+            f"{base}/campaigns",
+            json={
+                **draft,
+                "name": "Stale and stage",
+                "segment": {"tag_ids": [gone["id"]], "stages": ["lead"]},
+            },
+            headers=auth(),
+        ).json()
+        mixed_one = f"{base}/campaigns/{mixed['id']}"
+        refused = [
+            client.post(f"{mixed_one}/remove-deleted-tags", headers=auth("reader", 1)).status_code,
+            client.post(
+                f"/v1/workspaces/{b.id}/campaigns/{mixed['id']}/remove-deleted-tags",
+                headers=auth("other_owner", 1),
+            ).status_code,
+            client.post(f"{mixed_one}/remove-deleted-tags", headers=auth(version=9)).status_code,
+        ]
+        cleaned = client.post(f"{mixed_one}/remove-deleted-tags", headers=auth(version=1))
+        again = client.post(f"{mixed_one}/remove-deleted-tags", headers=auth(version=2)).json()[
+            "detail"
+        ]
+        result["stale_removed"] = {
+            "only_deleted": only_deleted,
+            "refused": refused,
+            "cleaned": [
+                cleaned.status_code,
+                cleaned.json()["status"],
+                cleaned.json()["segment"]["tag_ids"],
+                cleaned.json()["segment"]["stages"],
+                cleaned.json()["missing_tag_ids"],
+            ],
+            "again": again,
+            "audit": _scalar(
+                a.id,
+                "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"
+                " AND action = 'crm_app.campaign.updated'"
+                " AND metadata->>'removed_deleted_tags' = '1'",
+            ),
+        }
         result["audit_text"] = _scalar(
             a.id,
             "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"

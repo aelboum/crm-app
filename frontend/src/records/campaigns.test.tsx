@@ -615,6 +615,69 @@ describe("campaigns", () => {
     ).toBeInTheDocument();
   });
 
+  it("removes deleted tags only after a confirmation (P7-ST follow-up)", async () => {
+    const user = userEvent.setup();
+    const stale = campaign({
+      status: "draft",
+      segment: {
+        stages: ["lead"],
+        tag_ids: [VIP],
+        owner_ids: [],
+        company_ids: [],
+        all_contacts: false,
+      },
+      missing_tag_ids: [VIP],
+    });
+    const { sent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace({ manage: true, approve: false }, stale, () => ({
+        status: 200,
+        body: { ...stale, missing_tag_ids: [], version: 5 },
+      })),
+    );
+    const pane = await openCampaign(user);
+    await user.click(
+      within(pane).getByRole("button", { name: "Remove the deleted tag" }),
+    );
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "Remove deleted tags?",
+    });
+    expect(dialog).toHaveTextContent(/may include more contacts/);
+    expect(sent.filter((r) => r.method === "POST")).toEqual([]);
+    await user.click(within(dialog).getByRole("button", { name: "Remove" }));
+    await waitFor(() => {
+      expect(sent.filter((r) => r.method === "POST").map((r) => r.path)).toEqual([
+        `/v1/workspaces/${WS}/campaigns/${ID}/remove-deleted-tags`,
+      ]);
+    });
+  });
+
+  it("offers no removal when only deleted tags choose the audience", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: false },
+        campaign({
+          status: "draft",
+          segment: {
+            stages: [],
+            tag_ids: [VIP],
+            owner_ids: [],
+            company_ids: [],
+            all_contacts: false,
+          },
+          missing_tag_ids: [VIP],
+        }),
+      ),
+    );
+    const pane = await openCampaign(user);
+    expect(within(pane).getByText(/A tag in this audience was deleted/)).toBeInTheDocument();
+    expect(
+      within(pane).queryByRole("button", { name: /Remove the deleted/ }),
+    ).toBeNull();
+  });
+
   it("shows no results before a campaign is queued", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));

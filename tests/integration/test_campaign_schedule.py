@@ -64,6 +64,13 @@ def test_a_scheduled_campaign_starts_only_when_due(probe: Probe) -> None:
     assert probe["audit"] == ["crm_app.campaign.queued:true", "crm_app.campaign.scheduled:-"]
 
 
+def test_the_list_keeps_campaigns_scheduled_within_a_range(probe: Probe) -> None:
+    """The calendar asks for the campaigns scheduled in the range it shows:
+    the start is included, the end is not; times need a time zone; another
+    workspace's are never listed."""
+    assert probe["range"] == [["Autumn news"], [], 1, [], "invalid_range", 422]
+
+
 def test_editing_unscheduling_or_queuing_now_replaces_the_schedule(probe: Probe) -> None:
     # The edit returns it to draft without a time; the run drops the row.
     assert probe["edited"] == ["draft", None, 0, "draft", True]

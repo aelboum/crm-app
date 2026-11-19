@@ -1017,6 +1017,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/remove-deleted-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove Deleted Campaign Tags
+         * @description Take deleted tags out of the audience; the campaign returns to
+         *     draft (decision P7-ST follow-up).
+         */
+        post: operations["remove_deleted_campaign_tags_v1_workspaces__tenant_id__campaigns__campaign_id__remove_deleted_tags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/report": {
         parameters: {
             query?: never;
@@ -9001,6 +9022,8 @@ export interface operations {
                 archived?: boolean;
                 status?: ("draft" | "validated" | "awaiting_approval" | "approved" | "queued" | "processing" | "completed" | "partially_completed" | "failed" | "rejected" | "cancelled") | null;
                 search?: string | null;
+                scheduled_from?: string | null;
+                scheduled_to?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -9374,6 +9397,41 @@ export interface operations {
                 "application/json": components["schemas"]["RejectIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_deleted_campaign_tags_v1_workspaces__tenant_id__campaigns__campaign_id__remove_deleted_tags_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

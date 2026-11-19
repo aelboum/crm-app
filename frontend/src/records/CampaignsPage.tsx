@@ -26,6 +26,7 @@ import { useCompany } from "../api/records";
 import { useTags } from "../api/tags";
 import { EmptyState, Loading, LoadError } from "../components/StateNotice";
 import { Badge, type Tone } from "../components/ui/Badge";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
 import type { MessageId } from "../i18n/en";
@@ -600,6 +601,18 @@ function Scheduler({
   );
 }
 
+/** Whether anything but the deleted tags would still choose the audience. */
+function keepsAFilter(campaign: Campaign): boolean {
+  const segment = campaign.segment;
+  const missing = campaign.missing_tag_ids?.length ?? 0;
+  return (
+    segment.stages.length > 0 ||
+    segment.owner_ids.length > 0 ||
+    segment.company_ids.length > 0 ||
+    segment.tag_ids.length > missing
+  );
+}
+
 function Detail({
   workspaceId,
   campaign,
@@ -629,6 +642,7 @@ function Detail({
   const [note, setNote] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [scheduling, setScheduling] = useState(false);
+  const [removingTags, setRemovingTags] = useState(false);
   const problem = step.error ?? reject.error ?? duplicate.error;
   const run = (name: Step) => {
     step.mutate({ id: campaign.id, version: campaign.version, step: name });
@@ -673,6 +687,21 @@ function Detail({
               {t("campaigns.missingTags", {
                 count: campaign.missing_tag_ids.length,
               })}
+              {canManage &&
+              EDITABLE.includes(status) &&
+              keepsAFilter(campaign) ? (
+                <Button
+                  size="sm"
+                  isDisabled={step.isPending}
+                  onPress={() => {
+                    setRemovingTags(true);
+                  }}
+                >
+                  {t("campaigns.removeDeletedTags", {
+                    count: campaign.missing_tag_ids.length,
+                  })}
+                </Button>
+              ) : null}
             </span>
           ) : null}
         </dd>
@@ -736,6 +765,19 @@ function Detail({
           {t(failure(problem))}
         </p>
       ) : null}
+      <ConfirmDialog
+        isOpen={removingTags}
+        title={t("campaigns.removeDeletedTagsTitle")}
+        confirmLabel={t("campaigns.removeDeletedTagsSubmit")}
+        message={t("campaigns.removeDeletedTagsConfirm")}
+        onCancel={() => {
+          setRemovingTags(false);
+        }}
+        onConfirm={() => {
+          setRemovingTags(false);
+          run("remove_deleted_tags");
+        }}
+      />
       <div className="campaign-actions">
         {canManage && EDITABLE.includes(status) ? (
           <Button size="sm" onPress={onEdit}>

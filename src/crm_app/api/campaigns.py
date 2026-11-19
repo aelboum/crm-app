@@ -54,7 +54,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from saas_os.api.auth.config import get_auth_http_config, resolve_client_address
 from saas_os.api.context import RequestContext
 from saas_os.api.dependencies import require_permission
@@ -206,6 +206,9 @@ class ListParams(BaseModel):
     archived: bool = False
     status: Status | None = None
     search: str | None = Field(default=None, max_length=4 * rules.NAME_MAX)
+    # Scheduled within [scheduled_from, scheduled_to): the calendar's range.
+    scheduled_from: AwareDatetime | None = None
+    scheduled_to: AwareDatetime | None = None
 
 
 class CampaignList(BaseModel):
@@ -277,6 +280,12 @@ def list_campaigns(context: Read, params: Annotated[ListParams, Query()]) -> Any
         term = rules.search(params.search)
     except InvalidValue:
         raise HTTPException(422, detail={"code": "invalid_search"}) from None
+    if (
+        params.scheduled_from is not None
+        and params.scheduled_to is not None
+        and params.scheduled_from >= params.scheduled_to
+    ):
+        raise HTTPException(422, detail={"code": "invalid_range"})
     query = campaigns.ListQuery(
         limit=params.limit,
         cursor=params.cursor,
@@ -284,6 +293,8 @@ def list_campaigns(context: Read, params: Annotated[ListParams, Query()]) -> Any
         archived=params.archived,
         status=params.status,
         search=term,
+        scheduled_from=params.scheduled_from,
+        scheduled_to=params.scheduled_to,
     )
     try:
         page = campaigns.list_campaigns(_scope(context), query)
@@ -419,6 +430,17 @@ def validate_campaign(
     campaign_id: uuid.UUID, context: Manage, response: Response, if_match: IfMatch = None
 ) -> Any:
     return _step(campaigns.validate, campaign_id, context, response, if_match)
+
+
+@router.post(
+    f"{_ONE}/remove-deleted-tags", response_model=CampaignOut, name="remove_deleted_campaign_tags"
+)
+def remove_deleted_campaign_tags(
+    campaign_id: uuid.UUID, context: Manage, response: Response, if_match: IfMatch = None
+) -> Any:
+    """Take deleted tags out of the audience; the campaign returns to
+    draft (decision P7-ST follow-up)."""
+    return _step(campaigns.remove_deleted_tags, campaign_id, context, response, if_match)
 
 
 @router.post(f"{_ONE}/submit", response_model=CampaignOut, name="submit_campaign")

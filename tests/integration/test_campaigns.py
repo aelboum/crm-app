@@ -81,6 +81,25 @@ def test_a_deleted_tag_in_the_audience_is_reported_not_dropped(probe: Probe) -> 
     }
 
 
+def test_deleted_tags_are_removed_only_on_request(probe: Probe) -> None:
+    """P7-ST follow-up: removing the deleted tags is an edit for those who
+    manage campaigns (a draft again, the other filters kept); refused when
+    they are the only filter or none was deleted; another workspace sees a
+    404; the audit counts the tags removed."""
+    removed = probe["stale_removed"]
+    assert removed["only_deleted"] == {
+        "code": "invalid_campaign",
+        "rule": "segment: only deleted tags choose this audience; edit the audience",
+    }
+    assert removed["refused"] == [403, 404, 409]
+    assert removed["cleaned"] == [200, "draft", [], ["lead"], []]
+    assert removed["again"] == {
+        "code": "invalid_campaign",
+        "rule": "segment: no tag in the audience was deleted",
+    }
+    assert removed["audit"] == 1
+
+
 def test_the_estimate_counts_only_contacts_who_may_receive_it(probe: Probe) -> None:
     status, estimate = probe["validated"]
     assert status == "validated"

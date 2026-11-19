@@ -1073,6 +1073,36 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P7-ST follow-up — Removing deleted tags from an audience (2026-11-19)
+
+- **Status:** Implemented on the owner's "go 1 then 2 and 3" (item 3).
+- **Decision:** those who manage campaigns may remove the deleted tags
+  from a campaign's audience in one action
+  (`POST /campaigns/{id}/remove-deleted-tags`, If-Match). The server
+  works out which tags are gone; the client names none. It is an edit
+  like any other: the campaign returns to draft and loses its estimate,
+  approval and schedule, so the audience must be checked and approved
+  again. The audit records `updated` with the number of tags removed.
+  It is refused when no tag was deleted, and when the deleted tags are
+  the only filter. That would leave no filter, and the campaign is never
+  silently switched to "all contacts", so the audience must be edited
+  instead. The detail asks for confirmation first, because the audience
+  may then include more contacts.
+- **Tests:** `test_deleted_tags_are_removed_only_on_request`;
+  `campaigns.test.tsx`.
+
+## P7-SC follow-up — The calendar asks for its range (2026-11-19)
+
+- **Status:** Implemented on the owner's "go 1 then 2 and 3" (item 2).
+- **Decision:** the campaign list takes `scheduled_from` (inclusive) and
+  `scheduled_to` (exclusive). Both are times with a time zone, and
+  `from >= to` is refused with `invalid_range`. They are part of the
+  cursor's filters. The calendar sends the range it shows, so it no
+  longer misses campaigns beyond the first page of 50 approved ones.
+  When there are more, it shows "Show more campaigns".
+- **Tests:** `test_the_list_keeps_campaigns_scheduled_within_a_range`;
+  `calendar.test.tsx`.
+
 ## M-P2 — A name suggested when inviting (2026-11-19, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's "apply all 4" (2026-11-19; item 4).
