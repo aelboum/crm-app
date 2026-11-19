@@ -1353,6 +1353,28 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed at `4a82f68` (2026-11-19, owner: "Go ahead")
+
+From `f90b4e8`: campaign results CSV (P7-RX), duplicate (P7-DU) and list
+orders (P7-SO). No migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `4a82f68` | passed (5 of 5 jobs, run 44499527248) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:4a82f68`; `VERSION=4a82f68` |
+| `$C up -d --wait` | every service healthy |
+| Migration head | `0047_campaign_archive` (unchanged) |
+| `/readyz` | 200 |
+| alice (Owner), `results.csv` of "Rehearsal check" | 200, `text/csv`, `campaign-results-2026-11-19.csv`; header `email,contact_id,outcome,added_at,unsubscribed_at`; 2 rows, both `rehearsed` |
+| alice, the detail | "Download CSV", "Unarchive" and "Duplicate"; Duplicate opened the new draft "Rehearsal check (copy)" in the current list; Sort menu offers Newest first, Last updated, Name A to Z |
+| carol (Member) | `results.csv` 403, report 200; the detail offers Unarchive and Duplicate, no Download CSV |
+| Audit | one `crm_app.campaign.results_exported` (row count 2); one `crm_app.campaign.created` with `duplicated_from`; the refused download left none |
+| App and worker logs, first 15 minutes | no error lines |
+
+"Rehearsal check (copy)" stays as a disposable draft. Rollback: code to
+`crm-app:f90b4e8`.
+
 ## Member test user on staging (2026-11-19, owner: "Go 1, 2,3 and 4", item 2)
 
 `carol@crm-staging.auravox.nl` is a disposable staging user with the
@@ -1384,7 +1406,7 @@ by newest, last updated or name. No migration.
 | `npx vitest run --maxWorkers=2` | 37 files, 389 passed |
 | `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
 
-Not deployed to staging.
+Deployed to staging at `4a82f68` (above).
 
 ## Staging deployed at `f90b4e8` (2026-11-19, owner: "Go ahead")
 
