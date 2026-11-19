@@ -1353,6 +1353,24 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Member test user on staging (2026-11-19, owner: "Go 1, 2,3 and 4", item 2)
+
+`carol@crm-staging.auravox.nl` is a disposable staging user with the
+Member role in "Staging Alpha", so role checks can be tried in the browser
+next to `alice@` (Owner). Created with the ZITADEL v2 user API (the login
+client's token on the VPS, email marked verified); the random password is
+in `.local/test-users.env` (0600, VPS only) as `CAROL_*`, never printed.
+She joined through the product's own flow: alice created a manual-mode
+invitation (a link, no email sent), carol signed in and accepted it, and
+alice gave her the Member role.
+
+| Check, signed in as carol (staging at `f90b4e8`) | Result |
+| --- | --- |
+| `GET …/access` | roles `["Member"]`; `manage_campaigns` true; `approve_campaigns`, `export_records`, `revoke_member` false |
+| Contacts | Export disabled: "Only Owners and Admins can export contacts"; `GET …/contacts/export.csv` 403 |
+| Team & roles | no Invite button; `GET …/invitations` 403 |
+| Campaigns | list and report 200; "New campaign" offered (Members draft) |
+
 ## Campaign results CSV, duplicate and list orders (decisions P7-RX, P7-DU, P7-SO, 2026-11-19)
 
 The Results card downloads each recipient's outcome as CSV (Owners and
