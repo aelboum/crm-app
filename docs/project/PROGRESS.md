@@ -1353,6 +1353,32 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Staging deployed at `2365891` (2026-11-19, owner: "go ahead")
+
+From `4a82f68`: scheduled campaigns (P7-SC, migration
+`0048_campaign_schedule`), preview for a contact (P7-PV) and "Add your
+name" (M-P1 follow-up).
+
+| Check | Result |
+| --- | --- |
+| CI on `2365891` | passed (5 of 5 jobs, run 44514175017) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:2365891`; `VERSION=2365891` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| Migration heads | `0048_campaign_schedule` (`campaign.scheduled_at`, `campaign.scheduled_by_user_id`, `campaign_queue.due_at` present), SaaS-OS `e1f5a8c3b7d9` |
+| `/readyz` | 200 |
+| alice, preview of "Rehearsal check (copy)" for Elena | "Hello Elena, …" with the footer and "[unsubscribe link]"; "Not in this campaign's audience." |
+| Scheduling, end to end | disposable contact "Schedule Check" (`schedule-check@example.test`, consent, tag "Schedule check") and campaign "Schedule check", approved as alice; alice scheduled it in the browser for 11:48 UTC ("Scheduled for", Unschedule offered); the maintenance run queued it at 11:48:12 and it completed as a rehearsal: 1 email, `failed`/`rehearsal`, nothing sent; the time cleared; the queue empty |
+| Audit of "Schedule check" | created, validated, submitted, approved, scheduled, queued (`scheduled: true`), completed (`rehearsal: true`) |
+| carol, Team & roles | her own row shows "Add your name"; alice shows as "Alice Owner"; dave by ID; the new note |
+| App and worker logs, first 20 minutes | no error lines |
+
+"Rehearsal check (copy)" can no longer be checked: its tag was deleted,
+so it has no audience (the refusal is correct). "Schedule check", its tag
+and contact stay as disposable test data. Rollback: code to
+`crm-app:4a82f68` (it ignores the three new columns); a full rollback
+restores the backup taken above.
+
 ## Scheduling, preview, member names and a Read-only test user (2026-11-19, owner: "go ahead with all 4")
 
 Decisions P7-SC (scheduled campaigns, migration `0048_campaign_schedule`),
@@ -1365,7 +1391,7 @@ P7-PV (preview for one contact) and the M-P1 follow-up ("Add your name").
 | `npx vitest run --maxWorkers=2` | 37 files, 394 passed |
 | `tsc -b`; `eslint .`; `ruff`; `pyright`; Prettier on `api/campaigns.ts` | clean |
 
-Not deployed to staging.
+Deployed to staging at `2365891` (above).
 
 **Read-only test user on staging.** `dave@crm-staging.auravox.nl`, created
 like carol (ZITADEL v2 user API, login client token, email verified;
