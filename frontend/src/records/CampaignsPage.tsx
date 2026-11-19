@@ -666,7 +666,16 @@ function Detail({
           </Badge>
         </dd>
         <dt>{t("campaigns.field.audience")}</dt>
-        <dd>{audience}</dd>
+        <dd>
+          {audience}
+          {campaign.missing_tag_ids?.length ? (
+            <span className="notice error campaign-missing-tags" role="note">
+              {t("campaigns.missingTags", {
+                count: campaign.missing_tag_ids.length,
+              })}
+            </span>
+          ) : null}
+        </dd>
         {campaign.estimate ? (
           <>
             <dt>{t("campaigns.field.estimate")}</dt>
@@ -707,6 +716,7 @@ function Detail({
       </dl>
       <div
         className="campaign-preview"
+        role="group"
         aria-label={t("campaigns.previewLabel")}
       >
         <p className="campaign-preview-subject">{campaign.subject}</p>

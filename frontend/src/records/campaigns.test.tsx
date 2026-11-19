@@ -508,6 +508,9 @@ describe("campaigns", () => {
     });
     const pane = await openCampaign(user);
     const region = within(pane).getByRole("region", { name: "Preview" });
+    // The campaign's own email is a group with another name: one "Preview" only.
+    expect(within(pane).getByRole("group", { name: "Campaign email" })).toBeInTheDocument();
+    expect(within(pane).getAllByLabelText("Preview")).toHaveLength(1);
     await user.click(within(region).getByRole("button", { name: "Choose a contact" }));
     await user.click(await within(region).findByRole("option", { name: /Sam Jansen/ }));
     expect(await within(region).findByText("News for Sam")).toBeInTheDocument();
@@ -595,6 +598,21 @@ describe("campaigns", () => {
     );
     const pane = await openCampaign(user);
     expect(within(pane).queryByRole("button", { name: "Schedule" })).toBeNull();
+  });
+
+  it("says when a tag in the audience was deleted (P7-ST)", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: false },
+        campaign({ status: "draft", missing_tag_ids: [VIP] }),
+      ),
+    );
+    const pane = await openCampaign(user);
+    expect(
+      within(pane).getByText(/A tag in this audience was deleted\. Edit the audience/),
+    ).toBeInTheDocument();
   });
 
   it("shows no results before a campaign is queued", async () => {

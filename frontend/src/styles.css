@@ -1588,6 +1588,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .campaign-item-results { font-size: 12px; }
 .campaign-list { display: grid; gap: 8px; min-width: 0; }
 .campaign-status-filter { margin: 0; }
+.campaign-missing-tags { display: block; margin-top: 6px; }
 .campaign-status-filter .form-input { width: auto; max-width: 100%; }
 .campaign-detail { border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-wrap: anywhere; }
 .campaign-detail-title { margin: 0 0 8px; font-size: 1.05rem; }

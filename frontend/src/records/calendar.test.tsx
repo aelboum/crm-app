@@ -165,6 +165,67 @@ const READER = {
 };
 
 describe("calendar", () => {
+  it("lists approved campaigns scheduled in the week, only for those who read campaigns", async () => {
+    const base = workspace({ ...MANAGER, read_campaigns: true });
+    const scheduled = {
+      id: "ca000000-0000-4000-8000-000000000001",
+      name: "Winter news",
+      subject: "News",
+      body: "Hello",
+      segment: { stages: ["lead"], tag_ids: [], owner_ids: [], company_ids: [], all_contacts: false },
+      status: "approved",
+      estimate: null,
+      content_hash: "a".repeat(64),
+      approved: true,
+      approved_by_user_id: ME,
+      approved_at: at(8),
+      submitted_by_user_id: ME,
+      submitted_at: at(8),
+      decision_note: null,
+      archived_at: null,
+      missing_tag_ids: [],
+      scheduled_at: at(15),
+      created_by_user_id: ME,
+      created_at: at(8),
+      updated_at: at(8),
+      version: 5,
+    };
+    const later = { ...scheduled, id: "ca000000-0000-4000-8000-000000000002", name: "Spring news", scheduled_at: at(9, 0, 60) };
+    const { sent } = renderApp(`/w/${WS}/calendar`, (method, path, body) => {
+      if (path.startsWith(`/v1/workspaces/${WS}/campaigns?`)) {
+        return {
+          status: 200,
+          body: {
+            items: [scheduled, later],
+            next_cursor: null,
+            total: 2,
+            total_capped: false,
+            sending_available: false,
+            rehearsal: true,
+          },
+        };
+      }
+      return base(method, path, body);
+    });
+    const list = await screen.findByRole("list", { name: "Scheduled campaigns" });
+    expect(within(list).getByText("Winter news")).toBeInTheDocument();
+    // Outside the week in view.
+    expect(within(list).queryByText("Spring news")).toBeNull();
+    expect(within(list).getByRole("link", { name: /Winter news/ })).toHaveAttribute(
+      "href",
+      `/app/w/${WS}/campaigns`,
+    );
+    expect(sent.some((r) => r.path.includes("/campaigns?") && r.path.includes("status=approved"))).toBe(true);
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("asks for no campaigns without permission to read them", async () => {
+    const { sent } = renderApp(`/w/${WS}/calendar`, workspace(MANAGER));
+    await screen.findByRole("button", { name: "Week", pressed: true });
+    expect(screen.queryByText("Scheduled campaigns")).toBeNull();
+    expect(sent.some((r) => r.path.includes("/campaigns?"))).toBe(false);
+  });
+
   it("shows the week with today's appointments in the viewer's time zone", async () => {
     renderApp(`/w/${WS}/calendar`, workspace(MANAGER));
     const events = await screen.findAllByRole("button", {

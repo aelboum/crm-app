@@ -27,7 +27,11 @@ export function useInvitations(workspaceId: string, enabled: boolean) {
 
 export function useCreateInvitation(workspaceId: string) {
   const client = useQueryClient();
-  return useMutation<CreatedInvitation, ApiError, { email: string; role: InvitationRole }>({
+  return useMutation<
+    CreatedInvitation,
+    ApiError,
+    { email: string; role: InvitationRole; name?: string }
+  >({
     mutationFn: async (body) =>
       unwrap(await api.POST("/v1/workspaces/{tenant_id}/invitations", { ...where(workspaceId), body })),
     onSettled: () => client.invalidateQueries({ queryKey: invitationsKey(workspaceId) }),

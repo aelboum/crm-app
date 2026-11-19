@@ -17,10 +17,10 @@ from sqlalchemy import text
 from crm_app.app import create_app
 from crm_app.roles import Role
 from tests.integration.opportunity_route_probe import _member
-from tests.integration.workspace_route_probe import _new_workspace
+from tests.integration.workspace_route_probe import _new_user, _new_workspace
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
     if os.environ.get("ENVIRONMENT") != "test":
         raise SystemExit("member_profile_probe runs only with ENVIRONMENT=test")
     a = _new_workspace("profiles-a")
@@ -86,6 +86,86 @@ def main() -> None:
             text("SELECT count(*) FROM crm_app.member_profile WHERE tenant_id = :t"), {"t": b.id}
         ).scalar_one()
     result["ids"] = [str(a.owner_id), str(reader_id)]
+
+    # A name suggested when inviting (decision M-P2), in its own workspace.
+    os.environ.setdefault("PUBLIC_APP_ORIGIN", "https://app.example.test")
+    c = _new_workspace("profiles-c")
+    c_owner = issue_session(c.owner_id)[1]
+    _, c_reader = _member(c, Role.READ_ONLY)
+    invitee = _new_user()
+    invitee_token = issue_session(invitee, verified_email="cleo.m-p2@example.test")[1]
+    with TestClient(create_app(), follow_redirects=False) as client:
+        invite = client.post(
+            f"/v1/workspaces/{c.id}/invitations",
+            json={"email": "cleo.m-p2@example.test", "role": "Member", "name": "  Cleo   Jansen "},
+            headers=auth(c_owner),
+        )
+        created = invite.json()
+        result["invited"] = [invite.status_code, created["invitation"]["name"]]
+        result["invite_refused"] = [
+            client.post(
+                f"/v1/workspaces/{c.id}/invitations",
+                json={"email": "x.m-p2@example.test", "role": "Member", "name": "x" * 81},
+                headers=auth(c_owner),
+            ).status_code,
+            client.post(
+                f"/v1/workspaces/{c.id}/invitations",
+                json={"email": "y.m-p2@example.test", "role": "Member", "name": "A\nB"},
+                headers=auth(c_owner),
+            ).status_code,
+        ]
+        token = created["link"].split("#", 1)[1]
+        result["accepted"] = client.post(
+            f"/v1/tenants/{c.id}/invitations/accept",
+            json={"token": token},
+            headers=auth(invitee_token),
+        ).status_code
+
+        def shown_for_invitee() -> list[Any]:
+            items = client.get(f"/v1/workspaces/{c.id}/members", headers=auth(c_reader)).json()[
+                "items"
+            ]
+            row = next(m for m in items if str(m["user_id"]) == str(invitee))
+            return [row["display_name"], row["name_source"]]
+
+        # Shown even before an Owner confirms the role (Q5).
+        result["suggested"] = shown_for_invitee()
+        joined = next(
+            m
+            for m in client.get(f"/v1/workspaces/{c.id}/members", headers=auth(c_owner)).json()[
+                "items"
+            ]
+            if str(m["user_id"]) == str(invitee)
+        )
+        client.post(
+            f"/v1/workspaces/{c.id}/members/{joined['membership_id']}/roles",
+            json={"role": "Member"},
+            headers=auth(c_owner),
+        )
+        # Their own name wins; clearing it shows the suggestion again.
+        client.put(
+            f"/v1/workspaces/{c.id}/me/profile",
+            json={"display_name": "Cleo J."},
+            headers=auth(invitee_token),
+        )
+        result["own_wins"] = shown_for_invitee()
+        client.put(
+            f"/v1/workspaces/{c.id}/me/profile",
+            json={"display_name": None},
+            headers=auth(invitee_token),
+        )
+        result["back_to_suggested"] = shown_for_invitee()
+        result["own_profile"] = client.get(
+            f"/v1/workspaces/{c.id}/me/profile", headers=auth(invitee_token)
+        ).json()["display_name"]
+    with tenant_session_scope(c.id) as session:
+        result["intent_audit_has_name"] = session.execute(
+            text(
+                "SELECT bool_or(metadata::text LIKE '%Cleo%') FROM core.audit_log"
+                " WHERE tenant_id = :t AND action = 'crm_app.invitation.intent_recorded'"
+            ),
+            {"t": c.id},
+        ).scalar_one()
     print("RESULT " + json.dumps(result, default=str))
 
 

@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0048_campaign_schedule` own the
+Migrations `0002_contacts_companies` to `0049_invitation_name` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -359,6 +359,8 @@ class InvitationIntent(Base):
     invited_by_user_id: Mapped[uuid.UUID] = mapped_column()
     delivery: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # The name the inviter suggested (migration 0049, decision M-P2).
+    display_name: Mapped[str | None] = mapped_column(Text)
 
 
 class Signup(Base):

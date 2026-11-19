@@ -2276,6 +2276,14 @@
             "title": "Id",
             "type": "string"
           },
+          "missing_tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Missing Tag Ids",
+            "type": "array"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -7167,6 +7175,18 @@
             "title": "Email",
             "type": "string"
           },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "role": {
             "enum": [
               "Owner",
@@ -7253,6 +7273,17 @@
             "format": "uuid",
             "title": "Invited By User Id",
             "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "role": {
             "anyOf": [
@@ -7466,6 +7497,21 @@
             "format": "uuid",
             "title": "Membership Id",
             "type": "string"
+          },
+          "name_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "own",
+                  "invitation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Source"
           },
           "roles": {
             "items": {

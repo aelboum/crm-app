@@ -1073,6 +1073,48 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## M-P2 — A name suggested when inviting (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "apply all 4" (2026-11-19; item 4).
+  Migration `0049_invitation_name`.
+- **Decision:** an inviter may give the person's name (optional, the same
+  rules as a display name: 1 to 80 characters, no control characters). It
+  is stored with the invitation's intent and shown in the member list for
+  the member who joined with that invitation, with `name_source:
+  "invitation"`, until they set their own name, which always wins
+  (`name_source: "own"`). It refines M-P1 ("nobody sets another member's
+  name"): the suggestion is never written as the member's own name, their
+  My profile stays empty until they choose one, and "Add your name" keeps
+  showing on their own row. The audit records only whether a name was
+  given, never the name.
+- **Tests:** `tests/integration/test_member_profiles.py`
+  (`test_an_inviter_may_suggest_a_name_the_member_can_replace`);
+  `Invitations.test.tsx`; `WorkspacePage.test.tsx`.
+
+## P7-ST — Deleted tags in a campaign's audience (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "apply all 4" (item 2).
+- **Finding:** on staging, a draft's only tag had been deleted, so its
+  audience was empty and the audience check said only "no contact may
+  receive it".
+- **Decision:** the segment keeps a deleted tag; removing it could widen
+  who receives the campaign. Reads report it as `missing_tag_ids`; the
+  detail says a tag was deleted and to edit the audience; `validate`
+  refuses with the rule "segment: a tag in the audience was deleted".
+- **Tests:** `test_a_deleted_tag_in_the_audience_is_reported_not_dropped`;
+  `campaigns.test.tsx`.
+
+## P7-SC follow-up — Scheduled campaigns on the calendar (2026-11-19)
+
+- **Status:** Implemented on the owner's "apply all 4" (item 3). Frontend
+  only.
+- **Decision:** the calendar's side panel lists "Scheduled campaigns": the
+  approved campaigns scheduled within the range in view, with their time,
+  each linking to Campaigns. Shown only to those who read campaigns; it
+  reads the first page (50) of approved campaigns. Campaigns are not drawn
+  in the appointment grids, which are per host and per half hour.
+- **Tests:** `calendar.test.tsx`.
+
 ## P7-SC — Scheduled campaigns (2026-11-19, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's "go ahead with all 4" (2026-11-19;

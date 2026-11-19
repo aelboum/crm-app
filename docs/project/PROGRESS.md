@@ -1353,6 +1353,22 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Invited names, deleted tags, campaigns on the calendar (2026-11-19, owner: "apply all 4")
+
+Decisions M-P2 (migration `0049_invitation_name`), P7-ST and the P7-SC
+calendar follow-up; the campaign detail's email is now the group
+"Campaign email", so "Preview" names only the preview section.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest` integration: campaigns, campaign schedule, member profiles, invitations, foundation, crm tables | 79 passed |
+| `uv run pytest tests/unit` (no environment) | 812 passed |
+| `npx vitest run --maxWorkers=2` | 37 files, 399 passed |
+| `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
+
+`frontend/src/api/invitations.ts` was already not Prettier-formatted
+before this change and is left as it was. Not deployed to staging.
+
 ## Staging deployed at `2365891` (2026-11-19, owner: "go ahead")
 
 From `4a82f68`: scheduled campaigns (P7-SC, migration

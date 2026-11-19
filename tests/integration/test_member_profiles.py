@@ -69,6 +69,21 @@ def test_clearing_removes_only_the_callers_name(probe: Probe) -> None:
     assert probe["rows"] == 1
 
 
+def test_an_inviter_may_suggest_a_name_the_member_can_replace(probe: Probe) -> None:
+    """Decision M-P2: the suggested name is normalised and checked like a
+    member's own, shown for the member who joined with the invitation, and
+    the member's own name always wins; the audit holds no name."""
+    assert probe["invited"] == [201, "Cleo Jansen"]
+    assert probe["invite_refused"] == [422, 422]
+    assert probe["accepted"] == 200
+    assert probe["suggested"] == ["Cleo Jansen", "invitation"]
+    assert probe["own_wins"] == ["Cleo J.", "own"]
+    assert probe["back_to_suggested"] == ["Cleo Jansen", "invitation"]
+    # Their own profile has no name of their own: the suggestion is not theirs.
+    assert probe["own_profile"] is None
+    assert probe["intent_audit_has_name"] is False
+
+
 def test_changes_are_audited_without_the_name(probe: Probe) -> None:
     assert probe["audits"] == [
         ["crm_app.member_profile.updated", False],

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
@@ -23,6 +24,7 @@ import {
   type View,
   viewDays,
 } from "../api/appointments";
+import { useCampaigns } from "../api/campaigns";
 import { useAccess, useMe, useMembers } from "../api/queries";
 import { LoadError } from "../components/StateNotice";
 import { Button } from "../components/ui/Button";
@@ -48,6 +50,9 @@ import { type Option, ownerOptions } from "./parts";
  * time; keyboard users book with "New appointment". Times are the viewer's
  * own time zone, which the header names. The grid shows the whole day and
  * opens at 07:00. Appointments shorter than 45 minutes show on one line.
+ *
+ * Approved campaigns scheduled in the range show, read-only, in the side
+ * panel (decision P7-SC follow-up).
  *
  * Business hours (decision P5-B) hatch the closed time and give each team
  * member a status line from today's appointments: in an appointment until
@@ -279,6 +284,9 @@ export function CalendarPage({
               onOpen(id);
             }}
           />
+          {can("read_campaigns") ? (
+            <ScheduledCampaigns workspaceId={workspaceId} from={first} to={end} />
+          ) : null}
           <h2 className="calendar-side-title">{t("calendar.legend")}</h2>
           <ul className="calendar-legend">
             {LEGEND.map((status) => (
@@ -581,6 +589,72 @@ function MonthGrid({
         })}
       </div>
     </div>
+  );
+}
+
+/*
+ * Approved campaigns scheduled within the range in view (decision P7-SC
+ * follow-up), read-only: each opens the campaign list. Only for those who
+ * read campaigns.
+ */
+function ScheduledCampaigns({
+  workspaceId,
+  from,
+  to,
+}: {
+  workspaceId: string;
+  from: Date;
+  to: Date;
+}) {
+  const t = useT();
+  const intl = useIntl();
+  const list = useCampaigns(workspaceId, {
+    order: "created_at",
+    archived: false,
+    status: "approved",
+    search: "",
+  });
+  const items = (list.data?.pages.flatMap((page) => page.items) ?? [])
+    .filter((c) => {
+      if (!c.scheduled_at) return false;
+      const at = new Date(c.scheduled_at);
+      return at >= from && at < to;
+    })
+    .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""));
+  return (
+    <>
+      <h2 className="calendar-side-title">{t("calendar.campaigns")}</h2>
+      {items.length ? (
+        <ul className="calendar-upnext" aria-label={t("calendar.campaigns")}>
+          {items.map((c) => (
+            <li key={c.id}>
+              <Link
+                className="calendar-upnext-item"
+                to="/w/$workspaceId/$section"
+                params={{ workspaceId, section: "campaigns" }}
+              >
+                <span>
+                  <span className="calendar-upnext-title">{c.name}</span>
+                  <span className="calendar-upnext-meta">
+                    <time dateTime={c.scheduled_at ?? ""}>
+                      {intl.formatDate(new Date(c.scheduled_at ?? ""), {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : list.isPending ? null : (
+        <p className="muted calendar-side-empty">{t("calendar.noCampaigns")}</p>
+      )}
+    </>
   );
 }
 

@@ -41,6 +41,10 @@ recipients and unsubscribing.
 - `archive` hides a finished campaign from the list and `unarchive` shows
   it again (decision P7-AR, `crm_app.campaign:manage`); nothing about the
   campaign, its recipients, emails, results or audit is removed.
+- A tag deleted after it was put in a campaign's audience stays in the
+  segment, so the audience never widens by itself; reads report it as
+  `missing_tag_ids` and `validate` refuses with its own rule until the
+  audience is edited (decision P7-ST).
 - `unsubscribe` takes a recipient's token from the email's link: it
   suppresses the address (reason `unsubscribed`) and records the
   withdrawal of consent.
@@ -88,6 +92,7 @@ from crm_app.models import (
     Contact,
     ContactTag,
     EmailMessage,
+    Tag,
 )
 from crm_app.records import (
     ORDER_COLLATION,
@@ -195,8 +200,9 @@ def _content(name: str, subject: str, body: str) -> tuple[str, str, str]:
         raise CampaignRuleError(str(exc)) from None
 
 
-def _item(row: Campaign) -> Item:
+def _item(row: Campaign, missing: list[str] | None = None) -> Item:
     return {
+        "missing_tag_ids": missing or [],
         "id": row.id,
         "name": row.name,
         "subject": row.subject,
@@ -218,6 +224,30 @@ def _item(row: Campaign) -> Item:
         "updated_at": row.updated_at,
         "version": row.version,
     }
+
+
+def _missing_tags(
+    session: Session, workspace: uuid.UUID, rows: list[Campaign]
+) -> dict[uuid.UUID, list[str]]:
+    """For each campaign, the tags in its audience that no longer exist
+    (decision P7-ST). One query for all of them."""
+    wanted = {str(t) for row in rows for t in (row.segment or {}).get("tag_ids", [])}
+    if not wanted:
+        return {}
+    found = {
+        str(t)
+        for t in session.execute(
+            select(Tag.id).where(
+                Tag.tenant_id == workspace, Tag.id.in_([uuid.UUID(t) for t in wanted])
+            )
+        ).scalars()
+    }
+    result: dict[uuid.UUID, list[str]] = {}
+    for row in rows:
+        gone = [str(t) for t in (row.segment or {}).get("tag_ids", []) if str(t) not in found]
+        if gone:
+            result[row.id] = gone
+    return result
 
 
 def _load(session: Session, scope: Scope, campaign_id: uuid.UUID, *, lock: bool) -> Campaign:
@@ -315,7 +345,9 @@ def list_campaigns(scope: Scope, query: ListQuery | None = None) -> Page:
             statement = statement.where(_after(keys, after, ascending=ascending))
         ordering = [key.expression.asc() if ascending else key.expression.desc() for key in keys]
         rows = list(session.execute(statement.order_by(*ordering).limit(query.limit + 1)).scalars())
-        items = [_item(row) for row in rows[: query.limit]]
+        shown = rows[: query.limit]
+        missing = _missing_tags(session, scope.workspace, shown)
+        items = [_item(row, missing.get(row.id)) for row in shown]
     next_cursor = None
     if len(rows) > query.limit and items:
         last = items[-1]
@@ -332,7 +364,8 @@ def list_campaigns(scope: Scope, query: ListQuery | None = None) -> Page:
 
 def get(scope: Scope, campaign_id: uuid.UUID) -> Item:
     with tenant_session_scope(scope.workspace) as session:
-        return _item(_load(session, scope, campaign_id, lock=False))
+        row = _load(session, scope, campaign_id, lock=False)
+        return _item(row, _missing_tags(session, scope.workspace, [row]).get(row.id))
 
 
 # --- Audience ------------------------------------------------------------------------------
@@ -567,6 +600,8 @@ def validate(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> 
     def business(session: Session) -> Item:
         row = _load(session, scope, campaign_id, lock=True)
         _checked(row, expected_version)
+        if _missing_tags(session, scope.workspace, [row]):
+            raise CampaignRuleError("segment: a tag in the audience was deleted")
         estimate, _ = _eligible(session, scope, _segment(row.segment))
         if estimate.eligible == 0:
             raise CampaignRuleError("audience: no contact may receive this campaign")

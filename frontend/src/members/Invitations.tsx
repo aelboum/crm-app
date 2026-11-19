@@ -49,6 +49,8 @@ export function InviteDialog({
   const toast = useToast();
   const create = useCreateInvitation(workspaceId);
   const [email, setEmail] = useState("");
+  // A name for the person, shown until they add their own (decision M-P2).
+  const [name, setName] = useState("");
   const [role, setRole] = useState<InvitationRole>("Member");
   const [created, setCreated] = useState<CreatedInvitation | null>(null);
   const [error, setError] = useState<MessageId | null>(null);
@@ -61,7 +63,7 @@ export function InviteDialog({
       return;
     }
     create.mutate(
-      { email, role },
+      { email, role, ...(name.trim() ? { name } : {}) },
       {
         onSuccess: (result) => {
           if (result.link) setCreated(result);
@@ -157,6 +159,26 @@ export function InviteDialog({
           />
         </div>
         <div className="form-field wide">
+          <label className="form-label" htmlFor="invite-name">
+            {t("invite.name")}
+          </label>
+          <input
+            id="invite-name"
+            type="text"
+            className="form-input"
+            value={name}
+            maxLength={80}
+            autoComplete="off"
+            aria-describedby="invite-name-hint"
+            onChange={(event) => {
+              setName(event.target.value);
+            }}
+          />
+          <p id="invite-name-hint" className="form-hint">
+            {t("invite.nameHint")}
+          </p>
+        </div>
+        <div className="form-field wide">
           <label className="form-label" htmlFor="invite-role">
             {t("invite.role")}
           </label>
@@ -222,7 +244,9 @@ export function InvitationsCard({
           return (
             <li key={invitation.id} className="member-row">
               <div className="member-text">
-                <div className="member-name">{invitation.email}</div>
+                <div className="member-name">
+                  {invitation.name ? `${invitation.name} · ${invitation.email}` : invitation.email}
+                </div>
                 <div className="member-sub">
                   <Badge tone={status.tone}>{t(status.label)}</Badge>{" "}
                   {invitation.delivery === "manual" ? t("invite.deliveredManual") : null}

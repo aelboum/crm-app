@@ -127,6 +127,33 @@ describe("inviting members", () => {
     expect(sessionStorage.length).toBe(0);
   });
 
+  it("sends a suggested name with the invitation when one is given (M-P2)", async () => {
+    const user = userEvent.setup();
+    const { sent } = openTeam(
+      team(ADMIN, (method, path) =>
+        method === "POST" && path === `/v1/workspaces/${WS}/invitations`
+          ? {
+              status: 201,
+              body: { invitation: invitation("new-id", "cleo@example.test", "pending"), link: LINK },
+            }
+          : undefined,
+      ),
+    );
+    await user.click(await screen.findByRole("button", { name: "Invite" }));
+    const dialog = await screen.findByRole("dialog", { name: "Invite a member" });
+    await user.type(within(dialog).getByLabelText(/Email address/), "cleo@example.test");
+    await user.type(within(dialog).getByLabelText("Name (optional)"), "Cleo Jansen");
+    expect(within(dialog).getByText(/until they add their own name/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: /Create invitation/ }));
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toEqual({
+        email: "cleo@example.test",
+        role: "Member",
+        name: "Cleo Jansen",
+      });
+    });
+  });
+
   it("explains a refused invitation", async () => {
     const user = userEvent.setup();
     openTeam(

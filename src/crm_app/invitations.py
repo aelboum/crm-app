@@ -5,7 +5,8 @@ only as a SHA-256 hash, a 7-day expiry, one-time use under a row lock,
 revocation, acceptance only by a signed-in person whose verified email is
 the invited one, and the audit events `invitation.create`, `.revoke` and
 `.accept`. The product adds, in `crm_app.invitation_intent`, the role the
-inviter intends and how the link was delivered:
+inviter intends, how the link was delivered and, optionally, a name for the
+person (decision M-P2), shown until they set their own:
 
 - **manual** (default, Q4): the link is returned once to the inviter, who
   is told it was not sent; the product never says it was sent.
@@ -118,6 +119,7 @@ def _view(invitation: Invitation, intent: InvitationIntent | None) -> dict[str, 
         "id": invitation.id,
         "email": invitation.invited_email,
         "role": intent.role if intent else None,
+        "name": intent.display_name if intent else None,
         "delivery": intent.delivery if intent else None,
         "status": str(compute_invitation_status(invitation)),
         "invited_by_user_id": invitation.inviter_user_id,
@@ -198,7 +200,9 @@ def _create_locked(scope: Scope, email: str) -> _Created:
         return _Created(invitation, token)
 
 
-def create(scope: Scope, email: str, role: Role, *, origin: str) -> Created:
+def create(
+    scope: Scope, email: str, role: Role, *, origin: str, display_name: str | None = None
+) -> Created:
     """Invite `email` to the workspace with the intended `role`. The intent
     is recorded before any email is sent, so a delivered link always has
     one; if anything fails, the invitation is revoked."""
@@ -220,7 +224,7 @@ def create(scope: Scope, email: str, role: Role, *, origin: str) -> Created:
     invitation = created.invitation
     link = _link(origin, scope.workspace, created.token)
     try:
-        intent = _record_intent(scope, invitation, role, delivery)
+        intent = _record_intent(scope, invitation, role, delivery, display_name)
         if delivery == "email":
             _send(invitation.invited_email, scope.workspace, link, invitation.expires_at)
     except Exception:
@@ -251,7 +255,11 @@ def _revoke_quietly(scope: Scope, invitation_id: uuid.UUID) -> None:
 
 
 def _record_intent(
-    scope: Scope, invitation: Invitation, role: Role, delivery: str
+    scope: Scope,
+    invitation: Invitation,
+    role: Role,
+    delivery: str,
+    display_name: str | None = None,
 ) -> InvitationIntent:
     intent = InvitationIntent(
         tenant_id=scope.workspace,
@@ -260,6 +268,7 @@ def _record_intent(
         invited_by_user_id=scope.actor,
         delivery=delivery,
         created_at=datetime.now(UTC),
+        display_name=display_name,
     )
     try:
         with tenant_session_scope(scope.workspace) as session:
@@ -273,7 +282,12 @@ def _record_intent(
                 action=f"{RESOURCE}.intent_recorded",
                 resource_type=RESOURCE,
                 resource_id=str(invitation.id),
-                metadata={"role": role.value, "delivery": delivery},
+                # Whether a name was given, never the name (personal data).
+                metadata={
+                    "role": role.value,
+                    "delivery": delivery,
+                    "named": display_name is not None,
+                },
             )
             session.expunge(intent)
     except (TenantClosedError, TenantNotFoundError):

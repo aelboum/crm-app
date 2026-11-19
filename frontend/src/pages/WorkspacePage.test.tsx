@@ -74,6 +74,47 @@ describe("workspace members", () => {
     expect(await screen.findByRole("heading", { name: "My profile" })).toBeInTheDocument();
   });
 
+  it("keeps asking for your own name while only the inviter's suggestion shows (M-P2)", async () => {
+    const base = workspace({ roles: ["Member"], actions: { read_members: true } });
+    renderApp(`/w/${WS}/settings`, (method, path, body) => {
+      if (path.startsWith(`/v1/workspaces/${WS}/members?`)) {
+        return {
+          status: 200,
+          body: {
+            items: [
+              {
+                membership_id: ME,
+                user_id: "u-me",
+                status: "active",
+                roles: ["Member"],
+                display_name: "Cleo Jansen",
+                name_source: "invitation",
+              },
+              {
+                membership_id: OTHER_OWNER,
+                user_id: "u-2",
+                status: "active",
+                roles: ["Owner"],
+                display_name: "Anna",
+                name_source: "own",
+              },
+            ],
+            total: 2,
+            limit: 50,
+            offset: 0,
+          },
+        };
+      }
+      return base(method, path, body);
+    });
+    const mine = (await screen.findByText("Cleo Jansen")).closest("li");
+    if (!mine) throw new Error("row not found");
+    expect(within(mine).getByRole("button", { name: "Add your name" })).toBeInTheDocument();
+    const theirs = screen.getByText("Anna").closest("li");
+    if (!theirs) throw new Error("row not found");
+    expect(within(theirs).queryByRole("button", { name: "Add your name" })).toBeNull();
+  });
+
   it("offers an Admin no action on an Owner", async () => {
     renderApp(
       `/w/${WS}/settings`,

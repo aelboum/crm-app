@@ -3777,6 +3777,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Missing Tag Ids */
+            missing_tag_ids?: string[];
             /** Name */
             name: string;
             /** Scheduled At */
@@ -5359,6 +5361,8 @@ export interface components {
         InvitationIn: {
             /** Email */
             email: string;
+            /** Name */
+            name?: string | null;
             /**
              * Role
              * @enum {string}
@@ -5398,6 +5402,8 @@ export interface components {
              * Format: uuid
              */
             invited_by_user_id: string;
+            /** Name */
+            name?: string | null;
             /** Role */
             role: ("Owner" | "Admin" | "Member" | "Read-only") | null;
             /**
@@ -5474,6 +5480,8 @@ export interface components {
              * Format: uuid
              */
             membership_id: string;
+            /** Name Source */
+            name_source?: ("own" | "invitation") | null;
             /** Roles */
             roles: string[];
             /** Status */

@@ -20,7 +20,7 @@ workspace's membership of the caller.
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -65,8 +65,10 @@ class Member(BaseModel):
     user_id: uuid.UUID
     status: str
     roles: list[str]
-    # The member's own display name, when they chose one (decision M-P1).
+    # The member's own display name (decision M-P1), or else the name their
+    # inviter suggested (decision M-P2); `name_source` says which.
     display_name: str | None = None
+    name_source: Literal["own", "invitation"] | None = None
 
 
 class ProfileIn(BaseModel):
@@ -160,7 +162,7 @@ def list_members(
     )
     page = memberships[offset : offset + limit]
     role_names = {role.id: role.name for role in list_roles(workspace)} if page else {}
-    shown = member_profiles.names(workspace, (m.user_id for m in page))
+    shown = member_profiles.shown(workspace, (m.user_id for m in page))
     items = [
         Member(
             membership_id=m.id,
@@ -171,7 +173,8 @@ def list_members(
                 for a in list_membership_roles(workspace, m.id)
                 if a.role_id in role_names
             ),
-            display_name=shown.get(m.user_id),
+            display_name=shown[m.user_id][0] if m.user_id in shown else None,
+            name_source=shown[m.user_id][1] if m.user_id in shown else None,
         )
         for m in page
     ]

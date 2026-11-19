@@ -173,12 +173,14 @@ def _check(  # noqa: PLR0913 - each keyword is one named fact of the decision
 
 def _view(workspace: uuid.UUID, membership_id: uuid.UUID) -> Member:
     snap = _snapshot(workspace, membership_id)
+    name = member_profiles.shown(workspace, [snap.target_user_id]).get(snap.target_user_id)
     return Member(
         membership_id=snap.target_id,
         user_id=snap.target_user_id,
         status=snap.target_status,
         roles=sorted(snap.target_roles),
-        display_name=member_profiles.own(workspace, snap.target_user_id),
+        display_name=name[0] if name else None,
+        name_source=name[1] if name else None,
     )
 
 

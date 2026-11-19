@@ -66,6 +66,21 @@ def test_a_campaign_is_previewed_for_one_contact(probe: Probe) -> None:
     assert preview["refused"] == ["contact_not_found", 404, 422]
 
 
+def test_a_deleted_tag_in_the_audience_is_reported_not_dropped(probe: Probe) -> None:
+    """Decision P7-ST: the segment keeps the deleted tag (the audience never
+    widens by itself), reads report it, and the audience check refuses
+    with its own rule."""
+    stale = probe["stale_tag"]
+    assert stale["before"] == []
+    assert stale["after"] is True
+    assert stale["listed"] is True
+    assert stale["segment_kept"] is True
+    assert stale["validate"] == {
+        "code": "invalid_campaign",
+        "rule": "segment: a tag in the audience was deleted",
+    }
+
+
 def test_the_estimate_counts_only_contacts_who_may_receive_it(probe: Probe) -> None:
     status, estimate = probe["validated"]
     assert status == "validated"

@@ -9,6 +9,9 @@ name per member and workspace in `crm_app.member_profile` (forced RLS).
   list's visibility rules); this module adds no visibility of its own.
 - The name is personal data: it is not written to logs or audit metadata,
   and the workspace purge removes it.
+- An inviter may suggest a name (decision M-P2, `invitation_intent`): it is
+  shown for the member who joined with that invitation until they set
+  their own, which always wins. `shown` returns which one is shown.
 """
 
 from __future__ import annotations
@@ -16,14 +19,17 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from typing import Literal
 
 from saas_os.core.audit_log import record_in_transaction
 from saas_os.core.authority import UserCaller
+from saas_os.core.identity import list_invitations_for_tenant
 from saas_os.infra.db import select, tenant_session_scope
 
-from crm_app.models import MemberProfile
+from crm_app.models import InvitationIntent, MemberProfile
 
 RESOURCE = "crm_app.member_profile"
+NameSource = Literal["own", "invitation"]
 
 
 def names(workspace: uuid.UUID, user_ids: Iterable[uuid.UUID]) -> dict[uuid.UUID, str]:
@@ -38,6 +44,55 @@ def names(workspace: uuid.UUID, user_ids: Iterable[uuid.UUID]) -> dict[uuid.UUID
             )
         )
         return dict(rows.tuples().all())
+
+
+def _invited(workspace: uuid.UUID, user_ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """The names inviters suggested for those of `user_ids` who joined by
+    invitation; the latest accepted invitation counts."""
+    accepted = sorted(
+        (
+            invitation
+            for invitation in list_invitations_for_tenant(workspace)
+            if invitation.accepted_by_user_id in user_ids
+        ),
+        key=lambda invitation: invitation.created_at,
+    )
+    if not accepted:
+        return {}
+    with tenant_session_scope(workspace) as session:
+        named = dict(
+            session.execute(
+                select(InvitationIntent.invitation_id, InvitationIntent.display_name).where(
+                    InvitationIntent.tenant_id == workspace,
+                    InvitationIntent.invitation_id.in_([i.id for i in accepted]),
+                    InvitationIntent.display_name.is_not(None),
+                )
+            )
+            .tuples()
+            .all()
+        )
+    result: dict[uuid.UUID, str] = {}
+    for invitation in accepted:
+        name = named.get(invitation.id)
+        if name and invitation.accepted_by_user_id is not None:
+            result[invitation.accepted_by_user_id] = name
+    return result
+
+
+def shown(
+    workspace: uuid.UUID, user_ids: Iterable[uuid.UUID]
+) -> dict[uuid.UUID, tuple[str, NameSource]]:
+    """For each of `user_ids` with a name: the name shown and where it
+    comes from, `own` or `invitation` (decision M-P2)."""
+    wanted = set(user_ids)
+    result: dict[uuid.UUID, tuple[str, NameSource]] = {
+        user: (name, "own") for user, name in names(workspace, wanted).items()
+    }
+    rest = wanted - result.keys()
+    if rest:
+        for user, name in _invited(workspace, rest).items():
+            result[user] = (name, "invitation")
+    return result
 
 
 def own(workspace: uuid.UUID, user_id: uuid.UUID) -> str | None:

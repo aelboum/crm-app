@@ -163,7 +163,7 @@ function MemberRow({
           )}
           {isSelf ? <Badge tone="accent">{t("members.you")}</Badge> : null}
           {awaiting ? <Badge tone="pending">{t("members.awaitingRole")}</Badge> : null}
-          {isSelf && !member.display_name ? (
+          {isSelf && member.name_source !== "own" ? (
             <AriaButton className="text-button" onPress={onAddName}>
               {t("members.addName")}
             </AriaButton>

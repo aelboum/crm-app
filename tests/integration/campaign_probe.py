@@ -744,6 +744,32 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
                 c=camp["id"],
             ),
         }
+        # A tag deleted after it was put in the audience (decision P7-ST):
+        # reported, never dropped, and the audience check names it.
+        gone = client.post(f"{base}/tags", json={"name": "Gone soon"}, headers=auth()).json()
+        stale = client.post(
+            f"{base}/campaigns",
+            json={**draft, "name": "Stale tag", "segment": {"tag_ids": [gone["id"]]}},
+            headers=auth(),
+        ).json()
+        before = stale["missing_tag_ids"]
+        client.delete(f"{base}/tags/{gone['id']}", headers=auth())
+        stale_one = f"{base}/campaigns/{stale['id']}"
+        listed = [
+            i["missing_tag_ids"]
+            for i in client.get(f"{base}/campaigns?search=stale", headers=auth()).json()["items"]
+        ]
+        result["stale_tag"] = {
+            "before": before,
+            "after": client.get(stale_one, headers=auth()).json()["missing_tag_ids"]
+            == [gone["id"]],
+            "listed": listed == [[gone["id"]]],
+            "segment_kept": client.get(stale_one, headers=auth()).json()["segment"]["tag_ids"]
+            == [gone["id"]],
+            "validate": client.post(f"{stale_one}/validate", headers=auth(version=1)).json()[
+                "detail"
+            ],
+        }
         result["audit_text"] = _scalar(
             a.id,
             "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"

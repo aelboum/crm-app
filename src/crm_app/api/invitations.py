@@ -76,6 +76,15 @@ class InvitationIn(BaseModel):
 
     email: str = Field(max_length=values.EMAIL_MAX + 8)
     role: RoleName
+    # A name for the person, shown until they set their own (decision M-P2).
+    name: str | None = Field(default=None, max_length=400)
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        return values.display_name(value)
 
     @field_validator("email")
     @classmethod
@@ -90,6 +99,7 @@ class InvitationOut(BaseModel):
     id: uuid.UUID
     email: str
     role: RoleName | None
+    name: str | None = None
     delivery: Literal["manual", "email"] | None
     status: Status
     invited_by_user_id: uuid.UUID
@@ -129,6 +139,7 @@ def create_invitation(tenant_id: uuid.UUID, body: InvitationIn, context: CreateI
             body.email,
             Role(body.role),
             origin=os.environ["PUBLIC_APP_ORIGIN"].rstrip("/"),
+            display_name=body.name,
         )
     except RecordError as exc:
         raise _http(exc) from None

@@ -170,6 +170,8 @@ class CampaignOut(BaseModel):
     submitted_at: datetime | None
     decision_note: str | None
     archived_at: datetime | None = None
+    # Tags in the audience that were deleted since (decision P7-ST).
+    missing_tag_ids: list[uuid.UUID] = Field(default_factory=list)
     # When an approved campaign is to be queued (decision P7-SC).
     scheduled_at: datetime | None = None
     created_by_user_id: uuid.UUID | None
