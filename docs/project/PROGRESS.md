@@ -1369,6 +1369,31 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Staging deployed at `ac22cc3` (2026-11-19, owner: "go 1 then 2 and 3")
+
+From `2365891`: a name suggested when inviting (M-P2, migration
+`0049_invitation_name`), deleted tags in an audience (P7-ST) and scheduled
+campaigns on the calendar (P7-SC follow-up).
+
+| Check | Result |
+| --- | --- |
+| CI on `ac22cc3` | passed (5 of 5 jobs, run 44524351352) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:ac22cc3`; `VERSION=ac22cc3` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| Migration | `invitation_intent.display_name` present |
+| `/readyz` | 200 |
+| alice, "Rehearsal check (copy)" | "A tag in this audience was deleted. Edit the audience before checking it." |
+| alice, scheduling | duplicated "Schedule check" as "Schedule check (copy)", checked, submitted, approved, scheduled for Fri 20 Nov 23:00 (Amsterdam) |
+| alice, Calendar | "Scheduled campaigns" lists "Schedule check (copy)", Fri, Nov 20, 11:00 PM, linking to Campaigns |
+| alice, invite with a name | the dialog shows "Name (optional)" and its hint; the list shows "Named Check · named-invite-check@example.test"; the invitation was then revoked; the name is stored in `invitation_intent` |
+| App and worker logs, first 30 minutes | no error lines |
+
+"Schedule check (copy)" stays scheduled as disposable test data; if it is
+not unscheduled first, it runs as a rehearsal (nothing is sent). Rollback:
+code to `crm-app:2365891` (it ignores the new column); a full rollback
+restores the backup taken above.
+
 ## Staging deployed at `2365891` (2026-11-19, owner: "go ahead")
 
 From `4a82f68`: scheduled campaigns (P7-SC, migration
