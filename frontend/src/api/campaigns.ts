@@ -10,13 +10,22 @@ import type { components } from "./schema";
  * (`manage_campaigns`); Owners and Admins approve, reject and queue
  * (`approve_campaigns`). Editing returns a campaign to draft and clears its
  * approval. Queuing is refused while campaign sending is unavailable,
- * which the list reports as `sending_available`.
+ * which the list reports as `sending_available`. Finished campaigns can be
+ * archived and unarchived (decision P7-AR, `manage_campaigns`): archived
+ * ones are listed only on request (`archived`).
  */
 
 export type Campaign = components["schemas"]["CampaignOut"];
 export type CampaignStatus = Campaign["status"];
 export type CampaignInput = components["schemas"]["CampaignIn"];
-export type Step = "validate" | "submit" | "approve" | "cancel" | "queue";
+export type Step =
+  | "validate"
+  | "submit"
+  | "approve"
+  | "cancel"
+  | "queue"
+  | "archive"
+  | "unarchive";
 export type CampaignReport = components["schemas"]["CampaignReport"];
 export type Outcome = keyof CampaignReport["outcomes"];
 
@@ -25,14 +34,23 @@ export const campaignKeys = {
     ["workspace", workspaceId, "campaigns"] as const,
 };
 
-export function useCampaigns(workspaceId: string, enabled = true) {
+export function useCampaigns(
+  workspaceId: string,
+  enabled = true,
+  archived = false,
+) {
   return useQuery({
-    queryKey: campaignKeys.all(workspaceId),
+    queryKey: archived
+      ? [...campaignKeys.all(workspaceId), "archived"]
+      : campaignKeys.all(workspaceId),
     enabled,
     queryFn: async () =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/campaigns", {
-          params: { path: where(workspaceId) },
+          params: {
+            path: where(workspaceId),
+            query: archived ? { archived: true } : {},
+          },
         }),
       ),
   });
@@ -125,6 +143,20 @@ export function useCampaignStep(workspaceId: string) {
           return unwrapWrite(
             await api.POST(
               "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/queue",
+              params,
+            ),
+          );
+        case "archive":
+          return unwrapWrite(
+            await api.POST(
+              "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/archive",
+              params,
+            ),
+          );
+        case "unarchive":
+          return unwrapWrite(
+            await api.POST(
+              "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/unarchive",
               params,
             ),
           );

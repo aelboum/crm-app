@@ -90,6 +90,11 @@ function workspace(
         status: 200,
         body: { items: [item], sending_available: false, rehearsal },
       };
+    if (path === `${base}/campaigns?archived=true`)
+      return {
+        status: 200,
+        body: { items: [], sending_available: false, rehearsal },
+      };
     if (path === `${base}/campaigns/${ID}/report`) {
       return {
         status: 200,
@@ -209,6 +214,57 @@ describe("campaigns", () => {
     expect(
       within(results).getByText(/does not mean delivered/),
     ).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("archives a finished campaign with the version (P7-AR)", async () => {
+    const user = userEvent.setup();
+    const { headersSent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: false },
+        campaign({ status: "completed" }),
+        (method, path) =>
+          method === "POST" && path.endsWith("/archive")
+            ? {
+                status: 200,
+                body: campaign({ status: "completed", archived_at: stamp, version: 5 }),
+              }
+            : undefined,
+      ),
+    );
+    const pane = await openCampaign(user);
+    await user.click(within(pane).getByRole("button", { name: "Archive" }));
+    await waitFor(() => {
+      const call = headersSent.find((r) => r.path.endsWith("/archive"));
+      expect(call?.headers["if-match"]).toBe('"4"');
+    });
+  });
+
+  it("offers no archiving before a campaign is finished, nor to Read-only members", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));
+    const pane = await openCampaign(user);
+    expect(within(pane).queryByRole("button", { name: "Archive" })).toBeNull();
+  });
+
+  it("lists archived campaigns on request and says what archiving keeps", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/campaigns`,
+      workspace({ manage: false, approve: false }, campaign({ status: "cancelled" })),
+    );
+    await openCampaign(user);
+    expect(screen.queryByRole("button", { name: "Archive" })).toBeNull();
+    const toggle = screen.getByRole("button", { name: "Show archived" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await user.click(toggle);
+    expect(await screen.findByText("No archived campaigns")).toBeInTheDocument();
+    expect(screen.getByText(/results and history are kept/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show current" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(await accessibilityViolations()).toEqual([]);
   });
 

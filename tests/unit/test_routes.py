@@ -302,6 +302,8 @@ RECORDS |= {
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/validate": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/submit": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/cancel": "crm_app.campaign:manage",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/archive": "crm_app.campaign:manage",
+    "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/unarchive": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/approve": "crm_app.campaign:approve",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/reject": "crm_app.campaign:approve",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/queue": "crm_app.campaign:approve",

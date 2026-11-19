@@ -51,6 +51,9 @@ STATUSES = (
 EDITABLE = ("draft", "validated", "awaiting_approval", "approved", "rejected")
 CANCELLABLE = ("draft", "validated", "awaiting_approval", "approved", "rejected")
 FINAL = ("completed", "partially_completed", "failed", "cancelled")
+# Only a finished campaign may be archived (decision P7-AR); migration 0047
+# enforces the same list.
+ARCHIVABLE = FINAL
 
 # Which step leads from which states.
 TRANSITIONS: Mapping[str, tuple[tuple[str, ...], str]] = {

@@ -1073,6 +1073,27 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P7-AR — Archived campaigns (2026-11-19, under the autonomous mandate)
+
+- **Status:** Implemented on the owner's "Go 1 then 2" (2026-11-19; item 1,
+  "archive campaigns").
+- **Decision:** a finished campaign (completed, partially completed,
+  failed or cancelled) can be archived and unarchived by members with
+  `crm_app.campaign:manage` (`POST …/campaigns/{id}/archive`,
+  `…/unarchive`, with `If-Match`). Archiving only hides it from the list:
+  `GET …/campaigns` leaves archived ones out, `?archived=true` lists only
+  them. Nothing is deleted; recipients, emails, results and audit stay.
+  Migration `0047_campaign_archive` adds `archived_at` and
+  `archived_by_user_id`, set together, and only on a finished campaign, so
+  an archived campaign can never be queued. Audited as
+  `crm_app.campaign.archived` / `.unarchived`.
+- **Why not delete:** campaign emails, recipients and unsubscribes are
+  evidence of what was sent and of withdrawn consent; deleting them is a
+  retention decision for the owner.
+- **Tests:** `tests/integration/test_campaigns.py`
+  (`test_only_finished_campaigns_are_archived_and_hidden_from_the_list`);
+  `frontend/src/records/campaigns.test.tsx` (three tests).
+
 ## P7-RP — Campaign results (2026-11-18, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's "Go 1 then 2 and last 3"

@@ -915,6 +915,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Campaign */
+        post: operations["archive_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/cancel": {
         parameters: {
             query?: never;
@@ -994,6 +1011,23 @@ export interface paths {
         put?: never;
         /** Submit Campaign */
         post: operations["submit_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Campaign */
+        post: operations["unarchive_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__unarchive_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3621,6 +3655,8 @@ export interface components {
             approved_at: string | null;
             /** Approved By User Id */
             approved_by_user_id: string | null;
+            /** Archived At */
+            archived_at?: string | null;
             /** Body */
             body: string;
             /** Content Hash */
@@ -8810,7 +8846,9 @@ export interface operations {
     };
     list_campaigns_v1_workspaces__tenant_id__campaigns_get: {
         parameters: {
-            query?: never;
+            query?: {
+                archived?: boolean;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -8952,6 +8990,41 @@ export interface operations {
         };
     };
     approve_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__archive_post: {
         parameters: {
             query?: never;
             header?: {
@@ -9130,6 +9203,41 @@ export interface operations {
         };
     };
     submit_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                campaign_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_campaign_v1_workspaces__tenant_id__campaigns__campaign_id__unarchive_post: {
         parameters: {
             query?: never;
             header?: {

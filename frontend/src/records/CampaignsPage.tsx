@@ -67,6 +67,14 @@ const STARTED: CampaignStatus[] = [
   "failed",
 ];
 
+// Finished campaigns, which may be archived (decision P7-AR).
+const FINISHED: CampaignStatus[] = [
+  "completed",
+  "partially_completed",
+  "failed",
+  "cancelled",
+];
+
 const OUTCOMES: Outcome[] = [
   "waiting",
   "sent",
@@ -147,7 +155,8 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
   const actions = access.data?.actions;
   const canManage = actions?.manage_campaigns === true;
   const canApprove = actions?.approve_campaigns === true;
-  const list = useCampaigns(workspaceId);
+  const [archived, setArchived] = useState(false);
+  const list = useCampaigns(workspaceId, true, archived);
   const [editing, setEditing] = useState<Campaign | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const items = list.data?.items ?? [];
@@ -160,8 +169,17 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
           <h1 className="records-title">{t("nav.campaigns")}</h1>
           <p className="muted">{t("campaigns.intro")}</p>
         </div>
-        {canManage ? (
-          <div className="records-actions">
+        <div className="records-actions">
+          <Button
+            aria-pressed={archived}
+            onPress={() => {
+              setArchived(!archived);
+              setSelected(null);
+            }}
+          >
+            {t(archived ? "campaigns.showCurrent" : "campaigns.showArchived")}
+          </Button>
+          {canManage ? (
             <Button
               variant="primary"
               onPress={() => {
@@ -171,9 +189,14 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
               <Plus size={14} aria-hidden="true" />
               {t("campaigns.new")}
             </Button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
+      {archived ? (
+        <p className="notice" role="note">
+          {t("campaigns.archivedNote")}
+        </p>
+      ) : null}
       {list.data?.rehearsal ? (
         <p className="notice" role="note">
           {t("campaigns.rehearsal")}
@@ -188,10 +211,17 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
       ) : list.isPending ? (
         <Loading />
       ) : items.length === 0 ? (
-        <EmptyState
-          title={t("campaigns.empty")}
-          body={t("campaigns.emptyBody")}
-        />
+        archived ? (
+          <EmptyState
+            title={t("campaigns.archivedEmpty")}
+            body={t("campaigns.archivedEmptyBody")}
+          />
+        ) : (
+          <EmptyState
+            title={t("campaigns.empty")}
+            body={t("campaigns.emptyBody")}
+          />
+        )
       ) : (
         <div className="campaigns">
           <ul className="campaign-items" aria-label={t("campaigns.listLabel")}>
@@ -418,6 +448,17 @@ function Detail({
             }}
           >
             {t("campaigns.cancel")}
+          </Button>
+        ) : null}
+        {canManage && FINISHED.includes(status) ? (
+          <Button
+            size="sm"
+            isDisabled={step.isPending}
+            onPress={() => {
+              run(campaign.archived_at ? "unarchive" : "archive");
+            }}
+          >
+            {t(campaign.archived_at ? "campaigns.unarchive" : "campaigns.archive")}
           </Button>
         ) : null}
       </div>

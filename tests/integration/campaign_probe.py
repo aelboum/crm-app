@@ -530,6 +530,55 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
                 f"{base}/campaigns/{second['id']}", json={"name": "x"}, headers=auth("member", 2)
             ).status_code,
         ]
+        # Archiving (decision P7-AR): only a finished campaign, by members
+        # who manage campaigns; hidden from the list until unarchived.
+        two = f"{base}/campaigns/{second['id']}"
+        third = client.post(f"{base}/campaigns", json=draft, headers=auth()).json()
+
+        def listed_ids(archived: bool) -> list[str]:
+            query = "?archived=true" if archived else ""
+            items = client.get(f"{base}/campaigns{query}", headers=auth("reader")).json()["items"]
+            return [item["id"] for item in items]
+
+        refused = [
+            client.post(f"{two}/archive", headers=auth("reader", 2)).status_code,
+            client.post(
+                f"/v1/workspaces/{b.id}/campaigns/{second['id']}/archive",
+                headers=auth("other_owner", 2),
+            ).status_code,
+            client.post(f"{two}/archive", headers=auth("member")).status_code,
+            client.post(
+                f"{base}/campaigns/{third['id']}/archive", headers=auth("member", 1)
+            ).json()["detail"]["code"],
+            client.post(f"{two}/unarchive", headers=auth("member", 2)).status_code,
+        ]
+        archived = client.post(f"{two}/archive", headers=auth("member", 2)).json()
+        hidden = [
+            second["id"] in listed_ids(False),
+            second["id"] in listed_ids(True),
+            third["id"] in listed_ids(True),
+        ]
+        again = client.post(f"{two}/archive", headers=auth("member", 3)).status_code
+        report = client.get(f"{two}/report", headers=auth("reader")).status_code
+        restored = client.post(f"{two}/unarchive", headers=auth("member", 3)).json()
+        result["archive"] = {
+            "refused": refused,
+            "archived": [
+                archived["status"],
+                archived["archived_at"] is not None,
+                archived["version"],
+            ],
+            "hidden": hidden,
+            "again": again,
+            "report": report,
+            "restored": [restored["archived_at"], second["id"] in listed_ids(False)],
+            "audit": _scalar(
+                a.id,
+                "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t AND resource_id = :c"
+                " AND action IN ('crm_app.campaign.archived', 'crm_app.campaign.unarchived')",
+                c=second["id"],
+            ),
+        }
         result["audit_text"] = _scalar(
             a.id,
             "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"

@@ -109,6 +109,22 @@ def test_cancelled_campaigns_are_final(probe: Probe) -> None:
     assert probe["cancel"] == ["cancelled", 409, 409]
 
 
+def test_only_finished_campaigns_are_archived_and_hidden_from_the_list(probe: Probe) -> None:
+    """Decision P7-AR: archiving needs `campaign:manage` and a version, is
+    refused for a draft, another workspace sees a 404, and an archived
+    campaign keeps its results and comes back when unarchived."""
+    archive = probe["archive"]
+    # Read-only member; other workspace; no If-Match; a draft; not archived.
+    assert archive["refused"] == [403, 404, 428, "campaign_state", 409]
+    assert archive["archived"] == ["cancelled", True, 3]
+    # Not in the default list; in the archived list, which holds nothing else here.
+    assert archive["hidden"] == [False, True, False]
+    assert archive["again"] == 409
+    assert archive["report"] == 200
+    assert archive["restored"] == [None, True]
+    assert archive["audit"] == 2
+
+
 def test_other_workspaces_see_nothing_and_audit_holds_no_text(probe: Probe) -> None:
     assert probe["isolation"] == [0, 404, 404]
     assert probe["audit_text"] == 0

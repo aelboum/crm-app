@@ -8,6 +8,8 @@
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/validate      crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/submit        crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/cancel        crm_app.campaign:manage
+    POST   /v1/workspaces/{tenant_id}/campaigns/{id}/archive       crm_app.campaign:manage
+    POST   /v1/workspaces/{tenant_id}/campaigns/{id}/unarchive     crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/approve       crm_app.campaign:approve
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/reject        crm_app.campaign:approve
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/queue         crm_app.campaign:approve
@@ -129,6 +131,7 @@ class CampaignOut(BaseModel):
     submitted_by_user_id: uuid.UUID | None
     submitted_at: datetime | None
     decision_note: str | None
+    archived_at: datetime | None = None
     created_by_user_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
@@ -183,9 +186,9 @@ _ONE = f"{_LIST}/{{campaign_id}}"
 
 
 @router.get(_LIST, response_model=CampaignList, name="list_campaigns")
-def list_campaigns(context: Read) -> Any:
+def list_campaigns(context: Read, archived: bool = False) -> Any:
     return {
-        "items": campaigns.list_campaigns(_scope(context)),
+        "items": campaigns.list_campaigns(_scope(context), archived=archived),
         "sending_available": campaigns.sending_available(),
         "rehearsal": campaigns.rehearsal(context.tenant_id),
     }
@@ -275,6 +278,20 @@ def cancel_campaign(
     campaign_id: uuid.UUID, context: Manage, response: Response, if_match: IfMatch = None
 ) -> Any:
     return _step(campaigns.cancel, campaign_id, context, response, if_match)
+
+
+@router.post(f"{_ONE}/archive", response_model=CampaignOut, name="archive_campaign")
+def archive_campaign(
+    campaign_id: uuid.UUID, context: Manage, response: Response, if_match: IfMatch = None
+) -> Any:
+    return _step(campaigns.archive, campaign_id, context, response, if_match)
+
+
+@router.post(f"{_ONE}/unarchive", response_model=CampaignOut, name="unarchive_campaign")
+def unarchive_campaign(
+    campaign_id: uuid.UUID, context: Manage, response: Response, if_match: IfMatch = None
+) -> Any:
+    return _step(campaigns.unarchive, campaign_id, context, response, if_match)
 
 
 @router.post(f"{_ONE}/approve", response_model=CampaignOut, name="approve_campaign")

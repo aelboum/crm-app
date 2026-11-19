@@ -33,6 +33,9 @@ recipients and unsubscribing.
   email is closed as `failed` (`rehearsal`) in the same transaction: no
   email of a rehearsed campaign can ever be sent, even if sending is
   switched on later. Every other workspace is unaffected.
+- `archive` hides a finished campaign from the list and `unarchive` shows
+  it again (decision P7-AR, `crm_app.campaign:manage`); nothing about the
+  campaign, its recipients, emails, results or audit is removed.
 - `unsubscribe` takes a recipient's token from the email's link: it
   suppresses the address (reason `unsubscribed`) and records the
   withdrawal of consent.
@@ -194,6 +197,7 @@ def _item(row: Campaign) -> Item:
         "submitted_by_user_id": row.submitted_by_user_id,
         "submitted_at": row.submitted_at,
         "decision_note": row.decision_note,
+        "archived_at": row.archived_at,
         "created_by_user_id": row.created_by_user_id,
         "created_at": row.created_at,
         "updated_at": row.updated_at,
@@ -231,11 +235,14 @@ def _touch(row: Campaign) -> None:
 # --- Reads ---------------------------------------------------------------------------------
 
 
-def list_campaigns(scope: Scope) -> list[Item]:
+def list_campaigns(scope: Scope, *, archived: bool = False) -> list[Item]:
+    """The workspace's campaigns: by default those not archived; with
+    `archived`, only the archived ones."""
+    shown = Campaign.archived_at.is_not(None) if archived else Campaign.archived_at.is_(None)
     with tenant_session_scope(scope.workspace) as session:
         rows = session.execute(
             select(Campaign)
-            .where(Campaign.tenant_id == scope.workspace)
+            .where(Campaign.tenant_id == scope.workspace, shown)
             .order_by(Campaign.updated_at.desc(), Campaign.id.desc())
             .limit(LIST_LIMIT)
         ).scalars()
@@ -450,6 +457,41 @@ def cancel(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> It
         row.cancelled_by_user_id, row.cancelled_at = scope.actor, _now()
         _touch(row)
         _audit(session, scope, "cancelled", row)
+        return _item(row)
+
+    return _transaction(scope, business)
+
+
+def archive(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Item:
+    """Hide a finished campaign from the list (decision P7-AR). Its
+    recipients, emails, results and audit stay; nothing else changes."""
+
+    def business(session: Session) -> Item:
+        row = _load(session, scope, campaign_id, lock=True)
+        _checked(row, expected_version)
+        if row.archived_at is not None:
+            raise CampaignStateError("archive: already archived")
+        if row.status not in rules.ARCHIVABLE:
+            raise CampaignStateError(f"archive: not from {row.status}")
+        row.archived_by_user_id, row.archived_at = scope.actor, _now()
+        _touch(row)
+        _audit(session, scope, "archived", row)
+        return _item(row)
+
+    return _transaction(scope, business)
+
+
+def unarchive(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> Item:
+    """Show an archived campaign in the list again."""
+
+    def business(session: Session) -> Item:
+        row = _load(session, scope, campaign_id, lock=True)
+        _checked(row, expected_version)
+        if row.archived_at is None:
+            raise CampaignStateError("unarchive: not archived")
+        row.archived_by_user_id, row.archived_at = None, None
+        _touch(row)
+        _audit(session, scope, "unarchived", row)
         return _item(row)
 
     return _transaction(scope, business)

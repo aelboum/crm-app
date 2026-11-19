@@ -1353,6 +1353,22 @@ CI on GitHub: see "Criterion 9: CI on the pushed commit" below.
 Not tested end to end: `appointment.booked` with an address attached, and
 a real delivery through the egress proxy.
 
+## Archived campaigns (decision P7-AR, 2026-11-19)
+
+A finished or cancelled campaign can be archived from its detail and
+found again with "Show archived"; Unarchive returns it to the list.
+Nothing is deleted. Migration `0047_campaign_archive`.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest tests/integration/test_campaigns.py test_foundation.py tests/unit/test_routes.py` | 34 passed |
+| `uv run pytest` crm tables, migrations as owner, tenant table guard, purge, emails | 71 passed |
+| `uv run pytest tests/unit` (no environment) | 812 passed |
+| `npx vitest run src/records/campaigns.test.tsx` | 14 passed |
+| `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
+
+Not deployed to staging.
+
 ## Staging deployed at `2ad0d63` (2026-11-19, owner: "Go ahead")
 
 From `d015929`: the inbound receiving client (P6-R; off, staging cannot
