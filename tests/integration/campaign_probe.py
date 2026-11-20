@@ -197,6 +197,53 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
             ).status_code,
         ]
 
+        # Automations on campaign events (P8-C): one limited to this
+        # campaign, one for any and one for the unsubscribe link; a campaign
+        # that does not exist is refused when activating.
+        def automation(name: str, trigger: dict[str, Any]) -> Any:
+            made = client.post(
+                f"{base}/automations",
+                json={
+                    "name": name,
+                    "definition": {
+                        "trigger": trigger,
+                        "condition": None,
+                        "yes": [{"type": "set_lifecycle_stage", "stage": "inactive"}],
+                    },
+                },
+                headers=auth(),
+            ).json()
+            return client.post(
+                f"{base}/automations/{made['id']}/activate", headers=auth(version=made["version"])
+            )
+
+        missing = automation(
+            "On a missing one", {"type": "campaign_sent", "campaign_id": str(uuid.uuid4())}
+        )
+        result["campaign_automations"] = [
+            automation(
+                "On this one", {"type": "campaign_sent", "campaign_id": camp["id"]}
+            ).status_code,
+            automation("On any", {"type": "campaign_sent"}).status_code,
+            automation("On unsubscribe", {"type": "campaign_unsubscribed"}).status_code,
+            missing.status_code,
+            missing.json()["detail"],
+        ]
+
+        def started() -> list[str]:
+            with tenant_session_scope(a.id) as session:
+                return sorted(
+                    session.execute(
+                        text(
+                            "SELECT a.name FROM crm_app.automation_run r"
+                            " JOIN crm_app.automation a"
+                            " ON a.tenant_id = r.tenant_id AND a.id = r.automation_id"
+                            " WHERE r.tenant_id = :t AND r.contact_id = :c"
+                        ),
+                        {"t": a.id, "c": ada},
+                    ).scalars()
+                )
+
         # With sending made available in this process only: an approval that
         # no longer matches is refused; a matching one queues, and processing
         # adds each eligible contact once.
@@ -254,7 +301,9 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
         result["rendered"] = [body.startswith("Hello Ada,"), "Unsubscribe: https://" in body]
         token = re.search(r"/app/u/[0-9a-f-]+#([0-9a-f]{32})", body)
         recorder = Recorder()
+        result["runs_before_send"] = started()
         result["sent"] = emails.send(a.id, email_id, provider=recorder)
+        result["runs_after_send"] = started()
         result["sender"] = recorder.sent[-1].sender if recorder.sent else None
         # One-click unsubscribe headers (decision E-H1): the public route,
         # with the same token as the body's link.
@@ -286,6 +335,7 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
             ).status_code,
             client.post(f"/v1/public/unsubscribe/{a.id}/not-a-token").status_code,
         ]
+        result["runs_after_unsubscribe"] = started()
         result["after_unsubscribe"] = [
             _scalar(
                 a.id,

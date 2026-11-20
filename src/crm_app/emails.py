@@ -29,6 +29,7 @@ actors (decision K3.5).
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
 import secrets
@@ -70,6 +71,7 @@ from crm_app.domains import emails as rules
 from crm_app.models import (
     Appointment,
     AppointmentReminder,
+    CampaignRecipient,
     EmailEvent,
     EmailIndex,
     EmailMessage,
@@ -82,6 +84,8 @@ from crm_app.settings import (
     stream_limits,
     stream_sender,
 )
+
+_logger = logging.getLogger(__name__)
 
 RESOURCE = "crm_app.email"
 _SENDER = "crm_app.email_send"
@@ -457,6 +461,35 @@ def _finish(workspace: uuid.UUID, email_id: uuid.UUID, apply: Any) -> None:
         apply(session, row)
 
 
+def _campaign_sent(session: Session, row: EmailMessage) -> None:
+    """Start the automations waiting for this campaign email to be sent
+    (decision P8-C), in the transaction that records it as sent."""
+    from crm_app import automations  # noqa: PLC0415 - automations imports records
+
+    recipient = session.execute(
+        select(CampaignRecipient.campaign_id, CampaignRecipient.contact_id).where(
+            CampaignRecipient.tenant_id == row.tenant_id,
+            CampaignRecipient.email_message_id == row.id,
+        )
+    ).first()
+    if recipient is None or recipient.contact_id is None:
+        return
+    # In a savepoint: a failure here must never undo the record that the
+    # provider accepted the email, or the email would be sent again.
+    try:
+        with session.begin_nested():
+            automations.on_campaign_event(
+                session, row.tenant_id, "campaign_sent", recipient.contact_id, recipient.campaign_id
+            )
+    except Exception as exc:  # noqa: BLE001 - the email stays sent whatever happens here
+        # Ids and the error's type only: never content or addresses.
+        _logger.warning(
+            "emails: automations for campaign email %s were not started (%s)",
+            row.id,
+            type(exc).__name__,
+        )
+
+
 def send(
     workspace: uuid.UUID, email_id: uuid.UUID, *, provider: EmailProvider | None = None
 ) -> str:
@@ -525,6 +558,8 @@ def send(
         row.message_id = outgoing.message_id
         row.last_error, row.next_attempt_at = None, None
         _audit(session, row, "sent", provider=name, stream=claim.stream.value)
+        if row.purpose == "campaign":
+            _campaign_sent(session, row)
 
     _finish(workspace, email_id, sent)
     _index(email_id, provider_message_id=provider_id, retry_at=None)

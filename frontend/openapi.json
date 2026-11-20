@@ -1094,7 +1094,9 @@
               "tag_added",
               "form_submitted",
               "appointment_booked",
-              "deal_stage_changed"
+              "deal_stage_changed",
+              "campaign_sent",
+              "campaign_unsubscribed"
             ],
             "title": "Trigger Type",
             "type": "string"

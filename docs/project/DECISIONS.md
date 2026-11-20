@@ -1073,6 +1073,31 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-C — Campaign triggers for automations (2026-11-20)
+
+- **Status:** Implemented on the owner's "do 2 then 4, then 3" (item 3).
+- **Decision:** two automation triggers, each for one campaign
+  (`campaign_id`) or for any (null):
+  - `campaign_sent` starts when the email provider accepts a campaign's
+    email to the contact, in the transaction that records it as sent. That
+    is acceptance, never delivery; opens and clicks are not tracked. A
+    rehearsal sends nothing, so it never starts this trigger, and neither
+    does staging today.
+  - `campaign_unsubscribed` starts when the contact uses a campaign's
+    unsubscribe link (the page or the one-click route), the first time
+    only; the contact is suppressed as before.
+  - No member acts: the sending component or the link starts the run, like
+    the public pages. Each automation still runs at most once per contact,
+    so one for any campaign runs on the contact's first campaign only.
+  - Activation refuses a campaign that no longer exists. A campaign
+    deleted later (P7-DL) simply never matches.
+- **Migration** `0050_campaign_triggers` widens `automation_trigger_check`
+  and adds `campaign_recipient_email_idx` (tenant, email), so finding the
+  recipient of a sent email is one indexed read.
+- **Tests:** `test_campaign_events_start_their_automations`;
+  `test_campaign_triggers_match_their_campaign_or_any`;
+  `automations.test.tsx`.
+
 ## P7-DL — Deleting a campaign that was never queued (2026-11-20)
 
 - **Status:** Implemented on the owner's "do 2 then 4, then 3" (item 2).

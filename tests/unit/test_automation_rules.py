@@ -87,6 +87,10 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
         {"yes": [{"type": "notify_member", "message": "x" * (rules.NOTICE_MAX + 1)}]},
         {"yes": [{"type": "notify_member", "message": "Hi", "recipient": "everyone"}]},
         {"yes": [{"type": "notify_member", "message": "Hi", "subject": "x"}]},
+        # P8-C
+        {"trigger": {"type": "campaign_sent", "campaign_id": "nope"}},
+        {"trigger": {"type": "campaign_unsubscribed", "form_id": TAG}},
+        {"trigger": {"type": "campaign_opened"}},
     ],
 )
 def test_anything_outside_the_rules_is_refused(changes: dict[str, Any]) -> None:
@@ -108,6 +112,21 @@ def test_event_triggers_match_their_type_and_their_record() -> None:
     created = rules.definition(_base())
     assert not rules.matches(created, "contact_created", None)
     assert rules.referenced(tagged)[0] == {TAG}
+
+
+def test_campaign_triggers_match_their_campaign_or_any() -> None:
+    """P8-C: `campaign_sent` and `campaign_unsubscribed` take an optional
+    campaign; one never matches the other's event."""
+    campaign, other = str(uuid.uuid4()), str(uuid.uuid4())
+    this_one = rules.definition(_base(trigger={"type": "campaign_sent", "campaign_id": campaign}))
+    assert this_one.as_json()["trigger"] == {"type": "campaign_sent", "campaign_id": campaign}
+    assert rules.matches(this_one, "campaign_sent", campaign)
+    assert not rules.matches(this_one, "campaign_sent", other)
+    assert not rules.matches(this_one, "campaign_unsubscribed", campaign)
+    any_link = rules.definition(_base(trigger={"type": "campaign_unsubscribed"}))
+    assert any_link.as_json()["trigger"] == {"type": "campaign_unsubscribed", "campaign_id": None}
+    assert rules.matches(any_link, "campaign_unsubscribed", other)
+    assert not rules.matches(any_link, "campaign_sent", other)
 
 
 def test_the_new_actions_are_plain_data() -> None:

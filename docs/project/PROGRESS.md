@@ -1369,6 +1369,29 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Campaign triggers for automations (2026-11-20, owner: "do 2 then 4, then 3")
+
+Decision P8-C: triggers `campaign_sent` and `campaign_unsubscribed`, for
+one campaign or any; migration `0050_campaign_triggers`.
+
+| Check | Result |
+| --- | --- |
+| `uv run crm-app-migrate` on the test database | 0050 applied |
+| `uv run pytest` integration: campaigns, campaign schedule, automations, automation triggers, automation notify, foundation | 54 passed |
+| `uv run pytest` integration: emails, migrations as owner, table guard, purge, suppression routes | 51 passed |
+| `uv run pytest tests/unit` (no environment) | 816 passed |
+| `npx vitest run --maxWorkers=2` | 37 files, 405 passed |
+| `tsc -b`; `eslint .`; `npm run build`; `ruff`; `pyright` | clean |
+
+Not deployed to staging. On staging the sent trigger cannot start: the
+workspace rehearses campaigns and nothing is sent.
+
+Item 4 (Prettier) was not done: the repository has no Prettier
+configuration, dependency or CI check, and 101 of 153 frontend source
+files differ from Prettier's defaults. The earlier notes here that some
+files "failed the Prettier check" compared them with an unconfigured
+tool; they are not a gate. Adopting a formatter is the owner's choice.
+
 ## Deleting campaigns never queued (2026-11-20, owner: "do 2 then 4, then 3")
 
 Decision P7-DL: `DELETE /campaigns/{id}` for draft, validated, rejected and

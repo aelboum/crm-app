@@ -67,7 +67,10 @@ export type Trigger =
   | { type: "tag_added"; tag_id: string }
   | { type: "form_submitted"; form_id: string | null }
   | { type: "appointment_booked"; booking_page_id: string | null }
-  | { type: "deal_stage_changed"; stage_id: string };
+  | { type: "deal_stage_changed"; stage_id: string }
+  // Decision P8-C: for one campaign, or any when null.
+  | { type: "campaign_sent"; campaign_id: string | null }
+  | { type: "campaign_unsubscribed"; campaign_id: string | null };
 export type TriggerType = Trigger["type"];
 export const TRIGGER_TYPES: TriggerType[] = [
   "contact_created",
@@ -75,6 +78,8 @@ export const TRIGGER_TYPES: TriggerType[] = [
   "form_submitted",
   "appointment_booked",
   "deal_stage_changed",
+  "campaign_sent",
+  "campaign_unsubscribed",
 ];
 
 export interface Definition {

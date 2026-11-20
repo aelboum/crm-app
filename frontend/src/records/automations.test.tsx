@@ -75,6 +75,7 @@ const RUNS = {
 };
 
 type Reply = { status: number; body?: unknown } | undefined;
+const CAMPAIGN = "ca000000-0000-4000-8000-000000000001";
 
 function workspace(
   manage: boolean,
@@ -136,6 +137,19 @@ function workspace(
       return {
         status: 200,
         body: { items: [{ id: TAG, name: "Hot lead", version: 1, usage: 0 }] },
+      };
+    }
+    if (path.startsWith(`${base}/campaigns?`)) {
+      return {
+        status: 200,
+        body: {
+          items: [{ id: CAMPAIGN, name: "Autumn news" }],
+          next_cursor: null,
+          total: 1,
+          total_capped: false,
+          sending_available: false,
+          rehearsal: false,
+        },
       };
     }
     if (path === `${base}/automations`)
@@ -298,6 +312,97 @@ describe("automations", () => {
           yes: [{ type: "set_lifecycle_stage", stage: "customer" }],
           no: [],
         },
+      });
+    });
+  });
+
+  it("starts an automation when a campaign's email is sent (P8-C)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "After the news");
+    await user.selectOptions(
+      within(dialog).getByLabelText("When this happens"),
+      "campaign_sent",
+    );
+    expect(within(dialog).getByText(/That is not delivery/)).toBeInTheDocument();
+    const pick = within(dialog).getByLabelText("Campaign");
+    expect(pick).toHaveValue("");
+    await within(dialog).findByRole("option", { name: "Autumn news" });
+    await user.selectOptions(pick, CAMPAIGN);
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "set_lifecycle_stage",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toEqual({
+        name: "After the news",
+        definition: {
+          trigger: { type: "campaign_sent", campaign_id: CAMPAIGN },
+          condition: null,
+          yes: [{ type: "set_lifecycle_stage", stage: "customer" }],
+          no: [],
+        },
+      });
+    });
+  });
+
+  it("starts on any campaign's unsubscribe link unless one is picked", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Left the list");
+    await user.selectOptions(
+      within(dialog).getByLabelText("When this happens"),
+      "campaign_unsubscribed",
+    );
+    expect(within(dialog).getByText(/uses the unsubscribe link/)).toBeInTheDocument();
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "set_lifecycle_stage",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "POST")?.body as {
+        definition: { trigger: unknown };
+      };
+      expect(body.definition.trigger).toEqual({
+        type: "campaign_unsubscribed",
+        campaign_id: null,
       });
     });
   });

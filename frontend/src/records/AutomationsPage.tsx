@@ -26,6 +26,7 @@ import {
   useUpdateAutomation,
 } from "../api/automations";
 import { useBookingPages } from "../api/bookingPages";
+import { useCampaigns } from "../api/campaigns";
 import { ApiError } from "../api/client";
 import { useForms } from "../api/forms";
 import { usePipelines } from "../api/pipelines";
@@ -481,7 +482,49 @@ function newTrigger(
   if (type === "appointment_booked") return { type, booking_page_id: null };
   if (type === "deal_stage_changed")
     return { type, stage_id: stages[0]?.id ?? "" };
+  if (type === "campaign_sent" || type === "campaign_unsubscribed")
+    return { type, campaign_id: null };
   return { type: "contact_created", sources: [] };
+}
+
+/** The campaign a campaign trigger is limited to (P8-C), or any. */
+function CampaignPick({
+  workspaceId,
+  value,
+  onChange,
+}: {
+  workspaceId: string;
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const t = useT();
+  const list = useCampaigns(workspaceId, {
+    order: "created_at",
+    archived: false,
+    status: null,
+    search: "",
+  });
+  const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  return (
+    <select
+      className="form-input"
+      aria-label={t("automations.triggerCampaign")}
+      value={value ?? ""}
+      onChange={(event) => {
+        onChange(event.target.value || null);
+      }}
+    >
+      <option value="">{t("automations.triggerAny")}</option>
+      {value && !items.some((item) => item.id === value) ? (
+        <option value={value}>{t("automations.triggerCampaignUnlisted")}</option>
+      ) : null}
+      {items.map((item) => (
+        <option key={item.id} value={item.id}>
+          {item.name}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 /** The trigger (P8-B): its type, then what it is limited to. */
@@ -619,6 +662,25 @@ function TriggerFields({
             },
           )
         : null}
+      {trigger.type === "campaign_sent" ||
+      trigger.type === "campaign_unsubscribed" ? (
+        <>
+          <p className="form-hint">
+            {t(
+              trigger.type === "campaign_sent"
+                ? "automations.triggerSentHint"
+                : "automations.triggerUnsubscribedHint",
+            )}
+          </p>
+          <CampaignPick
+            workspaceId={workspaceId}
+            value={trigger.campaign_id}
+            onChange={(id) => {
+              onChange({ type: trigger.type, campaign_id: id });
+            }}
+          />
+        </>
+      ) : null}
     </fieldset>
   );
 }

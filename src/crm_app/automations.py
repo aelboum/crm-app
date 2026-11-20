@@ -59,6 +59,7 @@ from crm_app.models import (
     AutomationStep,
     AutomationVersion,
     BookingPage,
+    Campaign,
     Contact,
     ContactTag,
     Form,
@@ -78,6 +79,8 @@ _SUBJECT_MODELS: dict[str, Any] = {
     "form_submitted": Form,
     "appointment_booked": BookingPage,
     "deal_stage_changed": PipelineStage,
+    "campaign_sent": Campaign,
+    "campaign_unsubscribed": Campaign,
 }
 RESOURCE = "crm_app.automation"
 RUN_RESOURCE = "crm_app.automation_run"
@@ -307,7 +310,9 @@ def _check_references(session: Session, scope: Scope, given: rules.Definition) -
             )
         ).first()
         if found_subject is None:
-            raise AutomationRuleError("the form, booking page or stage it names no longer exists")
+            raise AutomationRuleError(
+                "the form, booking page, stage or campaign it names no longer exists"
+            )
 
 
 def activate(scope: Scope, automation_id: uuid.UUID, *, expected_version: int) -> Item:
@@ -427,7 +432,31 @@ def on_event(
     stage; decision P8-B), in the event's transaction. An automation that
     already ran for this contact is not started again, so automations that
     trigger one another always stop. Returns how many runs started."""
-    rows = _active(session, scope.workspace, trigger)
+    return _start(session, scope.workspace, trigger, contact_id, subject_id)
+
+
+def on_campaign_event(
+    session: Session,
+    workspace: uuid.UUID,
+    trigger: str,
+    contact_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+) -> int:
+    """Start the automations a campaign event matches (decision P8-C): its
+    email to the contact accepted by the provider (`campaign_sent`), or the
+    contact's unsubscribe link used (`campaign_unsubscribed`). Called by the
+    sending component or the link, so no member acts."""
+    return _start(session, workspace, trigger, contact_id, campaign_id)
+
+
+def _start(
+    session: Session,
+    workspace: uuid.UUID,
+    trigger: str,
+    contact_id: uuid.UUID,
+    subject_id: uuid.UUID | None,
+) -> int:
+    rows = _active(session, workspace, trigger)
     if not rows:
         return 0
     subject = None if subject_id is None else str(subject_id)
@@ -443,7 +472,7 @@ def on_event(
     ran = set(
         session.execute(
             select(AutomationRun.automation_id).where(
-                AutomationRun.tenant_id == scope.workspace,
+                AutomationRun.tenant_id == workspace,
                 AutomationRun.contact_id == contact_id,
                 AutomationRun.automation_id.in_([automation_id for automation_id, _ in wanted]),
             )
@@ -459,14 +488,12 @@ def on_event(
             # A concurrent event for the same contact may start it first:
             # then this one simply does not, and the caller's change stands.
             with session.begin_nested():
-                session.add(
-                    _new_run(scope.workspace, automation_id, version, contact_id, run_id, now)
-                )
+                session.add(_new_run(workspace, automation_id, version, contact_id, run_id, now))
                 session.flush()
         except IntegrityError:
             continue
         started.append(run_id)
-    _index_runs(scope.workspace, started, now)
+    _index_runs(workspace, started, now)
     return len(started)
 
 

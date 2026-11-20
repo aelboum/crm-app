@@ -17,8 +17,12 @@ Triggers (decision P8-B adds all but the first): `contact_created`
 (optional `sources`), `tag_added` (`tag_id`), `form_submitted` (optional
 `form_id`), `appointment_booked` on a booking page (optional
 `booking_page_id`) and `deal_stage_changed` into a stage (`stage_id`, the
-deal's contact). Each automation runs at most once per contact, whatever
-the trigger, so automations that trigger one another always stop.
+deal's contact). Decision P8-C adds `campaign_sent`, when the provider
+accepts a campaign's email to the contact (never delivery; a rehearsal sends
+nothing, so it never fires), and `campaign_unsubscribed`, when the contact
+uses a campaign's unsubscribe link; both take an optional `campaign_id`.
+Each automation runs at most once per contact, whatever the trigger, so
+automations that trigger one another always stop.
 
 Actions: `add_tag` and `remove_tag` (`tag_id`), `assign_owner`
 (`user_id`), `set_lifecycle_stage` (`stage`), `create_task` (`title`,
@@ -45,6 +49,8 @@ TRIGGERS = (
     "form_submitted",
     "appointment_booked",
     "deal_stage_changed",
+    "campaign_sent",
+    "campaign_unsubscribed",
 )
 # The record a trigger may be limited to, and whether it must be.
 TRIGGER_SUBJECTS: dict[str, tuple[str, bool]] = {
@@ -52,6 +58,8 @@ TRIGGER_SUBJECTS: dict[str, tuple[str, bool]] = {
     "form_submitted": ("form_id", False),
     "appointment_booked": ("booking_page_id", False),
     "deal_stage_changed": ("stage_id", True),
+    "campaign_sent": ("campaign_id", False),
+    "campaign_unsubscribed": ("campaign_id", False),
 }
 # An import can create thousands of contacts at once (P8-A 3).
 TRIGGER_SOURCES = tuple(source for source in SOURCES if source != "import")

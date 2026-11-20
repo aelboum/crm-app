@@ -81,6 +81,18 @@ def test_a_deleted_tag_in_the_audience_is_reported_not_dropped(probe: Probe) -> 
     }
 
 
+def test_campaign_events_start_their_automations(probe: Probe) -> None:
+    """P8-C: an email accepted by the provider starts the automations for
+    that campaign and for any; the unsubscribe link starts its own; each
+    once. An automation naming a campaign that does not exist is refused."""
+    made = probe["campaign_automations"]
+    assert made[:4] == [200, 200, 200, 422]
+    assert "campaign it names no longer exists" in str(made[4])
+    assert probe["runs_before_send"] == []
+    assert probe["runs_after_send"] == ["On any", "On this one"]
+    assert probe["runs_after_unsubscribe"] == ["On any", "On this one", "On unsubscribe"]
+
+
 def test_only_a_campaign_never_queued_may_be_deleted(probe: Probe) -> None:
     """P7-DL: those who manage campaigns delete a draft with its version;
     Read-only members are refused, another workspace sees a 404, and a

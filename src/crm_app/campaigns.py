@@ -1320,4 +1320,10 @@ def unsubscribe(workspace: uuid.UUID, token: str) -> bool:
         if row.status != "unsubscribed":
             row.status, row.unsubscribed_at = "unsubscribed", _now()
             suppression.suppress_unsubscribed(session, workspace, row.email, row.contact_id)
+            if row.contact_id is not None:
+                from crm_app import automations  # noqa: PLC0415 - automations imports records
+
+                automations.on_campaign_event(
+                    session, workspace, "campaign_unsubscribed", row.contact_id, row.campaign_id
+                )
         return True
