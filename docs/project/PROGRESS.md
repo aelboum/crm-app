@@ -1369,6 +1369,32 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Staging deployed at `6d3e5d3` (2026-11-20, owner: "Go ahead")
+
+From `6d52347`: deleting campaigns never queued (P7-DL) and campaign
+triggers for automations (P8-C, migration `0050_campaign_triggers`).
+
+| Check | Result |
+| --- | --- |
+| CI on `48319bb` and `6d3e5d3` | passed (runs 44691578319 and 44695631343) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:6d3e5d3`; `VERSION=6d3e5d3` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| Database after migrate | `campaign_recipient_email_idx` exists; `automation_trigger_check` allows `campaign_sent` and `campaign_unsubscribed` |
+| `/readyz` | 200, database and redis healthy |
+| alice, a draft duplicated from "Rehearsal check (copy)" | "Delete" shows; the confirmation "Delete campaign?" appears first; after "Delete" the campaign is gone from the list and the detail closes; audit `crm_app.campaign.deleted` with `status` and `content_hash` only |
+| alice, an approved and a completed campaign | no "Delete" (approved: cancel first; completed: "Archive") |
+| alice, New automation | the trigger list offers both campaign triggers; the campaign picker lists "Any" and the workspace's campaigns; the hint for the unsubscribe trigger shows |
+| alice, draft "Campaign trigger check" (unsubscribe, "Schedule check") | saved as a draft; stored `campaign_unsubscribed` naming that campaign; not activated |
+| App and worker logs, first 20 minutes | no error lines |
+
+"Campaign trigger check" (a draft, never activated), "Rehearsal check
+(copy)" and "Schedule check (copy)" are disposable test data. The sent
+trigger cannot be exercised on staging (rehearsals send nothing), nor
+the unsubscribe trigger end to end (no real email carries the link).
+Rollback: code to `crm-app:6d52347` after downgrading to
+`0049_invitation_name`; a full rollback restores the backup taken above.
+
 ## Campaign triggers for automations (2026-11-20, owner: "do 2 then 4, then 3")
 
 Decision P8-C: triggers `campaign_sent` and `campaign_unsubscribed`, for
@@ -1383,8 +1409,8 @@ one campaign or any; migration `0050_campaign_triggers`.
 | `npx vitest run --maxWorkers=2` | 37 files, 405 passed |
 | `tsc -b`; `eslint .`; `npm run build`; `ruff`; `pyright` | clean |
 
-Not deployed to staging. On staging the sent trigger cannot start: the
-workspace rehearses campaigns and nothing is sent.
+Deployed to staging above. On staging the sent trigger cannot start:
+the workspace rehearses campaigns and nothing is sent.
 
 Item 4 (Prettier) was not done: the repository has no Prettier
 configuration, dependency or CI check, and 101 of 153 frontend source
@@ -1404,7 +1430,7 @@ cancelled campaigns, confirmed first in the detail. No migration.
 | `npx vitest run --maxWorkers=2` | 37 files, 403 passed |
 | `tsc -b`; `eslint`; `ruff`; `pyright` | clean |
 
-Not deployed to staging.
+Deployed to staging above.
 
 ## Staging deployed at `6d52347` (2026-11-20, owner: "Go Ahead")
 
