@@ -1369,6 +1369,25 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Staging deployed at `f77a204` (2026-11-20, owner: "Go Ahead")
+
+From `6d3e5d3`: campaign automations named and listed (P8-C follow-up).
+Frontend only, no migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `f77a204` | passed (run 44721678675) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:f77a204`; `VERSION=f77a204` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `/readyz` | 200, database and redis healthy |
+| alice, Automations | the introduction names the campaign triggers; "Campaign trigger check" reads "When a contact unsubscribes from Schedule check · 0 steps" |
+| alice, "Schedule check" detail | "Automations started by this campaign" lists "Campaign trigger check", Draft, "on unsubscribing" |
+| alice, "Rehearsal check (copy)" detail | says no automation starts; "New automation for this campaign" opens the editor at `?create=automation&campaign=` with "A campaign email is sent to a contact" and this campaign chosen; cancelled, nothing saved |
+| App and worker logs, first 15 minutes | no error lines |
+
+Rollback: code to `crm-app:6d3e5d3` (no schema change).
+
 ## Campaign automations named and listed (2026-11-20, owner: "Do both")
 
 Decision P8-C follow-up. Each automation's summary names its campaign, and
@@ -1381,7 +1400,7 @@ campaign". Frontend only: no API or migration change.
 | `npx vitest run --maxWorkers=2` | 37 files, 409 passed |
 | `tsc -b`; `eslint .`; `npm run build` | clean |
 
-Not deployed to staging.
+Deployed to staging above.
 
 ## Staging deployed at `6d3e5d3` (2026-11-20, owner: "Go ahead")
 
