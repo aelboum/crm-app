@@ -1388,7 +1388,35 @@ error for runs with a notify, round-robin or business-hours step.
 
 The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
-everything passed. Not deployed to staging.
+everything passed. Deployed to staging below.
+
+## Staging deployed at `6d5708b` (2026-11-20, owner: "Go 1 and 2")
+
+From `f77a204`: the automation step that sets a contact custom field
+(P8-F) and the run-history fix. Migration `0051_custom_field_step` (widens
+the step action check; no data change).
+
+| Check | Result |
+| --- | --- |
+| CI on `6d5708b` | passed (run 44744843860) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:6d5708b`; `VERSION=6d5708b` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `public.alembic_version`; `automation_step_action_check` | `0051_custom_field_step`; the check lists `set_custom_field` |
+| `/readyz` | 200 |
+| alice, Automations editor | "Set a custom field" is offered; adding it shows the contact field "Plan", a text value and the hint; cancelled, nothing saved |
+| App and worker logs, first 30 minutes | no error lines |
+
+Disposable staging data deleted as alice through the app (owner: "Go 1
+and 2"): draft automation "Campaign trigger check"; draft campaign
+"Rehearsal check (copy)"; campaign "Schedule check (copy)" (approved and
+scheduled as a rehearsal, so cancelled first, then deleted; never queued,
+nothing sent). Kept: completed rehearsal "Schedule check", automation
+"Tag new 56367", template "Welcome 56367".
+
+Rollback: code to `crm-app:f77a204` is safe without a downgrade (0051 only
+adds an allowed value); the old code does not know the new step, so pause
+any automation that uses it first.
 
 ## Staging deployed at `f77a204` (2026-11-20, owner: "Go Ahead")
 
