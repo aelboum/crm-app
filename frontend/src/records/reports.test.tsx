@@ -159,9 +159,53 @@ function reports(
         },
       };
     }
+    if (path.startsWith(`${base}/reports/campaigns?`)) {
+      return { status: 200, body: CAMPAIGNS };
+    }
     return method === "GET" ? undefined : { status: 405 };
   };
 }
+
+const NONE = {
+  waiting: 0,
+  sent: 0,
+  delivered: 0,
+  bounced: 0,
+  complained: 0,
+  suppressed: 0,
+  not_sent: 0,
+  unknown: 0,
+  rehearsed: 0,
+};
+const CAMPAIGNS = {
+  period: PERIOD,
+  capped: false,
+  campaigns: 3,
+  campaigns_before: 1,
+  recipients: 7,
+  outcomes: { ...NONE, sent: 4, bounced: 1, rehearsed: 2 },
+  unsubscribed: 1,
+  items: [
+    {
+      campaign_id: "cccccccc-0000-4000-8000-000000000001",
+      name: "Autumn news",
+      status: "completed",
+      queued_at: "2026-10-20T09:00:00Z",
+      recipients: 5,
+      outcomes: { ...NONE, sent: 4, bounced: 1 },
+      unsubscribed: 1,
+    },
+    {
+      campaign_id: "cccccccc-0000-4000-8000-000000000002",
+      name: "Rehearsal",
+      status: "completed",
+      queued_at: "2026-10-02T09:00:00Z",
+      recipients: 2,
+      outcomes: { ...NONE, rehearsed: 2 },
+      unsubscribed: 0,
+    },
+  ],
+};
 
 describe("reports", () => {
   it("shows the last 30 days in the workspace's time zone with definitions and comparisons", async () => {
@@ -174,7 +218,7 @@ describe("reports", () => {
     await waitFor(() => {
       expect(
         new Set(asked.map((r) => r.path.split("?")[0]?.split("/").pop())).size,
-      ).toBe(5);
+      ).toBe(6);
     });
     for (const call of asked) {
       expect(period(call.path)).toEqual({
@@ -324,6 +368,51 @@ describe("reports", () => {
     });
     expect(
       screen.getByText(/^31 days, both dates included/),
+    ).toBeInTheDocument();
+  });
+
+  it("lists the period's campaigns with outcomes and says how many are not listed (P10-C)", async () => {
+    renderApp(`/w/${WS}/reports`, reports());
+    const card = await screen.findByRole("region", { name: "Campaigns" });
+    expect(await within(card).findByText("Autumn news")).toBeInTheDocument();
+    expect(card).toHaveTextContent("Campaigns sent or rehearsed3");
+    expect(card).toHaveTextContent("Recipients7");
+    expect(card).toHaveTextContent("Unsubscribed1");
+    expect(card).toHaveTextContent("Previous 30 days: 1");
+    expect(card).toHaveTextContent("Accepted by the provider4");
+    expect(card).toHaveTextContent("Bounced1");
+    expect(card).toHaveTextContent("Rehearsed, not sent2");
+    // Outcomes with no recipients are left out.
+    expect(within(card).queryByText("Delivered")).toBeNull();
+    expect(
+      within(card).getByText(/Completed · .* · 5 recipients/),
+    ).toBeInTheDocument();
+    expect(card).toHaveTextContent("1 more campaign is counted but not listed.");
+    expect(await accessibilityViolations()).toEqual([]);
+  });
+
+  it("says when no campaign went out, and fails alone", async () => {
+    renderApp(
+      `/w/${WS}/reports`,
+      reports({
+        campaigns: {
+          status: 200,
+          body: {
+            ...CAMPAIGNS,
+            campaigns: 0,
+            recipients: 0,
+            outcomes: NONE,
+            unsubscribed: 0,
+            items: [],
+          },
+        },
+      }),
+    );
+    const card = await screen.findByRole("region", { name: "Campaigns" });
+    expect(
+      await within(card).findByText(
+        "No campaign was sent or rehearsed in this period.",
+      ),
     ).toBeInTheDocument();
   });
 

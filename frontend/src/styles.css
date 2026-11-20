@@ -1492,6 +1492,9 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .reports-figures dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; overflow-wrap: anywhere; }
 .reports-line { margin: 10px 0 0; color: var(--ink-2); }
 .reports-definition { margin: 10px 0 0; font-size: 12px; }
+.reports-campaigns { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.reports-campaigns li { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.reports-campaign-name { font-weight: 600; overflow-wrap: anywhere; }
 .reports-team th[scope="row"] { font-weight: 500; text-align: left; }
 @media (max-width: 900px) {
   .reports-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

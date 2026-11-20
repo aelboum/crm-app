@@ -1210,6 +1210,14 @@ OUTCOMES = (
 )
 
 
+def outcome_of(email_status: str, last_error: str | None) -> str:
+    """The result bucket an email counts under: a rehearsal's recorded
+    failure is `rehearsed`, never `not_sent`."""
+    if email_status == "failed" and last_error == "rehearsal":
+        return "rehearsed"
+    return _OUTCOME.get(email_status, "unknown")
+
+
 def report(scope: Scope, campaign_id: uuid.UUID) -> Item:
     """What happened to a campaign's recipients, counted from stored rows:
     each recipient's email by outcome, and unsubscribes from its link."""
@@ -1232,12 +1240,8 @@ def report(scope: Scope, campaign_id: uuid.UUID) -> Item:
     unsubscribed = 0
     for recipient_status, email_status, last_error in rows:
         unsubscribed += recipient_status == "unsubscribed"
-        if email_status is None:
-            continue
-        if email_status == "failed" and last_error == "rehearsal":
-            outcomes["rehearsed"] += 1
-        else:
-            outcomes[_OUTCOME.get(email_status, "unknown")] += 1
+        if email_status is not None:
+            outcomes[outcome_of(email_status, last_error)] += 1
     return {
         "campaign_id": found,
         "status": status,
@@ -1280,12 +1284,7 @@ def results(scope: Scope, campaign_id: uuid.UUID) -> list[Item]:
         _audit(session, scope, "results_exported", row, row_count=len(found))
     items: list[Item] = []
     for email, contact_id, added_at, unsubscribed_at, email_status, last_error in found:
-        if email_status is None:
-            outcome = "unknown"
-        elif email_status == "failed" and last_error == "rehearsal":
-            outcome = "rehearsed"
-        else:
-            outcome = _OUTCOME.get(email_status, "unknown")
+        outcome = "unknown" if email_status is None else outcome_of(email_status, last_error)
         items.append(
             {
                 "email": email,

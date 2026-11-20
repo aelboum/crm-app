@@ -2525,6 +2525,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/reports/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Campaigns */
+        get: operations["report_campaigns_v1_workspaces__tenant_id__reports_campaigns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/reports/contact-trend": {
         parameters: {
             query?: never;
@@ -3891,6 +3908,48 @@ export interface components {
              */
             campaign_id: string;
             outcomes: components["schemas"]["CampaignOutcomes"];
+            /** Recipients */
+            recipients: number;
+            /** Status */
+            status: string;
+            /** Unsubscribed */
+            unsubscribed: number;
+        };
+        /**
+         * CampaignsReport
+         * @description Campaigns queued in the period, newest first (at most 50 listed).
+         */
+        CampaignsReport: {
+            /** Campaigns */
+            campaigns: number;
+            /** Campaigns Before */
+            campaigns_before: number;
+            /** Capped */
+            capped: boolean;
+            /** Items */
+            items: components["schemas"]["CampaignsReportRow"][];
+            outcomes: components["schemas"]["CampaignOutcomes"];
+            period: components["schemas"]["PeriodOut"];
+            /** Recipients */
+            recipients: number;
+            /** Unsubscribed */
+            unsubscribed: number;
+        };
+        /** CampaignsReportRow */
+        CampaignsReportRow: {
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /** Name */
+            name: string;
+            outcomes: components["schemas"]["CampaignOutcomes"];
+            /**
+             * Queued At
+             * Format: date-time
+             */
+            queued_at: string;
             /** Recipients */
             recipients: number;
             /** Status */
@@ -13535,6 +13594,42 @@ export interface operations {
                 };
                 content: {
                     "text/csv": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_campaigns_v1_workspaces__tenant_id__reports_campaigns_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignsReport"];
                 };
             };
             /** @description Validation Error */

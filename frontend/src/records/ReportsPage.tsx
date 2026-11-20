@@ -7,6 +7,7 @@ import { Button as AriaButton } from "react-aria-components";
 import { fileDownload } from "../api/exportContacts";
 import {
   type AppointmentReport,
+  type CampaignsReport,
   daysBefore,
   daysIn,
   type DealReport,
@@ -18,6 +19,7 @@ import {
   type TaskReport,
   todayIn,
   useAppointmentReport,
+  useCampaignReport,
   useContactReport,
   useDealReport,
   useFunnelReport,
@@ -96,6 +98,7 @@ export function ReportsPage({ workspaceId }: { workspaceId: string }) {
         <DealsCard workspaceId={workspaceId} period={period} />
         <TasksCard workspaceId={workspaceId} period={period} />
         <AppointmentsCard workspaceId={workspaceId} period={period} />
+        <CampaignsCard workspaceId={workspaceId} period={period} />
         <TeamCard workspaceId={workspaceId} period={period} />
       </div>
     </div>
@@ -671,6 +674,98 @@ function AppointmentsCard({
           </p>
           <p className="muted reports-definition">
             {t("reports.appointments.definition")}
+          </p>
+        </>
+      ) : (
+        <Loading />
+      )}
+    </Card>
+  );
+}
+
+const OUTCOMES = [
+  "waiting",
+  "sent",
+  "delivered",
+  "bounced",
+  "complained",
+  "suppressed",
+  "not_sent",
+  "unknown",
+  "rehearsed",
+] as const;
+
+function CampaignsCard({
+  workspaceId,
+  period,
+}: {
+  workspaceId: string;
+  period: Period;
+}) {
+  const t = useT();
+  const intl = useIntl();
+  const report = useCampaignReport(workspaceId, period);
+  const data: CampaignsReport | undefined = report.data;
+  const more = data ? data.campaigns - data.items.length : 0;
+  return (
+    <Card id="reports-campaigns" title={t("reports.campaigns")}>
+      {report.isError ? (
+        <LoadError error={report.error} onRetry={() => void report.refetch()} />
+      ) : data ? (
+        <>
+          <Capped capped={data.capped} />
+          <dl className="reports-figures">
+            <dt>{t("reports.campaigns.queued")}</dt>
+            <dd>{intl.formatNumber(data.campaigns)}</dd>
+            <dt>{t("reports.campaigns.recipients")}</dt>
+            <dd>{intl.formatNumber(data.recipients)}</dd>
+            <dt>{t("campaigns.results.unsubscribed")}</dt>
+            <dd>{intl.formatNumber(data.unsubscribed)}</dd>
+          </dl>
+          <p className="muted reports-line">
+            <Before
+              days={daysIn(period)}
+              value={intl.formatNumber(data.campaigns_before)}
+            />
+          </p>
+          {data.items.length ? (
+            <>
+              <Bars
+                rows={OUTCOMES.filter((key) => data.outcomes[key] > 0).map(
+                  (key) => ({
+                    key,
+                    label: t(`campaigns.results.${key}` as MessageId),
+                    value: data.outcomes[key],
+                  }),
+                )}
+              />
+              <ul className="reports-campaigns">
+                {data.items.map((row) => (
+                  <li key={row.campaign_id}>
+                    <span className="reports-campaign-name">{row.name}</span>
+                    <span className="muted">
+                      {t("reports.campaigns.row", {
+                        status: t(`campaigns.status.${row.status}` as MessageId),
+                        date: intl.formatDate(row.queued_at, {
+                          dateStyle: "medium",
+                        }),
+                        count: row.recipients,
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {more > 0 ? (
+                <p className="muted">
+                  {t("reports.campaigns.more", { count: more })}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="muted">{t("reports.campaigns.none")}</p>
+          )}
+          <p className="muted reports-definition">
+            {t("reports.campaigns.definition")}
           </p>
         </>
       ) : (

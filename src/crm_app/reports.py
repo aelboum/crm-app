@@ -1,4 +1,5 @@
-"""Reports over contacts, deals, tasks and appointments (decision P10-A).
+"""Reports over contacts, deals, tasks and appointments (decision P10-A),
+and campaigns (decision P10-C).
 
 Every figure is counted from rows as they are stored now, in one workspace
 under its row security, for a period of whole days in the workspace's time
@@ -29,10 +30,20 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
+from crm_app import campaigns as campaign_service
 from crm_app.domains import opportunities as deal_rules
 from crm_app.domains import reports as rules
 from crm_app.domains.settings import DEFAULT_TIME_ZONE
-from crm_app.models import Appointment, Contact, Opportunity, Task, WorkspaceSettings
+from crm_app.models import (
+    Appointment,
+    Campaign,
+    CampaignRecipient,
+    Contact,
+    EmailMessage,
+    Opportunity,
+    Task,
+    WorkspaceSettings,
+)
 from crm_app.records import Scope
 
 ROW_CAP = 20_000
@@ -123,6 +134,87 @@ def contacts(scope: Scope, chosen: rules.Period) -> Item:
         "sources": [
             {"source": s, "count": n}
             for s, n in sorted(sources.items(), key=lambda i: (-i[1], i[0]))
+        ],
+    }
+
+
+CAMPAIGNS_LISTED = 50
+
+
+def campaigns(scope: Scope, chosen: rules.Period) -> Item:
+    """Campaigns queued in the period (sent, or processed as a rehearsal),
+    newest first: each one's recipients by outcome and its unsubscribes, and
+    the totals. Outcomes are as stored now, whenever they happened; at most
+    `CAMPAIGNS_LISTED` campaigns are listed, all are counted."""
+    with tenant_session_scope(scope.workspace) as session:
+        _start(session)
+        found, capped = _capped(
+            session.execute(
+                select(Campaign.id, Campaign.name, Campaign.status, Campaign.queued_at)
+                .where(
+                    Campaign.tenant_id == scope.workspace,
+                    Campaign.queued_at >= chosen.previous_since,
+                    Campaign.queued_at < chosen.until,
+                )
+                .order_by(Campaign.queued_at.desc(), Campaign.id)
+                .limit(ROW_CAP + 1)
+            ).all()
+        )
+        sides = Counter(rules.where(row.queued_at, chosen) for row in found)
+        current = [row for row in found if rules.where(row.queued_at, chosen) == "current"]
+        rows: list[Any] = []
+        if current:
+            rows, rows_capped = _capped(
+                session.execute(
+                    select(
+                        CampaignRecipient.campaign_id,
+                        CampaignRecipient.status,
+                        EmailMessage.status,
+                        EmailMessage.last_error,
+                    )
+                    .outerjoin(
+                        EmailMessage,
+                        (EmailMessage.tenant_id == CampaignRecipient.tenant_id)
+                        & (EmailMessage.id == CampaignRecipient.email_message_id),
+                    )
+                    .where(
+                        CampaignRecipient.tenant_id == scope.workspace,
+                        CampaignRecipient.campaign_id.in_([row.id for row in current]),
+                    )
+                    .limit(ROW_CAP + 1)
+                ).all()
+            )
+            capped = capped or rows_capped
+    tallies: dict[uuid.UUID, Counter[str]] = {row.id: Counter() for row in current}
+    for campaign_id, recipient_status, email_status, last_error in rows:
+        tally = tallies[campaign_id]
+        tally["recipients"] += 1
+        tally["unsubscribed"] += recipient_status == "unsubscribed"
+        if email_status is not None:
+            tally[campaign_service.outcome_of(email_status, last_error)] += 1
+    totals: Counter[str] = Counter()
+    for tally in tallies.values():
+        totals.update(tally)
+    names = campaign_service.OUTCOMES
+    return {
+        "period": _period(chosen),
+        "capped": capped,
+        "campaigns": sides["current"],
+        "campaigns_before": sides["previous"],
+        "recipients": totals["recipients"],
+        "outcomes": {name: totals[name] for name in names},
+        "unsubscribed": totals["unsubscribed"],
+        "items": [
+            {
+                "campaign_id": row.id,
+                "name": row.name,
+                "status": row.status,
+                "queued_at": row.queued_at,
+                "recipients": tallies[row.id]["recipients"],
+                "outcomes": {name: tallies[row.id][name] for name in names},
+                "unsubscribed": tallies[row.id]["unsubscribed"],
+            }
+            for row in current[:CAMPAIGNS_LISTED]
         ],
     }
 

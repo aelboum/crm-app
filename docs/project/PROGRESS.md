@@ -1390,6 +1390,22 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Campaigns in Reports (2026-11-20, owner: "do all 4")
+
+Decision P10-C, no migration. `GET .../reports/campaigns` and a Reports
+card: campaigns queued in the period, recipients by outcome, unsubscribes.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/integration/test_report_campaigns.py test_reports.py` | 15 passed |
+| `pytest tests/integration/test_campaigns.py test_report_campaigns.py` (after moving the outcome rule into `outcome_of`) | 25 passed |
+| `ruff`; `pyright`; `lint-imports` | clean; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | regenerated (`CampaignsReport`) |
+| `npx vitest run src/records/reports.test.tsx` | 13 passed |
+| `tsc -b`; `eslint` | clean |
+
+Not deployed to staging.
+
 ## Automation condition on a contact custom field (2026-11-20, owner: "do all 4")
 
 Decision P8-G, no migration. A condition can read one contact custom field

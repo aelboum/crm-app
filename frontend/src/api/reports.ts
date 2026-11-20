@@ -18,6 +18,7 @@ export type TaskReport = components["schemas"]["TaskReport"];
 export type AppointmentReport = components["schemas"]["AppointmentReport"];
 export type FunnelReport = components["schemas"]["FunnelReport"];
 export type ContactTrend = components["schemas"]["ContactTrend"];
+export type CampaignsReport = components["schemas"]["CampaignsReport"];
 
 export interface Period {
   start: string;
@@ -90,6 +91,23 @@ export function useAppointmentReport(workspaceId: string, period: Period) {
     queryFn: async () =>
       unwrap(
         await api.GET("/v1/workspaces/{tenant_id}/reports/appointments", {
+          params: { path: where(workspaceId), query: period },
+        }),
+      ),
+  });
+}
+
+/*
+ * Campaigns (decision P10-C): those queued in the period, newest first,
+ * with recipients by outcome as stored now. No CSV; each campaign's own
+ * results have one.
+ */
+export function useCampaignReport(workspaceId: string, period: Period) {
+  return useQuery({
+    queryKey: reportKeys.one(workspaceId, "campaigns", period),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/reports/campaigns", {
           params: { path: where(workspaceId), query: period },
         }),
       ),

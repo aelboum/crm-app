@@ -2574,6 +2574,100 @@
         "title": "CampaignReport",
         "type": "object"
       },
+      "CampaignsReport": {
+        "description": "Campaigns queued in the period, newest first (at most 50 listed).",
+        "properties": {
+          "campaigns": {
+            "title": "Campaigns",
+            "type": "integer"
+          },
+          "campaigns_before": {
+            "title": "Campaigns Before",
+            "type": "integer"
+          },
+          "capped": {
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CampaignsReportRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "outcomes": {
+            "$ref": "#/components/schemas/CampaignOutcomes"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodOut"
+          },
+          "recipients": {
+            "title": "Recipients",
+            "type": "integer"
+          },
+          "unsubscribed": {
+            "title": "Unsubscribed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period",
+          "capped",
+          "campaigns",
+          "campaigns_before",
+          "recipients",
+          "outcomes",
+          "unsubscribed",
+          "items"
+        ],
+        "title": "CampaignsReport",
+        "type": "object"
+      },
+      "CampaignsReportRow": {
+        "properties": {
+          "campaign_id": {
+            "format": "uuid",
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outcomes": {
+            "$ref": "#/components/schemas/CampaignOutcomes"
+          },
+          "queued_at": {
+            "format": "date-time",
+            "title": "Queued At",
+            "type": "string"
+          },
+          "recipients": {
+            "title": "Recipients",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unsubscribed": {
+            "title": "Unsubscribed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "campaign_id",
+          "name",
+          "status",
+          "queued_at",
+          "recipients",
+          "outcomes",
+          "unsubscribed"
+        ],
+        "title": "CampaignsReportRow",
+        "type": "object"
+      },
       "CompanyCreate": {
         "additionalProperties": false,
         "description": "`domain` is derived from `website` when it is not given.",
@@ -26554,6 +26648,85 @@
           }
         },
         "summary": "Export Report Appointments",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/reports/campaigns": {
+      "get": {
+        "operationId": "report_campaigns_v1_workspaces__tenant_id__reports_campaigns_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignsReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Campaigns",
         "tags": [
           "reports"
         ]

@@ -4377,6 +4377,32 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Tests:** `tests/integration/test_setup.py`, `tests/unit/test_routes.py`,
   `frontend/src/records/dashboard.test.tsx`.
 
+## P10-C — Campaigns in Reports (2026-11-20)
+
+- **Status:** Implemented on the owner's "do all 4" (option 2 of the
+  options after the `6d5708b` deploy).
+- **Decision:** `GET .../reports/campaigns?start&end`, guarded by
+  `crm_app.campaign:read` like the other report cards (each fails alone).
+  - It counts campaigns queued in the period (sent, or processed as a
+    rehearsal; drafts and approved campaigns never queued are not counted)
+    and, for comparison, in the period before.
+  - For the period's campaigns: recipients, recipients by outcome (the
+    same buckets as a campaign's Results card, decision P7-RP; a
+    rehearsal's emails count as "rehearsed", never "not sent"), and
+    unsubscribes from the campaign's link. Outcomes are as stored now,
+    whenever they happened, not only within the period.
+  - At most 50 campaigns are listed, newest first; all are counted. Row
+    reads stop at the report cap (20,000) and say so (`capped`).
+  - No CSV: each campaign's own results CSV (P7-RX) covers the detail.
+  - Read only, no migration, no sending. Opens and clicks are not tracked.
+- **Reports card:** "Campaigns": campaigns sent or rehearsed (with the
+  previous period), recipients, unsubscribed, outcome bars without empty
+  buckets, then each campaign with status, date and recipient count.
+- **Tests:** `tests/integration/test_report_campaigns.py` (period and
+  previous period, outcomes, unsubscribes, drafts and older campaigns not
+  counted, other workspaces, refused period); `reports.test.tsx` (card,
+  empty state).
+
 ## P10-F — Conversion funnel, lead trend and Home cards (2026-11-08)
 
 - **Status:** Decided and built under the autonomous mandate (owner,

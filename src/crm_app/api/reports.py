@@ -8,6 +8,8 @@
                                                          appointment and deal read
     GET /v1/workspaces/{tenant_id}/reports/contact-trend crm_app.contact:read, and
                                                          deal read (decision P10-F)
+    GET /v1/workspaces/{tenant_id}/reports/campaigns     crm_app.campaign:read
+                                                         (decision P10-C; no CSV)
 
 and each as CSV at `.../reports/<name>/export.csv` with the same
 permission (decision P10-B).
@@ -40,6 +42,7 @@ from saas_os.core.rbac import can
 from saas_os.infra.db import OperationalError, is_statement_timeout
 
 from crm_app import reports
+from crm_app.api.campaigns import CampaignOutcomes
 from crm_app.domains import export as csv_export
 from crm_app.domains import reports as rules
 from crm_app.records import Scope
@@ -52,6 +55,7 @@ ReadTasks = Annotated[RequestContext, Depends(require_permission("crm_app.task",
 ReadAppointments = Annotated[
     RequestContext, Depends(require_permission("crm_app.appointment", "read"))
 ]
+ReadCampaigns = Annotated[RequestContext, Depends(require_permission("crm_app.campaign", "read"))]
 
 
 class PeriodParams(BaseModel):
@@ -165,6 +169,29 @@ class FunnelReport(BaseModel):
     won_before: int
 
 
+class CampaignsReportRow(BaseModel):
+    campaign_id: uuid.UUID
+    name: str
+    status: str
+    queued_at: datetime
+    recipients: int
+    outcomes: CampaignOutcomes
+    unsubscribed: int
+
+
+class CampaignsReport(BaseModel):
+    """Campaigns queued in the period, newest first (at most 50 listed)."""
+
+    period: PeriodOut
+    capped: bool
+    campaigns: int
+    campaigns_before: int
+    recipients: int
+    outcomes: CampaignOutcomes
+    unsubscribed: int
+    items: list[CampaignsReportRow]
+
+
 class TrendWeek(BaseModel):
     start: date
     created: int
@@ -213,6 +240,13 @@ Params = Annotated[PeriodParams, Query()]
 @router.get("/{tenant_id}/reports/contacts", response_model=ContactReport, name="report_contacts")
 async def report_contacts(context: ReadContacts, params: Params) -> Any:
     return await _report(context, params, reports.contacts)
+
+
+@router.get(
+    "/{tenant_id}/reports/campaigns", response_model=CampaignsReport, name="report_campaigns"
+)
+async def report_campaigns(context: ReadCampaigns, params: Params) -> Any:
+    return await _report(context, params, reports.campaigns)
 
 
 @router.get("/{tenant_id}/reports/deals", response_model=DealReport, name="report_deals")
