@@ -30,7 +30,11 @@ Actions: `add_tag` and `remove_tag` (`tag_id`), `assign_owner`
 member's id), `notify_member` (`recipient`: `contact_owner` or a member's
 id, and a fixed `message` the definition's author writes; decision P8-N),
 `assign_round_robin` (`user_ids`, 2 to 20 members; decision P8-R), `wait`
-(`minutes`) and `wait_for_business_hours` (no arguments; decision P8-W).
+(`minutes`), `wait_for_business_hours` (no arguments; decision P8-W) and
+`set_custom_field` (`field_key` of a contact custom field and a fixed
+`value` the author writes; decision P8-F). A field's key and type never
+change, so the key names it; whether the field is active and the value fits
+its type is checked at activation and again at each run.
 Contacts created by an import never start an automation.
 """
 
@@ -41,6 +45,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from crm_app.domains import custom_fields as field_rules
 from crm_app.domains.records import SOURCES, STAGES, InvalidValue, visible_text
 
 TRIGGERS = (
@@ -73,6 +78,7 @@ ACTIONS = (
     "assign_round_robin",
     "wait",
     "wait_for_business_hours",
+    "set_custom_field",
 )
 PRIORITIES = ("high", "medium", "low")
 MAX_ACTIONS = 10
@@ -187,6 +193,34 @@ def _rotation(raw: Mapping[str, Any], where: str) -> Action:
     return Action("assign_round_robin", {"user_ids": users})
 
 
+def _field_value(raw: Mapping[str, Any], where: str) -> Action:
+    """`set_custom_field` (P8-F): a key and a fixed value of a shape some
+    field type accepts; which field and type is checked at activation."""
+    _keys(raw, {"type", "field_key", "value"}, where)
+    given_key = raw.get("field_key")
+    try:
+        key = field_rules.key(given_key if isinstance(given_key, str) else "")
+    except InvalidValue:
+        raise InvalidValue(f"{where}.field_key: a custom field's key") from None
+    given = raw.get("value")
+    value: object
+    if isinstance(given, bool):
+        value = given
+    elif isinstance(given, int | float):
+        try:
+            value = field_rules.value("number", None, given)
+        except InvalidValue as exc:
+            raise InvalidValue(f"{where}.value: {exc}") from None
+    elif isinstance(given, str):
+        text = given.strip()
+        if not 1 <= len(text) <= field_rules.TEXT_MAX or not visible_text(text):
+            raise InvalidValue(f"{where}.value: 1 to {field_rules.TEXT_MAX} visible characters")
+        value = text
+    else:
+        raise InvalidValue(f"{where}.value: text, a number, or true or false")
+    return Action("set_custom_field", {"field_key": key, "value": value})
+
+
 def _action(raw: object, where: str) -> Action:
     if not isinstance(raw, Mapping):
         raise InvalidValue(f"{where}: an object")
@@ -210,7 +244,12 @@ def _action(raw: object, where: str) -> Action:
     if kind == "wait_for_business_hours":
         _keys(raw, {"type"}, where)
         return Action(kind, {})
-    builder = {"create_task": _task, "notify_member": _notice, "assign_round_robin": _rotation}
+    builder = {
+        "create_task": _task,
+        "notify_member": _notice,
+        "assign_round_robin": _rotation,
+        "set_custom_field": _field_value,
+    }
     if isinstance(kind, str) and kind in builder:
         return builder[kind](raw, where)
     raise InvalidValue(f"{where}.type: one of {', '.join(ACTIONS)}")
@@ -352,3 +391,13 @@ def referenced(given: Definition) -> tuple[set[str], set[str]]:
         elif step.type == "assign_round_robin":
             users.update(step.args["user_ids"])
     return tags, users
+
+
+def field_values(given: Definition) -> list[tuple[str, object]]:
+    """The custom field keys and values a definition sets (P8-F), to check
+    against the workspace's active contact fields before activation."""
+    return [
+        (step.args["field_key"], step.args["value"])
+        for step in (*given.yes, *given.no)
+        if step.type == "set_custom_field"
+    ]

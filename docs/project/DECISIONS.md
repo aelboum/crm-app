@@ -1073,6 +1073,52 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-F — Automation step that sets a contact custom field (2026-11-20)
+
+- **Status:** Implemented on the owner's "go" (recommended option 1: an
+  automation step that updates an approved field). The approved fields are
+  the workspace's contact custom fields; the lifecycle stage already has
+  its own step. Email, phone, name and the other built-in contact fields
+  are not offered, so an automation never overwrites contact details.
+- **Decision:** the step `set_custom_field` takes `field_key` (a contact
+  custom field's key, which never changes) and a fixed `value` that the
+  automation's author writes: text (1 to 500 visible characters, one
+  line), a number, or true or false. It never sets a value read from the
+  contact, and it never clears a field.
+  - Saving a draft checks only the shape.
+  - Activation also checks that the key names an active contact field
+    (not a company field), and that the value fits the field's type and,
+    for a select, its options. The refusal names the key, never the value.
+  - At each run the value is checked again, through the same rules as a
+    member's edit. If the field has been archived since, the step is
+    skipped with `field_gone`. If the value no longer fits (such as a
+    select option since removed), it is skipped with `invalid`; a value
+    that would exceed the record's size limit is skipped with
+    `too_large`. The field is then left as it was. A value already set
+    counts as done and writes nothing.
+  - A change writes one history entry by the automation ("updated",
+    `custom_fields`), one audit entry with `custom_field_keys` and never
+    the value, and the `contact.updated` webhook, like a member's edit.
+  - Migration `0051_custom_field_step` allows the action on
+    `automation_step`.
+- **Fix found on the way:** the run history's response model listed only
+  six step types. A run with a notify, round-robin or business-hours step
+  failed the whole `GET .../automations/{id}/runs` with a server error. It
+  now lists every action, and a unit test holds it equal to the domain's
+  list.
+- **Editor:** "Set a custom field" offers the active contact fields only,
+  then a control for the field's type: a list of options for a select,
+  Yes or No for true or false, a number, a date or text. A field archived
+  since stays chosen and is shown as "A field that is archived or no
+  longer exists" until changed.
+- **Tests:** `tests/unit/test_automation_rules.py` (shapes refused and
+  stored, every action in the run history);
+  `tests/integration/test_automation_field.py` (refusals when saved and
+  when activated; a run sets three fields, history, audit without values,
+  a retry changes nothing, the run history lists the steps; an archived
+  field and a removed option skip their steps); `automations.test.tsx`
+  (builds the three kinds of step; keeps an archived field).
+
 ## P8-C follow-up — Campaign automations named and listed (2026-11-20)
 
 - **Status:** Implemented on the owner's "Do both" (items 1 and 2 of the

@@ -28,6 +28,11 @@ import {
 import { useBookingPages } from "../api/bookingPages";
 import { useCampaign, useCampaigns } from "../api/campaigns";
 import { ApiError } from "../api/client";
+import {
+  activeFields,
+  type FieldDefinition,
+  useFieldDefinitions,
+} from "../api/customFields";
 import { useForms } from "../api/forms";
 import { usePipelines } from "../api/pipelines";
 import {
@@ -497,10 +502,17 @@ function Runs({
   );
 }
 
+function fieldStart(field: FieldDefinition | undefined): string | boolean {
+  if (field?.field_type === "select") return field.options?.[0] ?? "";
+  if (field?.field_type === "boolean") return true;
+  return "";
+}
+
 function newAction(
   type: Action["type"],
   tags: Option[],
   members: Option[],
+  fields: FieldDefinition[],
 ): Action {
   if (type === "add_tag" || type === "remove_tag")
     return { type, tag_id: tags[0]?.id ?? "" };
@@ -508,6 +520,12 @@ function newAction(
   if (type === "assign_owner") return { type, user_id: members[0]?.id ?? "" };
   if (type === "wait") return { type, minutes: 60 };
   if (type === "wait_for_business_hours") return { type };
+  if (type === "set_custom_field")
+    return {
+      type,
+      field_key: fields[0]?.key ?? "",
+      value: fieldStart(fields[0]),
+    };
   if (type === "notify_member")
     return { type, recipient: "contact_owner", message: "" };
   if (type === "assign_round_robin")
@@ -767,6 +785,8 @@ function AutomationEditor({
   const me = useMe();
   const tagsQuery = useTags(workspaceId);
   const membersQuery = useMembers(workspaceId, 0, true);
+  const fieldsQuery = useFieldDefinitions(workspaceId);
+  const fields = activeFields(fieldsQuery.data?.items, "contact");
   const settingsQuery = useWorkspaceSettings(workspaceId);
   // Unknown (undefined) while loading or unreadable: no warning is shown.
   const hoursSet =
@@ -915,6 +935,7 @@ function AutomationEditor({
           actions={definition.yes}
           tags={tags}
           members={members}
+          fields={fields}
           hoursSet={hoursSet}
           onChange={(yes) => {
             set({ yes });
@@ -926,6 +947,7 @@ function AutomationEditor({
             actions={definition.no}
             tags={tags}
             members={members}
+            fields={fields}
             hoursSet={hoursSet}
             onChange={(no) => {
               set({ no });
@@ -1020,6 +1042,7 @@ function Branch({
   actions,
   tags,
   members,
+  fields,
   hoursSet,
   onChange,
 }: {
@@ -1027,6 +1050,7 @@ function Branch({
   actions: Action[];
   tags: Option[];
   members: Option[];
+  fields: FieldDefinition[];
   hoursSet: boolean | undefined;
   onChange: (actions: Action[]) => void;
 }) {
@@ -1048,6 +1072,7 @@ function Branch({
                 branch={label}
                 tags={tags}
                 members={members}
+                fields={fields}
                 hoursSet={hoursSet}
                 onChange={(next) => {
                   onChange(
@@ -1103,6 +1128,9 @@ function Branch({
             <option value="notify_member">
               {t("automations.action.notify_member")}
             </option>
+            <option value="set_custom_field">
+              {t("automations.action.set_custom_field")}
+            </option>
             <option value="wait">{t("automations.action.wait")}</option>
             <option value="wait_for_business_hours">
               {t("automations.action.wait_for_business_hours")}
@@ -1112,7 +1140,10 @@ function Branch({
             size="sm"
             aria-label={t("automations.addStepTo", { branch: label })}
             onPress={() => {
-              onChange([...actions, newAction(adding, tags, members)]);
+              onChange([
+                ...actions,
+                newAction(adding, tags, members, fields),
+              ]);
             }}
           >
             <Plus size={13} aria-hidden="true" />
@@ -1130,6 +1161,7 @@ function ActionEditor({
   branch,
   tags,
   members,
+  fields,
   hoursSet,
   onChange,
 }: {
@@ -1138,6 +1170,7 @@ function ActionEditor({
   branch: string;
   tags: Option[];
   members: Option[];
+  fields: FieldDefinition[];
   hoursSet: boolean | undefined;
   onChange: (action: Action) => void;
 }) {
@@ -1164,6 +1197,17 @@ function ActionEditor({
           ))}
         </select>
       </div>
+    );
+  }
+  if (action.type === "set_custom_field") {
+    return (
+      <FieldStep
+        action={action}
+        kind={kind}
+        fields={fields}
+        label={label}
+        onChange={onChange}
+      />
     );
   }
   if (action.type === "add_tag" || action.type === "remove_tag") {
@@ -1393,6 +1437,112 @@ function ActionEditor({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+/*
+ * P8-F: which contact field, then a value in the control its type takes.
+ * A field archived since (or never known) stays chosen until changed, so an
+ * edit never silently swaps it; activation refuses it.
+ */
+function FieldStep({
+  action,
+  kind,
+  fields,
+  label,
+  onChange,
+}: {
+  action: Extract<Action, { type: "set_custom_field" }>;
+  kind: string;
+  fields: FieldDefinition[];
+  label: (field: MessageId) => string;
+  onChange: (action: Action) => void;
+}) {
+  const t = useT();
+  const field = fields.find((candidate) => candidate.key === action.field_key);
+  const valueLabel = label("automations.field.value");
+  const setValue = (value: string | number | boolean) => {
+    onChange({ ...action, value });
+  };
+  let control = null;
+  if (field?.field_type === "select") {
+    control = (
+      <select
+        className="form-input"
+        aria-label={valueLabel}
+        value={String(action.value)}
+        onChange={(event) => {
+          setValue(event.target.value);
+        }}
+      >
+        {(field.options ?? []).map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    );
+  } else if (field?.field_type === "boolean") {
+    control = (
+      <select
+        className="form-input"
+        aria-label={valueLabel}
+        value={action.value === false ? "no" : "yes"}
+        onChange={(event) => {
+          setValue(event.target.value === "yes");
+        }}
+      >
+        <option value="yes">{t("automations.valueYes")}</option>
+        <option value="no">{t("automations.valueNo")}</option>
+      </select>
+    );
+  } else if (field) {
+    const numeric = field.field_type === "number";
+    control = (
+      <input
+        className="form-input"
+        aria-label={valueLabel}
+        type={field.field_type}
+        maxLength={field.field_type === "text" ? 500 : undefined}
+        value={typeof action.value === "boolean" ? "" : action.value}
+        onChange={(event) => {
+          const raw = event.target.value;
+          setValue(numeric && raw !== "" ? Number(raw) : raw);
+        }}
+      />
+    );
+  }
+  return (
+    <div className="automation-step-body">
+      <span className="automation-step-kind">{kind}</span>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.customField")}
+        value={action.field_key}
+        onChange={(event) => {
+          const next = fields.find((f) => f.key === event.target.value);
+          onChange({
+            ...action,
+            field_key: event.target.value,
+            value: fieldStart(next),
+          });
+        }}
+      >
+        {!fields.length && !action.field_key ? (
+          <option value="">{t("automations.noFields")}</option>
+        ) : null}
+        {action.field_key && !field ? (
+          <option value={action.field_key}>{t("automations.fieldGone")}</option>
+        ) : null}
+        {fields.map((option) => (
+          <option key={option.id} value={option.key}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {control}
+      <p className="form-hint">{t("automations.fieldHint")}</p>
     </div>
   );
 }

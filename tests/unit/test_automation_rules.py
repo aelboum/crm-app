@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import uuid
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from crm_app.domains import automations as rules
 from crm_app.domains.records import InvalidValue
+from tests.support import PLACEHOLDER_SETTINGS, clean_environment, run_python
 
 TAG = str(uuid.uuid4())
 USER = str(uuid.uuid4())
@@ -91,6 +94,18 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
         {"trigger": {"type": "campaign_sent", "campaign_id": "nope"}},
         {"trigger": {"type": "campaign_unsubscribed", "form_id": TAG}},
         {"trigger": {"type": "campaign_opened"}},
+        # P8-F
+        {"yes": [{"type": "set_custom_field", "value": "x"}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "Bad Key", "value": "x"}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan"}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": None}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": " "}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": "a\nb"}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": ["a"]}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": float("nan")}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": 10**15}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": "x" * 501}]},
+        {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": 1, "x": 1}]},
     ],
 )
 def test_anything_outside_the_rules_is_refused(changes: dict[str, Any]) -> None:
@@ -203,3 +218,40 @@ def test_the_notify_action_is_plain_data_and_names_its_member() -> None:
         {"type": "notify_member", "recipient": USER, "message": "Call"},
     ]
     assert rules.referenced(given)[1] == {USER}
+
+
+def test_the_custom_field_step_is_plain_data_and_names_its_field() -> None:
+    """P8-F: a key and a fixed value, text trimmed, a whole float stored as
+    an integer; activation checks the field, so the rule only shapes it."""
+    given = rules.definition(
+        _base(
+            yes=[
+                {"type": "set_custom_field", "field_key": "plan", "value": "  Gold "},
+                {"type": "set_custom_field", "field_key": "score", "value": 5.0},
+                {"type": "set_custom_field", "field_key": "vip", "value": False},
+            ]
+        )
+    )
+    assert given.as_json()["yes"] == [
+        {"type": "set_custom_field", "field_key": "plan", "value": "Gold"},
+        {"type": "set_custom_field", "field_key": "score", "value": 5},
+        {"type": "set_custom_field", "field_key": "vip", "value": False},
+    ]
+    assert rules.field_values(given) == [("plan", "Gold"), ("score", 5), ("vip", False)]
+    assert rules.referenced(given) == (set(), set())
+
+
+def test_the_run_history_accepts_every_action(tmp_path: Path) -> None:
+    """A step whose action the response model left out failed the whole
+    run history (found with P8-F). The API module needs settings, so it is
+    imported in a fresh interpreter."""
+    probe = (
+        "import json, typing\n"
+        "from crm_app.api.automations import StepOut\n"
+        "print('ACTIONS ' + json.dumps("
+        "sorted(typing.get_args(StepOut.model_fields['action'].annotation))))\n"
+    )
+    result = run_python(probe, clean_environment(PLACEHOLDER_SETTINGS), tmp_path)
+    assert result.returncode == 0, result.stderr
+    line = next(x for x in result.stdout.splitlines() if x.startswith("ACTIONS "))
+    assert json.loads(line.removeprefix("ACTIONS ")) == sorted(rules.ACTIONS)

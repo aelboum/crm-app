@@ -10313,7 +10313,11 @@
               "assign_owner",
               "set_lifecycle_stage",
               "create_task",
-              "wait"
+              "notify_member",
+              "assign_round_robin",
+              "wait",
+              "wait_for_business_hours",
+              "set_custom_field"
             ],
             "title": "Action",
             "type": "string"

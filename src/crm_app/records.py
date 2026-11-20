@@ -1207,6 +1207,35 @@ def set_stage_in(session: Session, scope: Scope, contact_id: uuid.UUID, stage: s
     return True
 
 
+def set_custom_field_in(
+    session: Session, scope: Scope, contact_id: uuid.UUID, key: str, value: object
+) -> str:
+    """Set one custom field of a contact inside the caller's transaction (an
+    automation's step, decision P8-F): `set`, `same`, `field_gone` (no
+    active contact field has the key), `invalid` (the value no longer fits
+    the field, such as a select option since removed) or `too_large`.
+    Recorded like a member's change, naming the key, never the value."""
+    row = _load(session, CONTACT, scope, contact_id, lock=True)
+    stored = row.custom_fields or {}
+    try:
+        merged = _merge_custom_fields(session, scope, CONTACT, stored, {key: value})
+    except CustomFieldValueError as exc:
+        return {
+            "unknown_custom_field": "field_gone",
+            "invalid_custom_field": "invalid",
+        }.get(exc.code, "too_large")
+    if merged == stored:
+        return "same"
+    row.custom_fields = merged
+    _touch(row, scope)
+    session.flush()
+    session.add(history_entry(CONTACT, scope, contact_id, "updated", fields=["custom_fields"]))
+    metadata = {"fields": ["custom_fields"], "custom_field_keys": [key]}
+    _audit(session, CONTACT, scope, _Event("updated", contact_id, metadata))
+    _contact_changed(session, scope, row, ["custom_fields"])
+    return "set"
+
+
 def _contact_changed(session: Session, scope: Scope, row: Any, changed: list[str]) -> None:
     """Customers' webhooks hear of an owner or stage changed by an
     automation step or a bulk action, as of any other change (P12-H)."""

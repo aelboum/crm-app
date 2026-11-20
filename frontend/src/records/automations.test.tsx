@@ -78,6 +78,40 @@ type Reply = { status: number; body?: unknown } | undefined;
 const CAMPAIGN = "ca000000-0000-4000-8000-000000000001";
 const GONE = "ca000000-0000-4000-8000-000000000009";
 
+function definitionOf(
+  n: number,
+  entity: "contact" | "company",
+  key: string,
+  type: string,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    id: `f0000000-0000-4000-8000-00000000000${String(n)}`,
+    entity,
+    key,
+    label: key.charAt(0).toUpperCase() + key.slice(1),
+    field_type: type,
+    options: null,
+    archived: false,
+    position: n,
+    created_at: stamp,
+    updated_at: stamp,
+    version: 1,
+    ...extra,
+  };
+}
+
+// P8-F: contact fields of each kind, plus ones the step never offers.
+const FIELDS = {
+  items: [
+    definitionOf(1, "contact", "tier", "select", { options: ["Gold", "Silver"] }),
+    definitionOf(2, "contact", "seats", "number"),
+    definitionOf(3, "contact", "vip", "boolean"),
+    definitionOf(4, "company", "region", "text"),
+    definitionOf(5, "contact", "old", "text", { archived: true }),
+  ],
+};
+
 function workspace(
   manage: boolean,
   options: {
@@ -136,6 +170,7 @@ function workspace(
         },
       };
     }
+    if (path === `${base}/custom-fields`) return { status: 200, body: FIELDS };
     if (path === `${base}/tags`) {
       return {
         status: 200,
@@ -316,6 +351,7 @@ describe("automations", () => {
       "Assign owner in turn",
       "Set lifecycle stage",
       "Notify a team member",
+      "Set a custom field",
       "Wait",
       "Wait for business hours",
     ]);
@@ -532,6 +568,114 @@ describe("automations", () => {
         },
       });
     });
+  });
+
+  it("sets a contact custom field to a value its type takes (P8-F)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Gold plan");
+    const add = async () => {
+      await user.selectOptions(
+        within(dialog).getByLabelText("Step to add to Steps"),
+        "set_custom_field",
+      );
+      await user.click(
+        within(dialog).getByRole("button", { name: "Add step to Steps" }),
+      );
+    };
+    await add();
+    const first = within(dialog).getByLabelText("Custom field, step 1 of Steps");
+    await waitFor(() => {
+      expect(first).toHaveValue("tier");
+    });
+    // Only active contact fields are offered.
+    expect(
+      within(first)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Tier", "Seats", "Vip"]);
+    await user.selectOptions(
+      within(dialog).getByLabelText("Value, step 1 of Steps"),
+      "Silver",
+    );
+    await add();
+    await user.selectOptions(
+      within(dialog).getByLabelText("Custom field, step 2 of Steps"),
+      "seats",
+    );
+    await user.type(
+      within(dialog).getByLabelText("Value, step 2 of Steps"),
+      "12",
+    );
+    await add();
+    await user.selectOptions(
+      within(dialog).getByLabelText("Custom field, step 3 of Steps"),
+      "vip",
+    );
+    await user.selectOptions(
+      within(dialog).getByLabelText("Value, step 3 of Steps"),
+      "no",
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      expect(sent.find((r) => r.method === "POST")?.body).toEqual({
+        name: "Gold plan",
+        definition: {
+          trigger: { type: "contact_created", sources: [] },
+          condition: null,
+          yes: [
+            { type: "set_custom_field", field_key: "tier", value: "Silver" },
+            { type: "set_custom_field", field_key: "seats", value: 12 },
+            { type: "set_custom_field", field_key: "vip", value: false },
+          ],
+          no: [],
+        },
+      });
+    });
+  });
+
+  it("keeps a field archived since, and says so", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        items: [
+          automation({
+            status: "draft",
+            definition: {
+              ...DEFINITION,
+              yes: [{ type: "set_custom_field", field_key: "old", value: "x" }],
+            },
+          }),
+        ],
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: /Edit/ }));
+    const dialog = await screen.findByRole("dialog");
+    const select = within(dialog).getByLabelText(
+      "Custom field, step 1 of Steps",
+    );
+    await waitFor(() => {
+      expect(select).toHaveValue("old");
+    });
+    expect(within(select).getByRole("option", { selected: true })).toHaveTextContent(
+      "A field that is archived or no longer exists",
+    );
   });
 
   it("hands contacts out in turn among the members picked", async () => {

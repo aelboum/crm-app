@@ -6450,7 +6450,7 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "add_tag" | "remove_tag" | "assign_owner" | "set_lifecycle_stage" | "create_task" | "wait";
+            action: "add_tag" | "remove_tag" | "assign_owner" | "set_lifecycle_stage" | "create_task" | "notify_member" | "assign_round_robin" | "wait" | "wait_for_business_hours" | "set_custom_field";
             /**
              * Branch
              * @enum {string}

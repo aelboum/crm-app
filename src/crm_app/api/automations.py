@@ -80,8 +80,19 @@ class AutomationList(BaseModel):
 class StepOut(BaseModel):
     branch: Literal["yes", "no"]
     position: int
+    # Every action of `crm_app.domains.automations.ACTIONS` (a unit test
+    # holds them equal): a step of one left out failed the whole response.
     action: Literal[
-        "add_tag", "remove_tag", "assign_owner", "set_lifecycle_stage", "create_task", "wait"
+        "add_tag",
+        "remove_tag",
+        "assign_owner",
+        "set_lifecycle_stage",
+        "create_task",
+        "notify_member",
+        "assign_round_robin",
+        "wait",
+        "wait_for_business_hours",
+        "set_custom_field",
     ]
     outcome: Literal["done", "skipped"]
     detail: str | None

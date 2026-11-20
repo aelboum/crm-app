@@ -46,10 +46,11 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import notifications, records, system_audit, tasks
+from crm_app import custom_fields, notifications, records, system_audit, tasks
 from crm_app.appointments import workspace_hours
 from crm_app.domains import appointments as hours_rules
 from crm_app.domains import automations as rules
+from crm_app.domains import custom_fields as field_rules
 from crm_app.domains.records import InvalidValue
 from crm_app.models import (
     Automation,
@@ -302,6 +303,19 @@ def _check_references(session: Session, scope: Scope, given: rules.Definition) -
     for user in users:
         if not _active_member(scope.workspace, uuid.UUID(user)):
             raise AutomationRuleError("a member it names is not an active member")
+    fields = rules.field_values(given)
+    if fields:
+        active = custom_fields.active_definitions(session, scope, "contact")
+        for key, value in fields:
+            field = active.get(key)
+            if field is None:
+                raise AutomationRuleError("a custom field it sets is not an active contact field")
+            try:
+                fitted = field_rules.value(field.field_type, field.options, value)
+            except InvalidValue:
+                fitted = None
+            if fitted is None:
+                raise AutomationRuleError(f"the value for the custom field {key} does not fit it")
     model = _SUBJECT_MODELS.get(given.trigger)
     if model is not None and given.subject_id is not None:
         found_subject = session.execute(
@@ -586,6 +600,11 @@ def _act(  # noqa: PLR0911, PLR0912 - one answer per action
     if action.type == "set_lifecycle_stage":
         records.set_stage_in(session, scope, contact.id, args["stage"])
         return "done", None
+    if action.type == "set_custom_field":
+        result = records.set_custom_field_in(
+            session, scope, contact.id, args["field_key"], args["value"]
+        )
+        return ("done", None) if result in ("set", "same") else ("skipped", result)
     if action.type == "assign_owner":
         owner = uuid.UUID(args["user_id"])
         if not _active_member(scope.workspace, owner):

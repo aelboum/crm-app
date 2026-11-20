@@ -46,7 +46,14 @@ export type Action =
   | { type: "assign_round_robin"; user_ids: string[] }
   | { type: "wait"; minutes: number }
   // P8-W: on at once while the workspace is open, else at its next opening.
-  | { type: "wait_for_business_hours" };
+  | { type: "wait_for_business_hours" }
+  // P8-F: a contact custom field (by key) set to a fixed value; activation
+  // checks that the field is active and the value fits it.
+  | {
+      type: "set_custom_field";
+      field_key: string;
+      value: string | number | boolean;
+    };
 
 export type Condition =
   | {

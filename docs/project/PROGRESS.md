@@ -1369,6 +1369,27 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Automation step that sets a contact custom field (2026-11-20, owner: "go")
+
+Decision P8-F, migration `0051_custom_field_step`. An automation step sets a
+contact custom field to a fixed value. It is checked when activated and at
+each run. If the field has been archived or the value no longer fits, the
+step is skipped with a code. Also fixed: the run history returned a server
+error for runs with a notify, round-robin or business-hours step.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/integration` (automations, triggers, notify, round robin, business hours, campaigns, campaign schedule, custom fields and record values, custom domains, foundation) against `crm_app_test` | 114 passed |
+| `pytest tests/unit` | 829 passed |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | `openapi.json` and `schema.d.ts` regenerated (the step list) |
+| `npx vitest run --maxWorkers=3` | 37 files, 411 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+The first full `vitest` run with default workers had 25 timeouts, spread
+over 16 unrelated files and different on a second run; with three workers
+everything passed. Not deployed to staging.
+
 ## Staging deployed at `f77a204` (2026-11-20, owner: "Go Ahead")
 
 From `6d3e5d3`: campaign automations named and listed (P8-C follow-up).
