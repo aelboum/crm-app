@@ -13,7 +13,7 @@ import json
 import os
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from fastapi.testclient import TestClient
 from saas_os.core.identity import issue_session
@@ -143,7 +143,8 @@ def main() -> None:
             for key, value in document.items()
             if key not in ("today", "created_on", "recent_history")
         }
-        result["history_kinds"] = sorted({h["kind"] for h in document["recent_history"]})
+        history = cast("list[dict[str, str]]", document["recent_history"])
+        result["history_kinds"] = sorted({h["kind"] for h in history})
         request = ai.brief_request(facts, today=today)
         sent = json.dumps(
             [part.text for message in request.messages for part in message.parts],
