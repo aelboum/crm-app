@@ -205,6 +205,8 @@ interface SectionSearch {
     "contact" | "opportunity" | "appointment" | "conversation" | "automation";
   /** The form a new automation starts from (`create=automation`, P7-FA). */
   form?: string;
+  /** The campaign a new automation starts from (`create=automation`, P8-C). */
+  campaign?: string;
   /** A filtered list opened from the Home page (P4-D 1). */
   view?: "overdue" | "idle" | "unassigned";
 }
@@ -216,6 +218,7 @@ function SectionPage() {
     record,
     create,
     form,
+    campaign,
     view,
   } = sectionRoute.useSearch();
   const navigate = sectionRoute.useNavigate();
@@ -254,13 +257,26 @@ function SectionPage() {
     );
   }
   if (slug === "campaigns") {
-    return <CampaignsPage workspaceId={workspaceId} />;
+    return (
+      <CampaignsPage
+        workspaceId={workspaceId}
+        onNewAutomation={(id) => {
+          void navigate({
+            params: { workspaceId, section: "automations" },
+            search: { create: "automation", campaign: id },
+          });
+        }}
+      />
+    );
   }
   if (slug === "automations") {
     return (
       <AutomationsPage
         workspaceId={workspaceId}
         newForForm={create === "automation" && form ? form : null}
+        newForCampaign={
+          create === "automation" && campaign && !form ? campaign : null
+        }
         onNewDone={() => {
           void navigate({ search: {}, replace: true });
         }}
@@ -482,6 +498,9 @@ const sectionRoute = createRoute({
       : {}),
     ...(typeof search.form === "string" && isWorkspaceId(search.form)
       ? { form: search.form }
+      : {}),
+    ...(typeof search.campaign === "string" && isWorkspaceId(search.campaign)
+      ? { campaign: search.campaign }
       : {}),
     ...(search.view === "overdue" ||
     search.view === "idle" ||

@@ -230,6 +230,24 @@ export function useCampaignStep(workspaceId: string) {
 }
 
 /*
+ * One campaign, for naming it elsewhere (decision P8-C follow-up): an
+ * automation's summary. A deleted campaign is a 404 and is not retried.
+ */
+export function useCampaign(workspaceId: string, id: string | null) {
+  return useQuery({
+    queryKey: [...campaignKeys.all(workspaceId), id, "one"],
+    enabled: id !== null,
+    retry: false,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/v1/workspaces/{tenant_id}/campaigns/{campaign_id}", {
+          params: { path: one(workspaceId, id ?? "") },
+        }),
+      ),
+  });
+}
+
+/*
  * A campaign's results (decision P7-RP): its recipients by email outcome,
  * counted from stored rows, and unsubscribes. Refreshed every 30 seconds
  * while it is still being processed.

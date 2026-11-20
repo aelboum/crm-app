@@ -909,6 +909,93 @@ describe("campaigns", () => {
     expect((sentBody as { segment: { company_ids: string[] } }).segment.company_ids).toEqual([ZETA]);
   });
 
+  it("lists the automations this campaign starts and opens a new one for it (P8-C)", async () => {
+    const user = userEvent.setup();
+    const OTHER = "ca000000-0000-4000-8000-000000000002";
+    const started = (
+      id: string,
+      name: string,
+      type: string,
+      campaignId: string | null,
+    ) => ({
+      id,
+      name,
+      status: "active",
+      trigger_type: type,
+      definition: {
+        trigger: { type, campaign_id: campaignId },
+        condition: null,
+        yes: [{ type: "add_tag", tag_id: VIP }],
+        no: [],
+      },
+      active_version: 1,
+      created_at: stamp,
+      updated_at: stamp,
+      version: 1,
+    });
+    const items = [
+      started("a1000000-0000-4000-8000-000000000001", "After the news", "campaign_sent", ID),
+      started("a1000000-0000-4000-8000-000000000002", "Any unsubscribe", "campaign_unsubscribed", null),
+      started("a1000000-0000-4000-8000-000000000003", "Spring only", "campaign_sent", OTHER),
+    ];
+    const inner = workspace({ manage: true, approve: false });
+    const base = `/v1/workspaces/${WS}`;
+    renderApp(`/w/${WS}/campaigns`, (method, path, body) => {
+      if (method === "GET" && path === `${base}/access`) {
+        return {
+          status: 200,
+          body: {
+            membership_id: "m1",
+            roles: ["Member"],
+            actions: {
+              read_campaigns: true,
+              manage_campaigns: true,
+              read_automations: true,
+              manage_automations: true,
+            },
+          },
+        };
+      }
+      if (method === "GET" && path === `${base}/automations`)
+        return { status: 200, body: { items } };
+      return inner(method, path, body);
+    });
+    const pane = await openCampaign(user);
+    const group = await within(pane).findByRole("group", {
+      name: "Automations started by this campaign",
+    });
+    expect(await within(group).findByText("After the news")).toBeInTheDocument();
+    expect(within(group).getByText("on sending")).toBeInTheDocument();
+    expect(within(group).getByText("Any unsubscribe")).toBeInTheDocument();
+    expect(
+      within(group).getByText("on unsubscribing (any campaign)"),
+    ).toBeInTheDocument();
+    expect(within(group).queryByText("Spring only")).toBeNull();
+    expect(await accessibilityViolations()).toEqual([]);
+
+    await user.click(
+      within(group).getByRole("button", {
+        name: "New automation for this campaign",
+      }),
+    );
+    const editor = await screen.findByRole("dialog");
+    expect(within(editor).getByLabelText("When this happens")).toHaveValue(
+      "campaign_sent",
+    );
+    expect(within(editor).getByLabelText("Campaign")).toHaveValue(ID);
+  });
+
+  it("hides the campaign's automations from members who may not read them", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: false }));
+    await openCampaign(user);
+    expect(
+      screen.queryByRole("group", {
+        name: "Automations started by this campaign",
+      }),
+    ).toBeNull();
+  });
+
   it("lets Read-only members read only", async () => {
     const user = userEvent.setup();
     renderApp(

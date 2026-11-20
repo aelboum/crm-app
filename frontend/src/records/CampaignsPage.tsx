@@ -20,6 +20,7 @@ import {
   useScheduleCampaign,
   useUpdateCampaign,
 } from "../api/campaigns";
+import { type Definition, useAutomations } from "../api/automations";
 import { ApiError } from "../api/client";
 import { ExportError, fileDownload } from "../api/exportContacts";
 import { useAccess, useMe, useMembers } from "../api/queries";
@@ -243,7 +244,14 @@ function failure(error: unknown): MessageId {
   return "campaigns.error.generic";
 }
 
-export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
+export function CampaignsPage({
+  workspaceId,
+  onNewAutomation = () => undefined,
+}: {
+  workspaceId: string;
+  /** Opens the automation editor started by this campaign (P8-C). */
+  onNewAutomation?: (campaignId: string) => void;
+}) {
   const t = useT();
   const access = useAccess(workspaceId);
   const actions = access.data?.actions;
@@ -456,6 +464,9 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
               onDeleted={() => {
                 setSelected(null);
               }}
+              onNewAutomation={() => {
+                onNewAutomation(current.id);
+              }}
             />
           ) : (
             <p className="muted campaign-pick">{t("campaigns.pick")}</p>
@@ -631,6 +642,7 @@ function Detail({
   onEdit,
   onDuplicated,
   onDeleted,
+  onNewAutomation,
 }: {
   workspaceId: string;
   campaign: Campaign;
@@ -642,6 +654,7 @@ function Detail({
   onEdit: () => void;
   onDuplicated: (copy: Campaign) => void;
   onDeleted: () => void;
+  onNewAutomation: () => void;
 }) {
   const t = useT();
   const step = useCampaignStep(workspaceId);
@@ -764,6 +777,11 @@ function Detail({
         <p className="muted">{t("campaigns.footerNote")}</p>
       </div>
       <Preview workspaceId={workspaceId} campaign={campaign} />
+      <CampaignAutomations
+        workspaceId={workspaceId}
+        campaignId={campaign.id}
+        onNew={onNewAutomation}
+      />
       {STARTED.includes(status) ? (
         <Results
           workspaceId={workspaceId}
@@ -1274,5 +1292,81 @@ function CompanyChip({ workspaceId, id, onRemove }: { workspaceId: string; id: s
         <X size={12} aria-hidden="true" />
       </button>
     </li>
+  );
+}
+
+/*
+ * The automations this campaign starts (decision P8-C follow-up): those
+ * whose trigger is a campaign email sent or an unsubscribe, for this
+ * campaign or for any. A new one opens the automation editor with "sent"
+ * and this campaign set. Nothing is stored on the campaign.
+ */
+function CampaignAutomations({
+  workspaceId,
+  campaignId,
+  onNew,
+}: {
+  workspaceId: string;
+  campaignId: string;
+  onNew: () => void;
+}) {
+  const t = useT();
+  const access = useAccess(workspaceId);
+  const canRead = access.data?.actions.read_automations === true;
+  const canManage = access.data?.actions.manage_automations === true;
+  const list = useAutomations(workspaceId, canRead);
+  if (!canRead) return null;
+  const started = (list.data?.items ?? []).flatMap((item) => {
+    const trigger = (item.definition as unknown as Definition).trigger;
+    return (trigger.type === "campaign_sent" ||
+      trigger.type === "campaign_unsubscribed") &&
+      (trigger.campaign_id === null || trigger.campaign_id === campaignId)
+      ? [{ item, trigger }]
+      : [];
+  });
+  return (
+    <div
+      className="form-field campaign-automations"
+      role="group"
+      aria-labelledby="campaign-automations"
+    >
+      <p id="campaign-automations" className="form-label">
+        {t("campaigns.automations")}
+      </p>
+      {list.isPending ? (
+        <Loading />
+      ) : list.isError ? (
+        <LoadError error={list.error} onRetry={() => void list.refetch()} />
+      ) : started.length === 0 ? (
+        <p className="form-hint">{t("campaigns.automations.none")}</p>
+      ) : (
+        <ul className="form-automations">
+          {started.map(({ item, trigger }) => (
+            <li key={item.id}>
+              <span>{item.name}</span>
+              <Badge tone={item.status === "active" ? "success" : "neutral"}>
+                {t(`automations.status.${item.status}` as MessageId)}
+              </Badge>
+              <span className="form-hint">
+                {t(
+                  trigger.type === "campaign_sent"
+                    ? "campaigns.automations.onSent"
+                    : "campaigns.automations.onUnsubscribed",
+                )}
+                {trigger.campaign_id === null
+                  ? ` ${t("campaigns.automations.anyCampaign")}`
+                  : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {canManage ? (
+        <Button size="sm" onPress={onNew}>
+          {t("campaigns.automations.new")}
+        </Button>
+      ) : null}
+      <p className="form-hint">{t("campaigns.automations.hint")}</p>
+    </div>
   );
 }

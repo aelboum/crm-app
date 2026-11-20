@@ -1073,6 +1073,28 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-C follow-up — Campaign automations named and listed (2026-11-20)
+
+- **Status:** Implemented on the owner's "Do both" (items 1 and 2 of the
+  options after the `6d3e5d3` deploy).
+- **Decision:** an automation with a campaign trigger is summarised with
+  its campaign's name ("When a contact unsubscribes from Autumn news").
+  "any campaign" is used when it names none, "a campaign that no longer
+  exists" when the campaign returns 404, and "a campaign" when the member
+  may not read campaigns or while the name loads. The Automations
+  introduction now names the campaign triggers and the notify step.
+  A campaign's detail lists the automations it starts: the
+  "sent" and "unsubscribed" triggers for this campaign or for any
+  campaign, each with its status and trigger. It is shown only to
+  members who may read automations. Those who may manage them get
+  "New automation for this campaign", which opens the editor with
+  "A campaign email is sent to a contact" and this campaign chosen
+  (`?create=automation&campaign=`, as forms do in P7-FA). Nothing is
+  stored on the campaign. No API, schema or migration change.
+- **Tests:** `automations.test.tsx` (names the campaign; hides the name
+  from members who may not read campaigns); `campaigns.test.tsx` (lists
+  and opens a new automation; hidden without `read_automations`).
+
 ## P8-C — Campaign triggers for automations (2026-11-20)
 
 - **Status:** Implemented on the owner's "do 2 then 4, then 3" (item 3).

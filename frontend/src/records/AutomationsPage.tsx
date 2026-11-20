@@ -26,7 +26,7 @@ import {
   useUpdateAutomation,
 } from "../api/automations";
 import { useBookingPages } from "../api/bookingPages";
-import { useCampaigns } from "../api/campaigns";
+import { useCampaign, useCampaigns } from "../api/campaigns";
 import { ApiError } from "../api/client";
 import { useForms } from "../api/forms";
 import { usePipelines } from "../api/pipelines";
@@ -106,12 +106,15 @@ export function AutomationsPage({
   workspaceId,
   onOpenContact,
   newForForm = null,
+  newForCampaign = null,
   onNewDone = () => undefined,
 }: {
   workspaceId: string;
   onOpenContact: (id: string) => void;
   /** Opens a new automation started by this form (`?create=automation&form=`). */
   newForForm?: string | null;
+  /** Opens a new automation started by this campaign's emails (`&campaign=`). */
+  newForCampaign?: string | null;
   /** Called when that editor closes, to clear the request. */
   onNewDone?: () => void;
 }) {
@@ -119,7 +122,7 @@ export function AutomationsPage({
   const access = useAccess(workspaceId);
   const list = useAutomations(workspaceId);
   const [editing, setEditing] = useState<Automation | "new" | null>(
-    newForForm ? "new" : null,
+    newForForm || newForCampaign ? "new" : null,
   );
   const [preset] = useState<Definition | null>(() =>
     newForForm
@@ -127,7 +130,12 @@ export function AutomationsPage({
           ...EMPTY_DEFINITION,
           trigger: { type: "form_submitted", form_id: newForForm },
         }
-      : null,
+      : newForCampaign
+        ? {
+            ...EMPTY_DEFINITION,
+            trigger: { type: "campaign_sent", campaign_id: newForCampaign },
+          }
+        : null,
   );
   const [runsOf, setRunsOf] = useState<string | null>(null);
   const canManage = access.data?.actions.manage_automations === true;
@@ -190,7 +198,7 @@ export function AutomationsPage({
           initial={editing === "new" ? preset : null}
           onClose={() => {
             setEditing(null);
-            if (newForForm) onNewDone();
+            if (newForForm || newForCampaign) onNewDone();
           }}
         />
       ) : null}
@@ -212,6 +220,40 @@ function summary(t: T, definition: Definition): string {
     ? sources.map((s) => t(`source.${s}` as MessageId)).join(", ")
     : t("automations.anySource");
   return t("automations.summary", { from, count });
+}
+
+/*
+ * A campaign trigger's summary names its campaign (decision P8-C
+ * follow-up), when the member may read campaigns; otherwise, or while it
+ * loads, "a campaign".
+ */
+function CampaignSummary({
+  workspaceId,
+  sent,
+  campaignId,
+  count,
+}: {
+  workspaceId: string;
+  sent: boolean;
+  campaignId: string | null;
+  count: number;
+}) {
+  const t = useT();
+  const access = useAccess(workspaceId);
+  const canRead = access.data?.actions.read_campaigns === true;
+  const campaign = useCampaign(workspaceId, canRead ? campaignId : null);
+  const name =
+    campaignId === null
+      ? t("automations.campaignAny")
+      : campaign.data
+        ? campaign.data.name
+        : campaign.error instanceof ApiError && campaign.error.status === 404
+          ? t("automations.campaignGone")
+          : t("automations.campaignSome");
+  return t(sent ? "automations.summarySent" : "automations.summaryUnsubscribed", {
+    campaign: name,
+    count,
+  });
 }
 
 function AutomationCard({
@@ -267,7 +309,17 @@ function AutomationCard({
             {automation.name}
           </h2>
           <p className="muted automation-card-summary">
-            {summary(t, definition)}
+            {definition.trigger.type === "campaign_sent" ||
+            definition.trigger.type === "campaign_unsubscribed" ? (
+              <CampaignSummary
+                workspaceId={workspaceId}
+                sent={definition.trigger.type === "campaign_sent"}
+                campaignId={definition.trigger.campaign_id}
+                count={definition.yes.length + definition.no.length}
+              />
+            ) : (
+              summary(t, definition)
+            )}
           </p>
         </div>
         <Badge tone={STATUS_TONE[automation.status]}>

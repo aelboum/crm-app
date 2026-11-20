@@ -76,6 +76,7 @@ const RUNS = {
 
 type Reply = { status: number; body?: unknown } | undefined;
 const CAMPAIGN = "ca000000-0000-4000-8000-000000000001";
+const GONE = "ca000000-0000-4000-8000-000000000009";
 
 function workspace(
   manage: boolean,
@@ -83,6 +84,7 @@ function workspace(
     items?: unknown[];
     members?: unknown[];
     hours?: unknown[] | null;
+    readCampaigns?: boolean;
     onWrite?: (method: string, path: string, body: unknown) => Reply;
   } = {},
 ): Handler {
@@ -102,6 +104,7 @@ function workspace(
             read_automations: true,
             manage_automations: manage,
             read_members: true,
+            read_campaigns: options.readCampaigns ?? false,
           },
         },
       };
@@ -152,6 +155,10 @@ function workspace(
         },
       };
     }
+    if (path === `${base}/campaigns/${CAMPAIGN}`)
+      return { status: 200, body: { id: CAMPAIGN, name: "Autumn news" } };
+    if (path === `${base}/campaigns/${GONE}`)
+      return { status: 404, body: { detail: { code: "not_found" } } };
     if (path === `${base}/automations`)
       return { status: 200, body: { items: options.items ?? [automation()] } };
     if (path === `${base}/automations/${AUTO}/runs`)
@@ -160,7 +167,74 @@ function workspace(
   };
 }
 
+function campaignAutomation(
+  id: string,
+  name: string,
+  type: "campaign_sent" | "campaign_unsubscribed",
+  campaignId: string | null,
+) {
+  return automation({
+    id,
+    name,
+    trigger_type: type,
+    definition: { ...DEFINITION, trigger: { type, campaign_id: campaignId } },
+  });
+}
+
+const CAMPAIGN_ITEMS = [
+  campaignAutomation(
+    "a0000000-0000-4000-8000-000000000011",
+    "After the news",
+    "campaign_sent",
+    CAMPAIGN,
+  ),
+  campaignAutomation(
+    "a0000000-0000-4000-8000-000000000012",
+    "Any unsubscribe",
+    "campaign_unsubscribed",
+    null,
+  ),
+  campaignAutomation(
+    "a0000000-0000-4000-8000-000000000013",
+    "Old campaign",
+    "campaign_sent",
+    GONE,
+  ),
+];
+
 describe("automations", () => {
+  it("names the campaign a campaign trigger starts on (P8-C)", async () => {
+    renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, { items: CAMPAIGN_ITEMS, readCampaigns: true }),
+    );
+    expect(
+      await screen.findByText(
+        "When an email from Autumn news is sent to a contact · 1 step",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("When a contact unsubscribes from any campaign · 1 step"),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "When an email from a campaign that no longer exists is sent to a contact · 1 step",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("does not name campaigns to members who may not read them", async () => {
+    renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, { items: CAMPAIGN_ITEMS.slice(0, 1) }),
+    );
+    expect(
+      await screen.findByText(
+        "When an email from a campaign is sent to a contact · 1 step",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("lists automations with their status and what starts them", async () => {
     renderApp(`/w/${WS}/automations`, workspace(true));
     const card = await screen.findByRole("listitem", {

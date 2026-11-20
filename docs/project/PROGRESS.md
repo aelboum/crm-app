@@ -1369,6 +1369,20 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Campaign automations named and listed (2026-11-20, owner: "Do both")
+
+Decision P8-C follow-up. Each automation's summary names its campaign, and
+the Automations introduction mentions the campaign triggers. A campaign's
+detail lists the automations it starts and offers "New automation for this
+campaign". Frontend only: no API or migration change.
+
+| Check | Result |
+| --- | --- |
+| `npx vitest run --maxWorkers=2` | 37 files, 409 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+Not deployed to staging.
+
 ## Staging deployed at `6d3e5d3` (2026-11-20, owner: "Go ahead")
 
 From `6d52347`: deleting campaigns never queued (P7-DL) and campaign
