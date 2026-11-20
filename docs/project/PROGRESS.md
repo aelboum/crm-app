@@ -1390,6 +1390,30 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Contact brief route and permission (2026-11-20, owner: "do all 4")
+
+Decision P9-B, no migration of the database. `POST .../contacts/{id}/brief`,
+the allowlisted facts read from the database, `ai.inference:run` for Owner,
+Admin and Member (new workspaces; existing ones only through the held-back
+administrative list), and the "AI brief" section in the contact drawer. AI
+stays off by default, so the answer on every workspace today is
+`unavailable`.
+
+Also fixed: `107f472` (P10-C) was pushed without updating
+`tests/unit/test_routes.py` for the new report route; the full unit suite
+was not run before that push. The route map now lists both new routes.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/unit` | 840 passed |
+| `pytest` integration: AI settings, permission grants, provision, role upgrade, workspace routes, contact brief, foundation | 63 passed, 2 failed, then 33 passed after adding `use_ai_brief` to the two expected action maps |
+| `ruff`; `pyright`; `lint-imports` | clean; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | regenerated (`BriefOut`) |
+| `npx vitest run --maxWorkers=3` | 38 files, 420 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+Not deployed to staging.
+
 ## Campaigns in Reports (2026-11-20, owner: "do all 4")
 
 Decision P10-C, no migration. `GET .../reports/campaigns` and a Reports

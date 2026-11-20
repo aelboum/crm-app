@@ -56,6 +56,7 @@ from saas_os.inference.settings import (
 )
 
 from crm_app import ai
+from crm_app.api.contact_brief import router as brief_router
 
 router = APIRouter(prefix="/v1/workspaces", tags=["ai settings"])
 
@@ -372,4 +373,4 @@ def put_ai_budget(tenant_id: uuid.UUID, body: BudgetIn, context: ManageBudget) -
 # reads of a workspace's AI usage and limits, as they are
 # (`/v1/tenants/{id}/ai/usage`, `/usage/monthly`, `/limits`; `ai.usage:read`,
 # decision P9-U). Nothing here wraps or changes them.
-routers = (router, usage_router)
+routers = (router, brief_router, usage_router)

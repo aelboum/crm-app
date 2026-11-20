@@ -99,6 +99,7 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "read_ai_settings": ("ai.policy", "read"),
     "manage_ai_settings": ("ai.policy", "manage"),
     "read_ai_usage": ("ai.usage", "read"),
+    "use_ai_brief": ("ai.inference", "run"),
     "manage_ai_budget": ("ai.budget", "manage"),
 }
 

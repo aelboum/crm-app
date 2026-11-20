@@ -203,6 +203,9 @@ ADMINISTRATIVE_DIGESTS: tuple[str, ...] = (
     "17d6a9ea00549847ef3985e0210108eef49e265dd71c7d6af64c77cb8fb7e31b",  # pragma: allowlist secret
     "b6a7b89148a4735f1b2c1a2b244c7777adc2b82a55f1a5140a17283801625267",  # pragma: allowlist secret
     "2c5cf5fc408ff2529a8e8774ce0dac3d99280da19655b6515ebcda6cc042b830",  # pragma: allowlist secret
+    "0a0c0b04ca9d0c6ad055f814237e559c581ba8ee9427134c538e515b74832f6f",  # pragma: allowlist secret
+    "a7c99b36fbe17d9bc31c8616e578464742247371a60a931c8faaa34261823e36",  # pragma: allowlist secret
+    "9445e460e31d9a79f152573e849cf24ffc4a59ba161cd85089ad2bd73431e4ef",  # pragma: allowlist secret
 )
 
 

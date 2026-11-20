@@ -1718,6 +1718,39 @@
         "title": "BookingView",
         "type": "object"
       },
+      "BriefOut": {
+        "description": "`text` only when `state` is `ready`: a suggestion to check, not a fact.",
+        "properties": {
+          "state": {
+            "enum": [
+              "ready",
+              "unavailable",
+              "quota_reached",
+              "busy",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "state",
+          "text"
+        ],
+        "title": "BriefOut",
+        "type": "object"
+      },
       "BudgetIn": {
         "additionalProperties": false,
         "properties": {
@@ -19487,6 +19520,75 @@
         "summary": "Export Contacts",
         "tags": [
           "contacts"
+        ]
+      }
+    },
+    "/v1/workspaces/{tenant_id}/contacts/{contact_id}/brief": {
+      "post": {
+        "operationId": "contact_brief_v1_workspaces__tenant_id__contacts__contact_id__brief_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Contact Brief",
+        "tags": [
+          "ai"
         ]
       }
     },

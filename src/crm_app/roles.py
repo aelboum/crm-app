@@ -152,6 +152,15 @@ PLATFORM_PERMISSIONS: tuple[Permission, ...] = (
         " provider the platform allows (P9-S).",
     ),
     Permission("ai.usage", "read", Kind.READ),
+    # P9-B: asking for a contact brief. SaaS-OS checks it again with the
+    # workspace's AI policy (off by default), its features, budget and quota.
+    Permission(
+        "ai.inference",
+        "run",
+        Kind.CREATE,
+        "Sends a contact's allowlisted facts to an AI provider only once an Owner"
+        " or Admin has turned AI and the contact brief on (P9-B).",
+    ),
     Permission(
         "ai.budget",
         "manage",
@@ -302,6 +311,9 @@ _MEMBER = _READ_ONLY | _keys(
     f"{PREFIX}suppression:read",
     f"{PREFIX}conversation:reply",
     f"{PREFIX}campaign:manage",
+    # P9-B: the contact brief (suggestions only; AI is off until an Owner
+    # or Admin turns it on).
+    "ai.inference:run",
 )
 
 _ADMIN = _MEMBER | _keys(

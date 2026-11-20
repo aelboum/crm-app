@@ -1369,6 +1369,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{tenant_id}/contacts/{contact_id}/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Contact Brief */
+        post: operations["contact_brief_v1_workspaces__tenant_id__contacts__contact_id__brief_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{tenant_id}/contacts/{record_id}": {
         parameters: {
             query?: never;
@@ -3665,6 +3682,19 @@ export interface components {
              * Format: date-time
              */
             starts_at: string;
+        };
+        /**
+         * BriefOut
+         * @description `text` only when `state` is `ready`: a suggestion to check, not a fact.
+         */
+        BriefOut: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ready" | "unavailable" | "quota_reached" | "busy" | "failed";
+            /** Text */
+            text: string | null;
         };
         /** BudgetIn */
         BudgetIn: {
@@ -10442,6 +10472,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    contact_brief_v1_workspaces__tenant_id__contacts__contact_id__brief_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                contact_id: string;
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

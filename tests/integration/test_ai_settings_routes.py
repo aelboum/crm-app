@@ -78,8 +78,9 @@ def test_only_owners_and_admins_see_or_change_ai_settings(probe: Probe) -> None:
     assert probe["budget_read"] == ONLY_OWNERS_AND_ADMINS
     assert probe["budget_set"] == CHANGES
     names = {"read_ai_settings", "manage_ai_settings", "read_ai_usage", "manage_ai_budget"}
-    assert probe["admin_actions"] == dict.fromkeys(names, True)
-    assert probe["member_actions"] == dict.fromkeys(names, False)
+    # Members may ask for a contact brief (P9-B), never change the settings.
+    assert probe["admin_actions"] == {**dict.fromkeys(names, True), "use_ai_brief": True}
+    assert probe["member_actions"] == {**dict.fromkeys(names, False), "use_ai_brief": True}
     assert probe["prefs_invalid"]["member"] == 403
     assert probe["model_member"] == 403
 

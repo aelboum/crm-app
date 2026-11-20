@@ -31,6 +31,7 @@ import { ContactViews } from "./ContactViews";
 import { CustomFieldsSection } from "./CustomFields";
 import { ImportButton, ImportDialog } from "./ImportDialog";
 import { AppointmentsSection } from "./AppointmentsSection";
+import { BriefSection } from "./BriefSection";
 import { ConsentSection } from "./ConsentSection";
 import { ConversationsSection } from "./ConversationsSection";
 import { DealsSection } from "./DealsSection";
@@ -422,6 +423,7 @@ export function ContactsPage({
           canDelete={can("delete_contact")}
           canAddNote={can("create_note")}
           canCreateTags={can("update_workspace")}
+          canBrief={can("use_ai_brief")}
           onClose={() => { onOpen(null); }}
           onEdit={(contact) => { setDialog({ contact }); }}
           onOpenAppointment={onOpenAppointment}
@@ -459,6 +461,7 @@ function ContactDrawer({
   canDelete,
   canAddNote,
   canCreateTags,
+  canBrief,
   onClose,
   onEdit,
   onOpenAppointment,
@@ -472,6 +475,8 @@ function ContactDrawer({
   canDelete: boolean;
   canAddNote: boolean;
   canCreateTags: boolean;
+  /** Asks for an AI contact brief (decision P9-B). */
+  canBrief: boolean;
   onClose: () => void;
   onEdit: (contact: Contact) => void;
   onOpenAppointment: (id: string) => void;
@@ -590,6 +595,9 @@ function ContactDrawer({
                 </Button>
               ) : null}
             </div>
+          ) : null}
+          {canBrief ? (
+            <BriefSection key={record.id} workspaceId={workspaceId} contactId={record.id} />
           ) : null}
           <TasksSection workspaceId={workspaceId} link={{ kind: "contact", id: record.id }} />
           <DealsSection

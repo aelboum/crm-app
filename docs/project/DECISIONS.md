@@ -4057,6 +4057,53 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
   - the DPIA;
   - production activation.
 
+## P9-B — Contact brief: facts, route and permission (2026-11-20)
+
+- **Status:** Implemented on the owner's "do all 4" (option 3 of the
+  options after the `6d5708b` deploy). Code only: AI stays off in every
+  workspace by default, no provider, model or credential is configured,
+  and production AI activation is still not authorized (P9-P restriction 5).
+- **Decision:**
+  1. `crm_app.contact_brief.facts` reads exactly the P9-P allowlist
+     (`ai_brief.ContactFacts`) for one contact under the workspace's row
+     security: lifecycle stage, source, tag names (up to 20), creation day,
+     kinds and days of the last 20 history entries, stage names and
+     outcomes of up to 10 deals, open and overdue task counts and upcoming
+     appointment counts (not cancelled, no-show or completed). Days are in
+     the workspace's time zone. Nothing is written.
+  2. `POST /v1/workspaces/{id}/contacts/{contact_id}/brief` requires
+     `crm_app.contact:read` and a user session (an integration's key gets
+     403 `user_only`). SaaS-OS then checks `ai.inference:run`, the
+     workspace's AI policy and feature, its budget and the platform rules.
+     The answer is `{state, text}`: `ready` with text, or `unavailable`,
+     `quota_reached`, `busy`, `failed` without provider detail. A contact
+     of another workspace, or none, is 404 `not_found`. The brief is not
+     stored or logged; SaaS-OS meters and audits the call.
+  3. **Permission:** `ai.inference:run` for Owner, Admin and Member, not
+     Read-only (a brief can spend the workspace's AI budget). New
+     workspaces get it from the templates. Existing workspaces get it only
+     through the held-back administrative list
+     (`crm_app.p9b.contact_brief.administrative.*`), which needs its own
+     approved run, like the other AI permissions. It is marked sensitive.
+  4. **Access action** `use_ai_brief` for the frontend.
+- **Screen:** the contact drawer shows "AI brief" only to members with
+  `use_ai_brief`. Nothing is sent until "Write a brief" is pressed; the
+  text is labelled as a suggestion to check; each state has a plain
+  message ("AI is not turned on for this workspace, ..."). The section says
+  what is sent and that names, contact details, notes and messages never
+  are.
+- **Tests:** `tests/integration/test_contact_brief.py` (the facts are the
+  allowlist and a request never carries the seeded name, email, phone,
+  job title or task title; with AI off the route answers `unavailable` to
+  an Owner and a Read-only member; 404 for another workspace's contact or
+  none; 401 without a session); `test_ai_settings_routes.py`,
+  `test_workspace_routes.py` (the new action); unit `test_roles.py`,
+  `test_permission_grants.py` (digests pinned), `test_routes.py`;
+  `contactBrief.test.tsx` (5 tests).
+- **Not verified:** a `ready` brief from a real model. That needs an
+  operator to configure a provider and an Owner to turn AI on, neither of
+  which is authorized.
+
 ## P9-U — AI usage in Settings › AI (2026-11-18, under the autonomous mandate)
 
 - **Status:** Implemented on the owner's instruction, 2026-11-18 ("Go 1

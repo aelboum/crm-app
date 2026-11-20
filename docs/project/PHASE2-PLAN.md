@@ -228,6 +228,7 @@ check" is enforced by product code in addition to the permission.
 | `ai.policy:manage` | ✓ | ✓ | – | – | A | Turn AI on or off, allow features and models, set data preferences (SaaS-OS checks each change; support access never); added by P9-S |
 | `ai.usage:read` | ✓ | ✓ | – | – | R | See AI usage and the monthly AI budget; added by P9-S |
 | `ai.budget:manage` | ✓ | ✓ | – | – | A | Lower the workspace's monthly AI budget, never above the plan's; added by P9-S |
+| `ai.inference:run` | ✓ | ✓ | ✓ | – | C | Ask for a contact brief; SaaS-OS refuses while AI or the feature is off (the default); added by P9-B |
 | `crm_app.workspace:read` | ✓ | ✓ | ✓ | ✓ | R | — |
 | `crm_app.workspace:update` | ✓ | ✓ | – | – | U | Ordinary settings: name, locale, time zone, currency |
 | `crm_app.workspace_security:update` | ✓ | – | – | – | A | Re-confirmation; security-sensitive settings only |

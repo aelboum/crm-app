@@ -374,6 +374,24 @@ ADMINISTRATIVE_MIGRATIONS: tuple[PermissionGrantMigration, ...] = (
         (("ai.policy", "manage"), ("ai.budget", "manage")),
         "P9-S: Workspace AI settings (Phase 9)",
     ),
+    _migration(
+        "crm_app.p9b.contact_brief.administrative.owner",
+        Role.OWNER,
+        (("ai.inference", "run"),),
+        "P9-B: Contact brief (Phase 9)",
+    ),
+    _migration(
+        "crm_app.p9b.contact_brief.administrative.admin",
+        Role.ADMIN,
+        (("ai.inference", "run"),),
+        "P9-B: Contact brief (Phase 9)",
+    ),
+    _migration(
+        "crm_app.p9b.contact_brief.administrative.member",
+        Role.MEMBER,
+        (("ai.inference", "run"),),
+        "P9-B: Contact brief (Phase 9)",
+    ),
 )
 
 
