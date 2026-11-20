@@ -1369,6 +1369,27 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Staging deployed at `6d52347` (2026-11-20, owner: "Go Ahead")
+
+From `ac22cc3`: the calendar asks for its range (P7-SC follow-up) and
+removing deleted tags from an audience (P7-ST follow-up). No migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `6d52347` | passed (5 of 5 jobs, run 44612481380) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:6d52347`; `VERSION=6d52347` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `/readyz` | 200, database and redis healthy |
+| alice, Calendar (week Nov 16 – 22) | asks `status=approved&scheduled_from=2026-11-15T23:00:00.000Z&scheduled_to=2026-11-22T23:00:00.000Z`; lists "Schedule check (copy)", Fri, Nov 20, 11:00 PM; no "Show more campaigns" (one page) |
+| alice, "Rehearsal check (copy)", only the deleted tag | the note shows and no removal is offered |
+| alice, same campaign after adding the "Lead" stage | "Remove the deleted tag" shows; the confirmation "Remove deleted tags?" appears first; after "Remove" the audience is `stages: ["lead"]`, `tag_ids: []`, status draft; audit `crm_app.campaign.updated` with `removed_deleted_tags = 1` |
+| App and worker logs, first 10 minutes | no error lines |
+
+"Rehearsal check (copy)" and "Schedule check (copy)" are disposable test
+data. Rollback: code to `crm-app:ac22cc3`; a full rollback restores the
+backup taken above.
+
 ## Calendar range and removing deleted tags (2026-11-19, owner: "go 1 then 2 and 3")
 
 Decisions P7-SC follow-up (the list's `scheduled_from` and `scheduled_to`;
@@ -1384,8 +1405,8 @@ migration.
 | `tsc -b`; `eslint .`; `ruff`; `pyright` | clean |
 
 `CalendarPage.tsx` and `CampaignsPage.tsx` already failed the Prettier
-check before this change, and their formatting is left as it was. Not
-deployed to staging.
+check before this change, and their formatting is left as it was.
+Deployed to staging below.
 
 ## Staging deployed at `ac22cc3` (2026-11-19, owner: "go 1 then 2 and 3")
 
