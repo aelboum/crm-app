@@ -1369,6 +1369,20 @@ calendar follow-up; the campaign detail's email is now the group
 `frontend/src/api/invitations.ts` was already not Prettier-formatted
 before this change and is left as it was. Not deployed to staging.
 
+## Deleting campaigns never queued (2026-11-20, owner: "do 2 then 4, then 3")
+
+Decision P7-DL: `DELETE /campaigns/{id}` for draft, validated, rejected and
+cancelled campaigns, confirmed first in the detail. No migration.
+
+| Check | Result |
+| --- | --- |
+| `uv run pytest` integration: campaigns, campaign schedule | 25 passed |
+| `uv run pytest tests/unit` (no environment) | 812 passed |
+| `npx vitest run --maxWorkers=2` | 37 files, 403 passed |
+| `tsc -b`; `eslint`; `ruff`; `pyright` | clean |
+
+Not deployed to staging.
+
 ## Staging deployed at `6d52347` (2026-11-20, owner: "Go Ahead")
 
 From `ac22cc3`: the calendar asks for its range (P7-SC follow-up) and

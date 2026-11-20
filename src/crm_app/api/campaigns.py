@@ -8,6 +8,7 @@
     GET    /v1/workspaces/{tenant_id}/campaigns/{id}/preview       crm_app.campaign:read
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/duplicate     crm_app.campaign:manage
     PATCH  /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:manage
+    DELETE /v1/workspaces/{tenant_id}/campaigns/{id}               crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/validate      crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/submit        crm_app.campaign:manage
     POST   /v1/workspaces/{tenant_id}/campaigns/{id}/cancel        crm_app.campaign:manage
@@ -31,7 +32,9 @@ the contact export), with the contact export's per-user limit on its own
 budget. `duplicate` copies a campaign's subject, body and audience into a
 new draft (decision P7-DU). `preview?contact_id=` shows the campaign as
 that contact would receive it, and whether they are in the audience and
-may receive it (decision P7-PV); nothing is sent.
+may receive it (decision P7-PV); nothing is sent. `DELETE` removes a
+campaign that was never queued: draft, validated, rejected or cancelled
+(decision P7-DL); a queued one is archived instead.
 
 Every change needs `If-Match`. Editing returns a campaign to draft and
 clears its approval. Queuing answers 409 `campaign_sending_unavailable`
@@ -408,6 +411,17 @@ def update_campaign(
     except RecordError as exc:
         raise _refusal(exc) from None
     return _etag(response, item)
+
+
+@router.delete(_ONE, status_code=204, name="delete_campaign")
+def delete_campaign(campaign_id: uuid.UUID, context: Manage, if_match: IfMatch = None) -> Response:
+    """Delete a campaign that was never queued (decision P7-DL)."""
+    expected = _version(if_match)
+    try:
+        campaigns.remove(_scope(context), campaign_id, expected_version=expected)
+    except RecordError as exc:
+        raise _refusal(exc) from None
+    return Response(status_code=204)
 
 
 def _step(

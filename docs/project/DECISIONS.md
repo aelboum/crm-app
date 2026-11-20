@@ -1073,6 +1073,22 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P7-DL — Deleting a campaign that was never queued (2026-11-20)
+
+- **Status:** Implemented on the owner's "do 2 then 4, then 3" (item 2).
+- **Decision:** those who manage campaigns may delete a campaign that was
+  never queued: a draft, validated, rejected or cancelled one
+  (`DELETE /campaigns/{id}`, If-Match, 204). Such a campaign has no
+  recipients, emails or results. One awaiting approval or approved must be
+  cancelled first, so a manager cannot remove what an approver is
+  deciding on. A campaign that was queued is never deleted; it is archived
+  instead (P7-AR). The audit records `deleted` with the status and content
+  hash, never the content. Any queue row left by an old schedule is
+  removed with it. The detail asks for confirmation first. No migration:
+  the application role already had `DELETE` on `campaign`.
+- **Tests:** `test_only_a_campaign_never_queued_may_be_deleted`;
+  `campaigns.test.tsx`.
+
 ## P7-ST follow-up — Removing deleted tags from an audience (2026-11-19)
 
 - **Status:** Implemented on the owner's "go 1 then 2 and 3" (item 3).

@@ -81,6 +81,23 @@ def test_a_deleted_tag_in_the_audience_is_reported_not_dropped(probe: Probe) -> 
     }
 
 
+def test_only_a_campaign_never_queued_may_be_deleted(probe: Probe) -> None:
+    """P7-DL: those who manage campaigns delete a draft with its version;
+    Read-only members are refused, another workspace sees a 404, and a
+    campaign that was sent stays (it is archived instead). Audited."""
+    deleted = probe["deleted"]
+    assert deleted["refused"] == [403, 404, 428, 409]
+    status, code, detail = deleted["finished"]
+    assert status in ("completed", "partially_completed", "failed")
+    assert (code, detail) == (
+        409,
+        {"code": "campaign_state", "rule": f"delete: not from {status}"},
+    )
+    assert deleted["still_there"] == 200
+    assert deleted["gone"] == [204, 404]
+    assert deleted["audit"] == 1
+
+
 def test_deleted_tags_are_removed_only_on_request(probe: Probe) -> None:
     """P7-ST follow-up: removing the deleted tags is an edit for those who
     manage campaigns (a draft again, the other filters kept); refused when

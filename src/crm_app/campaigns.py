@@ -777,6 +777,25 @@ def unarchive(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) ->
     return _transaction(scope, business)
 
 
+def remove(scope: Scope, campaign_id: uuid.UUID, *, expected_version: int) -> None:
+    """Delete a campaign that was never queued (decision P7-DL): a draft,
+    validated, rejected or cancelled one. Audited as `deleted` with its
+    status and content hash, never its content."""
+
+    def business(session: Session) -> None:
+        row = _load(session, scope, campaign_id, lock=True)
+        _checked(row, expected_version)
+        if row.status not in rules.DELETABLE or row.queued_at is not None:
+            raise CampaignStateError(f"delete: not from {row.status}")
+        _audit(session, scope, "deleted", row, content_hash=row.content_hash)
+        session.delete(row)
+        session.flush()
+
+    _transaction(scope, business)
+    # A cancelled campaign may still have the queue row of its old schedule.
+    _unregister(campaign_id)
+
+
 def _production() -> bool:
     return os.environ.get("ENVIRONMENT", "").strip().lower() == "production"
 

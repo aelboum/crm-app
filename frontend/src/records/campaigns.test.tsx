@@ -253,6 +253,36 @@ describe("campaigns", () => {
     });
   });
 
+  it("deletes a campaign never queued after a confirmation (P7-DL)", async () => {
+    const user = userEvent.setup();
+    const { headersSent } = renderApp(
+      `/w/${WS}/campaigns`,
+      workspace(
+        { manage: true, approve: false },
+        campaign({ status: "draft" }),
+        (method) => (method === "DELETE" ? { status: 204 } : undefined),
+      ),
+    );
+    const pane = await openCampaign(user);
+    await user.click(within(pane).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Delete campaign?" });
+    expect(dialog).toHaveTextContent(/Autumn news is deleted for good/);
+    expect(headersSent.filter((r) => r.method === "DELETE")).toEqual([]);
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      const call = headersSent.find((r) => r.method === "DELETE");
+      expect(call?.path).toBe(`/v1/workspaces/${WS}/campaigns/${ID}`);
+      expect(call?.headers["if-match"]).toBe('"4"');
+    });
+  });
+
+  it("offers no deletion once a campaign awaits approval or was queued", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));
+    const pane = await openCampaign(user);
+    expect(within(pane).queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
   it("offers no archiving before a campaign is finished, nor to Read-only members", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/campaigns`, workspace({ manage: true, approve: true }));

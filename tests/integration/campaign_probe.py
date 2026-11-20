@@ -816,6 +816,35 @@ def main() -> None:  # noqa: PLR0912, PLR0915 - one scenario script, read top to
                 " AND metadata->>'removed_deleted_tags' = '1'",
             ),
         }
+        # Deleting (P7-DL): only a campaign that was never queued.
+        doomed = client.post(
+            f"{base}/campaigns", json={**draft, "name": "Doomed"}, headers=auth()
+        ).json()
+        doomed_one = f"{base}/campaigns/{doomed['id']}"
+        finished = client.get(one, headers=auth()).json()
+        refused_delete = [
+            client.delete(doomed_one, headers=auth("reader", 1)).status_code,
+            client.delete(
+                f"/v1/workspaces/{b.id}/campaigns/{doomed['id']}",
+                headers=auth("other_owner", 1),
+            ).status_code,
+            client.delete(doomed_one, headers=auth()).status_code,
+            client.delete(doomed_one, headers=auth(version=9)).status_code,
+        ]
+        kept = client.delete(one, headers=auth(version=finished["version"]))
+        gone = client.delete(doomed_one, headers=auth("member", 1))
+        result["deleted"] = {
+            "refused": refused_delete,
+            "finished": [finished["status"], kept.status_code, kept.json()["detail"]],
+            "still_there": client.get(one, headers=auth()).status_code,
+            "gone": [gone.status_code, client.get(doomed_one, headers=auth()).status_code],
+            "audit": _scalar(
+                a.id,
+                "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"
+                " AND action = 'crm_app.campaign.deleted' AND resource_id = :c",
+                c=doomed["id"],
+            ),
+        }
         result["audit_text"] = _scalar(
             a.id,
             "SELECT count(*) FROM core.audit_log WHERE tenant_id = :t"

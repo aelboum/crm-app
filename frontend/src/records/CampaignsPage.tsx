@@ -14,6 +14,7 @@ import {
   useCampaignPreview,
   useCampaignStep,
   useCreateCampaign,
+  useDeleteCampaign,
   useDuplicateCampaign,
   useRejectCampaign,
   useScheduleCampaign,
@@ -66,6 +67,9 @@ const EDITABLE: CampaignStatus[] = [
   "approved",
   "rejected",
 ];
+
+// Those never queued, which may be deleted (decision P7-DL).
+const DELETABLE: CampaignStatus[] = ["draft", "validated", "rejected", "cancelled"];
 
 // Every status, in workflow order, for the list's filter (decision P7-CL).
 const STATUSES: CampaignStatus[] = [
@@ -449,6 +453,9 @@ export function CampaignsPage({ workspaceId }: { workspaceId: string }) {
                 setSearch("");
                 setSelected(copy.id);
               }}
+              onDeleted={() => {
+                setSelected(null);
+              }}
             />
           ) : (
             <p className="muted campaign-pick">{t("campaigns.pick")}</p>
@@ -623,6 +630,7 @@ function Detail({
   rehearsal,
   onEdit,
   onDuplicated,
+  onDeleted,
 }: {
   workspaceId: string;
   campaign: Campaign;
@@ -633,17 +641,20 @@ function Detail({
   rehearsal: boolean;
   onEdit: () => void;
   onDuplicated: (copy: Campaign) => void;
+  onDeleted: () => void;
 }) {
   const t = useT();
   const step = useCampaignStep(workspaceId);
   const reject = useRejectCampaign(workspaceId);
   const duplicate = useDuplicateCampaign(workspaceId);
+  const remove = useDeleteCampaign(workspaceId);
   const intl = useIntl();
   const [note, setNote] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [removingTags, setRemovingTags] = useState(false);
-  const problem = step.error ?? reject.error ?? duplicate.error;
+  const [deleting, setDeleting] = useState(false);
+  const problem = step.error ?? reject.error ?? duplicate.error ?? remove.error;
   const run = (name: Step) => {
     step.mutate({ id: campaign.id, version: campaign.version, step: name });
   };
@@ -778,6 +789,22 @@ function Detail({
           run("remove_deleted_tags");
         }}
       />
+      <ConfirmDialog
+        isOpen={deleting}
+        title={t("campaigns.deleteTitle")}
+        confirmLabel={t("campaigns.deleteSubmit")}
+        message={t("campaigns.deleteConfirm", { name: campaign.name })}
+        onCancel={() => {
+          setDeleting(false);
+        }}
+        onConfirm={() => {
+          setDeleting(false);
+          remove.mutate(
+            { id: campaign.id, version: campaign.version },
+            { onSuccess: onDeleted },
+          );
+        }}
+      />
       <div className="campaign-actions">
         {canManage && EDITABLE.includes(status) ? (
           <Button size="sm" onPress={onEdit}>
@@ -899,6 +926,18 @@ function Detail({
             }}
           >
             {t("campaigns.duplicate")}
+          </Button>
+        ) : null}
+        {canManage && DELETABLE.includes(status) ? (
+          <Button
+            size="sm"
+            variant="destructive"
+            isDisabled={remove.isPending}
+            onPress={() => {
+              setDeleting(true);
+            }}
+          >
+            {t("campaigns.delete")}
           </Button>
         ) : null}
       </div>

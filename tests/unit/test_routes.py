@@ -305,6 +305,7 @@ RECORDS |= {
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/duplicate": "crm_app.campaign:manage",
     "GET /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/preview": "crm_app.campaign:read",
     "PATCH /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:manage",
+    "DELETE /v1/workspaces/{tenant_id}/campaigns/{campaign_id}": "crm_app.campaign:manage",
     "POST /v1/workspaces/{tenant_id}/campaigns/{campaign_id}/remove-deleted-tags": (
         "crm_app.campaign:manage"
     ),

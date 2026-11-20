@@ -7,7 +7,7 @@ import {
 
 import { api, ApiError, unwrap } from "./client";
 import { ExportError, fileNameFrom } from "./exportContacts";
-import { ifMatch, unwrapWrite, where } from "./records";
+import { expectNoContent, ifMatch, unwrapWrite, where } from "./records";
 import type { components } from "./schema";
 
 /*
@@ -311,6 +311,25 @@ export function useCampaignPreview(
           },
         ),
       ),
+  });
+}
+
+/** Delete a campaign that was never queued (P7-DL). */
+export function useDeleteCampaign(workspaceId: string) {
+  const refresh = useRefresh(workspaceId);
+  return useMutation<null, ApiError, { id: string; version: number }>({
+    mutationFn: async ({ id, version }) =>
+      expectNoContent(
+        (
+          await api.DELETE(
+            "/v1/workspaces/{tenant_id}/campaigns/{campaign_id}",
+            {
+              params: { path: one(workspaceId, id), header: ifMatch(version) },
+            },
+          )
+        ).response,
+      ),
+    onSettled: () => refresh(),
   });
 }
 

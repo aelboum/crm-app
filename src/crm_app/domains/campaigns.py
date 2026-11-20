@@ -54,6 +54,10 @@ FINAL = ("completed", "partially_completed", "failed", "cancelled")
 # Only a finished campaign may be archived (decision P7-AR); migration 0047
 # enforces the same list.
 ARCHIVABLE = FINAL
+# Only a campaign that was never queued may be deleted (decision P7-DL): it
+# has no recipients, emails or results. One awaiting approval or approved is
+# cancelled first; one that was queued is archived instead.
+DELETABLE = ("draft", "validated", "rejected", "cancelled")
 
 # Which step leads from which states.
 TRANSITIONS: Mapping[str, tuple[tuple[str, ...], str]] = {
