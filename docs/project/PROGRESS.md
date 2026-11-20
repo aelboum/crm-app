@@ -1390,6 +1390,29 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Staging deployed at `f5cca88` (2026-11-20, owner: "go ahead")
+
+From `6d5708b`: the automation condition on a contact custom field (P8-G),
+campaigns in Reports (P10-C) and the contact brief (P9-B), with the CI
+fixes `1d3cab3` (route map) and `f5cca88` (probe typing). No migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `f5cca88` | passed (run 44810843453) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:f5cca88`; `VERSION=f5cca88` |
+| `$C up -d --wait` | every service healthy |
+| `public.alembic_version` | `0051_custom_field_step` (unchanged) |
+| `/readyz` | 200 |
+| Running app's OpenAPI | lists `.../contacts/{contact_id}/brief` and `.../reports/campaigns` |
+| App log, first 2 minutes | no error lines |
+
+Not yet run on staging: the administrative grant list
+(`crm_app.p9b.contact_brief.administrative.*`), so existing staging
+workspaces have no `ai.inference:run` and do not show the AI brief; AI
+stays off there in any case. Not checked in a browser. Rollback is
+code-only to `crm-app:6d5708b`.
+
 ## Contact brief route and permission (2026-11-20, owner: "do all 4")
 
 Decision P9-B, no migration of the database. `POST .../contacts/{id}/brief`,
@@ -1412,7 +1435,7 @@ was not run before that push. The route map now lists both new routes.
 | `npx vitest run --maxWorkers=3` | 38 files, 420 passed |
 | `tsc -b`; `eslint .`; `npm run build` | clean |
 
-Not deployed to staging.
+Deployed to staging above (`f5cca88`).
 
 ## Campaigns in Reports (2026-11-20, owner: "do all 4")
 
@@ -1428,7 +1451,7 @@ card: campaigns queued in the period, recipients by outcome, unsubscribes.
 | `npx vitest run src/records/reports.test.tsx` | 13 passed |
 | `tsc -b`; `eslint` | clean |
 
-Not deployed to staging.
+Deployed to staging above (`f5cca88`).
 
 ## Automation condition on a contact custom field (2026-11-20, owner: "do all 4")
 
@@ -1446,7 +1469,7 @@ introduction now names the custom field step and the condition kinds
 | `npx vitest run src/records/automations.test.tsx` | 18 passed |
 | `tsc -b`; `eslint .`; `npm run build` | clean |
 
-Not deployed to staging.
+Deployed to staging above (`f5cca88`).
 
 ## Staging deployed at `6d5708b` (2026-11-20, owner: "Go 1 and 2")
 
