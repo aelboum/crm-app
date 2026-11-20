@@ -63,6 +63,7 @@ from crm_app.models import (
     Campaign,
     Contact,
     ContactTag,
+    CustomFieldDefinition,
     Form,
     PipelineStage,
     Tag,
@@ -289,6 +290,39 @@ def _active_member(workspace: uuid.UUID, user_id: uuid.UUID) -> bool:
     return membership is not None and membership.status == "active"
 
 
+def _fits(field: CustomFieldDefinition, value: object) -> bool:
+    try:
+        return field_rules.value(field.field_type, field.options, value) is not None
+    except InvalidValue:
+        return False
+
+
+def _check_fields(session: Session, scope: Scope, given: rules.Definition) -> None:
+    """The contact custom fields a definition reads (P8-G) or sets (P8-F)
+    are active, and its values fit them."""
+    fields = rules.field_values(given)
+    read = rules.condition_field(given)
+    active = custom_fields.active_definitions(session, scope, "contact") if fields or read else {}
+    if read is not None:
+        key, values = read
+        field = active.get(key)
+        if field is None:
+            raise AutomationRuleError(
+                "the custom field its condition reads is not an active contact field"
+            )
+        for value in values:
+            if not _fits(field, value):
+                raise AutomationRuleError(
+                    f"a value in its condition does not fit the custom field {key}"
+                )
+    for key, value in fields:
+        field = active.get(key)
+        if field is None:
+            raise AutomationRuleError("a custom field it sets is not an active contact field")
+        if not _fits(field, value):
+            raise AutomationRuleError(f"the value for the custom field {key} does not fit it")
+
+
 def _check_references(session: Session, scope: Scope, given: rules.Definition) -> None:
     tags, users = rules.referenced(given)
     if tags:
@@ -303,19 +337,7 @@ def _check_references(session: Session, scope: Scope, given: rules.Definition) -
     for user in users:
         if not _active_member(scope.workspace, uuid.UUID(user)):
             raise AutomationRuleError("a member it names is not an active member")
-    fields = rules.field_values(given)
-    if fields:
-        active = custom_fields.active_definitions(session, scope, "contact")
-        for key, value in fields:
-            field = active.get(key)
-            if field is None:
-                raise AutomationRuleError("a custom field it sets is not an active contact field")
-            try:
-                fitted = field_rules.value(field.field_type, field.options, value)
-            except InvalidValue:
-                fitted = None
-            if fitted is None:
-                raise AutomationRuleError(f"the value for the custom field {key} does not fit it")
+    _check_fields(session, scope, given)
     model = _SUBJECT_MODELS.get(given.trigger)
     if model is not None and given.subject_id is not None:
         found_subject = session.execute(
@@ -569,7 +591,12 @@ def on_contact_created(session: Session, scope: Scope, contact_id: uuid.UUID, so
 # --- Execution -----------------------------------------------------------------------------
 
 
-def _facts(session: Session, workspace: uuid.UUID, contact: Contact) -> rules.Facts:
+def _facts(
+    session: Session,
+    workspace: uuid.UUID,
+    contact: Contact,
+    condition: dict[str, Any] | None,
+) -> rules.Facts:
     tag_ids = frozenset(
         str(tag)
         for tag in session.execute(
@@ -578,11 +605,25 @@ def _facts(session: Session, workspace: uuid.UUID, contact: Contact) -> rules.Fa
             )
         ).scalars()
     )
+    custom_value: object = None
+    if condition is not None and condition["field"] == "custom_field":
+        key = condition["key"]
+        active = session.execute(
+            select(CustomFieldDefinition.id).where(
+                CustomFieldDefinition.tenant_id == workspace,
+                CustomFieldDefinition.entity == "contact",
+                CustomFieldDefinition.key == key,
+                CustomFieldDefinition.archived_at.is_(None),
+            )
+        ).first()
+        if active is not None:
+            custom_value = (contact.custom_fields or {}).get(key)
     return rules.Facts(
         source=contact.source,
         lifecycle_stage=contact.lifecycle_stage,
         has_email=bool(contact.email),
         tag_ids=tag_ids,
+        custom_value=custom_value,
     )
 
 
@@ -782,7 +823,9 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
             _forget([run_id])
             return run.status, False
         if run.branch is None:
-            run.branch = rules.branch_for(definition.condition, _facts(session, workspace, contact))
+            run.branch = rules.branch_for(
+                definition.condition, _facts(session, workspace, contact, definition.condition)
+            )
         steps = definition.branch(run.branch)
         if run.next_step >= len(steps):
             _finish(session, run, "completed", now, None)

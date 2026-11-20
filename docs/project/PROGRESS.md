@@ -1390,6 +1390,24 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Automation condition on a contact custom field (2026-11-20, owner: "do all 4")
+
+Decision P8-G, no migration. A condition can read one contact custom field
+("is one of", "is none of", "is present", "is missing"). The Automations
+introduction now names the custom field step and the condition kinds
+(option 4).
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/integration/test_automation*.py` against `crm_app_test` | 29 passed |
+| `pytest tests/unit` | 840 passed |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 2 contracts kept |
+| `crm_app.openapi` | no change (the definition is free-form JSON checked by the domain) |
+| `npx vitest run src/records/automations.test.tsx` | 18 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+Not deployed to staging.
+
 ## Staging deployed at `6d5708b` (2026-11-20, owner: "Go 1 and 2")
 
 From `f77a204`: the automation step that sets a contact custom field

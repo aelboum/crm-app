@@ -678,6 +678,91 @@ describe("automations", () => {
     );
   });
 
+  it("branches on a contact custom field (P8-G)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "By tier");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Condition type"),
+      "custom_field",
+    );
+    const field = within(dialog).getByLabelText("Condition field");
+    await waitFor(() => {
+      expect(field).toHaveValue("tier");
+    });
+    expect(
+      within(field)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Tier", "Seats", "Vip"]);
+    // A select field starts on its first option; tick a second one.
+    expect(within(dialog).getByRole("checkbox", { name: "Gold" })).toBeChecked();
+    await user.click(within(dialog).getByRole("checkbox", { name: "Silver" }));
+    await user.selectOptions(within(dialog).getByLabelText("Condition test"), "not_in");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to If it matches"),
+      "add_tag",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to If it matches" }),
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "POST")?.body as {
+        definition: { condition: unknown };
+      };
+      expect(body.definition.condition).toEqual({
+        field: "custom_field",
+        key: "tier",
+        op: "not_in",
+        values: ["Gold", "Silver"],
+      });
+    });
+  });
+
+  it("asks a number field for one value and drops it for is missing", async () => {
+    const user = userEvent.setup();
+    renderApp(`/w/${WS}/automations`, workspace(true));
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.selectOptions(
+      within(dialog).getByLabelText("Condition type"),
+      "custom_field",
+    );
+    const field = within(dialog).getByLabelText("Condition field");
+    await waitFor(() => {
+      expect(field).toHaveValue("tier");
+    });
+    await user.selectOptions(field, "seats");
+    const value = within(dialog).getByLabelText("Condition value");
+    expect(value).toHaveAttribute("type", "number");
+    await user.type(value, "3");
+    expect(value).toHaveValue(3);
+    await user.selectOptions(within(dialog).getByLabelText("Condition test"), "absent");
+    expect(within(dialog).queryByLabelText("Condition value")).toBeNull();
+    await user.selectOptions(within(dialog).getByLabelText("Condition test"), "in");
+    expect(within(dialog).getByLabelText("Condition value")).toHaveValue(null);
+  });
+
   it("hands contacts out in turn among the members picked", async () => {
     const user = userEvent.setup();
     const { sent } = renderApp(

@@ -85,7 +85,14 @@ const SOURCES = [
 const WAITS = [15, 60, 240, 1440, 4320, 10080];
 const DUES = [null, 15, 60, 1440, 4320];
 
-type ConditionKind = "none" | "source" | "lifecycle_stage" | "email" | "tag";
+type ConditionKind =
+  | "none"
+  | "source"
+  | "lifecycle_stage"
+  | "email"
+  | "tag"
+  | "custom_field";
+type FieldValue = string | number | boolean;
 type T = ReturnType<typeof useT>;
 
 function failure(error: unknown): MessageId {
@@ -755,10 +762,26 @@ function TriggerFields({
   );
 }
 
+function startValues(field: FieldDefinition | undefined): FieldValue[] {
+  const start = fieldStart(field);
+  return start === "" ? [] : [start];
+}
+
+function fieldCondition(field: FieldDefinition | undefined): Condition {
+  return {
+    field: "custom_field",
+    key: field?.key ?? "",
+    op: "in",
+    values: startValues(field),
+  };
+}
+
 function startingCondition(
   kind: ConditionKind,
   tags: Option[],
+  fields: FieldDefinition[],
 ): Condition | null {
+  if (kind === "custom_field") return fieldCondition(fields[0]);
   if (kind === "source") return { field: "source", op: "in", values: ["form"] };
   if (kind === "lifecycle_stage")
     return { field: "lifecycle_stage", op: "in", values: ["lead"] };
@@ -904,6 +927,7 @@ function AutomationEditor({
               const condition = startingCondition(
                 event.target.value as ConditionKind,
                 tags,
+                fields,
               );
               set({ condition, no: condition ? definition.no : [] });
             }}
@@ -915,11 +939,15 @@ function AutomationEditor({
             </option>
             <option value="email">{t("automations.condition.email")}</option>
             <option value="tag">{t("automations.condition.tag")}</option>
+            <option value="custom_field">
+              {t("automations.condition.customField")}
+            </option>
           </select>
           {definition.condition ? (
             <ConditionEditor
               condition={definition.condition}
               tags={tags}
+              fields={fields}
               onChange={(condition) => {
                 set({ condition });
               }}
@@ -968,13 +996,20 @@ function AutomationEditor({
 function ConditionEditor({
   condition,
   tags,
+  fields,
   onChange,
 }: {
   condition: Condition;
   tags: Option[];
+  fields: FieldDefinition[];
   onChange: (condition: Condition) => void;
 }) {
   const t = useT();
+  if (condition.field === "custom_field") {
+    return (
+      <FieldCondition condition={condition} fields={fields} onChange={onChange} />
+    );
+  }
   if (condition.field === "email") {
     return (
       <select
@@ -1544,5 +1579,136 @@ function FieldStep({
       {control}
       <p className="form-hint">{t("automations.fieldHint")}</p>
     </div>
+  );
+}
+
+/*
+ * P8-G: which contact field, the test, then the values in the control its
+ * type takes. A field archived since stays chosen until changed.
+ */
+function FieldCondition({
+  condition,
+  fields,
+  onChange,
+}: {
+  condition: Extract<Condition, { field: "custom_field" }>;
+  fields: FieldDefinition[];
+  onChange: (condition: Condition) => void;
+}) {
+  const t = useT();
+  const field = fields.find((candidate) => candidate.key === condition.key);
+  const values: FieldValue[] = "values" in condition ? condition.values : [];
+  const valueLabel = t("automations.conditionValue");
+  const setValues = (next: FieldValue[]) => {
+    onChange({
+      field: "custom_field",
+      key: condition.key,
+      op: condition.op === "not_in" ? "not_in" : "in",
+      values: next,
+    });
+  };
+  let control = null;
+  if ("values" in condition && field?.field_type === "select") {
+    control = (
+      <div className="automation-checks">
+        {(field.options ?? []).map((option) => (
+          <label key={option} className="public-check-label">
+            <input
+              type="checkbox"
+              checked={values.includes(option)}
+              onChange={(event) => {
+                setValues(
+                  event.target.checked
+                    ? [...values, option]
+                    : values.filter((v) => v !== option),
+                );
+              }}
+            />
+            <span>{option}</span>
+          </label>
+        ))}
+      </div>
+    );
+  } else if ("values" in condition && field?.field_type === "boolean") {
+    control = (
+      <select
+        className="form-input"
+        aria-label={valueLabel}
+        value={values[0] === false ? "no" : "yes"}
+        onChange={(event) => {
+          setValues([event.target.value === "yes"]);
+        }}
+      >
+        <option value="yes">{t("automations.valueYes")}</option>
+        <option value="no">{t("automations.valueNo")}</option>
+      </select>
+    );
+  } else if ("values" in condition && field) {
+    const numeric = field.field_type === "number";
+    const first = values[0];
+    control = (
+      <input
+        className="form-input"
+        aria-label={valueLabel}
+        type={field.field_type}
+        maxLength={field.field_type === "text" ? 500 : undefined}
+        value={first === undefined || typeof first === "boolean" ? "" : first}
+        onChange={(event) => {
+          const raw = event.target.value;
+          setValues(raw === "" ? [] : [numeric ? Number(raw) : raw]);
+        }}
+      />
+    );
+  }
+  return (
+    <>
+      <select
+        className="form-input"
+        aria-label={t("automations.conditionField")}
+        value={condition.key}
+        onChange={(event) => {
+          onChange(
+            fieldCondition(fields.find((f) => f.key === event.target.value)),
+          );
+        }}
+      >
+        {!fields.length && !condition.key ? (
+          <option value="">{t("automations.noFields")}</option>
+        ) : null}
+        {condition.key && !field ? (
+          <option value={condition.key}>{t("automations.fieldGone")}</option>
+        ) : null}
+        {fields.map((option) => (
+          <option key={option.id} value={option.key}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <select
+        className="form-input"
+        aria-label={t("automations.conditionOp")}
+        value={condition.op}
+        onChange={(event) => {
+          const op = event.target.value as Condition["op"];
+          if (op === "present" || op === "absent") {
+            onChange({ field: "custom_field", key: condition.key, op });
+          } else {
+            onChange({
+              field: "custom_field",
+              key: condition.key,
+              op: op === "not_in" ? "not_in" : "in",
+              values: "values" in condition ? condition.values : startValues(field),
+            });
+          }
+        }}
+      >
+        <option value="in">{t("automations.op.in")}</option>
+        <option value="not_in">{t("automations.op.notIn")}</option>
+        <option value="present">{t("automations.op.present")}</option>
+        <option value="absent">{t("automations.op.absent")}</option>
+      </select>
+      {control}
+      <p className="form-hint">{t("automations.conditionFieldHint")}</p>
+    </>
   );
 }

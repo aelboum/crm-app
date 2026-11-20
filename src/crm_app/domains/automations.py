@@ -36,6 +36,14 @@ id, and a fixed `message` the definition's author writes; decision P8-N),
 change, so the key names it; whether the field is active and the value fits
 its type is checked at activation and again at each run.
 Contacts created by an import never start an automation.
+
+Conditions read the contact's `source` or `lifecycle_stage` (`in`,
+`not_in`), whether it has an `email` (`present`, `absent`), its `tag`s
+(`has`, `has_not`), or (decision P8-G) one contact custom field:
+`{"field": "custom_field", "key": ..., "op": "in" | "not_in", "values":
+[...]}` or `"op": "present" | "absent"` without values. Values have the
+shapes `set_custom_field` takes; text compares without regard to case. A
+field archived since activation counts as having no value.
 """
 
 from __future__ import annotations
@@ -193,31 +201,50 @@ def _rotation(raw: Mapping[str, Any], where: str) -> Action:
     return Action("assign_round_robin", {"user_ids": users})
 
 
+def _field_key(given: object, where: str) -> str:
+    try:
+        return field_rules.key(given if isinstance(given, str) else "")
+    except InvalidValue:
+        raise InvalidValue(f"{where}: a custom field's key") from None
+
+
+def _fixed_value(given: object, where: str) -> object:
+    """A fixed value of a shape some field type accepts: true or false, a
+    number, or trimmed visible text. Which field it must fit is checked at
+    activation."""
+    if isinstance(given, bool):
+        return given
+    if isinstance(given, int | float):
+        try:
+            return field_rules.value("number", None, given)
+        except InvalidValue as exc:
+            raise InvalidValue(f"{where}: {exc}") from None
+    if isinstance(given, str):
+        text = given.strip()
+        if not 1 <= len(text) <= field_rules.TEXT_MAX or not visible_text(text):
+            raise InvalidValue(f"{where}: 1 to {field_rules.TEXT_MAX} visible characters")
+        return text
+    raise InvalidValue(f"{where}: text, a number, or true or false")
+
+
+def same_value(stored: object, wanted: object) -> bool:
+    """Whether a stored custom field value equals a condition's value: of
+    the same kind (true or false is never a number), text without regard
+    to case."""
+    if isinstance(stored, bool) or isinstance(wanted, bool):
+        return isinstance(stored, bool) and isinstance(wanted, bool) and stored == wanted
+    if isinstance(stored, str) and isinstance(wanted, str):
+        return stored.casefold() == wanted.casefold()
+    numbers = (int, float)
+    return isinstance(stored, numbers) and isinstance(wanted, numbers) and stored == wanted
+
+
 def _field_value(raw: Mapping[str, Any], where: str) -> Action:
     """`set_custom_field` (P8-F): a key and a fixed value of a shape some
     field type accepts; which field and type is checked at activation."""
     _keys(raw, {"type", "field_key", "value"}, where)
-    given_key = raw.get("field_key")
-    try:
-        key = field_rules.key(given_key if isinstance(given_key, str) else "")
-    except InvalidValue:
-        raise InvalidValue(f"{where}.field_key: a custom field's key") from None
-    given = raw.get("value")
-    value: object
-    if isinstance(given, bool):
-        value = given
-    elif isinstance(given, int | float):
-        try:
-            value = field_rules.value("number", None, given)
-        except InvalidValue as exc:
-            raise InvalidValue(f"{where}.value: {exc}") from None
-    elif isinstance(given, str):
-        text = given.strip()
-        if not 1 <= len(text) <= field_rules.TEXT_MAX or not visible_text(text):
-            raise InvalidValue(f"{where}.value: 1 to {field_rules.TEXT_MAX} visible characters")
-        value = text
-    else:
-        raise InvalidValue(f"{where}.value: text, a number, or true or false")
+    key = _field_key(raw.get("field_key"), f"{where}.field_key")
+    value = _fixed_value(raw.get("value"), f"{where}.value")
     return Action("set_custom_field", {"field_key": key, "value": value})
 
 
@@ -268,11 +295,35 @@ def _values(raw: object, allowed: Sequence[str] | None, where: str) -> list[str]
     return values
 
 
+def _field_condition(raw: Mapping[str, Any]) -> dict[str, Any]:
+    """A condition on one contact custom field (P8-G)."""
+    _keys(raw, {"field", "key", "op", "values"}, "condition")
+    key = _field_key(raw.get("key"), "condition.key")
+    op = raw.get("op")
+    if op in ("present", "absent"):
+        if "values" in raw:
+            raise InvalidValue("condition.values: not with present or absent")
+        return {"field": "custom_field", "key": key, "op": op}
+    if op not in ("in", "not_in"):
+        raise InvalidValue("condition.op: one of in, not_in, present, absent")
+    given = raw.get("values")
+    if not isinstance(given, list) or not 1 <= len(given) <= MAX_VALUES:
+        raise InvalidValue(f"condition.values: 1 to {MAX_VALUES} values")
+    values: list[object] = []
+    for item in given:
+        value = _fixed_value(item, "condition.values")
+        if not any(same_value(value, seen) for seen in values):
+            values.append(value)
+    return {"field": "custom_field", "key": key, "op": op, "values": values}
+
+
 def _condition(raw: object) -> dict[str, Any] | None:
     if raw is None:
         return None
     if not isinstance(raw, Mapping):
         raise InvalidValue("condition: an object or null")
+    if raw.get("field") == "custom_field":
+        return _field_condition(raw)
     _keys(raw, {"field", "op", "values"}, "condition")
     field, op = raw.get("field"), raw.get("op")
     if field in ("source", "lifecycle_stage") and op in ("in", "not_in"):
@@ -352,6 +403,9 @@ class Facts:
     lifecycle_stage: str
     has_email: bool
     tag_ids: frozenset[str]
+    # The value of the custom field a condition reads (P8-G); None when it
+    # has none or the field is no longer active.
+    custom_value: object = None
 
 
 def branch_for(condition: dict[str, Any] | None, facts: Facts) -> str:
@@ -359,7 +413,14 @@ def branch_for(condition: dict[str, Any] | None, facts: Facts) -> str:
     if condition is None:
         return "yes"
     field, op, values = condition["field"], condition["op"], condition.get("values", [])
-    if field == "email":
+    if field == "custom_field":
+        present = facts.custom_value is not None
+        if op in ("present", "absent"):
+            matched = present == (op == "present")
+        else:
+            held = present and any(same_value(facts.custom_value, v) for v in values)
+            matched = held if op == "in" else not held
+    elif field == "email":
         matched = facts.has_email == (op == "present")
     elif field == "tag":
         held = bool(facts.tag_ids & set(values))
@@ -391,6 +452,14 @@ def referenced(given: Definition) -> tuple[set[str], set[str]]:
         elif step.type == "assign_round_robin":
             users.update(step.args["user_ids"])
     return tags, users
+
+
+def condition_field(given: Definition) -> tuple[str, list[object]] | None:
+    """The custom field key a condition reads and the values it compares
+    with (P8-G), to check before activation; None for other conditions."""
+    if not given.condition or given.condition["field"] != "custom_field":
+        return None
+    return given.condition["key"], list(given.condition.get("values", []))
 
 
 def field_values(given: Definition) -> list[tuple[str, object]]:

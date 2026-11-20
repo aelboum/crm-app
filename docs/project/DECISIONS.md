@@ -1073,6 +1073,41 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-G — Automation condition on a contact custom field (2026-11-20)
+
+- **Status:** Implemented on the owner's "do all 4" (option 1 of the
+  options after the `6d5708b` deploy; option 4, the Automations
+  introduction, is folded in).
+- **Decision:** a condition may read one contact custom field:
+  `{"field": "custom_field", "key": ..., "op": "in" | "not_in", "values":
+  [...]}` (1 to 20 values) or `"op": "present" | "absent"` (no values).
+  - Values take the shapes `set_custom_field` takes: one-line text (1 to
+    500 visible characters), a number, or true or false. Text compares
+    without regard to case; true or false never equals a number.
+  - Saving a draft checks only the shape. Activation also checks that the
+    key names an active contact field and that every value fits its type
+    and, for a select, its options (exactly as written). The refusal names
+    the key, never a value.
+  - The branch is chosen when the run starts, from the stored value. A
+    contact without a value takes "no" for `in` and "yes" for `not_in`.
+    A field archived since activation counts as having no value.
+  - No comparisons such as "greater than" or date ranges: equality and
+    presence only, so a condition stays a lookup, never an expression.
+  - No migration: the condition lives in the stored definition.
+- **Editor:** "Custom field" in the condition types; the active contact
+  fields; "is one of", "is none of", "is present", "is missing"; then
+  options as tick boxes for a select, Yes or No, or one value for text,
+  number and date. A field archived since stays chosen and is named as
+  such. The introduction now says an automation can set a custom field
+  and that a condition can check source, stage, email, tags or a custom
+  field.
+- **Tests:** `tests/unit/test_automation_rules.py` (shapes refused and
+  stored, matching by kind and case); `tests/integration/
+  test_automation_condition.py` (refusals when saved and activated;
+  branches for a matching, another and no value; an archived field);
+  `automations.test.tsx` (builds a select condition; number value and
+  "is missing").
+
 ## P8-F — Automation step that sets a contact custom field (2026-11-20)
 
 - **Status:** Implemented on the owner's "go" (recommended option 1: an

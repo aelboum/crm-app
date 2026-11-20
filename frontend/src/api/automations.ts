@@ -62,7 +62,16 @@ export type Condition =
       values: string[];
     }
   | { field: "email"; op: "present" | "absent" }
-  | { field: "tag"; op: "has" | "has_not"; values: string[] };
+  | { field: "tag"; op: "has" | "has_not"; values: string[] }
+  // P8-G: one contact custom field by key; values fit its type, checked at
+  // activation. A field archived since counts as having no value.
+  | {
+      field: "custom_field";
+      key: string;
+      op: "in" | "not_in";
+      values: (string | number | boolean)[];
+    }
+  | { field: "custom_field"; key: string; op: "present" | "absent" };
 
 /*
  * Triggers (decision P8-B adds all but the first). The tag and stage

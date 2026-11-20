@@ -106,6 +106,24 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
         {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": 10**15}]},
         {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": "x" * 501}]},
         {"yes": [{"type": "set_custom_field", "field_key": "plan", "value": 1, "x": 1}]},
+        # P8-G
+        {"condition": {"field": "custom_field", "op": "in", "values": ["a"]}},
+        {"condition": {"field": "custom_field", "key": "Bad", "op": "in", "values": ["a"]}},
+        {"condition": {"field": "custom_field", "key": "plan", "op": "has", "values": ["a"]}},
+        {"condition": {"field": "custom_field", "key": "plan", "op": "in"}},
+        {"condition": {"field": "custom_field", "key": "plan", "op": "in", "values": []}},
+        {"condition": {"field": "custom_field", "key": "plan", "op": "in", "values": [None]}},
+        {"condition": {"field": "custom_field", "key": "plan", "op": "in", "values": [" "]}},
+        {"condition": {"field": "custom_field", "key": "plan", "op": "present", "values": []}},
+        {"condition": {"field": "custom_field", "key": "plan", "op": "absent", "x": 1}},
+        {
+            "condition": {
+                "field": "custom_field",
+                "key": "plan",
+                "op": "in",
+                "values": [str(i) for i in range(rules.MAX_VALUES + 1)],
+            }
+        },
     ],
 )
 def test_anything_outside_the_rules_is_refused(changes: dict[str, Any]) -> None:
@@ -255,3 +273,58 @@ def test_the_run_history_accepts_every_action(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     line = next(x for x in result.stdout.splitlines() if x.startswith("ACTIONS "))
     assert json.loads(line.removeprefix("ACTIONS ")) == sorted(rules.ACTIONS)
+
+
+def test_a_custom_field_condition_is_plain_data_and_compares_by_kind() -> None:
+    """P8-G: one contact field by key; text without regard to case, true
+    or false never equal to a number, and no value fails `in`."""
+    given = rules.definition(
+        _base(
+            condition={
+                "field": "custom_field",
+                "key": "plan",
+                "op": "in",
+                "values": [" Gold ", "gold", 5.0, True],
+            },
+            no=[{"type": "add_tag", "tag_id": TAG}],
+        )
+    )
+    condition = given.as_json()["condition"]
+    assert condition == {
+        "field": "custom_field",
+        "key": "plan",
+        "op": "in",
+        "values": ["Gold", 5, True],
+    }
+    assert rules.condition_field(given) == ("plan", ["Gold", 5, True])
+    assert rules.referenced(given) == ({TAG}, set())
+
+    def facts(value: object) -> rules.Facts:
+        return rules.Facts(
+            source="form",
+            lifecycle_stage="lead",
+            has_email=True,
+            tag_ids=frozenset(),
+            custom_value=value,
+        )
+
+    cases = [("GOLD", "yes"), (5, "yes"), (True, "yes"), (1, "no"), (False, "no"), (None, "no")]
+    for value, expected in cases:
+        assert rules.branch_for(condition, facts(value)) == expected, value
+    not_in = {**condition, "op": "not_in"}
+    assert rules.branch_for(not_in, facts(None)) == "yes"
+    assert rules.branch_for(not_in, facts("gold")) == "no"
+    present = rules.definition(
+        _base(condition={"field": "custom_field", "key": "vip", "op": "present"})
+    )
+    assert present.as_json()["condition"] == {
+        "field": "custom_field",
+        "key": "vip",
+        "op": "present",
+    }
+    assert rules.condition_field(present) == ("vip", [])
+    assert rules.branch_for(present.condition, facts(False)) == "yes"
+    assert rules.branch_for(present.condition, facts(None)) == "no"
+    absent = {"field": "custom_field", "key": "vip", "op": "absent"}
+    assert rules.branch_for(absent, facts(None)) == "yes"
+    assert rules.condition_field(rules.definition(_base())) is None
