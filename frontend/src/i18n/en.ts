@@ -27,8 +27,7 @@ export const en = {
   "nav.group.marketing": "Marketing",
   "nav.campaigns": "Campaigns",
   "websites.title": "Websites",
-  "websites.intro":
-    "Embed your published forms on sites outside LeadStack, such as WordPress, Shopify, Webflow or Wix. List each site's address here first: forms accept submissions only from listed, active sites.",
+  "websites.intro": "Embed your published forms on sites outside LeadStack, such as WordPress, Shopify, Webflow or Wix. List each site's address here first: forms accept submissions only from listed, active sites.",
   "websites.empty": "No websites yet.",
   "websites.active": "Active",
   "websites.disabled": "Disabled",
@@ -40,27 +39,21 @@ export const en = {
   "websites.add": "Add website",
   "websites.embed": "Embed on a website",
   "websites.embedTitle": "Embed this form",
-  "websites.embedIntro":
-    "Paste this code where the form should appear, in a custom HTML block of your site. It works only on the sites listed under Websites, and it sends the page's campaign tags (utm) with each submission.",
+  "websites.embedIntro": "Paste this code where the form should appear, in a custom HTML block of your site. It works only on the sites listed under Websites, and it sends the page's campaign tags (utm) with each submission.",
   "websites.code": "Embed code",
   "websites.copyCode": "Copy code",
   "websites.close": "Close",
-  "websites.error.invalid":
-    "Enter a name and site addresses like https://www.example.com (no paths or wildcards).",
-  "websites.error.stale":
-    "Someone else changed this website. It has been reloaded.",
+  "websites.error.invalid": "Enter a name and site addresses like https://www.example.com (no paths or wildcards).",
+  "websites.error.stale": "Someone else changed this website. It has been reloaded.",
   "websites.error.limit": "This workspace has reached its number of websites.",
   "websites.error.forbidden": "You do not have permission for that.",
   "websites.error.generic": "That did not work. Try again.",
-  "campaigns.intro":
-    "Draft an email to a segment of your contacts, check who may receive it, and have an Owner or Admin approve it.",
+  "campaigns.intro": "Draft an email to a segment of your contacts, check who may receive it, and have an Owner or Admin approve it.",
   "campaigns.new": "New campaign",
   "campaigns.newTitle": "New campaign",
   "campaigns.editTitle": "Edit campaign",
-  "campaigns.rehearsal":
-    "Rehearsal workspace: approved campaigns can be queued and processed, but no email is sent. Each email is recorded as not sent, and stays that way.",
-  "campaigns.sendingUnavailable":
-    "Campaigns cannot be sent yet: email sending is not switched on. Drafting, checking the audience and approval work.",
+  "campaigns.rehearsal": "Rehearsal workspace: approved campaigns can be queued and processed, but no email is sent. Each email is recorded as not sent, and stays that way.",
+  "campaigns.sendingUnavailable": "Campaigns cannot be sent yet: email sending is not switched on. Drafting, checking the audience and approval work.",
   "campaigns.empty": "No campaigns yet",
   "campaigns.emptyBody": "Create one to draft an email and check its audience.",
   "campaigns.listLabel": "Campaigns",
@@ -77,10 +70,8 @@ export const en = {
   "campaigns.audience.all": "All contacts",
   "campaigns.audience.filtered": "Filtered contacts",
   "campaigns.audience.tags": "{count, plural, one {# tag} other {# tags}}",
-  "campaigns.audience.owners":
-    "{count, plural, one {# owner} other {# owners}}",
-  "campaigns.audience.companies":
-    "{count, plural, one {# company} other {# companies}}",
+  "campaigns.audience.owners": "{count, plural, one {# owner} other {# owners}}",
+  "campaigns.audience.companies": "{count, plural, one {# company} other {# companies}}",
   "campaigns.companies.add": "Company",
   "campaigns.companies.any": "Any company",
   "campaigns.companies.some": "Contacts of the companies below",
@@ -88,20 +79,16 @@ export const en = {
   "campaigns.companies.chosen": "Chosen companies",
   "campaigns.companies.remove": "Remove {name}",
   "campaigns.companies.unknown": "A company you cannot see",
-  "campaigns.audience.combine":
-    "A contact must match every kind of filter you choose, and any one value within it.",
+  "campaigns.audience.combine": "A contact must match every kind of filter you choose, and any one value within it.",
   "campaigns.eligible": "{count, plural, one {# contact} other {# contacts}}",
   "campaigns.excluded.no_consent": "{count} without marketing consent",
   "campaigns.excluded.suppressed": "{count} suppressed",
   "campaigns.excluded.no_email": "{count} without an email address",
   "campaigns.excluded.duplicate_email": "{count} sharing an address",
-  "campaigns.footerNote":
-    "Each email ends with your workspace name and an unsubscribe link.",
-  "campaigns.placeholders":
-    "You may use {first} and {last}; nothing else is replaced.",
+  "campaigns.footerNote": "Each email ends with your workspace name and an unsubscribe link.",
+  "campaigns.placeholders": "You may use {first} and {last}; nothing else is replaced.",
   "templates.title": "Email templates",
-  "templates.intro":
-    "Reusable subjects and texts for campaigns and email replies. Using a template only fills in the text; a campaign still needs its own approval.",
+  "templates.intro": "Reusable subjects and texts for campaigns and email replies. Using a template only fills in the text; a campaign still needs its own approval.",
   "templates.empty": "No templates yet.",
   "templates.new": "New template",
   "templates.edit": "Edit template",
@@ -113,19 +100,14 @@ export const en = {
   "templates.field.name": "Template name",
   "templates.field.subject": "Subject",
   "templates.field.body": "Text",
-  "templates.error.invalid":
-    "Check the fields: a one-line subject, a text, and only the placeholders named below.",
+  "templates.error.invalid": "Check the fields: a one-line subject, a text, and only the placeholders named below.",
   "templates.error.taken": "A template with this name already exists.",
-  "templates.error.limit":
-    "This workspace has reached its number of templates.",
-  "templates.error.stale":
-    "Someone else changed this template. Close and open it again.",
+  "templates.error.limit": "This workspace has reached its number of templates.",
+  "templates.error.stale": "Someone else changed this template. Close and open it again.",
   "templates.error.forbidden": "You do not have permission for that.",
-  "templates.error.render":
-    "The template could not be filled in for this contact.",
+  "templates.error.render": "The template could not be filled in for this contact.",
   "templates.error.generic": "That did not work. Try again.",
-  "campaigns.editWithdraws":
-    "Saving a change returns this campaign to draft and withdraws its approval.",
+  "campaigns.editWithdraws": "Saving a change returns this campaign to draft and withdraws its approval.",
   "campaigns.edit": "Edit",
   "campaigns.validate": "Check audience",
   "campaigns.submit": "Submit for approval",
@@ -146,26 +128,21 @@ export const en = {
   "campaigns.delete": "Delete",
   "campaigns.deleteTitle": "Delete campaign?",
   "campaigns.deleteSubmit": "Delete",
-  "campaigns.deleteConfirm":
-    "{name} is deleted for good. It was never queued, so nothing was sent and no results are lost.",
+  "campaigns.deleteConfirm": "{name} is deleted for good. It was never queued, so nothing was sent and no results are lost.",
   "campaigns.duplicate": "Duplicate",
   "campaigns.schedule": "Schedule",
-  "campaigns.missingTags":
-    "{count, plural, one {A tag} other {# tags}} in this audience {count, plural, one {was} other {were}} deleted. Edit the audience before checking it.",
+  "campaigns.missingTags": "{count, plural, one {A tag} other {# tags}} in this audience {count, plural, one {was} other {were}} deleted. Edit the audience before checking it.",
   "calendar.campaigns": "Scheduled campaigns",
   "calendar.noCampaigns": "No campaign is scheduled in this period.",
   "calendar.moreCampaigns": "Show more campaigns",
   "campaigns.scheduleAt": "Queue at",
   "campaigns.scheduleSave": "Save schedule",
-  "campaigns.scheduleHint":
-    "From 5 minutes to 90 days ahead, in this device's time zone. Editing or cancelling the campaign clears the time.",
+  "campaigns.scheduleHint": "From 5 minutes to 90 days ahead, in this device's time zone. Editing or cancelling the campaign clears the time.",
   "campaigns.unschedule": "Unschedule",
-  "campaigns.removeDeletedTags":
-    "Remove the deleted {count, plural, one {tag} other {tags}}",
+  "campaigns.removeDeletedTags": "Remove the deleted {count, plural, one {tag} other {tags}}",
   "campaigns.removeDeletedTagsTitle": "Remove deleted tags?",
   "campaigns.removeDeletedTagsSubmit": "Remove",
-  "campaigns.removeDeletedTagsConfirm":
-    "The audience is then chosen by its other filters only, so it may include more contacts. The campaign goes back to draft: check its audience and have it approved again.",
+  "campaigns.removeDeletedTagsConfirm": "The audience is then chosen by its other filters only, so it may include more contacts. The campaign goes back to draft: check its audience and have it approved again.",
   "campaigns.field.scheduled": "Scheduled for",
   "campaigns.error.schedule": "Choose a time from 5 minutes to 90 days ahead.",
   "campaigns.preview.label": "Preview for a contact",
@@ -173,16 +150,13 @@ export const en = {
   "campaigns.preview.none": "No contact chosen",
   "campaigns.preview.region": "Preview",
   "campaigns.preview.eligible": "In the audience; may receive it.",
-  "campaigns.preview.excluded":
-    "In the audience, but will not receive it: {reason}.",
+  "campaigns.preview.excluded": "In the audience, but will not receive it: {reason}.",
   "campaigns.preview.outside": "Not in this campaign's audience.",
   "campaigns.preview.reason.no_consent": "no marketing consent",
   "campaigns.preview.reason.suppressed": "the address is suppressed",
   "campaigns.preview.reason.no_email": "no email address",
-  "campaigns.preview.reason.duplicate_email":
-    "another contact has the same address",
-  "campaigns.preview.note":
-    "The unsubscribe link is created for each recipient when the campaign is processed. Nothing is sent from a preview.",
+  "campaigns.preview.reason.duplicate_email": "another contact has the same address",
+  "campaigns.preview.note": "The unsubscribe link is created for each recipient when the campaign is processed. Nothing is sent from a preview.",
   "campaigns.sort": "Sort",
   "campaigns.order.created_at": "Newest first",
   "campaigns.order.updated_at": "Last updated",
@@ -193,15 +167,12 @@ export const en = {
   "campaigns.results.csvLimit": "Too many downloads for now. Try again later.",
   "campaigns.showArchived": "Show archived",
   "campaigns.showCurrent": "Show current",
-  "campaigns.archivedNote":
-    "Archived campaigns are hidden from the list. Their recipients, results and history are kept.",
+  "campaigns.archivedNote": "Archived campaigns are hidden from the list. Their recipients, results and history are kept.",
   "campaigns.archivedEmpty": "No archived campaigns",
-  "campaigns.archivedEmptyBody":
-    "Finished or cancelled campaigns you archive appear here.",
+  "campaigns.archivedEmptyBody": "Finished or cancelled campaigns you archive appear here.",
   "campaigns.results.label": "Results",
   "campaigns.results.recipients": "Recipients",
-  "campaigns.results.count":
-    "{count, plural, one {# recipient} other {# recipients}}",
+  "campaigns.results.count": "{count, plural, one {# recipient} other {# recipients}}",
   "campaigns.results.waiting": "Waiting to send",
   "campaigns.results.sent": "Accepted by the provider",
   "campaigns.results.delivered": "Delivered",
@@ -212,8 +183,7 @@ export const en = {
   "campaigns.results.unknown": "Outcome unknown",
   "campaigns.results.rehearsed": "Rehearsed, not sent",
   "campaigns.results.unsubscribed": "Unsubscribed",
-  "campaigns.results.note":
-    "Accepted by the provider does not mean delivered. Opens and clicks are not tracked.",
+  "campaigns.results.note": "Accepted by the provider does not mean delivered. Opens and clicks are not tracked.",
   "campaigns.close": "Close",
   "campaigns.save": "Save",
   "campaigns.status.draft": "Draft",
@@ -227,20 +197,15 @@ export const en = {
   "campaigns.status.failed": "Failed",
   "campaigns.status.rejected": "Changes requested",
   "campaigns.status.cancelled": "Cancelled",
-  "campaigns.error.stale":
-    "Someone else changed this campaign. It has been reloaded.",
+  "campaigns.error.stale": "Someone else changed this campaign. It has been reloaded.",
   "campaigns.error.sending": "Campaigns cannot be sent yet.",
-  "campaigns.error.outdated":
-    "The campaign changed after it was approved; it needs a new approval.",
-  "campaigns.error.invalid":
-    "Check the fields: a value or the audience is not allowed, or no contact may receive it.",
-  "campaigns.error.state":
-    "That step is not possible in the campaign's current state.",
+  "campaigns.error.outdated": "The campaign changed after it was approved; it needs a new approval.",
+  "campaigns.error.invalid": "Check the fields: a value or the audience is not allowed, or no contact may receive it.",
+  "campaigns.error.state": "That step is not possible in the campaign's current state.",
   "campaigns.error.forbidden": "You do not have permission for that.",
   "campaigns.error.generic": "That did not work. Try again.",
   "nav.automations": "Automations",
-  "inbox.intro":
-    "Conversations with your contacts. Log what a contact sent, keep internal notes and reply by email. Replies wait until email sending is turned on for this installation.",
+  "inbox.intro": "Conversations with your contacts. Log what a contact sent, keep internal notes and reply by email. Replies wait until email sending is turned on for this installation.",
   "inbox.new": "New conversation",
   "inbox.listLabel": "Conversations",
   "inbox.threadLabel": "Conversation",
@@ -252,8 +217,7 @@ export const en = {
   "inbox.status.all": "All",
   "inbox.search": "Search conversations",
   "inbox.noResults": "No conversations match",
-  "inbox.noResultsBody":
-    "Search looks for words in subjects, messages and notes, and for contact names. Check the status filter too.",
+  "inbox.noResultsBody": "Search looks for words in subjects, messages and notes, and for contact names. Check the status filter too.",
   "inbox.filter.all": "Everyone",
   "inbox.filter.mine": "Assigned to me",
   "inbox.filter.unassigned": "Unassigned",
@@ -277,25 +241,19 @@ export const en = {
   "inbox.reopenedToast": "Conversation reopened",
   "inbox.kind.inbound": "Contact",
   "inbox.attachments": "Attachments (not stored)",
-  "inbox.attachmentsNote":
-    "Attachments are listed but not downloaded until a malware scanner is set up.",
+  "inbox.attachmentsNote": "Attachments are listed but not downloaded until a malware scanner is set up.",
   "inbox.reviews.title": "Needs review",
-  "inbox.reviews.intro":
-    "Emails that reached a conversation but need a look before they are added to it.",
+  "inbox.reviews.intro": "Emails that reached a conversation but need a look before they are added to it.",
   "inbox.reviews.from": "From {sender}",
-  "inbox.reviews.reason.sender_mismatch":
-    "Not sent by this conversation's contact",
-  "inbox.reviews.reason.dmarc_failed":
-    "The sender's domain failed its authenticity check (DMARC)",
-  "inbox.reviews.reason.dmarc_unverified":
-    "The sender's domain could not be confirmed as authentic (no DMARC pass)",
+  "inbox.reviews.reason.sender_mismatch": "Not sent by this conversation's contact",
+  "inbox.reviews.reason.dmarc_failed": "The sender's domain failed its authenticity check (DMARC)",
+  "inbox.reviews.reason.dmarc_unverified": "The sender's domain could not be confirmed as authentic (no DMARC pass)",
   "inbox.reviews.reason.no_contact": "The conversation has no contact",
   "inbox.reviews.reason.empty_body": "The email had no text",
   "inbox.reviews.accept": "Add to conversation",
   "inbox.reviews.discard": "Discard",
   "inbox.reviews.truncated": "Shortened to the first 20,000 characters.",
-  "inbox.reviews.error":
-    "This review could not be decided. It may have been decided already, or its conversation was deleted.",
+  "inbox.reviews.error": "This review could not be decided. It may have been decided already, or its conversation was deleted.",
   "inbox.kind.note": "Internal note",
   "inbox.composeAs": "Message type",
   "inbox.mode.outbound": "Email reply",
@@ -307,8 +265,7 @@ export const en = {
   "inbox.submit.outbound": "Queue reply",
   "inbox.submit.inbound": "Log message",
   "inbox.submit.note": "Add note",
-  "inbox.queuedHint":
-    "The reply is queued and shows “Not sent yet” until the email leaves. Nothing is sent while email sending is off.",
+  "inbox.queuedHint": "The reply is queued and shows “Not sent yet” until the email leaves. Nothing is sent while email sending is off.",
   "inbox.delivery.queued": "Not sent yet",
   "inbox.delivery.sending": "Sending",
   "inbox.delivery.sent": "Handed to the email provider",
@@ -319,30 +276,23 @@ export const en = {
   "inbox.delivery.complained": "Marked as spam",
   "inbox.delivery.failed": "Not sent: failed",
   "inbox.delivery.suppressed": "Not sent: address suppressed",
-  "inbox.delivery.outcome_unknown":
-    "Delivery unknown: may have been sent, not retried",
+  "inbox.delivery.outcome_unknown": "Delivery unknown: may have been sent, not retried",
   "inbox.field.contact": "Contact",
   "inbox.field.channel": "Channel",
   "inbox.field.subject": "Subject",
   "inbox.field.kind": "First message",
   "inbox.field.body": "Message",
-  "inbox.error.noEmail":
-    "This contact has no email address. Add one, or log the conversation by hand.",
-  "inbox.error.invalid":
-    "Check the subject and message: they are empty, too long or contain characters that are not allowed.",
-  "inbox.error.stale":
-    "Someone else changed this conversation. It has been reloaded; try again.",
+  "inbox.error.noEmail": "This contact has no email address. Add one, or log the conversation by hand.",
+  "inbox.error.invalid": "Check the subject and message: they are empty, too long or contain characters that are not allowed.",
+  "inbox.error.stale": "Someone else changed this conversation. It has been reloaded; try again.",
   "inbox.error.forbidden": "Your role cannot change conversations.",
   "inbox.error.failed": "That did not work. Try again.",
-  "automations.intro":
-    "When a contact is created, tagged, submits a form, books online, has a deal moved into a stage, is sent a campaign email or unsubscribes from a campaign, an active automation can tag it, set its stage or a custom field, assign it, notify a team member, create tasks and wait between steps. A condition can send contacts down different steps by their source, stage, email, tags, a custom field or their deals. Each automation runs once per contact; imports never start one.",
+  "automations.intro": "When a contact is created, tagged, submits a form, books online, has a deal moved into a stage, is sent a campaign email or unsubscribes from a campaign, an active automation can tag it, set its stage or a custom field, assign it, notify a team member, create tasks and wait between steps. A condition can send contacts down different steps by their source, stage, email, tags, a custom field or their deals. Each automation runs once per contact; imports never start one.",
   "automations.new": "New automation",
   "automations.empty": "No automations yet",
-  "automations.emptyBody":
-    "Owners and Admins can create one to follow up new contacts automatically.",
+  "automations.emptyBody": "Owners and Admins can create one to follow up new contacts automatically.",
   "automations.anySource": "any source but imports",
-  "automations.summary":
-    "When a contact is created from {from} · {count, plural, one {# step} other {# steps}}",
+  "automations.summary": "When a contact is created from {from} · {count, plural, one {# step} other {# steps}}",
   "automations.status.draft": "Draft",
   "automations.status.active": "Active",
   "automations.status.paused": "Paused",
@@ -352,12 +302,10 @@ export const en = {
   "automations.pause": "Pause",
   "automations.activate": "Activate",
   "automations.activated": "Automation activated.",
-  "automations.pausedToast":
-    "Automation paused. Runs already started will finish.",
+  "automations.pausedToast": "Automation paused. Runs already started will finish.",
   "automations.deleteNamed": "Delete {name}",
   "automations.deleteTitle": "Delete this automation?",
-  "automations.deleteMessage":
-    "{name}, its versions and its run history will be deleted. Changes it already made stay.",
+  "automations.deleteMessage": "{name}, its versions and its run history will be deleted. Changes it already made stay.",
   "automations.delete": "Delete automation",
   "automations.deleted": "Automation deleted.",
   "automations.noRuns": "No runs yet.",
@@ -399,10 +347,10 @@ export const en = {
   "automations.outcome.open": "Open",
   "automations.outcome.won": "Won",
   "automations.outcome.lost": "Lost",
+  "automations.stageGone": "Removed stage",
   "automations.conditionField": "Condition field",
   "automations.conditionValue": "Condition value",
-  "automations.conditionFieldHint":
-    "A field archived later counts as empty. Text is compared without regard to capitals.",
+  "automations.conditionFieldHint": "A field archived later counts as empty. Text is compared without regard to capitals.",
   "automations.op.in": "is one of",
   "automations.op.notIn": "is none of",
   "automations.op.has": "has one of",
@@ -432,55 +380,42 @@ export const en = {
   "automations.field.value": "Value",
   "automations.noFields": "No contact custom fields yet",
   "automations.fieldGone": "A field that is archived or no longer exists",
-  "automations.fieldHint":
-    "Sets the contact's field to this value. If the field is archived or the value no longer fits it, the step is skipped. Owners and Admins add fields in Settings › Custom fields.",
+  "automations.fieldHint": "Sets the contact's field to this value. If the field is archived or the value no longer fits it, the step is skipped. Owners and Admins add fields in Settings › Custom fields.",
   "automations.valueYes": "Yes",
   "automations.valueNo": "No",
-  "automations.businessHoursHint":
-    "Goes on at once while the workspace is open; otherwise at the next opening, in the workspace's time zone.",
-  "automations.businessHoursUnset":
-    "Business hours are not set, so this step is skipped. An Owner or Admin sets them in Settings › Business profile.",
+  "automations.businessHoursHint": "Goes on at once while the workspace is open; otherwise at the next opening, in the workspace's time zone.",
+  "automations.businessHoursUnset": "Business hours are not set, so this step is skipped. An Owner or Admin sets them in Settings › Business profile.",
   "automations.rotationMembers": "Members in turn, step {number} of {branch}",
   "automations.formerMember": "Former member",
-  "automations.rotationHint":
-    "Each contact goes to the next member in turn; members who left are passed over. Pick {min} to {max}.",
+  "automations.rotationHint": "Each contact goes to the next member in turn; members who left are passed over. Pick {min} to {max}.",
   "automations.field.recipient": "Notify",
   "automations.field.message": "Message",
   "automations.messagePlaceholder": "For example: New lead, call today",
   "automations.field.stage": "Lifecycle stage",
-  "automations.summaryEvent":
-    "{trigger} · {count, plural, one {# step} other {# steps}}",
-  "automations.summarySent":
-    "When an email from {campaign} is sent to a contact · {count, plural, one {# step} other {# steps}}",
-  "automations.summaryUnsubscribed":
-    "When a contact unsubscribes from {campaign} · {count, plural, one {# step} other {# steps}}",
+  "automations.summaryEvent": "{trigger} · {count, plural, one {# step} other {# steps}}",
+  "automations.summarySent": "When an email from {campaign} is sent to a contact · {count, plural, one {# step} other {# steps}}",
+  "automations.summaryUnsubscribed": "When a contact unsubscribes from {campaign} · {count, plural, one {# step} other {# steps}}",
   "automations.campaignAny": "any campaign",
   "automations.campaignGone": "a campaign that no longer exists",
   "automations.campaignSome": "a campaign",
   "automations.triggerKind": "When this happens",
-  "automations.triggerOnce":
-    "An automation runs at most once for each contact, so automations that start one another always stop.",
+  "automations.triggerOnce": "An automation runs at most once for each contact, so automations that start one another always stop.",
   "automations.triggerAny": "Any",
   "automations.triggerTag": "Tag",
   "automations.triggerForm": "Form",
   "automations.triggerPage": "Booking page",
   "automations.triggerCampaign": "Campaign",
   "automations.triggerCampaignUnlisted": "(a campaign not in the newest 50)",
-  "automations.triggerSentHint":
-    "Starts when the email provider accepts the campaign's email to the contact. That is not delivery, and a rehearsal sends nothing, so it never starts this.",
-  "automations.triggerUnsubscribedHint":
-    "Starts when the contact uses the unsubscribe link in a campaign's email.",
+  "automations.triggerSentHint": "Starts when the email provider accepts the campaign's email to the contact. That is not delivery, and a rehearsal sends nothing, so it never starts this.",
+  "automations.triggerUnsubscribedHint": "Starts when the contact uses the unsubscribe link in a campaign's email.",
   "automations.triggerStage": "Deal stage",
   "automations.triggerType.contact_created": "A contact is created",
   "automations.triggerType.tag_added": "A tag is added to a contact",
   "automations.triggerType.form_submitted": "A form is submitted",
-  "automations.triggerType.appointment_booked":
-    "An appointment is booked online",
+  "automations.triggerType.appointment_booked": "An appointment is booked online",
   "automations.triggerType.deal_stage_changed": "A deal moves into a stage",
-  "automations.triggerType.campaign_sent":
-    "A campaign email is sent to a contact",
-  "automations.triggerType.campaign_unsubscribed":
-    "A contact unsubscribes from a campaign",
+  "automations.triggerType.campaign_sent": "A campaign email is sent to a contact",
+  "automations.triggerType.campaign_unsubscribed": "A contact unsubscribes from a campaign",
   "automations.field.tag": "Tag",
   "automations.field.member": "Owner",
   "automations.field.wait": "Wait for",
@@ -496,18 +431,13 @@ export const en = {
   "automations.minutes": "{count, plural, one {# minute} other {# minutes}}",
   "automations.hours": "{count, plural, one {# hour} other {# hours}}",
   "automations.days": "{count, plural, one {# day} other {# days}}",
-  "automations.editorHint":
-    "Drafts are checked again when activated. A notification reaches the team member in LeadStack only, with your message and the contact; nothing is sent to the contact. Sending email or SMS and AI steps are not available yet.",
+  "automations.editorHint": "Drafts are checked again when activated. A notification reaches the team member in LeadStack only, with your message and the contact; nothing is sent to the contact. Sending email or SMS and AI steps are not available yet.",
   "automations.error.name": "Give the automation a name.",
-  "automations.error.invalid":
-    "Some steps are incomplete or name something that no longer exists. Check every step.",
-  "automations.error.limit":
-    "This workspace has its 20 automations. Delete one first.",
+  "automations.error.invalid": "Some steps are incomplete or name something that no longer exists. Check every step.",
+  "automations.error.limit": "This workspace has its 20 automations. Delete one first.",
   "automations.error.active": "Pause the automation before changing its steps.",
-  "automations.error.stale":
-    "Someone changed this automation meanwhile. Close and open it again.",
-  "automations.error.forbidden":
-    "Only Owners and Admins can change automations.",
+  "automations.error.stale": "Someone changed this automation meanwhile. Close and open it again.",
+  "automations.error.forbidden": "Only Owners and Admins can change automations.",
   "automations.error.failed": "That did not work. Try again.",
   "nav.forms": "Forms",
   "nav.reviews": "Reviews",
@@ -526,12 +456,9 @@ export const en = {
   "reports.custom.required": "Choose both dates.",
   "reports.custom.order": "The end date must not be before the start date.",
   "reports.custom.long": "A period is at most 366 days.",
-  "reports.periodNote":
-    "{days, plural, one {# day} other {# days}}, both dates included, in the workspace's time zone ({zone}). Each figure is compared with the same number of days before.",
-  "reports.capped":
-    "Only the first 20,000 records were counted: these figures are incomplete.",
-  "reports.before":
-    "Previous {days, plural, one {day} other {# days}}: {value}",
+  "reports.periodNote": "{days, plural, one {# day} other {# days}}, both dates included, in the workspace's time zone ({zone}). Each figure is compared with the same number of days before.",
+  "reports.capped": "Only the first 20,000 records were counted: these figures are incomplete.",
+  "reports.before": "Previous {days, plural, one {day} other {# days}}: {value}",
   "reports.kpis": "Headline figures",
   "reports.kpi.contacts": "New contacts",
   "reports.kpi.won": "Deals won",
@@ -543,37 +470,31 @@ export const en = {
   "reports.csvNamed": "Download {report} as CSV",
   "reports.csvFailed": "The download did not work. Try again.",
   "reports.contacts.none": "No contacts were created in this period.",
-  "reports.contacts.definition":
-    "Contacts created in the period, archived ones included, by how they arrived.",
+  "reports.contacts.definition": "Contacts created in the period, archived ones included, by how they arrived.",
   "reports.deals": "Deal outcomes",
   "reports.deals.created": "Created",
   "reports.deals.won": "Won",
   "reports.deals.lost": "Lost",
-  "reports.deals.definition":
-    "Won and lost count deals closed in the period that are still won or lost; a reopened deal is not counted. The win rate is won out of won and lost. Values are per currency, never converted.",
+  "reports.deals.definition": "Won and lost count deals closed in the period that are still won or lost; a reopened deal is not counted. The win rate is won out of won and lost. Values are per currency, never converted.",
   "reports.tasks": "Tasks",
   "reports.tasks.created": "Created",
   "reports.tasks.onTime": "Completed on time",
   "reports.tasks.late": "Completed late",
   "reports.tasks.noDue": "Completed without a due time",
   "reports.tasks.overdue": "Overdue now",
-  "reports.tasks.definition":
-    "Completed tasks count by when they were completed; on time means by their due time. Overdue now counts open tasks past their due time today, whatever the period.",
+  "reports.tasks.definition": "Completed tasks count by when they were completed; on time means by their due time. Overdue now counts open tasks past their due time today, whatever the period.",
   "reports.appointments": "Appointments",
   "reports.appointments.none": "No appointments start in this period.",
   "reports.appointments.noShow": "No-show rate: {value}",
-  "reports.appointments.definition":
-    "Appointments that start in the period, by status. Held means not cancelled. The no-show rate is no-shows out of appointments marked completed or no-show.",
+  "reports.appointments.definition": "Appointments that start in the period, by status. Held means not cancelled. The no-show rate is no-shows out of appointments marked completed or no-show.",
   "reports.team": "Team",
   "brief.title": "AI brief",
-  "brief.what":
-    "A short summary and suggested next steps, written on request and not saved. It uses only the stage, source, tags, kinds of recent activity, deal stages and counts: never names, contact details, notes or messages.",
+  "brief.what": "A short summary and suggested next steps, written on request and not saved. It uses only the stage, source, tags, kinds of recent activity, deal stages and counts: never names, contact details, notes or messages.",
   "brief.write": "Write a brief",
   "brief.again": "Write it again",
   "brief.writing": "Writing…",
   "brief.suggestion": "Suggestion: check it before acting on it.",
-  "brief.unavailable":
-    "AI is not turned on for this workspace, or you may not use it. An Owner or Admin can turn it on in Settings › AI.",
+  "brief.unavailable": "AI is not turned on for this workspace, or you may not use it. An Owner or Admin can turn it on in Settings › AI.",
   "brief.quotaReached": "This workspace has used its AI budget for now.",
   "brief.busy": "The AI service is busy. Try again in a moment.",
   "brief.failed": "The brief could not be written. Try again.",
@@ -581,19 +502,15 @@ export const en = {
   "reports.campaigns.queued": "Campaigns sent or rehearsed",
   "reports.campaigns.recipients": "Recipients",
   "reports.campaigns.none": "No campaign was sent or rehearsed in this period.",
-  "reports.campaigns.row":
-    "{status} · {date} · {count, plural, one {# recipient} other {# recipients}}",
-  "reports.campaigns.more":
-    "{count, plural, one {# more campaign is} other {# more campaigns are}} counted but not listed.",
-  "reports.campaigns.definition":
-    "Campaigns queued in the period, newest first. Recipients are counted by what happened to their email as known now. Accepted by the provider does not mean delivered; opens and clicks are not tracked.",
+  "reports.campaigns.row": "{status} · {date} · {count, plural, one {# recipient} other {# recipients}}",
+  "reports.campaigns.more": "{count, plural, one {# more campaign is} other {# more campaigns are}} counted but not listed.",
+  "reports.campaigns.definition": "Campaigns queued in the period, newest first. Recipients are counted by what happened to their email as known now. Accepted by the provider does not mean delivered; opens and clicks are not tracked.",
   "reports.team.member": "Member",
   "reports.team.won": "Deals won",
   "reports.team.value": "Value won",
   "reports.team.tasks": "Tasks completed",
   "reports.team.appointments": "Appointments held",
-  "reports.team.none":
-    "Nobody won a deal, completed a task or held an appointment in this period.",
+  "reports.team.none": "Nobody won a deal, completed a task or held an appointment in this period.",
   "reports.funnel": "Conversion funnel",
   "reports.funnel.created": "New contacts",
   "reports.funnel.booked": "Booked an appointment",
@@ -601,12 +518,9 @@ export const en = {
   "reports.funnel.won": "Won a deal",
   "reports.funnel.share": "{value} of new contacts",
   "reports.funnel.none": "No contacts were created in this period.",
-  "reports.funnel.before":
-    "Previous {days, plural, one {day} other {# days}}: {created} new, {won} won",
-  "reports.funnel.definition":
-    "Follows the contacts created in the period to what has happened to them by now: an appointment that is not cancelled, a deal linked to them, a deal won. A deal needs no appointment, so each step is a share of the new contacts, not of the step before.",
-  "reports.team.definition":
-    "Deals by their owner, tasks by who completed them, appointments by their host. Members are shown by ID until profiles exist.",
+  "reports.funnel.before": "Previous {days, plural, one {day} other {# days}}: {created} new, {won} won",
+  "reports.funnel.definition": "Follows the contacts created in the period to what has happened to them by now: an appointment that is not cancelled, a deal linked to them, a deal won. A deal needs no appointment, so each step is a share of the new contacts, not of the step before.",
+  "reports.team.definition": "Deals by their owner, tasks by who completed them, appointments by their host. Members are shown by ID until profiles exist.",
   "nav.settings": "Settings",
   "ws.kind": "Client workspace",
   "ws.menu": "Workspace",
@@ -633,8 +547,7 @@ export const en = {
   "create.task": "Task",
   "notif.button": "Notifications",
   "notif.title": "Notifications",
-  "notif.empty":
-    "No notifications yet. You will see tasks, conversations and appointments assigned to you, bookings on your pages, and contacts an automation points you to.",
+  "notif.empty": "No notifications yet. You will see tasks, conversations and appointments assigned to you, bookings on your pages, and contacts an automation points you to.",
   "notif.buttonUnread": "Notifications, {count} unread",
   "notif.markAll": "Mark all read",
   "notif.markAllFailed": "Could not mark them read. Try again.",
@@ -643,8 +556,7 @@ export const en = {
   "notif.actor.automation": "An automation",
   "notif.kind.task_assigned": "{actor} assigned you a task",
   "notif.kind.conversation_assigned": "{actor} assigned you a conversation",
-  "notif.kind.appointment_assigned":
-    "{actor} made you the host of an appointment",
+  "notif.kind.appointment_assigned": "{actor} made you the host of an appointment",
   "notif.kind.booking_received": "New booking on your booking page",
   "notif.kind.booking_cancelled": "A visitor cancelled their booking",
   "notif.kind.appointment_upcoming": "Your appointment starts soon",
@@ -656,10 +568,8 @@ export const en = {
   "profile.preferences": "Profile & preferences",
   "profile.security": "Security (via identity provider)",
   "unavailable.kicker": "Not available yet",
-  "unavailable.note":
-    "This module is not built yet. Nothing on this page stores or changes data.",
-  "soon.inbox":
-    "One inbox for the workspace's conversations, starting with the email channel.",
+  "unavailable.note": "This module is not built yet. Nothing on this page stores or changes data.",
+  "soon.inbox": "One inbox for the workspace's conversations, starting with the email channel.",
   "soon.sales": "Opportunities and tasks follow contacts and companies.",
   "soon.later": "Planned for a later phase; its timing is not decided yet.",
   "soon.deferred": "Deferred: not part of the first release.",
@@ -711,96 +621,68 @@ export const en = {
   "dash.leads.new": "New contacts",
   "dash.leads.won": "Won a deal",
   "dash.leads.week": "Week of {date}: {created} new, {won} won a deal",
-  "dash.leads.chart":
-    "New contacts per week for the last 12 weeks, and how many of them won a deal",
+  "dash.leads.chart": "New contacts per week for the last 12 weeks, and how many of them won a deal",
   "dash.leads.sources": "Sources, last 30 days",
   "dash.leads.noSources": "No contacts were created in the last 30 days.",
-  "dash.leads.definition":
-    "Contacts created each week (Monday first, workspace time zone), and how many of those have a won deal by now.",
+  "dash.leads.definition": "Contacts created each week (Monday first, workspace time zone), and how many of those have a won deal by now.",
   "dash.conversations": "Recent conversations",
   "dash.conversations.none": "No open conversations.",
   "dash.conversations.unread": "Unread",
   "dash.deletedRecord": "A deleted record",
   "home.signedOut.title": "Sign in to LeadStack",
-  "home.signedOut.body":
-    "Use your organisation account to open your workspaces.",
+  "home.signedOut.body": "Use your organisation account to open your workspaces.",
   "home.signIn": "Sign in",
-  "signin.tagline":
-    "Contacts, companies and your team's work in one place, in workspaces your organisation controls.",
-  "signin.asideNote":
-    "Accounts are created by invitation. There is no public sign-up.",
-  "signin.provider":
-    "You continue on our secure sign-in page. Your password and two-factor codes are handled there, never by this page.",
-  "signin.noAccount":
-    "No account yet? Ask an Owner or Admin of your organisation to invite you.",
+  "signin.tagline": "Contacts, companies and your team's work in one place, in workspaces your organisation controls.",
+  "signin.asideNote": "Accounts are created by invitation. There is no public sign-up.",
+  "signin.provider": "You continue on our secure sign-in page. Your password and two-factor codes are handled there, never by this page.",
+  "signin.noAccount": "No account yet? Ask an Owner or Admin of your organisation to invite you.",
   "signin.checking": "Checking your session…",
-  "signin.checkFailed":
-    "We could not check whether you are signed in. You can still sign in, or try again.",
+  "signin.checkFailed": "We could not check whether you are signed in. You can still sign in, or try again.",
   "signin.leaving": "Opening the sign-in page…",
   "signin.createAccount": "Create account",
-  "signin.createHelp":
-    "New to LeadStack? Choose “Create one” on the sign-in page, verify your email, then name your workspace here.",
-  "signin.asideNoteSignup":
-    "Create an account to start your own workspace, or join one by invitation.",
+  "signin.createHelp": "New to LeadStack? Choose “Create one” on the sign-in page, verify your email, then name your workspace here.",
+  "signin.asideNoteSignup": "Create an account to start your own workspace, or join one by invitation.",
   "signup.title": "Create a workspace",
-  "signup.body":
-    "Name your workspace. You become its Owner and can invite your team from its settings.",
-  "signup.invited":
-    "Were you invited to an existing workspace? Open the invitation link from your email instead: creating a workspace here does not join theirs.",
+  "signup.body": "Name your workspace. You become its Owner and can invite your team from its settings.",
+  "signup.invited": "Were you invited to an existing workspace? Open the invitation link from your email instead: creating a workspace here does not join theirs.",
   "signup.open": "Create workspace",
   "signup.name.label": "Workspace name",
   "signup.name.empty": "Enter a name for the workspace.",
   "signup.name.long": "Use at most {max} characters.",
   "signup.name.character": "The name has a character that cannot be used.",
-  "signup.name.invalid":
-    "This name cannot be used. Use 1 to 100 ordinary characters.",
+  "signup.name.invalid": "This name cannot be used. Use 1 to 100 ordinary characters.",
   "signup.submit": "Create workspace",
   "signup.sending": "Creating…",
   "signup.working": "Setting up your workspace…",
-  "signup.stalled":
-    "Your workspace is taking longer than usual to set up. It continues in the background.",
+  "signup.stalled": "Your workspace is taking longer than usual to set up. It continues in the background.",
   "signup.resume": "Check again",
-  "signup.failed":
-    "Your workspace could not be set up. You can start again with a new request.",
+  "signup.failed": "Your workspace could not be set up. You can start again with a new request.",
   "signup.expired": "This workspace request expired before it was finished.",
   "signup.startAgain": "Start again",
-  "signup.verify":
-    "Verify your email address before creating a workspace. Use the link or code we sent you, then sign in again.",
-  "signup.unavailable":
-    "Creating workspaces is not available right now. Ask an Owner or Admin of an existing workspace to invite you.",
-  "signup.error.limit":
-    "You have reached the number of workspaces you can create.",
-  "signup.error.reused":
-    "That request could not be repeated. Submit the form again.",
-  "signup.error.denied":
-    "You are not allowed to create a workspace from this page. Reload it and try again.",
+  "signup.verify": "Verify your email address before creating a workspace. Use the link or code we sent you, then sign in again.",
+  "signup.unavailable": "Creating workspaces is not available right now. Ask an Owner or Admin of an existing workspace to invite you.",
+  "signup.error.limit": "You have reached the number of workspaces you can create.",
+  "signup.error.reused": "That request could not be repeated. Submit the form again.",
+  "signup.error.denied": "You are not allowed to create a workspace from this page. Reload it and try again.",
   "signup.error.busy": "Too many requests right now.",
-  "signup.error.unreachable":
-    "We could not reach LeadStack. Check your connection and try again; your request will not be duplicated.",
-  "signup.error.generic":
-    "Something went wrong. Try again; your request will not be duplicated.",
-  "signup.wait.seconds":
-    "Try again in {count, plural, one {# second} other {# seconds}}.",
-  "signup.wait.minutes":
-    "Try again in {count, plural, one {# minute} other {# minutes}}.",
+  "signup.error.unreachable": "We could not reach LeadStack. Check your connection and try again; your request will not be duplicated.",
+  "signup.error.generic": "Something went wrong. Try again; your request will not be duplicated.",
+  "signup.wait.seconds": "Try again in {count, plural, one {# second} other {# seconds}}.",
+  "signup.wait.minutes": "Try again in {count, plural, one {# minute} other {# minutes}}.",
   "accept.signInTitle": "Sign in to accept your invitation",
   "home.list.title": "Your workspaces",
-  "home.list.empty":
-    "You are not a member of any workspace yet. Ask an Owner or Admin of your organisation to invite you.",
-  "home.list.emptySignup":
-    "You are not a member of any workspace yet. Create one below, or open an invitation link you were sent.",
+  "home.list.empty": "You are not a member of any workspace yet. Ask an Owner or Admin of your organisation to invite you.",
+  "home.list.emptySignup": "You are not a member of any workspace yet. Create one below, or open an invitation link you were sent.",
   "home.open.title": "Open by ID",
   "home.open.body": "Paste a workspace ID an Owner or Admin shared with you.",
   "home.open.label": "Workspace ID",
-  "home.open.invalid":
-    "Enter a workspace ID in the form xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.",
+  "home.open.invalid": "Enter a workspace ID in the form xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.",
   "home.open.submit": "Open",
   "state.loading": "Loading…",
   "state.retry": "Try again",
   "state.error": "Something went wrong. Try again.",
   "state.signedOut": "Your session has ended. Sign in again to continue.",
-  "state.notFound":
-    "This workspace does not exist, or you are not a member of it.",
+  "state.notFound": "This workspace does not exist, or you are not a member of it.",
   "state.denied": "You do not have permission to see this.",
   "workspace.status": "Status: {status}",
   "members.title": "Members",
@@ -812,21 +694,17 @@ export const en = {
   "invite.name": "Name (optional)",
   "invite.nameHint": "Shown to the team until they add their own name.",
   "invite.role": "Role after joining",
-  "invite.hint":
-    "The invitation works once, for this email address only, and expires after 7 days. The role is given when an Owner or Admin confirms it after the person joins.",
+  "invite.hint": "The invitation works once, for this email address only, and expires after 7 days. The role is given when an Owner or Admin confirms it after the person joins.",
   "invite.submit": "Create invitation",
   "invite.emailed": "Invitation accepted for sending by email",
   "invite.linkTitle": "Invitation link",
-  "invite.notSent":
-    "Not sent — deliver it yourself. This link is shown only now.",
+  "invite.notSent": "Not sent — deliver it yourself. This link is shown only now.",
   "invite.linkFor": "For {email}, as {role}.",
   "invite.linkLabel": "Invitation link",
   "invite.copy": "Copy link",
   "invite.copied": "Link copied",
-  "invite.copyFailed":
-    "The link could not be copied; select it and copy it yourself.",
-  "invite.linkRules":
-    "Anyone with this link can use it only if they sign in with the invited email address. It works once.",
+  "invite.copyFailed": "The link could not be copied; select it and copy it yourself.",
+  "invite.linkRules": "Anyone with this link can use it only if they sign in with the invited email address. It works once.",
   "invite.done": "Done",
   "invite.listTitle": "Invitations",
   "invite.expires": "expires",
@@ -843,23 +721,16 @@ export const en = {
   "invite.error.email": "Enter a valid email address.",
   "invite.error.duplicate": "This address already has a pending invitation.",
   "invite.error.ownerOnly": "Only an Owner can invite an Owner.",
-  "invite.error.tooMany":
-    "This workspace has too many pending invitations. Revoke some first.",
-  "invite.error.delivery":
-    "The invitation email could not be sent, so the invitation was withdrawn. Try again later.",
+  "invite.error.tooMany": "This workspace has too many pending invitations. Revoke some first.",
+  "invite.error.delivery": "The invitation email could not be sent, so the invitation was withdrawn. Try again later.",
   "accept.title": "Workspace invitation",
-  "accept.body":
-    "You have been invited to join a workspace. Accepting adds you as a member; an Owner or Admin then gives you your role.",
-  "accept.signedOut":
-    "Sign in with the email address the invitation was sent to, then come back to this page.",
+  "accept.body": "You have been invited to join a workspace. Accepting adds you as a member; an Owner or Admin then gives you your role.",
+  "accept.signedOut": "Sign in with the email address the invitation was sent to, then come back to this page.",
   "accept.submit": "Accept invitation",
-  "accept.done":
-    "You have joined the workspace. An Owner or Admin still needs to give you a role before you can open it.",
+  "accept.done": "You have joined the workspace. An Owner or Admin still needs to give you a role before you can open it.",
   "accept.home": "Go to your workspaces",
-  "accept.invalid":
-    "This invitation cannot be used. It may have expired, been used or revoked, or be meant for another email address.",
-  "accept.missing":
-    "This invitation link is incomplete. Open the full link you were given.",
+  "accept.invalid": "This invitation cannot be used. It may have expired, been used or revoked, or be meant for another email address.",
+  "accept.missing": "This invitation link is incomplete. Open the full link you were given.",
   "accept.pending": "You have an invitation waiting.",
   "accept.continue": "Continue",
   "settings.title": "Settings",
@@ -869,23 +740,19 @@ export const en = {
   "settings.business": "Business profile",
   "settings.team": "Team & roles",
   "settings.teamDesc": "Who can access this workspace and what they can do.",
-  "settings.businessDesc":
-    "How dates, times and amounts are shown in this workspace.",
+  "settings.businessDesc": "How dates, times and amounts are shown in this workspace.",
   "settings.tags": "Tags",
   "settings.tagsDesc": "The tags people can put on contacts and companies.",
   "settings.suppression": "Suppression list",
-  "settings.suppressionDesc":
-    "Email addresses this workspace must never send to.",
+  "settings.suppressionDesc": "Email addresses this workspace must never send to.",
   "business.reminders": "Appointment reminders",
   "business.remindersOff": "Off",
-  "business.remindersHint":
-    "Email the contact of each pending or confirmed appointment this long before it starts. Appointments booked closer to their start than this get no reminder; their confirmation is enough.",
+  "business.remindersHint": "Email the contact of each pending or confirmed appointment this long before it starts. Appointments booked closer to their start than this get no reminder; their confirmation is enough.",
   "reminders.title": "Reminders",
   "reminders.off": "Automatic reminders are off for this workspace.",
   "reminders.setting": "The contact is emailed {lead}.",
   "reminders.next": "Next reminder: {when}.",
-  "reminders.noneFor":
-    "No automatic reminder is planned for this appointment: it was booked inside the reminder time, has been reminded already, or is no longer open.",
+  "reminders.noneFor": "No automatic reminder is planned for this appointment: it was booked inside the reminder time, has been reminded already, or is no longer open.",
   "sending.useFor": "Use this address for",
   "reminders.lead.60": "1 hour before",
   "reminders.lead.120": "2 hours before",
@@ -900,29 +767,20 @@ export const en = {
   "reminders.skipped.contact_archived": "Skipped: contact archived",
   "reminders.skipped.no_email": "Skipped: no email address",
   "reminders.skipped.invalid_email": "Skipped: email address not usable",
-  "reminders.problem.no_contact":
-    "Nobody can be reminded: this appointment has no contact.",
-  "reminders.problem.contact_archived":
-    "Nobody will be reminded: the contact is archived.",
-  "reminders.problem.no_email":
-    "Nobody can be reminded: the contact has no email address.",
+  "reminders.problem.no_contact": "Nobody can be reminded: this appointment has no contact.",
+  "reminders.problem.contact_archived": "Nobody will be reminded: the contact is archived.",
+  "reminders.problem.no_email": "Nobody can be reminded: the contact has no email address.",
   "reminders.send": "Send reminder",
-  "reminders.sent":
-    "Reminder queued. It is emailed once email sending is switched on.",
-  "reminders.error.tooSoon":
-    "A reminder was sent in the last hour. Try again later.",
-  "reminders.error.unavailable":
-    "This appointment cannot be reminded about: it is over, closed, or its contact has no usable email address.",
+  "reminders.sent": "Reminder queued. It is emailed once email sending is switched on.",
+  "reminders.error.tooSoon": "A reminder was sent in the last hour. Try again later.",
+  "reminders.error.unavailable": "This appointment cannot be reminded about: it is over, closed, or its contact has no usable email address.",
   "reminders.error.forbidden": "You do not have permission to send reminders.",
   "reminders.error.generic": "The reminder could not be sent. Try again.",
   "settings.sending": "Sending domains",
-  "settings.sendingDesc":
-    "Send conversation and campaign email from your own domain.",
+  "settings.sendingDesc": "Send conversation and campaign email from your own domain.",
   "sending.title": "Sending domains",
-  "sending.intro":
-    "Register a domain your business owns, publish the DNS records the email provider gives you, and verify it. Then add sender addresses such as jan@your-company.com. An address is used only while its domain is verified; until then email goes from LeadStack's own address.",
-  "sending.noProvider":
-    "No email provider is connected for domain registration on this platform yet, so domains are saved but not registered or verified.",
+  "sending.intro": "Register a domain your business owns, publish the DNS records the email provider gives you, and verify it. Then add sender addresses such as jan@your-company.com. An address is used only while its domain is verified; until then email goes from LeadStack's own address.",
+  "sending.noProvider": "No email provider is connected for domain registration on this platform yet, so domains are saved but not registered or verified.",
   "sending.empty": "No sending domains yet.",
   "sending.domain": "Domain",
   "sending.add": "Register domain",
@@ -949,40 +807,26 @@ export const en = {
   "sending.status.temporary_failure": "Temporarily failing",
   "sending.status.unknown": "Unknown",
   "sending.status.expired": "Expired",
-  "sending.claimExpires":
-    "Verify this domain by {date}. If it is not verified by then, the name is released so its real owner can register it.",
-  "sending.lastError.claim_expired":
-    "This domain was not verified in time and its name was released. Remove it and register it again to try once more.",
-  "sending.lastError.provider_unavailable":
-    "No email provider is connected for domain registration yet.",
-  "sending.lastError.unreachable":
-    "The email provider could not be reached. Try again later.",
-  "sending.lastError.rate_limited":
-    "The email provider asked to slow down. Try again in a minute.",
-  "sending.lastError.refused":
-    "The email provider refused the request. Check the domain name.",
-  "sending.lastError.malformed_answer":
-    "The email provider gave an answer we could not use. Try again later.",
-  "sending.lastError.deleted_at_provider":
-    "The domain was removed at the email provider. Verify to register it again.",
-  "sending.error.invalid":
-    "Enter a domain your business owns, such as your-company.com, and an address without + or spaces.",
+  "sending.claimExpires": "Verify this domain by {date}. If it is not verified by then, the name is released so its real owner can register it.",
+  "sending.lastError.claim_expired": "This domain was not verified in time and its name was released. Remove it and register it again to try once more.",
+  "sending.lastError.provider_unavailable": "No email provider is connected for domain registration yet.",
+  "sending.lastError.unreachable": "The email provider could not be reached. Try again later.",
+  "sending.lastError.rate_limited": "The email provider asked to slow down. Try again in a minute.",
+  "sending.lastError.refused": "The email provider refused the request. Check the domain name.",
+  "sending.lastError.malformed_answer": "The email provider gave an answer we could not use. Try again later.",
+  "sending.lastError.deleted_at_provider": "The domain was removed at the email provider. Verify to register it again.",
+  "sending.error.invalid": "Enter a domain your business owns, such as your-company.com, and an address without + or spaces.",
   "sending.error.inUse": "This domain is already registered on LeadStack.",
   "sending.error.identityConflict": "This address already exists.",
-  "sending.error.limit":
-    "This workspace has reached its number of domains or addresses.",
-  "sending.error.stale":
-    "Someone else changed this domain. It has been reloaded.",
+  "sending.error.limit": "This workspace has reached its number of domains or addresses.",
+  "sending.error.stale": "Someone else changed this domain. It has been reloaded.",
   "sending.error.forbidden": "You do not have permission for that.",
   "sending.error.generic": "That did not work. Try again.",
   "settings.domains": "Domains",
-  "settings.domainsDesc":
-    "Your own domain names for hosted forms and booking pages.",
+  "settings.domainsDesc": "Your own domain names for hosted forms and booking pages.",
   "domains.title": "Domains",
-  "domains.intro":
-    "Add a domain name you own, such as forms.your-company.com, then publish the DNS record shown and check it. Only you can prove a domain is yours, and only one workspace can hold it.",
-  "domains.serving":
-    "A verified domain also needs the platform's web server to accept it and get its certificate; your administrator sets that up. Until then your pages keep their LeadStack address.",
+  "domains.intro": "Add a domain name you own, such as forms.your-company.com, then publish the DNS record shown and check it. Only you can prove a domain is yours, and only one workspace can hold it.",
+  "domains.serving": "A verified domain also needs the platform's web server to accept it and get its certificate; your administrator sets that up. Until then your pages keep their LeadStack address.",
   "domains.empty": "No domains yet.",
   "domains.hostname": "Domain name",
   "domains.add": "Add domain",
@@ -995,23 +839,16 @@ export const en = {
   "domains.status.pending": "Waiting for DNS record",
   "domains.status.verified": "Verified",
   "domains.status.lapsed": "Record removed",
-  "domains.lastError.resolver_unavailable":
-    "DNS checks are not set up on this platform yet, so the domain cannot be verified.",
-  "domains.lastError.record_not_found":
-    "The record was not found. DNS changes can take a while to appear.",
-  "domains.lastError.claimed_elsewhere":
-    "Another workspace already uses this domain.",
-  "domains.lastError.timeout":
-    "The DNS lookup did not answer. Try again later.",
+  "domains.lastError.resolver_unavailable": "DNS checks are not set up on this platform yet, so the domain cannot be verified.",
+  "domains.lastError.record_not_found": "The record was not found. DNS changes can take a while to appear.",
+  "domains.lastError.claimed_elsewhere": "Another workspace already uses this domain.",
+  "domains.lastError.timeout": "The DNS lookup did not answer. Try again later.",
   "domains.lastError.lookup_failed": "The DNS lookup failed. Try again later.",
-  "domains.error.invalid":
-    "Enter a domain name you own, such as forms.your-company.com (no https://, paths or wildcards).",
+  "domains.error.invalid": "Enter a domain name you own, such as forms.your-company.com (no https://, paths or wildcards).",
   "domains.error.duplicate": "This domain is already added.",
   "domains.error.limit": "This workspace has reached its number of domains.",
-  "domains.error.expired":
-    "This claim expired. Remove it and add the domain again for a new record.",
-  "domains.error.stale":
-    "Someone else changed this domain. It has been reloaded.",
+  "domains.error.expired": "This claim expired. Remove it and add the domain again for a new record.",
+  "domains.error.stale": "Someone else changed this domain. It has been reloaded.",
   "domains.error.forbidden": "You do not have permission for that.",
   "domains.error.generic": "That did not work. Try again.",
   "settings.fieldsDesc": "Extra fields on contact and company records.",
@@ -1027,17 +864,13 @@ export const en = {
   "business.website": "Website",
   "business.address": "Address",
   "business.contactPublic": "Show these on booking pages",
-  "business.contactHint":
-    "Visitors see them on your booking pages only when this is on. Leave a field empty to remove it.",
+  "business.contactHint": "Visitors see them on your booking pages only when this is on. Leave a field empty to remove it.",
   "business.hours": "Business hours",
-  "business.hoursUnset":
-    "No business hours are set, so the calendar treats every hour as open.",
+  "business.hoursUnset": "No business hours are set, so the calendar treats every hour as open.",
   "business.hoursSet": "Set business hours",
   "business.hoursClear": "Clear business hours",
-  "business.hoursInvalid":
-    "Each open day needs a closing time after its opening time.",
-  "business.hoursZone":
-    "Hours are in the workspace time zone ({zone}). The calendar shades the rest and warns before booking outside them.",
+  "business.hoursInvalid": "Each open day needs a closing time after its opening time.",
+  "business.hoursZone": "Hours are in the workspace time zone ({zone}). The calendar shades the rest and warns before booking outside them.",
   "business.opens": "{day} opens at",
   "business.closes": "{day} closes at",
   "business.closedDay": "Closed",
@@ -1045,16 +878,14 @@ export const en = {
   "business.save": "Save changes",
   "business.saved": "Settings saved",
   "business.reload": "Load the latest",
-  "business.error.stale":
-    "Someone else changed these settings meanwhile. Load the latest and try again.",
+  "business.error.stale": "Someone else changed these settings meanwhile. Load the latest and try again.",
   "business.error.invalid": "One of these values is not accepted.",
   "business.error.denied": "Only Owners and Admins can change these settings.",
   "settings.profileDesc": "Your personal details and preferences.",
   "profileForm.name": "Display name",
   "profileForm.zone": "Time zone",
   "profileForm.namePlaceholder": "How your team sees you",
-  "profileForm.nameHelp":
-    "Shown to the members of this workspace wherever you own, host or wrote something. Leave empty to show your member ID instead.",
+  "profileForm.nameHelp": "Shown to the members of this workspace wherever you own, host or wrote something. Leave empty to show your member ID instead.",
   "profileForm.nameInvalid": "Use 1 to 80 visible characters.",
   "profileForm.save": "Save name",
   "profileForm.saving": "Saving…",
@@ -1062,18 +893,15 @@ export const en = {
   "profileForm.saveFailed": "The name could not be saved. Try again.",
   "profileForm.loadFailed": "Your profile could not be loaded.",
   "profileForm.deviceZone": "{zone} (this device)",
-  "profileForm.zoneNote":
-    "Times, the calendar and the dates you enter use this device's time zone. To change it, change your device's time zone.",
-  "profileForm.zoneDiffers":
-    "The workspace's business time zone is {zone}. Business hours, booking pages and reports use that zone, so their times can differ from the times shown here.",
+  "profileForm.zoneNote": "Times, the calendar and the dates you enter use this device's time zone. To change it, change your device's time zone.",
+  "profileForm.zoneDiffers": "The workspace's business time zone is {zone}. Business hours, booking pages and reports use that zone, so their times can differ from the times shown here.",
   "profileForm.idpTitle": "Email, password & two-factor",
   "profileForm.idpSub": "Managed by your organisation's identity provider.",
   "profileForm.manage": "Manage",
   "settings.notifications": "Notifications",
   "settings.fields": "Custom fields",
   "settings.pipeline": "Sales pipeline",
-  "settings.pipelineDesc":
-    "The stages deals move through, and how likely each is to close.",
+  "settings.pipelineDesc": "The stages deals move through, and how likely each is to close.",
   "pipeline.none": "This workspace has no pipeline.",
   "pipeline.readOnly": "Only Owners and Admins can change the pipeline.",
   "pipeline.name": "Pipeline name",
@@ -1090,27 +918,21 @@ export const en = {
   "pipeline.remove": "Remove {name}",
   "pipeline.removeTitle": "Remove stage?",
   "pipeline.removeConfirm": "Remove stage",
-  "pipeline.removeMessage":
-    "{name} will no longer be a stage of this pipeline. Its deals, if any, move to the stage you choose, and their history says so.",
+  "pipeline.removeMessage": "{name} will no longer be a stage of this pipeline. Its deals, if any, move to the stage you choose, and their history says so.",
   "pipeline.moveDealsTo": "Move its deals to",
-  "pipeline.outcomesNote":
-    "Won and lost are not stages: each deal is marked won or lost when it closes.",
+  "pipeline.outcomesNote": "Won and lost are not stages: each deal is marked won or lost when it closes.",
   "pipeline.renamed": "Pipeline renamed.",
   "pipeline.stageAdded": "Stage added.",
   "pipeline.stageSaved": "Stage saved.",
   "pipeline.stageRemoved": "Stage removed.",
   "pipeline.reordered": "Stages reordered.",
   "pipeline.error.duplicate": "Another stage already has this name.",
-  "pipeline.error.invalid":
-    "Check the name: 1 to 40 characters, without line breaks.",
-  "pipeline.error.probability":
-    "Probability must be a whole number from 0 to 100.",
-  "pipeline.error.stale":
-    "Someone else changed the pipeline. It has been reloaded; try again.",
+  "pipeline.error.invalid": "Check the name: 1 to 40 characters, without line breaks.",
+  "pipeline.error.probability": "Probability must be a whole number from 0 to 100.",
+  "pipeline.error.stale": "Someone else changed the pipeline. It has been reloaded; try again.",
   "pipeline.error.full": "A pipeline holds at most 15 stages.",
   "pipeline.error.lastStage": "A pipeline needs at least one stage.",
-  "pipeline.error.forbidden":
-    "You do not have permission to change the pipeline.",
+  "pipeline.error.forbidden": "You do not have permission to change the pipeline.",
   "pipeline.error.failed": "The pipeline could not be changed. Try again.",
   "settings.ai": "AI",
   "settings.integrations": "Integrations",
@@ -1124,8 +946,7 @@ export const en = {
   "views.error.duplicate": "You already have a view with that name.",
   "views.error.limit": "You have 20 saved views here. Delete one first.",
   "views.error.generic": "That did not work. Try again.",
-  "bulk.title":
-    "Bulk action on {count, plural, one {# contact} other {# contacts}}",
+  "bulk.title": "Bulk action on {count, plural, one {# contact} other {# contacts}}",
   "bulk.selected": "{count, plural, one {# selected} other {# selected}}",
   "bulk.action": "Action for the selected contacts",
   "bulk.do.assign_owner": "Assign owner",
@@ -1147,12 +968,9 @@ export const en = {
   "bulk.error.owner": "That person is not an active member of this workspace.",
   "bulk.error.forbidden": "You cannot change contacts in this workspace.",
   "bulk.error.generic": "That did not work. Try again.",
-  "settings.integrationsDesc":
-    "Connect other tools to this workspace with API keys.",
-  "settings.aiDesc":
-    "Choose whether this workspace uses AI, for which features, with which models, and within what monthly budget.",
-  "integrations.intro":
-    "An integration lets another tool read, create and update contacts, companies, deals and tasks through the API, with a key you issue here. It acts as a Member or as Read-only, never as an Admin, and can never delete records, see members or manage keys. Every change it makes is recorded under its name.",
+  "settings.integrationsDesc": "Connect other tools to this workspace with API keys.",
+  "settings.aiDesc": "Choose whether this workspace uses AI, for which features, with which models, and within what monthly budget.",
+  "integrations.intro": "An integration lets another tool read, create and update contacts, companies, deals and tasks through the API, with a key you issue here. It acts as a Member or as Read-only, never as an Admin, and can never delete records, see members or manage keys. Every change it makes is recorded under its name.",
   "integrations.empty": "No integrations yet.",
   "integrations.forbidden": "Only Owners and Admins can manage integrations.",
   "integrations.name": "Integration name",
@@ -1177,32 +995,23 @@ export const en = {
   "integrations.revokeShort": "Revoke",
   "integrations.disable": "Disable integration",
   "integrations.disableConfirm": "Disable {name} and revoke its keys for good",
-  "integrations.shownOnce":
-    "Key {name} issued. Copy it now: it is shown only once.",
-  "integrations.howToSend":
-    "Send it in the X-API-Key header of each request. Anyone who has it can act as this integration; revoke it if it leaks.",
+  "integrations.shownOnce": "Key {name} issued. Copy it now: it is shown only once.",
+  "integrations.howToSend": "Send it in the X-API-Key header of each request. Anyone who has it can act as this integration; revoke it if it leaks.",
   "integrations.copiedIt": "I have copied it",
-  "integrations.error.duplicate":
-    "An integration with that name already exists.",
-  "integrations.error.limit":
-    "The limit is reached: 20 integrations, and 2 active keys each. Revoke or disable one first.",
-  "integrations.error.unavailable":
-    "Integrations are not available in this workspace yet: it was created before they existed.",
+  "integrations.error.duplicate": "An integration with that name already exists.",
+  "integrations.error.limit": "The limit is reached: 20 integrations, and 2 active keys each. Revoke or disable one first.",
+  "integrations.error.unavailable": "Integrations are not available in this workspace yet: it was created before they existed.",
   "integrations.error.invalid": "Check the name: 1 to 100 visible characters.",
-  "integrations.error.forbidden":
-    "Only Owners and Admins can manage integrations.",
+  "integrations.error.forbidden": "Only Owners and Admins can manage integrations.",
   "integrations.error.generic": "That did not work. Try again.",
   "ai.title": "AI",
-  "ai.intro":
-    "AI only suggests: it never sends, changes or deletes anything. It stays off until you turn it on. Workspace data can reach an AI provider only when AI, a feature and a model are all allowed below, and only for that feature.",
+  "ai.intro": "AI only suggests: it never sends, changes or deletes anything. It stays off until you turn it on. Workspace data can reach an AI provider only when AI, a feature and a model are all allowed below, and only for that feature.",
   "ai.enabled": "Use AI in this workspace",
   "ai.features": "Features",
   "ai.feature.contactBrief": "Contact brief",
-  "ai.feature.contactBriefDesc":
-    "A short summary of a contact from their details and recent activity, shown only to the member who asks. It sends that contact's data to the chosen model.",
+  "ai.feature.contactBriefDesc": "A short summary of a contact from their details and recent activity, shown only to the member who asks. It sends that contact's data to the chosen model.",
   "ai.models.for": "Models for {feature}",
-  "ai.models.none":
-    "No AI models are available yet: the platform operator has not set up an AI provider.",
+  "ai.models.none": "No AI models are available yet: the platform operator has not set up an AI provider.",
   "ai.models.rank": "Choice {rank}",
   "ai.models.usable": "Ready",
   "ai.blocked.aiOff": "AI is off",
@@ -1213,22 +1022,18 @@ export const en = {
   "ai.blocked.capability": "Cannot do this feature",
   "ai.blocked.held": "AI is paused for this workspace by the platform",
   "ai.prefs.title": "Data preferences",
-  "ai.prefs.intro":
-    "Models that do not meet these preferences cannot be chosen.",
+  "ai.prefs.intro": "Models that do not meet these preferences cannot be chosen.",
   "ai.prefs.training": "Never let the provider train on our data",
   "ai.prefs.retention": "Longest time the provider may keep our data",
   "ai.prefs.retentionAny": "No limit",
-  "ai.prefs.retentionDays":
-    "{days, plural, =0 {Not kept} one {# day} other {# days}}",
+  "ai.prefs.retentionDays": "{days, plural, =0 {Not kept} one {# day} other {# days}}",
   "ai.prefs.residency": "Allowed data locations",
-  "ai.prefs.residencyHint":
-    "Comma-separated region codes, such as eu. Leave empty to allow any.",
+  "ai.prefs.residencyHint": "Comma-separated region codes, such as eu. Leave empty to allow any.",
   "ai.prefs.save": "Save preferences",
   "ai.saved": "Saved.",
   "ai.budget.title": "Monthly AI budget",
   "ai.usage.title": "AI usage",
-  "ai.usage.intro":
-    "Calls to AI models made for this workspace, with tokens and estimated cost, in UTC months. Estimates only, not an invoice; calls whose details were deleted after the retention period still count.",
+  "ai.usage.intro": "Calls to AI models made for this workspace, with tokens and estimated cost, in UTC months. Estimates only, not an invoice; calls whose details were deleted after the retention period still count.",
   "ai.usage.empty": "No AI use yet.",
   "ai.usage.thisMonth": "This month, by feature",
   "ai.usage.byMonth": "The last 12 months",
@@ -1237,8 +1042,7 @@ export const en = {
   "ai.usage.calls": "Calls",
   "ai.usage.tokens": "Tokens",
   "ai.usage.cost": "Estimated cost",
-  "ai.budget.intro":
-    "Estimated AI spend this calendar month (UTC), not an invoice. You can set a lower cap than your plan's; it never raises it.",
+  "ai.budget.intro": "Estimated AI spend this calendar month (UTC), not an invoice. You can set a lower cap than your plan's; it never raises it.",
   "ai.budget.status": "Status",
   "ai.budget.limit": "Limit",
   "ai.budget.spent": "Spent",
@@ -1247,23 +1051,19 @@ export const en = {
   "ai.budget.state.ok": "Within budget",
   "ai.budget.state.warning": "Close to the limit",
   "ai.budget.state.exhausted": "Used up: AI is refused until next month",
-  "ai.budget.state.currencyConflict":
-    "The cap's currency differs from the plan's: AI is refused until it is corrected",
+  "ai.budget.state.currencyConflict": "The cap's currency differs from the plan's: AI is refused until it is corrected",
   "ai.budget.state.unavailable": "Not available right now",
   "ai.budget.cap": "Monthly cap",
   "ai.budget.currency": "Currency",
   "ai.budget.setCap": "Set cap",
   "ai.budget.removeCap": "Remove cap",
-  "ai.notAllowed":
-    "Only Owners and Admins can see AI settings. In a workspace created before AI settings existed, they appear after a one-time update.",
+  "ai.notAllowed": "Only Owners and Admins can see AI settings. In a workspace created before AI settings existed, they appear after a one-time update.",
   "ai.error.unknownModel": "That model is no longer available.",
   "ai.error.forbidden": "Only Owners and Admins can change AI settings.",
-  "ai.error.refused":
-    "That change was refused. Check the values and the model's data handling.",
+  "ai.error.refused": "That change was refused. Check the values and the model's data handling.",
   "ai.error.generic": "That did not work. Try again.",
   "webhooks.title": "Webhooks",
-  "webhooks.intro":
-    "LeadStack can tell another service when something happens, by sending a signed message to an HTTPS address you enter. It sends the record's ID and, for contacts, the name, email and stage; for a changed contact, only which fields changed. Every address gets every event below.",
+  "webhooks.intro": "LeadStack can tell another service when something happens, by sending a signed message to an HTTPS address you enter. It sends the record's ID and, for contacts, the name, email and stage; for a changed contact, only which fields changed. Every address gets every event below.",
   "webhooks.events": "Events:",
   "webhooks.empty": "No webhook addresses yet.",
   "webhooks.url": "HTTPS address",
@@ -1276,14 +1076,10 @@ export const en = {
   "webhooks.status.pending": "Waiting",
   "webhooks.status.published": "Delivered",
   "webhooks.status.failed": "Gave up",
-  "webhooks.shownOnce":
-    "Address {url} added. Copy its signing key now: it is shown only once.",
-  "webhooks.howToVerify":
-    "Each message carries X-Webhook-Timestamp and X-Webhook-Signature: sha256= followed by the HMAC-SHA256, with this key, of the timestamp, a dot and the message body. Refuse a message whose signature does not match or whose timestamp is old.",
-  "webhooks.error.url":
-    "Enter an https:// address without a user name or password.",
-  "webhooks.error.limit":
-    "This workspace has its 10 webhook addresses. Remove one first.",
+  "webhooks.shownOnce": "Address {url} added. Copy its signing key now: it is shown only once.",
+  "webhooks.howToVerify": "Each message carries X-Webhook-Timestamp and X-Webhook-Signature: sha256= followed by the HMAC-SHA256, with this key, of the timestamp, a dot and the message body. Refuse a message whose signature does not match or whose timestamp is old.",
+  "webhooks.error.url": "Enter an https:// address without a user name or password.",
+  "webhooks.error.limit": "This workspace has its 10 webhook addresses. Remove one first.",
   "webhooks.error.notConfigured": "Webhooks are not set up on this server yet.",
   "settings.appearance": "Appearance & white-label",
   "settings.unavailable": "{name} is not available yet.",
@@ -1309,8 +1105,7 @@ export const en = {
   "members.status": "Status",
   "members.actions": "Actions",
   "members.actionsFor": "Actions for member {id}",
-  "members.namesUnavailable":
-    "Members who have not added a display name are shown by ID. Each member adds their own under My profile.",
+  "members.namesUnavailable": "Members who have not added a display name are shown by ID. Each member adds their own under My profile.",
   "members.addName": "Add your name",
   "members.previous": "Previous",
   "members.next": "Next",
@@ -1328,21 +1123,17 @@ export const en = {
   "confirm.title": "Confirm change",
   "confirm.owner":
     "This changes who owns the workspace. Owners control every setting and every member.",
-  "confirm.revoke":
-    "Removing a member cannot be undone. They lose access immediately.",
+  "confirm.revoke": "Removing a member cannot be undone. They lose access immediately.",
   "confirm.cancel": "Cancel",
   "confirm.submit": "Confirm",
   "refusal.self_change": "You cannot change your own membership or roles.",
-  "refusal.owner_only":
-    "Only an Owner can change an Owner or grant the Owner role.",
+  "refusal.owner_only": "Only an Owner can change an Owner or grant the Owner role.",
   "refusal.confirmation_required": "This Owner change needs confirmation.",
   "refusal.last_owner": "The workspace must keep at least one active Owner.",
-  "refusal.last_administrator":
-    "The workspace must keep at least one administrator.",
+  "refusal.last_administrator": "The workspace must keep at least one administrator.",
   "refusal.busy": "Another change to the members is in progress. Try again.",
   "refusal.membership_not_found": "That member no longer exists.",
-  "refusal.membership_not_active":
-    "Roles can be changed only for active members.",
+  "refusal.membership_not_active": "Roles can be changed only for active members.",
   "refusal.role_already_assigned": "The member already has that role.",
   "refusal.role_not_assigned": "The member does not have that role.",
   "refusal.invalid_transition": "That status change is not possible.",
@@ -1372,37 +1163,24 @@ export const en = {
   "contacts.export.done": "Contacts exported",
   "contacts.export.notAllowed": "Only Owners and Admins can export contacts",
   "contacts.export.forbidden": "You do not have permission to export contacts.",
-  "contacts.export.tooLarge":
-    "More than 50,000 contacts match. Narrow the search or filters, then export again.",
-  "contacts.export.limited":
-    "You have reached the limit of 10 exports per hour.",
-  "contacts.export.waitSeconds":
-    "Try again in {count, plural, one {# second} other {# seconds}}.",
-  "contacts.export.waitMinutes":
-    "Try again in {count, plural, one {# minute} other {# minutes}}.",
-  "contacts.export.unavailable":
-    "Export is temporarily unavailable. Try again in a few minutes.",
+  "contacts.export.tooLarge": "More than 50,000 contacts match. Narrow the search or filters, then export again.",
+  "contacts.export.limited": "You have reached the limit of 10 exports per hour.",
+  "contacts.export.waitSeconds": "Try again in {count, plural, one {# second} other {# seconds}}.",
+  "contacts.export.waitMinutes": "Try again in {count, plural, one {# minute} other {# minutes}}.",
+  "contacts.export.unavailable": "Export is temporarily unavailable. Try again in a few minutes.",
   "contacts.export.failed": "The export failed. Try again.",
-  "contacts.export.network":
-    "We could not reach LeadStack. Check your connection and try again.",
+  "contacts.export.network": "We could not reach LeadStack. Check your connection and try again.",
   "companies.export.running": "Exporting…",
   "companies.export.done": "Companies exported",
   "companies.export.notAllowed": "Only Owners and Admins can export companies",
-  "companies.export.forbidden":
-    "You do not have permission to export companies.",
-  "companies.export.tooLarge":
-    "More than 50,000 companies match. Narrow the search or filters, then export again.",
-  "companies.export.limited":
-    "You have reached the limit of 10 company exports per hour.",
-  "companies.export.waitSeconds":
-    "Try again in {count, plural, one {# second} other {# seconds}}.",
-  "companies.export.waitMinutes":
-    "Try again in {count, plural, one {# minute} other {# minutes}}.",
-  "companies.export.unavailable":
-    "Export is temporarily unavailable. Try again in a few minutes.",
+  "companies.export.forbidden": "You do not have permission to export companies.",
+  "companies.export.tooLarge": "More than 50,000 companies match. Narrow the search or filters, then export again.",
+  "companies.export.limited": "You have reached the limit of 10 company exports per hour.",
+  "companies.export.waitSeconds": "Try again in {count, plural, one {# second} other {# seconds}}.",
+  "companies.export.waitMinutes": "Try again in {count, plural, one {# minute} other {# minutes}}.",
+  "companies.export.unavailable": "Export is temporarily unavailable. Try again in a few minutes.",
   "companies.export.failed": "The export failed. Try again.",
-  "companies.export.network":
-    "We could not reach LeadStack. Check your connection and try again.",
+  "companies.export.network": "We could not reach LeadStack. Check your connection and try again.",
   "records.clear": "Clear",
   "records.capped": "10,000+",
   "records.shown": "{shown} of {total}",
@@ -1419,26 +1197,19 @@ export const en = {
   "tags.saved": "Tags saved",
   "tags.chosen": "{count} of {max} tags chosen",
   "tags.noMatch": "No tag matches.",
-  "tags.emptyCreate":
-    "This workspace has no tags yet. Create the first one below.",
-  "tags.emptyAsk":
-    "This workspace has no tags yet. Owners and Admins can create them.",
+  "tags.emptyCreate": "This workspace has no tags yet. Create the first one below.",
+  "tags.emptyAsk": "This workspace has no tags yet. Owners and Admins can create them.",
   "tags.newName": "New tag",
   "tags.add": "Add tag",
-  "tags.error.stale":
-    "Someone changed this record meanwhile. Close and open it again, then edit its tags.",
-  "tags.error.gone":
-    "One of these tags was just deleted. Check the tags and save again.",
+  "tags.error.stale": "Someone changed this record meanwhile. Close and open it again, then edit its tags.",
+  "tags.error.gone": "One of these tags was just deleted. Check the tags and save again.",
   "tags.error.duplicate": "A tag with this name already exists.",
-  "tags.error.vocabularyFull":
-    "This workspace has the maximum of 500 tags. Delete one to add another.",
-  "tags.error.name":
-    "A tag name needs 1 to 50 characters, without line breaks.",
+  "tags.error.vocabularyFull": "This workspace has the maximum of 500 tags. Delete one to add another.",
+  "tags.error.name": "A tag name needs 1 to 50 characters, without line breaks.",
   "tags.error.forbidden": "You do not have permission to change tags.",
   "tags.error.failed": "The tags could not be saved. Try again.",
   "tagSettings.count": "{count} of {max} tags",
-  "tagSettings.readOnly":
-    "Only Owners and Admins can add, rename or delete tags.",
+  "tagSettings.readOnly": "Only Owners and Admins can add, rename or delete tags.",
   "tagSettings.emptyEdit": "No tags yet. Add the first one above.",
   "tagSettings.created": "Tag “{name}” added",
   "tagSettings.renamed": "Tag renamed",
@@ -1449,16 +1220,14 @@ export const en = {
   "tagSettings.delete": "Delete {name}",
   "tagSettings.deleteTitle": "Delete this tag?",
   "tagSettings.deleteConfirm": "Delete tag",
-  "tagSettings.deleteMessage":
-    "“{name}” will be removed from every contact and company that has it. This cannot be undone.",
+  "tagSettings.deleteMessage": "“{name}” will be removed from every contact and company that has it. This cannot be undone.",
   "tagSettings.error.stale": "Someone changed this tag meanwhile. Try again.",
   "tagSettings.error.gone": "This tag was already deleted.",
   "import.titleContacts": "Import contacts",
   "import.titleCompanies": "Import companies",
   "import.notAllowed": "Only Owners and Admins can import",
   "import.file": "CSV file",
-  "import.fileHint":
-    "Up to 5 MB and 10,000 rows, with a header row. Rows matching an existing email or domain are skipped, never merged.",
+  "import.fileHint": "Up to 5 MB and 10,000 rows, with a header row. Rows matching an existing email or domain are skipped, never merged.",
   "import.mapping": "Columns",
   "import.notImported": "Not imported",
   "import.column": "Column {number}",
@@ -1485,31 +1254,24 @@ export const en = {
   "import.status.queued": "Waiting to start…",
   "import.status.running": "Importing…",
   "import.status.completed": "Import finished.",
-  "import.status.completedWithErrors":
-    "Import finished; some rows were not imported.",
-  "import.status.failed":
-    "The import stopped with an error. Records already created stay; you can resume.",
+  "import.status.completedWithErrors": "Import finished; some rows were not imported.",
+  "import.status.failed": "The import stopped with an error. Records already created stay; you can resume.",
   "import.status.cancelled": "Import stopped. Records already created stay.",
   "import.status.expired": "This check has expired. Choose the file again.",
   "import.error.tooLarge": "The file is larger than 5 MB.",
-  "import.error.unreadable":
-    "This file could not be read as CSV. Save it as CSV (UTF-8) and try again.",
+  "import.error.unreadable": "This file could not be read as CSV. Save it as CSV (UTF-8) and try again.",
   "import.error.noRows": "The file has no rows below its header.",
-  "import.error.tooManyRows":
-    "The file has more than 10,000 rows. Split it and import each part.",
+  "import.error.tooManyRows": "The file has more than 10,000 rows. Split it and import each part.",
   "import.error.tooManyColumns": "The file has more than 100 columns.",
   "import.error.cellTooLong": "A cell in the file is too long.",
   "import.error.required": "Choose the column that holds the required name.",
   "import.error.mapping": "Each column can fill one field only.",
-  "import.error.inProgress":
-    "Another import is running in this workspace. Wait for it to finish.",
+  "import.error.inProgress": "Another import is running in this workspace. Wait for it to finish.",
   "import.error.nothing": "No row is ready to import.",
   "import.error.stale": "This import has already started or expired.",
-  "import.error.limited":
-    "You have checked 10 files in the last hour. Try again later.",
+  "import.error.limited": "You have checked 10 files in the last hour. Try again later.",
   "import.error.forbidden": "You do not have permission to import.",
-  "import.error.unavailable":
-    "Import is temporarily unavailable. Try again in a few minutes.",
+  "import.error.unavailable": "Import is temporarily unavailable. Try again in a few minutes.",
   "import.error.failed": "The file could not be checked. Try again.",
   "fields.title": "Custom fields",
   "fields.manage": "Manage",
@@ -1517,14 +1279,12 @@ export const en = {
   "fields.entity.contact": "Contacts",
   "fields.entity.company": "Companies",
   "fields.count": "{count} of {max} active fields",
-  "fields.readOnly":
-    "Only Owners and Admins can add, change or archive fields.",
+  "fields.readOnly": "Only Owners and Admins can add, change or archive fields.",
   "fields.empty": "No custom fields yet.",
   "fields.new": "New field",
   "fields.label": "Label",
   "fields.key": "Key",
-  "fields.keyHint":
-    "Lower-case letters, digits and _. Fixed once the field exists.",
+  "fields.keyHint": "Lower-case letters, digits and _. Fixed once the field exists.",
   "fields.type": "Type",
   "fields.type.text": "Text",
   "fields.type.number": "Number",
@@ -1547,20 +1307,15 @@ export const en = {
   "fields.value.yes": "Yes",
   "fields.value.no": "No",
   "fields.error.value": "This value is not valid for this field.",
-  "fields.error.duplicateKey":
-    "A field with this key already exists, possibly archived. Choose another key.",
-  "fields.error.limit":
-    "This record type has the maximum of 50 active fields. Archive one to add another.",
+  "fields.error.duplicateKey": "A field with this key already exists, possibly archived. Choose another key.",
+  "fields.error.limit": "This record type has the maximum of 50 active fields. Archive one to add another.",
   "fields.error.options": "A choice field needs 1 to 50 different options.",
-  "fields.error.invalid":
-    "Check the label, key and options: one or more are not valid.",
+  "fields.error.invalid": "Check the label, key and options: one or more are not valid.",
   "fields.error.stale": "Someone changed this field meanwhile. Try again.",
   "fields.error.gone": "This field no longer exists.",
-  "fields.error.forbidden":
-    "You do not have permission to change custom fields.",
+  "fields.error.forbidden": "You do not have permission to change custom fields.",
   "fields.error.failed": "The field could not be saved. Try again.",
-  "fields.error.record":
-    "A custom field was changed meanwhile. Check the values and save again.",
+  "fields.error.record": "A custom field was changed meanwhile. Check the values and save again.",
   "records.field.created": "Created",
   "records.loadMore": "Load more",
   "records.edit": "Edit",
@@ -1568,8 +1323,7 @@ export const en = {
   "records.restore": "Restore",
   "records.delete": "Delete permanently",
   "records.archived": "archived",
-  "records.archivedNote":
-    "Archived: hidden from the default list, not deleted. Restore it to bring it back.",
+  "records.archivedNote": "Archived: hidden from the default list, not deleted. Restore it to bring it back.",
   "records.at": " at ",
   "records.saveChanges": "Save changes",
   "records.saved": "Changes saved",
@@ -1578,10 +1332,8 @@ export const en = {
   "records.done.restore": "Restored",
   "records.done.delete": "Deleted permanently",
   "records.error.field": "Check this value.",
-  "records.error.stale":
-    "Someone changed this record since you opened it. Close this dialog and open the record again.",
-  "records.error.owner":
-    "The owner must be an active member of this workspace.",
+  "records.error.stale": "Someone changed this record since you opened it. Close this dialog and open the record again.",
+  "records.error.owner": "The owner must be an active member of this workspace.",
   "records.error.conflict": "Another change got in the way. Try again.",
   "records.error.denied": "You do not have permission to make this change.",
   "records.error.generic": "Something went wrong. Try again.",
@@ -1594,8 +1346,7 @@ export const en = {
   "contacts.empty.noneBody": "Contacts you add appear here.",
   "contacts.empty.archived": "No archived contacts",
   "contacts.empty.filtered": "No contacts match",
-  "contacts.empty.filteredBody":
-    "Try removing a filter, or search by the start of a first name, last name or email.",
+  "contacts.empty.filteredBody": "Try removing a filter, or search by the start of a first name, last name or email.",
   "contact.new": "New contact",
   "contact.edit": "Edit contact",
   "contact.create": "Create contact",
@@ -1611,25 +1362,20 @@ export const en = {
   "contact.field.stage": "Stage",
   "contact.field.source": "Source",
   "contact.noCompany": "No company",
-  "contact.hint":
-    "A contact needs an email or a phone number. Tags and notes are added from the contact's preview.",
+  "contact.hint": "A contact needs an email or a phone number. Tags and notes are added from the contact's preview.",
   "contact.notBuilt": "Calls are not available yet.",
   "contact.conversations": "Conversations",
   "contact.conversationsEmpty": "No conversations yet.",
-  "contact.conversationsMore":
-    "Showing the {shown} most recent. Open the Inbox for the rest.",
+  "contact.conversationsMore": "Showing the {shown} most recent. Open the Inbox for the rest.",
   "contact.conversationNoSubject": "(no subject)",
-  "contact.deleteConfirm":
-    "Permanently delete {name}? This cannot be undone. To keep the record but hide it, archive it instead.",
+  "contact.deleteConfirm": "Permanently delete {name}? This cannot be undone. To keep the record but hide it, archive it instead.",
   "contact.deleteTitle": "Delete contact?",
-  "contact.notFound":
-    "This contact no longer exists. It may have been deleted.",
+  "contact.notFound": "This contact no longer exists. It may have been deleted.",
   "contact.error.firstName": "First name is required",
   "contact.error.emailOrPhone": "Add an email or phone number",
   "contact.error.duplicate": "A contact with this email already exists.",
   "contact.error.company": "That company no longer exists or is archived.",
-  "contact.error.restoreDuplicate":
-    "Another active contact already has this email, so this one cannot be restored.",
+  "contact.error.restoreDuplicate": "Another active contact already has this email, so this one cannot be restored.",
   "companies.view.active": "Active",
   "companies.view.archived": "Archived",
   "companies.search": "Search companies",
@@ -1677,10 +1423,8 @@ export const en = {
   "deals.search": "Search opportunities",
   "deals.idle": "Idle 7+ days",
   "deals.idleDays": "{count}d idle",
-  "deals.dragHint":
-    "Drag cards between stages, or open a deal to change its stage.",
-  "deals.readOnlyHint":
-    "You can view opportunities; changing them needs another role.",
+  "deals.dragHint": "Drag cards between stages, or open a deal to change its stage.",
+  "deals.readOnlyHint": "You can view opportunities; changing them needs another role.",
   "deals.emptyStage": "No deals in this stage",
   "deals.empty.none": "No opportunities yet",
   "deals.empty.noneBody": "Deals you create appear here, by stage.",
@@ -1707,8 +1451,7 @@ export const en = {
   "deals.field.close": "Expected close",
   "deals.field.contact": "Contact",
   "deals.field.company": "Company",
-  "deals.hint":
-    "Amounts are in the workspace's currency when the deal is created, with at most its decimal places.",
+  "deals.hint": "Amounts are in the workspace's currency when the deal is created, with at most its decimal places.",
   "deals.closedStageHint": "Reopen the deal to change its stage.",
   "deals.daysInStage": "Days in stage",
   "deals.days": "{count, plural, one {# day} other {# days}}",
@@ -1725,34 +1468,29 @@ export const en = {
   "deals.lostReason": "Reason lost",
   "deals.delete": "Delete deal",
   "deals.deleteTitle": "Delete this deal?",
-  "deals.deleteMessage":
-    "{title} and its history will be deleted for everyone. This cannot be undone.",
+  "deals.deleteMessage": "{title} and its history will be deleted for everyone. This cannot be undone.",
   "deals.deleted": "Deal deleted.",
   "deals.history.title": "History",
-  "deals.section":
-    "{count, plural, =0 {Opportunities} other {Opportunities (#)}}",
+  "deals.section": "{count, plural, =0 {Opportunities} other {Opportunities (#)}}",
   "deals.sectionEmpty": "No opportunities.",
   "deals.sectionMore": "Showing the {shown} most recently changed of {total}.",
   "deals.history.created": "Created in {stage}",
   "deals.history.updated": "Changed {fields}",
   "deals.history.moved": "Moved from {from} to {to}",
-  "deals.history.stageRemoved":
-    "Moved from {from} to {to} when {from} was removed",
+  "deals.history.stageRemoved": "Moved from {from} to {to} when {from} was removed",
   "deals.history.owner": "Owner set to {owner}",
   "deals.history.won": "Marked won",
   "deals.history.lost": "Marked lost",
   "deals.history.reopened": "Reopened",
   "deals.error.title": "Give the opportunity a name.",
   "deals.error.amount": "That value is not valid for this currency.",
-  "deals.error.amountHint":
-    "Enter a number like 1250.50, with no more decimals than {currency} has.",
+  "deals.error.amountHint": "Enter a number like 1250.50, with no more decimals than {currency} has.",
   "deals.error.reason": "Say why the deal was lost.",
   "deals.error.stale": "The pipeline changed. Choose the stage again.",
   "deals.error.contact": "That contact is archived or no longer exists.",
   "deals.error.company": "That company is archived or no longer exists.",
   "deals.error.owner": "That person is no longer an active member.",
-  "deals.error.version":
-    "Someone else changed this deal. It has been reloaded; try again.",
+  "deals.error.version": "Someone else changed this deal. It has been reloaded; try again.",
   "deals.error.closed": "Reopen the deal before changing its stage.",
   "deals.error.forbidden": "You do not have permission to change this deal.",
   "deals.error.gone": "This deal no longer exists.",
@@ -1765,8 +1503,7 @@ export const en = {
   "calendar.next": "Next",
   "calendar.today": "Today",
   "calendar.zone": "Times in {zone}",
-  "calendar.truncated":
-    "This range has more appointments than can be shown; choose a shorter view.",
+  "calendar.truncated": "This range has more appointments than can be shown; choose a shorter view.",
   "calendar.side": "Team and upcoming appointments",
   "calendar.team": "Team",
   "calendar.todayCount": "{count} today",
@@ -1777,8 +1514,7 @@ export const en = {
   "calendar.legend": "Status",
   "calendar.everyone": "Everyone",
   "calendar.clickToBook": "Click a free time to book",
-  "calendar.openDay":
-    "{day}, {count, plural, =0 {no appointments} one {# appointment} other {# appointments}}",
+  "calendar.openDay": "{day}, {count, plural, =0 {no appointments} one {# appointment} other {# appointments}}",
   "calendar.more": "+{count} more",
   "calendar.upNext": "Up next",
   "calendar.nothingNext": "Nothing coming up.",
@@ -1792,12 +1528,9 @@ export const en = {
   "appointments.saveAnyway": "Save anyway",
   "appointments.booked": "Appointment booked.",
   "appointments.free": "The host is free at this time.",
-  "appointments.outsideHours":
-    "This time is outside the business hours. You can still book it.",
-  "appointments.conflict":
-    "{count, plural, one {The host already has an appointment at this time:} other {The host already has # appointments at this time:}}",
-  "appointments.minutes":
-    "{minutes, plural, =60 {1 hour} =90 {1.5 hours} =120 {2 hours} other {# min}}",
+  "appointments.outsideHours": "This time is outside the business hours. You can still book it.",
+  "appointments.conflict": "{count, plural, one {The host already has an appointment at this time:} other {The host already has # appointments at this time:}}",
+  "appointments.minutes": "{minutes, plural, =60 {1 hour} =90 {1.5 hours} =120 {2 hours} other {# min}}",
   "appointments.field.title": "Title",
   "appointments.field.contact": "Contact",
   "appointments.field.host": "With",
@@ -1822,40 +1555,31 @@ export const en = {
   "appointments.status.cancelled": "Cancelled",
   "appointments.marked": "Marked {status}.",
   "appointments.cancelled": "Appointment cancelled.",
-  "appointments.cancelledHint":
-    "A cancelled appointment cannot be changed; book a new one instead.",
+  "appointments.cancelledHint": "A cancelled appointment cannot be changed; book a new one instead.",
   "appointments.reschedule": "Reschedule",
   "appointments.cancel": "Cancel appointment",
   "appointments.cancelTitle": "Cancel this appointment?",
-  "appointments.cancelMessage":
-    "{title} will be marked cancelled. It stays on record and cannot be reopened.",
+  "appointments.cancelMessage": "{title} will be marked cancelled. It stays on record and cannot be reopened.",
   "appointments.cancelConfirm": "Cancel appointment",
   "appointments.delete": "Delete",
   "appointments.deleteTitle": "Delete this appointment?",
-  "appointments.deleteMessage":
-    "{title} will be deleted for everyone. To keep it on record, cancel it instead.",
+  "appointments.deleteMessage": "{title} will be deleted for everyone. To keep it on record, cancel it instead.",
   "appointments.deleteConfirm": "Delete appointment",
   "appointments.deleted": "Appointment deleted.",
-  "appointments.section":
-    "{count, plural, =0 {Upcoming appointments} other {Upcoming appointments (#)}}",
+  "appointments.section": "{count, plural, =0 {Upcoming appointments} other {Upcoming appointments (#)}}",
   "appointments.sectionEmpty": "No upcoming appointments.",
   "appointments.error.title": "Give the appointment a title.",
-  "appointments.error.times":
-    "Choose a start time; an appointment lasts 5 minutes to 24 hours.",
+  "appointments.error.times": "Choose a start time; an appointment lasts 5 minutes to 24 hours.",
   "appointments.error.fields": "Check the highlighted values.",
-  "appointments.error.version":
-    "Someone else changed this appointment. Close and open it again.",
+  "appointments.error.version": "Someone else changed this appointment. Close and open it again.",
   "appointments.error.gone": "This appointment no longer exists.",
-  "appointments.error.cancelled":
-    "This appointment was cancelled and cannot be changed.",
+  "appointments.error.cancelled": "This appointment was cancelled and cannot be changed.",
   "appointments.error.contact": "That contact is no longer available.",
-  "appointments.error.host":
-    "The host must be an active member of this workspace.",
+  "appointments.error.host": "The host must be an active member of this workspace.",
   "appointments.error.forbidden": "Your role cannot change appointments.",
   "appointments.error.failed": "The appointment could not be saved. Try again.",
   "tasks.views": "Task views",
-  "tasks.openGone":
-    "That task is no longer available. It may have been deleted.",
+  "tasks.openGone": "That task is no longer available. It may have been deleted.",
   "tasks.tab.open": "Open",
   "tasks.tab.mine": "Assigned to me",
   "tasks.tab.overdue": "Overdue",
@@ -1899,8 +1623,7 @@ export const en = {
   "tasks.section": "{count, plural, =0 {Open tasks} other {Open tasks (#)}}",
   "tasks.sectionEmpty": "No open tasks.",
   "tasks.error.title": "Give the task a title.",
-  "tasks.error.version":
-    "Someone else changed this task. It has been reloaded; try again.",
+  "tasks.error.version": "Someone else changed this task. It has been reloaded; try again.",
   "tasks.error.gone": "This task no longer exists.",
   "tasks.error.link": "The linked record is archived or no longer exists.",
   "tasks.error.assignee": "That person is no longer an active member.",
@@ -1909,18 +1632,15 @@ export const en = {
   "forms.title": "Forms",
   "forms.new": "New form",
   "forms.untitled": "Untitled form",
-  "forms.scope":
-    "Lead capture forms, hosted by LeadStack or embedded on your own websites. Landing pages and view counts are not available yet.",
+  "forms.scope": "Lead capture forms, hosted by LeadStack or embedded on your own websites. Landing pages and view counts are not available yet.",
   "forms.empty.title": "No forms yet",
-  "forms.empty.body":
-    "Create a form, publish it and share its link to capture leads.",
+  "forms.empty.body": "Create a form, publish it and share its link to capture leads.",
   "forms.empty.reader": "Owners and Admins create forms.",
   "forms.status.published": "Published",
   "forms.status.draft": "Draft",
   "forms.card.fields": "{count, plural, one {# field} other {# fields}}",
   "forms.card.updated": "updated",
-  "forms.card.submissions":
-    "{count, plural, one {submission} other {submissions}}",
+  "forms.card.submissions": "{count, plural, one {submission} other {submissions}}",
   "forms.back": "Back to forms",
   "forms.field.name": "Form name",
   "forms.copy": "Copy link",
@@ -1963,8 +1683,7 @@ export const en = {
   "forms.type.checkbox": "Checkbox",
   "forms.preview": "Preview",
   "forms.after": "After someone submits",
-  "forms.after.contact":
-    "A new lead is created, or the contact with the same email is matched. A matched contact's details are never changed by a submission.",
+  "forms.after.contact": "A new lead is created, or the contact with the same email is matched. A matched contact's details are never changed by a submission.",
   "forms.field.tag": "Add tag",
   "forms.tag.none": "None",
   "forms.field.owner": "Owner of new contacts",
@@ -1976,24 +1695,19 @@ export const en = {
   "forms.automations.anyForm": "(any form)",
   "forms.automations.new": "New automation for this form",
   "campaigns.automations": "Automations started by this campaign",
-  "campaigns.automations.none":
-    "No automation starts when this campaign's email is sent or a contact unsubscribes from it.",
+  "campaigns.automations.none": "No automation starts when this campaign's email is sent or a contact unsubscribes from it.",
   "campaigns.automations.anyCampaign": "(any campaign)",
   "campaigns.automations.onSent": "on sending",
   "campaigns.automations.onUnsubscribed": "on unsubscribing",
   "campaigns.automations.new": "New automation for this campaign",
-  "campaigns.automations.hint":
-    "They start when the email provider accepts this campaign's email for a contact, or when a contact uses its unsubscribe link. A rehearsal sends nothing, so it starts none.",
-  "forms.automations.hint":
-    "They start for contacts the form creates. A submission that matches an existing contact starts none.",
-  "forms.consentHint":
-    "Optional. Shown as an unticked checkbox; the exact wording is kept with each consent. Needs an email field.",
+  "campaigns.automations.hint": "They start when the email provider accepts this campaign's email for a contact, or when a contact uses its unsubscribe link. A rehearsal sends nothing, so it starts none.",
+  "forms.automations.hint": "They start for contacts the form creates. A submission that matches an existing contact starts none.",
+  "forms.consentHint": "Optional. Shown as an unticked checkbox; the exact wording is kept with each consent. Needs an email field.",
   "forms.stats.submissions": "Submissions",
   "forms.stats.last": "Last submission",
   "forms.delete": "Delete form",
   "forms.deleteTitle": "Delete this form?",
-  "forms.deleteMessage":
-    "{name} and its submissions will be deleted, and its link will stop working. Contacts and consent records stay.",
+  "forms.deleteMessage": "{name} and its submissions will be deleted, and its link will stop working. Contacts and consent records stay.",
   "forms.deleteConfirm": "Delete form",
   "forms.deleted": "Form deleted.",
   "forms.submissions": "Submissions",
@@ -2010,69 +1724,55 @@ export const en = {
   "forms.consent.no": "No",
   "forms.error.name": "Give the form a name (at most 120 characters).",
   "forms.error.thankYou": "Write a thank-you message (at most 500 characters).",
-  "forms.error.consentText":
-    "The consent wording is too long or has unusual characters.",
-  "forms.error.firstName":
-    "To publish, the form needs a required field that fills First name.",
-  "forms.error.emailOrPhone":
-    "To publish, the form needs a field that fills Email or Phone.",
+  "forms.error.consentText": "The consent wording is too long or has unusual characters.",
+  "forms.error.firstName": "To publish, the form needs a required field that fills First name.",
+  "forms.error.emailOrPhone": "To publish, the form needs a field that fills Email or Phone.",
   "forms.error.consentEmail": "Consent wording needs a field that fills Email.",
   "forms.error.field": "Field {position} is not valid.",
-  "forms.error.fieldLabel":
-    "Field {position} needs a label (at most 100 characters).",
-  "forms.error.fieldOptions":
-    "Field {position} needs 1 to 20 different options.",
+  "forms.error.fieldLabel": "Field {position} needs a label (at most 100 characters).",
+  "forms.error.fieldOptions": "Field {position} needs 1 to 20 different options.",
   "forms.error.fieldTarget": "Field {position} cannot fill that contact field.",
-  "forms.error.duplicateTarget":
-    "Field {position} fills a contact field another field already fills.",
+  "forms.error.duplicateTarget": "Field {position} fills a contact field another field already fills.",
   "forms.error.fieldCount": "A form has 1 to 20 fields.",
   "forms.error.tag": "That tag no longer exists.",
   "forms.error.owner": "The owner of new contacts must be an active member.",
-  "forms.error.stale":
-    "Someone else changed this form. It has been reloaded; try again.",
+  "forms.error.stale": "Someone else changed this form. It has been reloaded; try again.",
   "forms.error.limit": "This workspace has the maximum number of forms.",
   "forms.error.gone": "This form no longer exists.",
   "forms.error.forbidden": "You do not have permission to change forms.",
-  "forms.error.copy":
-    "The link could not be copied. Select it and copy it yourself.",
+  "forms.error.copy": "The link could not be copied. Select it and copy it yourself.",
   "forms.error.failed": "The form could not be saved. Try again.",
   "publicForm.requiredHint": "Fields marked * are required.",
   "publicForm.choose": "Choose…",
   "publicForm.submit": "Submit",
   "publicForm.sending": "Sending…",
   "publicForm.honeypot": "Leave this field empty",
-  "publicForm.footer":
-    "Your answers are sent to the organisation that shared this form.",
+  "publicForm.footer": "Your answers are sent to the organisation that shared this form.",
   "publicForm.error.required": "This field is required.",
   "publicForm.error.invalid": "Check this answer.",
   "publicForm.error.emailOrPhone": "Give an email address or a phone number.",
   "publicForm.error.check": "Some answers need attention.",
   "publicForm.error.gone": "This form is not available.",
   "publicForm.error.busy": "Too many attempts. Wait a minute and try again.",
-  "publicForm.error.unavailable":
-    "The form is temporarily unavailable. Try again shortly.",
+  "publicForm.error.unavailable": "The form is temporarily unavailable. Try again shortly.",
   "publicForm.error.failed": "Your answers could not be sent. Try again.",
   "bookingPages.open": "Booking pages",
   "bookingPages.title": "Booking pages",
-  "bookingPages.intro":
-    "Share a link where people book a free time with one host, inside your business hours.",
+  "bookingPages.intro": "Share a link where people book a free time with one host, inside your business hours.",
   "bookingPages.new": "New booking page",
   "bookingPages.empty": "No booking pages yet.",
-  "bookingPages.emptyReadOnly":
-    "No booking pages yet. Owners and Admins create them.",
+  "bookingPages.emptyReadOnly": "No booking pages yet. Owners and Admins create them.",
   "bookingPages.limit": "A workspace has at most {max} booking pages.",
   "bookingPages.draft": "Draft",
   "bookingPages.published": "Published",
   "bookingPages.summary": "{length} min · {kind} · with {host}",
-  "bookingPages.count":
-    "{count, plural, =0 {No bookings yet} one {# booking} other {# bookings}}",
+  "bookingPages.count": "{count, plural, =0 {No bookings yet} one {# booking} other {# bookings}}",
   "bookingPages.publish": "Publish",
   "bookingPages.unpublish": "Unpublish",
   "bookingPages.edit": "Edit",
   "bookingPages.delete": "Delete",
   "bookingPages.deleteTitle": "Delete this booking page?",
-  "bookingPages.deleteBody":
-    "Its link stops working. The appointments it booked stay in the calendar.",
+  "bookingPages.deleteBody": "Its link stops working. The appointments it booked stay in the calendar.",
   "bookingPages.deleted": "Booking page deleted.",
   "bookingPages.publishedToast": "Booking page published.",
   "bookingPages.unpublishedToast": "Booking page unpublished.",
@@ -2081,10 +1781,8 @@ export const en = {
   "bookingPages.link": "Link",
   "bookingPages.copy": "Copy link",
   "bookingPages.copied": "Link copied.",
-  "bookingPages.copyFailed":
-    "The link could not be copied. Select it and copy it yourself.",
-  "bookingPages.hoursNote":
-    "Free times come from the business hours in Settings › Business profile and the host's appointments.",
+  "bookingPages.copyFailed": "The link could not be copied. Select it and copy it yourself.",
+  "bookingPages.hoursNote": "Free times come from the business hours in Settings › Business profile and the host's appointments.",
   "bookingPages.dialogNew": "New booking page",
   "bookingPages.dialogEdit": "Edit booking page",
   "bookingPages.field.name": "Name",
@@ -2095,10 +1793,8 @@ export const en = {
   "bookingPages.field.kind": "Type",
   "bookingPages.field.location": "Location or link",
   "bookingPages.field.confirmation": "Email a confirmation to the visitor",
-  "bookingPages.field.confirmationHint":
-    "With the time in the workspace's time zone and what to expect, never the private link. Sent only once email sending is switched on for this installation.",
-  "bookingPages.field.locationHint":
-    "Shown to the visitor only after they book.",
+  "bookingPages.field.confirmationHint": "With the time in the workspace's time zone and what to expect, never the private link. Sent only once email sending is switched on for this installation.",
+  "bookingPages.field.locationHint": "Shown to the visitor only after they book.",
   "bookingPages.field.notice": "Minimum notice",
   "bookingPages.field.horizon": "Bookable up to (days ahead)",
   "bookingPages.minutes": "{count} min",
@@ -2107,17 +1803,12 @@ export const en = {
   "bookingPages.notice.days": "{count, plural, one {# day} other {# days}}",
   "bookingPages.save": "Save",
   "bookingPages.create": "Create",
-  "bookingPages.error.business_hours_required":
-    "Set the business hours in Settings › Business profile before publishing.",
-  "bookingPages.error.host_not_member":
-    "The host must be an active member of this workspace.",
+  "bookingPages.error.business_hours_required": "Set the business hours in Settings › Business profile before publishing.",
+  "bookingPages.error.host_not_member": "The host must be an active member of this workspace.",
   "bookingPages.error.invalid": "Check the highlighted values.",
-  "bookingPages.error.stale":
-    "Someone else changed this booking page. Close and open it again.",
-  "bookingPages.error.denied":
-    "You do not have permission to change booking pages.",
-  "bookingPages.error.generic":
-    "The booking page could not be saved. Try again.",
+  "bookingPages.error.stale": "Someone else changed this booking page. Close and open it again.",
+  "bookingPages.error.denied": "You do not have permission to change booking pages.",
+  "bookingPages.error.generic": "The booking page could not be saved. Try again.",
   "publicBooking.with": "{length} min · {kind}",
   "publicBooking.zone": "Times are shown in {zone}.",
   "publicBooking.earlier": "Earlier",
@@ -2136,60 +1827,43 @@ export const en = {
   "publicBooking.submit": "Book",
   "publicBooking.sending": "Booking…",
   "publicBooking.confirmed": "You are booked",
-  "publicBooking.keepLink":
-    "Keep this link: it is the only way to see or cancel your booking. Nothing is emailed to you.",
-  "publicBooking.noLink":
-    "Your booking is confirmed. Its private link was shown when you first booked.",
+  "publicBooking.keepLink": "Keep this link: it is the only way to see or cancel your booking. Nothing is emailed to you.",
+  "publicBooking.noLink": "Your booking is confirmed. Its private link was shown when you first booked.",
   "publicBooking.location": "Where: {location}",
-  "publicBooking.footer":
-    "Your details are sent to the organisation that shared this page.",
-  "publicBooking.error.taken":
-    "That time is no longer free. Choose another one.",
-  "publicBooking.error.limit":
-    "You already have upcoming bookings here. Cancel one before booking another.",
+  "publicBooking.footer": "Your details are sent to the organisation that shared this page.",
+  "publicBooking.error.taken": "That time is no longer free. Choose another one.",
+  "publicBooking.error.limit": "You already have upcoming bookings here. Cancel one before booking another.",
   "publicBooking.error.check": "Some details need attention.",
   "publicBooking.error.required": "This field is required.",
   "publicBooking.error.invalid": "Check this value.",
   "publicBooking.error.gone": "This booking page is not available.",
-  "publicBooking.error.capacity":
-    "This page is not taking more online bookings today. Try again tomorrow.",
-  "publicBooking.error.busy":
-    "Too many attempts from your connection. Try again in an hour.",
+  "publicBooking.error.capacity": "This page is not taking more online bookings today. Try again tomorrow.",
+  "publicBooking.error.busy": "Too many attempts from your connection. Try again in an hour.",
   "publicBooking.error.failed": "Your booking could not be made. Try again.",
   "publicBooking.error.times": "The free times could not be loaded. Try again.",
   "visitorBooking.title": "Your booking",
   "consentConfirm.title": "Confirm your email preferences",
-  "consentConfirm.body":
-    "Someone asked to receive email using your address. If this was you, confirm below. If it was not, close this page: nothing changes.",
+  "consentConfirm.body": "Someone asked to receive email using your address. If this was you, confirm below. If it was not, close this page: nothing changes.",
   "consentConfirm.button": "Yes, this was me",
-  "consentConfirm.done":
-    "Thank you, your choice is recorded. You can unsubscribe from any email we send.",
-  "consentConfirm.gone":
-    "This link has expired, was already used for something else, or is not valid. Nothing was changed.",
+  "consentConfirm.done": "Thank you, your choice is recorded. You can unsubscribe from any email we send.",
+  "consentConfirm.gone": "This link has expired, was already used for something else, or is not valid. Nothing was changed.",
   "consentConfirm.failed": "That did not work. Try again in a moment.",
   "unsubscribe.title": "Unsubscribe",
-  "unsubscribe.body":
-    "Stop receiving marketing email from this sender at this address. Messages about things you asked for, such as a booking, still arrive.",
+  "unsubscribe.body": "Stop receiving marketing email from this sender at this address. Messages about things you asked for, such as a booking, still arrive.",
   "unsubscribe.button": "Unsubscribe me",
-  "unsubscribe.done":
-    "Done. If this address was on the list, it will get no more marketing email from this sender.",
-  "unsubscribe.invalid":
-    "This link is not complete. Open the unsubscribe link from the email again.",
+  "unsubscribe.done": "Done. If this address was on the list, it will get no more marketing email from this sender.",
+  "unsubscribe.invalid": "This link is not complete. Open the unsubscribe link from the email again.",
   "unsubscribe.failed": "That did not work. Try again in a moment.",
   "visitorBooking.cancelled": "This booking is cancelled.",
   "visitorBooking.cancelledByYou": "You cancelled this booking.",
-  "visitorBooking.started":
-    "This booking has started or passed and can no longer be cancelled here.",
+  "visitorBooking.started": "This booking has started or passed and can no longer be cancelled here.",
   "visitorBooking.cancel": "Cancel booking",
   "visitorBooking.cancelTitle": "Cancel this booking?",
-  "visitorBooking.cancelBody":
-    "The time becomes free for others. This cannot be undone.",
+  "visitorBooking.cancelBody": "The time becomes free for others. This cannot be undone.",
   "visitorBooking.keep": "Keep booking",
   "visitorBooking.cancelling": "Cancelling…",
-  "visitorBooking.noToken":
-    "This link is incomplete. Open the full link you saved when you booked.",
-  "visitorBooking.gone":
-    "This booking could not be found. Links stop working a week after the appointment.",
+  "visitorBooking.noToken": "This link is incomplete. Open the full link you saved when you booked.",
+  "visitorBooking.gone": "This booking could not be found. Links stop working a week after the appointment.",
   "visitorBooking.failed": "The booking could not be cancelled. Try again.",
   "consent.title": "Consent",
   "consent.granted": "Email consent given",
@@ -2198,48 +1872,39 @@ export const en = {
   "consent.viaDeletedForm": "Through a form that has since been deleted",
   "consent.byMember": "Recorded by {who}",
   "consent.none": "No consent recorded.",
-  "consent.unverified":
-    "Given by ticking a box on a web form; the email address has not been confirmed.",
+  "consent.unverified": "Given by ticking a box on a web form; the email address has not been confirmed.",
   "consent.status.allowed": "May receive marketing email",
-  "consent.status.suppressed":
-    "Suppressed: {reason}. No email will be sent to this address.",
+  "consent.status.suppressed": "Suppressed: {reason}. No email will be sent to this address.",
   "consent.status.withdrawn": "Consent withdrawn: no marketing email.",
   "consent.status.none": "No consent: no marketing email.",
   "consent.status.noEmail": "No email address.",
   "consent.record": "Record consent",
   "consent.withdraw": "Withdraw consent",
   "consent.recordTitle": "Record email consent",
-  "consent.recordHint":
-    "Write the exact words the person agreed to, for example the sentence they ticked or confirmed. It is kept as evidence and cannot be changed.",
+  "consent.recordHint": "Write the exact words the person agreed to, for example the sentence they ticked or confirmed. It is kept as evidence and cannot be changed.",
   "consent.wording": "Wording agreed to",
   "consent.withdrawTitle": "Withdraw email consent",
-  "consent.withdrawHint":
-    "The person no longer wants email. Their address is added to the suppression list, and no email will be sent to it until an Owner or Admin removes it.",
+  "consent.withdrawHint": "The person no longer wants email. Their address is added to the suppression list, and no email will be sent to it until an Owner or Admin removes it.",
   "consent.note": "Note (optional)",
   "consent.recorded": "Consent recorded.",
   "consent.withdrawnToast": "Consent withdrawn and address suppressed.",
   "consent.withdrawnNoEmail": "Consent withdrawn.",
-  "consent.error.wording":
-    "Write the wording, up to 500 characters, without unusual characters.",
+  "consent.error.wording": "Write the wording, up to 500 characters, without unusual characters.",
   "consent.error.note": "The note is too long or has unusual characters.",
   "consent.error.noEmail": "Add an email address to this contact first.",
   "consent.error.failed": "The change could not be saved. Try again.",
-  "suppression.intro":
-    "No email will be sent to these addresses, whatever a contact's consent says. Withdrawing a contact's consent adds its address here.",
+  "suppression.intro": "No email will be sent to these addresses, whatever a contact's consent says. Withdrawing a contact's consent adds its address here.",
   "suppression.add": "Add addresses",
   "suppression.addresses": "Email addresses",
-  "suppression.addressesHint":
-    "One per line, or separated by commas. At most {max} at once.",
+  "suppression.addressesHint": "One per line, or separated by commas. At most {max} at once.",
   "suppression.reason": "Reason",
   "suppression.note": "Note (optional)",
   "suppression.submit": "Suppress",
-  "suppression.added":
-    "{added, plural, =0 {No new addresses} one {# address suppressed} other {# addresses suppressed}}{already, plural, =0 {} one { · # was already on the list} other { · # were already on the list}}.",
+  "suppression.added": "{added, plural, =0 {No new addresses} one {# address suppressed} other {# addresses suppressed}}{already, plural, =0 {} one { · # was already on the list} other { · # were already on the list}}.",
   "suppression.search": "Search addresses",
   "suppression.empty": "No suppressed addresses.",
   "suppression.noMatch": "No address matches.",
-  "suppression.total":
-    "{count, plural, one {# address} other {# addresses}}{capped, select, true {+} other {}}",
+  "suppression.total": "{count, plural, one {# address} other {# addresses}}{capped, select, true {+} other {}}",
   "suppression.column.email": "Address",
   "suppression.column.reason": "Reason",
   "suppression.column.added": "Added",
@@ -2248,8 +1913,7 @@ export const en = {
   "suppression.fromProvider": "Reported by the email provider",
   "suppression.remove": "Remove",
   "suppression.removeTitle": "Remove from the suppression list?",
-  "suppression.removeBody":
-    "Email may be sent to {email} again. Do this only if the person asked for it or the address was added by mistake.",
+  "suppression.removeBody": "Email may be sent to {email} again. Do this only if the person asked for it or the address was added by mistake.",
   "suppression.removed": "Address removed from the suppression list.",
   "suppression.more": "Show more",
   "suppression.readOnly": "Only Owners and Admins add or remove addresses.",
@@ -2258,13 +1922,11 @@ export const en = {
   "suppression.reason.unsubscribed": "Unsubscribed",
   "suppression.reason.bounced": "Bounced",
   "suppression.reason.complained": "Spam complaint",
-  "suppression.error.lines":
-    "{count, plural, one {Line {lines} is not an email address.} other {Lines {lines} are not email addresses.}}",
+  "suppression.error.lines": "{count, plural, one {Line {lines} is not an email address.} other {Lines {lines} are not email addresses.}}",
   "suppression.error.none": "Enter at least one email address.",
   "suppression.error.tooMany": "Add at most {max} addresses at once.",
   "suppression.error.note": "The note is too long or has unusual characters.",
-  "suppression.error.limit":
-    "The suppression list is full (100,000 addresses).",
+  "suppression.error.limit": "The suppression list is full (100,000 addresses).",
   "suppression.error.failed": "The change could not be saved. Try again.",
   "picker.contact.noContact": "No contact",
   "picker.contact.choose": "Choose contact",
@@ -2275,17 +1937,13 @@ export const en = {
   "picker.contact.more": "Load more contacts",
   "picker.contact.noMatch": "No active contact starts with that text.",
   "picker.contact.none": "This workspace has no active contacts yet.",
-  "company.hint":
-    "The domain is taken from the website when you leave it empty. Two active companies cannot share a domain.",
-  "company.deleteConfirm":
-    "Permanently delete {name}? Its contacts are kept and unlinked. This cannot be undone.",
+  "company.hint": "The domain is taken from the website when you leave it empty. Two active companies cannot share a domain.",
+  "company.deleteConfirm": "Permanently delete {name}? Its contacts are kept and unlinked. This cannot be undone.",
   "company.deleteTitle": "Delete company?",
-  "company.notFound":
-    "This company no longer exists. It may have been deleted.",
+  "company.notFound": "This company no longer exists. It may have been deleted.",
   "company.error.name": "Company name is required",
   "company.error.duplicate": "A company with this domain already exists.",
-  "company.error.restoreDuplicate":
-    "Another active company already has this domain, so this one cannot be restored.",
+  "company.error.restoreDuplicate": "Another active company already has this domain, so this one cannot be restored.",
   // Notes and history (slice 3B, decision P3-B)
   "notes.title": "Notes",
   "notes.new": "New note",
@@ -2304,20 +1962,16 @@ export const en = {
   "notes.archivedContact": "Restore this contact to add or edit notes.",
   "notes.archivedCompany": "Restore this company to add or edit notes.",
   "notes.deleteTitle": "Delete note?",
-  "notes.deleteConfirm":
-    "This note will be permanently deleted. This cannot be undone.",
+  "notes.deleteConfirm": "This note will be permanently deleted. This cannot be undone.",
   "notes.discardTitle": "Discard note?",
   "notes.discardConfirm": "Your unsaved note will be lost.",
   "notes.discard": "Discard",
-  "notes.error.archived":
-    "This record is archived. Restore it to add or edit notes.",
-  "notes.error.stale":
-    "Someone changed this note meanwhile. Cancel to see the latest text.",
+  "notes.error.archived": "This record is archived. Restore it to add or edit notes.",
+  "notes.error.stale": "Someone changed this note meanwhile. Cancel to see the latest text.",
   "notes.error.denied": "You can only change your own notes.",
   "notes.error.gone": "This note was deleted.",
   "notes.error.recordGone": "This record no longer exists.",
-  "notes.error.invalid":
-    "This note can't be saved. Notes are plain text of at most 10,000 characters.",
+  "notes.error.invalid": "This note can't be saved. Notes are plain text of at most 10,000 characters.",
   "history.title": "Activity",
   "history.empty": "No activity yet",
   "history.more": "Show more activity",

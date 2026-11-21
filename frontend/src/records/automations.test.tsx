@@ -844,6 +844,50 @@ describe("automations", () => {
     });
   });
 
+  it("lists a removed stage so it can be cleared (P8-H)", async () => {
+    const user = userEvent.setup();
+    const gone = "e0000009-0000-4000-8000-000000000009";
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        items: [
+          automation({
+            definition: {
+              ...DEFINITION,
+              condition: { field: "deal_stage", op: "has", values: [gone] },
+            },
+          }),
+        ],
+        onWrite: (method) =>
+          method === "PATCH" ? { status: 200, body: automation() } : undefined,
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: /Edit/ }));
+    const dialog = await screen.findByRole("dialog");
+    const removed = await within(dialog).findByRole("checkbox", {
+      name: "Removed stage",
+    });
+    expect(removed).toBeChecked();
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Sales · Proposal" }),
+    );
+    await user.click(removed);
+    expect(
+      within(dialog).queryByRole("checkbox", { name: "Removed stage" }),
+    ).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "PATCH")?.body as {
+        definition: { condition: unknown };
+      };
+      expect(body.definition.condition).toEqual({
+        field: "deal_stage",
+        op: "has",
+        values: ["e0000001-0000-4000-8000-000000000002"],
+      });
+    });
+  });
+
   it("asks a number field for one value and drops it for is missing", async () => {
     const user = userEvent.setup();
     renderApp(`/w/${WS}/automations`, workspace(true));

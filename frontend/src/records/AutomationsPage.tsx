@@ -265,13 +265,10 @@ function CampaignSummary({
         : campaign.error instanceof ApiError && campaign.error.status === 404
           ? t("automations.campaignGone")
           : t("automations.campaignSome");
-  return t(
-    sent ? "automations.summarySent" : "automations.summaryUnsubscribed",
-    {
-      campaign: name,
-      count,
-    },
-  );
+  return t(sent ? "automations.summarySent" : "automations.summaryUnsubscribed", {
+    campaign: name,
+    count,
+  });
 }
 
 function AutomationCard({
@@ -599,9 +596,7 @@ function CampaignPick({
     >
       <option value="">{t("automations.triggerAny")}</option>
       {value && !items.some((item) => item.id === value) ? (
-        <option value={value}>
-          {t("automations.triggerCampaignUnlisted")}
-        </option>
+        <option value={value}>{t("automations.triggerCampaignUnlisted")}</option>
       ) : null}
       {items.map((item) => (
         <option key={item.id} value={item.id}>
@@ -970,7 +965,7 @@ function AutomationEditor({
               {t("automations.condition.customField")}
             </option>
             <option value="deal">{t("automations.condition.deal")}</option>
-            <option value="deal_stage">
+            <option value="deal_stage" disabled={stages.length === 0}>
               {t("automations.condition.dealStage")}
             </option>
           </select>
@@ -1041,11 +1036,7 @@ function ConditionEditor({
   const t = useT();
   if (condition.field === "custom_field") {
     return (
-      <FieldCondition
-        condition={condition}
-        fields={fields}
-        onChange={onChange}
-      />
+      <FieldCondition condition={condition} fields={fields} onChange={onChange} />
     );
   }
   if (condition.field === "email") {
@@ -1074,7 +1065,14 @@ function ConditionEditor({
     condition.field === "tag"
       ? tags
       : condition.field === "deal_stage"
-        ? stages
+        ? [
+            ...stages,
+            // A stage removed since it was chosen stays listed, so it can be
+            // cleared; activation refuses it (P8-H).
+            ...condition.values
+              .filter((id) => !stages.some((stage) => stage.id === id))
+              .map((id) => ({ id, label: t("automations.stageGone") })),
+          ]
         : condition.field === "deal"
           ? OUTCOMES.map((o) => ({
               id: o,
@@ -1231,7 +1229,10 @@ function Branch({
             size="sm"
             aria-label={t("automations.addStepTo", { branch: label })}
             onPress={() => {
-              onChange([...actions, newAction(adding, tags, members, fields)]);
+              onChange([
+                ...actions,
+                newAction(adding, tags, members, fields),
+              ]);
             }}
           >
             <Plus size={13} aria-hidden="true" />
@@ -1750,8 +1751,7 @@ function FieldCondition({
               field: "custom_field",
               key: condition.key,
               op: op === "not_in" ? "not_in" : "in",
-              values:
-                "values" in condition ? condition.values : startValues(field),
+              values: "values" in condition ? condition.values : startValues(field),
             });
           }
         }}
