@@ -1433,7 +1433,15 @@ as CSV (P10-C.1) and the review fixes in `cd3a844`. No migration.
 - The first build ran from the old checkout: `sudo git fetch` failed host
   key verification and the chain went on. It was rebuilt after a plain
   `git fetch`, with `HEAD` checked against `cd3a844` before the build.
-- Browser check of the new screens: waits for the owner's sign-in. Not run.
+- Browser check as alice (Owner of Staging Alpha), after the owner signed
+  in: the automation editor offers the "Deals" condition (open, won, lost)
+  and "Open deal stage" (the workspace's four stages, with yes and no
+  steps); the dialog was cancelled, nothing saved. The Campaigns card in
+  Reports has "Download Campaigns as CSV"; the export for the last 30 days
+  answered 200, `text/csv`, `report-campaigns-2026-11-21.csv`, 38 rows. The
+  AI brief is not shown on a contact because `use_ai_brief` is false: the
+  P9-B administrative grants were not run on staging, as the owner chose.
+  The brief itself is therefore not checked on staging.
 
 ## Deal conditions in automations and the Campaigns report as CSV (2026-11-21, owner: "do all four")
 
