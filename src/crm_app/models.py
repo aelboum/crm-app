@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0053_date_reached_trigger` own the
+Migrations `0002_contacts_companies` to `0054_wait_for_field` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -945,6 +945,8 @@ class AutomationRun(Base):
     next_step: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(Text)
     resume_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When a `wait_for_field` step (P8-J) stops waiting for a value.
+    field_wait_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     attempts: Mapped[int] = mapped_column(Integer)
     last_error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

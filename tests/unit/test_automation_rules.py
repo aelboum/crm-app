@@ -138,6 +138,15 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
             ]
         },
         {"yes": [{"type": "wait_until_date", "field_key": "renewal", "hour": 9, "x": 1}]},
+        # P8-J
+        {"yes": [{"type": "wait_for_field", "max_days": 3}]},
+        {"yes": [{"type": "wait_for_field", "field_key": "Bad Key", "max_days": 3}]},
+        {"yes": [{"type": "wait_for_field", "field_key": "plan"}]},
+        {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": 0}]},
+        {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": 366}]},
+        {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": True}]},
+        {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": 1.5}]},
+        {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": 3, "hour": 9}]},
         # P8-I
         {"trigger": {"type": "date_reached", "hour": 9}},
         {"trigger": {"type": "date_reached", "field_key": "Bad Key", "hour": 9}},
@@ -467,3 +476,25 @@ def test_a_date_trigger_looks_for_the_date_its_days_lead_to_today() -> None:
     assert rules.date_reached_on(today, 0) == today
     assert rules.date_reached_on(date(1, 1, 1), 1) is None
     assert rules.date_reached_on(date(9999, 12, 31), -1) is None
+
+
+def test_a_field_wait_is_plain_data_and_names_its_field() -> None:
+    """P8-J: `wait_for_field` takes a field key and 1 to 365 days; any
+    stored value but nothing counts, false and 0 included."""
+    given = rules.definition(
+        _base(
+            condition={"field": "email", "op": "present"},
+            yes=[{"type": "wait_for_field", "field_key": "plan", "max_days": 14}],
+            no=[{"type": "wait_for_field", "field_key": "renewal", "max_days": 365}],
+        )
+    )
+    assert given.as_json()["yes"] == [
+        {"type": "wait_for_field", "field_key": "plan", "max_days": 14}
+    ]
+    assert rules.definition(given.as_json()) == given
+    assert rules.waited_fields(given) == {"plan", "renewal"}
+    assert rules.date_fields(given) == set()
+    assert rules.waited_fields(rules.definition(_base())) == set()
+    for stored in ("gold", "", 0, False, "2026-12-01"):
+        assert rules.has_value(stored)
+    assert not rules.has_value(None)

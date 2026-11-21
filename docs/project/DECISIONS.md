@@ -1073,6 +1073,42 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-J — Automation step that waits for a contact field's value (2026-11-21)
+
+- **Status:** Implemented on the owner's "go 1 and then 3" (option 3, second
+  item: wait until a contact's field gets a value).
+- **Decision:** a step `{"type": "wait_for_field", "field_key": ...,
+  "max_days": 1..365}` keeps the run on that step while the contact's
+  custom field has no value, and goes on as soon as it has one.
+  - Any field type counts; any stored value but nothing is a value, so
+    false and 0 are values (as the `present` condition reads them).
+  - The run looks at the field again every 10 minutes
+    (`FIELD_LOOK_EVERY`), not when the contact changes. Looking again
+    catches every way a field changes (the screen, the API, forms,
+    imports, other automation steps) without a hook in each, at the cost
+    of up to 10 minutes' delay and one queued job per waiting run per look.
+  - The first look sets `automation_run.field_wait_until` (now plus the
+    days). Once it has passed without a value, the step is skipped as
+    `timed_out` and the run goes on with the next step. The last look is
+    due at that moment, not 10 minutes after it.
+  - A value already there when the run reaches the step: done at once.
+    A field archived while the run waits: skipped as `field_gone`.
+  - While waiting no step row is written, so the run history shows the
+    run as waiting with its next look; the step's row appears once it is
+    done or skipped. A retried job before the next look changes nothing.
+  - Activation checks that the key names an active contact field ("the
+    custom field it waits for is not an active contact field").
+  - Migration `0054_wait_for_field`: `automation_step.action` also allows
+    `wait_for_field`; the new nullable column `automation_run.field_wait_until`.
+- **Not built:** waking a waiting run when the contact changes (the delay
+  is at most 10 minutes); showing the end of the wait in the run history.
+- **Editor:** "Wait for a field value" step: the field (all contact custom
+  fields) and "Wait at most" (1 to 365 days, 7 by default), with a hint.
+- **Tests:** unit `test_automation_rules.py` (refused shapes, what counts as
+  a value); `tests/integration/test_automation_field_wait.py` (refusals,
+  a value already there, the look every 10 minutes, a value filled in,
+  timed out, field archived, run history); `automations.test.tsx`.
+
 ## P8-I — Automation trigger on a contact's date (2026-11-21)
 
 - **Status:** Implemented on the owner's "go 1 and then 3" (option 3: a

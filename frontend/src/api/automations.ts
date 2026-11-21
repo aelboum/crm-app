@@ -61,7 +61,10 @@ export type Action =
       field_key: string;
       offset_days: number;
       hour: number;
-    };
+    }
+  // P8-J: on as soon as a contact custom field has a value, looked at again
+  // every few minutes; skipped as timed_out after max_days without one.
+  | { type: "wait_for_field"; field_key: string; max_days: number };
 
 export type Condition =
   | {

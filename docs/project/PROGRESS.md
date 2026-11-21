@@ -1390,6 +1390,29 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Automation step that waits for a contact field's value (2026-11-21, owner: "go 1 and then 3")
+
+Decision P8-J, migration `0054_wait_for_field`. A "Wait for a field value"
+step keeps the run on that step until the contact's custom field has a
+value (any stored value, `false` and `0` included), looked at again every
+10 minutes. After 1 to 365 days without one the step is skipped as
+`timed_out`; a field archived meanwhile skips it as `field_gone`. The run
+goes on either way.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/integration` (full suite) against `crm_app_test` at `0054` | 965 passed (1:05:45) |
+| `pytest tests/integration/test_automation_field_wait.py` and the related automation suites | 55 passed |
+| `pytest tests/unit` | 875 passed |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 0 errors; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | `openapi.json` and `schema.d.ts` regenerated (the step action) |
+| `npx vitest run` | 38 files, 426 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+Not built: waking a run as soon as the contact changes (up to 10 minutes'
+delay), and showing the wait's end in the run history. Not deployed to
+staging.
+
 ## Automation trigger on a contact's date (2026-11-21, owner: "go 1 and then 3")
 
 Decision P8-I, migration `0053_date_reached_trigger`. An automation starts

@@ -21,7 +21,10 @@
   together, so a retried job finds the step done and never acts twice. A
   `wait` sets the run waiting until its time, and `wait_for_business_hours`
   until the workspace's next opening (P8-W), `wait_until_date` until a
-  contact's date (P8-D); the sweeper
+  contact's date (P8-D); `wait_for_field` (P8-J) keeps the run on its step
+  while the contact's field has no value, looking again every
+  `FIELD_LOOK_EVERY` until its days run out (`automation_run.field_wait_until`
+  holds the end, set on the first look); the sweeper
   (`crm_app.automation_maintenance`) enqueues due runs. A missing tag or a
   member who left skips the step with a code; a deleted contact cancels
   the run; anything unexpected raises, the job queue retries, and after
@@ -107,6 +110,8 @@ RUN_PAGE = 50
 # and how many are started per automation each time.
 DATE_SCAN_EVERY = timedelta(minutes=5)
 PER_DATE_SCAN = 200
+# How often a `wait_for_field` step (P8-J) looks at the contact's field again.
+FIELD_LOOK_EVERY = timedelta(minutes=10)
 
 logger = logging.getLogger(__name__)
 
@@ -340,12 +345,25 @@ def _check_fields(session: Session, scope: Scope, given: rules.Definition) -> No
             raise AutomationRuleError("a custom field it sets is not an active contact field")
         if not _fits(field, value):
             raise AutomationRuleError(f"the value for the custom field {key} does not fit it")
+    _check_read_fields(session, scope, given)
+
+
+def _check_read_fields(session: Session, scope: Scope, given: rules.Definition) -> None:
+    """The contact fields a definition's trigger (P8-I) or waits (P8-D,
+    P8-J) read are active, and of type date where a date is read."""
     trigger_field = rules.trigger_date_field(given)
     if trigger_field is not None:
         field = custom_fields.active_definitions(session, scope, "contact").get(trigger_field)
         if field is None or field.field_type != "date":
             raise AutomationRuleError(
                 "the date field its trigger reads is not an active contact date field"
+            )
+    waited = rules.waited_fields(given)
+    if waited:
+        known = custom_fields.active_definitions(session, scope, "contact")
+        if any(key not in known for key in waited):
+            raise AutomationRuleError(
+                "the custom field it waits for is not an active contact field"
             )
     waits = rules.date_fields(given)
     if waits:
@@ -657,17 +675,7 @@ def _facts(
     )
     custom_value: object = None
     if condition is not None and condition["field"] == "custom_field":
-        key = condition["key"]
-        active = session.execute(
-            select(CustomFieldDefinition.id).where(
-                CustomFieldDefinition.tenant_id == workspace,
-                CustomFieldDefinition.entity == "contact",
-                CustomFieldDefinition.key == key,
-                CustomFieldDefinition.archived_at.is_(None),
-            )
-        ).first()
-        if active is not None:
-            custom_value = (contact.custom_fields or {}).get(key)
+        _, custom_value = _custom_value(session, workspace, contact, condition["key"])
     deal_outcomes: frozenset[str] = frozenset()
     open_stages: frozenset[str] = frozenset()
     if condition is not None and condition["field"] in ("deal", "deal_stage"):
@@ -746,6 +754,13 @@ def _act(  # noqa: PLR0911, PLR0912 - one answer per action
         if until is None:
             return "skipped", "no_date"
         return ("done", None) if until > _now() else ("skipped", "date_passed")
+    if action.type == "wait_for_field":
+        # Reached once the field has a value or the days have gone by
+        # (`_field_pending`).
+        active, value = _custom_value(session, scope.workspace, contact, args["field_key"])
+        if not active:
+            return "skipped", "field_gone"
+        return ("done", None) if rules.has_value(value) else ("skipped", "timed_out")
     # wait: the caller sets the run waiting.
     return "done", None
 
@@ -817,6 +832,41 @@ def _round_robin(
             records.assign_owner_in(session, scope, contact.id, candidate)
             return "done", None
     return "skipped", "no_member"
+
+
+def _custom_value(
+    session: Session, workspace: uuid.UUID, contact: Contact, key: str
+) -> tuple[bool, object]:
+    """Whether `key` names an active contact field, and the contact's value
+    in it (`None` while the field is archived)."""
+    active = session.execute(
+        select(CustomFieldDefinition.id).where(
+            CustomFieldDefinition.tenant_id == workspace,
+            CustomFieldDefinition.entity == "contact",
+            CustomFieldDefinition.key == key,
+            CustomFieldDefinition.archived_at.is_(None),
+        )
+    ).first()
+    if active is None:
+        return False, None
+    return True, (contact.custom_fields or {}).get(key)
+
+
+def _field_pending(
+    session: Session, contact: Contact, run: AutomationRun, args: Mapping[str, Any], now: datetime
+) -> datetime | None:
+    """`wait_for_field` (P8-J): when to look at the field again while the
+    run stays on the step, or `None` once the step is reached: the field
+    has a value, it is no longer an active field, or the days are over.
+    The first look sets when the days end."""
+    active, value = _custom_value(session, run.tenant_id, contact, args["field_key"])
+    if not active or rules.has_value(value):
+        return None
+    if run.field_wait_until is None:
+        run.field_wait_until = now + timedelta(days=args["max_days"])
+    if now >= run.field_wait_until:
+        return None
+    return min(now + FIELD_LOOK_EVERY, run.field_wait_until)
 
 
 def _opening(session: Session, workspace: uuid.UUID, now: datetime) -> datetime | None:
@@ -946,6 +996,15 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
                 AutomationStep.position == position,
             )
         ).first()
+        if done is None and action.type == "wait_for_field":
+            pending = _field_pending(session, contact, run, action.args, now)
+            if pending is not None:
+                # Still no value: the run stays on this step and looks again.
+                run.status, run.resume_at, run.updated_at = "waiting", pending, now
+                run.attempts, run.last_error = 0, None
+                session.flush()
+                _schedule(run_id, workspace, pending)
+                return "waiting", False
         if done is None:
             # Steps run with the activating member's rights; the run worker
             # acts, so their entries name it, not the member (K3.6).
@@ -971,7 +1030,7 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
         # A step that succeeded resets the failure count: five unrelated
         # transient errors over a long run do not fail it (13-H5).
         run.next_step, run.updated_at, run.last_error = position + 1, now, None
-        run.attempts = 0
+        run.attempts, run.field_wait_until = 0, None
         resume_at = _resume_at(session, workspace, contact, action, now)
         if resume_at is not None:
             run.status = "waiting"

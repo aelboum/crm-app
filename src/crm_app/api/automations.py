@@ -95,6 +95,7 @@ class StepOut(BaseModel):
         "wait_for_business_hours",
         "set_custom_field",
         "wait_until_date",
+        "wait_for_field",
     ]
     outcome: Literal["done", "skipped"]
     detail: str | None

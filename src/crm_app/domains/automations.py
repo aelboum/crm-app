@@ -44,6 +44,10 @@ Decision P8-D adds `wait_until_date` (`field_key` of a contact custom
 field of type date, `offset_days` from -365 to 365 and `hour` from 0 to
 23): the run waits until that date, moved by the days, at that hour in the
 workspace's time zone. No date, or a moment already past, skips the step.
+Decision P8-J adds `wait_for_field` (`field_key` of a contact custom field
+of any type, `max_days` from 1 to 365): the run goes on as soon as the
+contact's field has a value, looked at again every few minutes, and skips
+the step as `timed_out` once the days have gone by without one.
 Contacts created by an import never start an automation.
 
 Conditions read the contact's `source` or `lifecycle_stage` (`in`,
@@ -108,6 +112,7 @@ ACTIONS = (
     "wait_for_business_hours",
     "set_custom_field",
     "wait_until_date",
+    "wait_for_field",
 )
 PRIORITIES = ("high", "medium", "low")
 MAX_ACTIONS = 10
@@ -124,6 +129,8 @@ MAX_VALUES = 20
 # A `wait_until_date` step (P8-D): days before or after the date, and the
 # hour of the day in the workspace's time zone.
 OFFSET_DAYS_MAX = 365
+# A `wait_for_field` step (P8-J): the longest it waits for a value, in days.
+FIELD_WAIT_DAYS_MAX = 365
 
 
 @dataclass(frozen=True)
@@ -299,6 +306,23 @@ def _date_wait(raw: Mapping[str, Any], where: str) -> Action:
     return Action("wait_until_date", _date_args(raw, where))
 
 
+def _field_wait(raw: Mapping[str, Any], where: str) -> Action:
+    """`wait_for_field` (P8-J): a contact field's key and the days it waits
+    at most; that the key names an active contact field is checked at
+    activation."""
+    _keys(raw, {"type", "field_key", "max_days"}, where)
+    key = _field_key(raw.get("field_key"), f"{where}.field_key")
+    days = _whole(raw.get("max_days"), 1, FIELD_WAIT_DAYS_MAX, f"{where}.max_days")
+    return Action("wait_for_field", {"field_key": key, "max_days": days})
+
+
+def has_value(stored: object) -> bool:
+    """Whether a stored custom field value counts as filled in for
+    `wait_for_field` (P8-J), as for a `present` condition: anything but
+    nothing. False and 0 are values."""
+    return stored is not None
+
+
 def date_reached_on(today: date, offset_days: int) -> date | None:
     """The stored date (P8-I) whose day, moved by `offset_days`, is
     `today`; `None` past the calendar's ends."""
@@ -351,6 +375,7 @@ def _action(raw: object, where: str) -> Action:
         "assign_round_robin": _rotation,
         "set_custom_field": _field_value,
         "wait_until_date": _date_wait,
+        "wait_for_field": _field_wait,
     }
     if isinstance(kind, str) and kind in builder:
         return builder[kind](raw, where)
@@ -577,6 +602,14 @@ def date_fields(given: Definition) -> set[str]:
     check before activation."""
     return {
         step.args["field_key"] for step in (*given.yes, *given.no) if step.type == "wait_until_date"
+    }
+
+
+def waited_fields(given: Definition) -> set[str]:
+    """The contact fields `wait_for_field` steps wait for (P8-J), to check
+    before activation."""
+    return {
+        step.args["field_key"] for step in (*given.yes, *given.no) if step.type == "wait_for_field"
     }
 
 

@@ -386,6 +386,7 @@ describe("automations", () => {
       "Wait",
       "Wait for business hours",
       "Wait until a date",
+      "Wait for a field value",
     ]);
     expect(await accessibilityViolations()).toEqual([]);
     await user.click(
@@ -901,6 +902,58 @@ describe("automations", () => {
         field_key: "renewal",
         offset_days: -3,
         hour: 8,
+      });
+    });
+  });
+
+  it("waits for a contact field's value (P8-J)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Seats known");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "wait_for_field",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    const field = within(dialog).getByLabelText(
+      "Custom field, step 1 of Steps",
+    );
+    await waitFor(() => {
+      expect(field).toHaveValue("tier");
+    });
+    await user.selectOptions(field, "seats");
+    const days = within(dialog).getByLabelText("Wait at most, step 1 of Steps");
+    expect(days).toHaveValue("7");
+    await user.selectOptions(days, "30 days");
+    expect(
+      within(dialog).getByText(/looked at again every 10 minutes/),
+    ).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "POST")?.body as {
+        definition: { yes: unknown[] };
+      };
+      expect(body.definition.yes[0]).toEqual({
+        type: "wait_for_field",
+        field_key: "seats",
+        max_days: 30,
       });
     });
   });

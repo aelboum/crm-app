@@ -543,6 +543,8 @@ function newAction(
       field_key: fields[0]?.key ?? "",
       value: fieldStart(fields[0]),
     };
+  if (type === "wait_for_field")
+    return { type, field_key: fields[0]?.key ?? "", max_days: 7 };
   if (type === "notify_member")
     return { type, recipient: "contact_owner", message: "" };
   if (type === "assign_round_robin")
@@ -1260,6 +1262,9 @@ function Branch({
             <option value="wait_until_date">
               {t("automations.action.wait_until_date")}
             </option>
+            <option value="wait_for_field">
+              {t("automations.action.wait_for_field")}
+            </option>
           </select>
           <Button
             size="sm"
@@ -1465,6 +1470,17 @@ function ActionEditor({
           }}
         />
       </div>
+    );
+  }
+  if (action.type === "wait_for_field") {
+    return (
+      <FieldWaitStep
+        action={action}
+        kind={kind}
+        fields={fields}
+        label={label}
+        onChange={onChange}
+      />
     );
   }
   if (action.type === "wait_until_date") {
@@ -1679,6 +1695,73 @@ function FieldStep({
       </select>
       {control}
       <p className="form-hint">{t("automations.fieldHint")}</p>
+    </div>
+  );
+}
+
+const WAIT_DAYS = [1, 2, 3, 7, 14, 30, 60, 90, 180, 365];
+
+/*
+ * P8-J: which contact custom field to wait for, and for how many days at
+ * most. A field archived since stays chosen until changed.
+ */
+function FieldWaitStep({
+  action,
+  kind,
+  fields,
+  label,
+  onChange,
+}: {
+  action: Extract<Action, { type: "wait_for_field" }>;
+  kind: string;
+  fields: FieldDefinition[];
+  label: (field: MessageId) => string;
+  onChange: (action: Action) => void;
+}) {
+  const t = useT();
+  const known = fields.some((f) => f.key === action.field_key);
+  return (
+    <div className="automation-step-body">
+      <span className="automation-step-kind">{kind}</span>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.customField")}
+        value={action.field_key}
+        onChange={(event) => {
+          onChange({ ...action, field_key: event.target.value });
+        }}
+      >
+        {!fields.length && !action.field_key ? (
+          <option value="">{t("automations.noFields")}</option>
+        ) : null}
+        {action.field_key && !known ? (
+          <option value={action.field_key}>{t("automations.fieldGone")}</option>
+        ) : null}
+        {fields.map((option) => (
+          <option key={option.id} value={option.key}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.maxDays")}
+        value={action.max_days}
+        onChange={(event) => {
+          onChange({ ...action, max_days: Number(event.target.value) });
+        }}
+      >
+        {[...new Set([...WAIT_DAYS, action.max_days])]
+          .sort((x, y) => x - y)
+          .map((days) => (
+            <option key={days} value={days}>
+              {days === 1
+                ? t("automations.maxDay")
+                : t("automations.maxDays", { count: days })}
+            </option>
+          ))}
+      </select>
+      <p className="form-hint">{t("automations.fieldWaitHint")}</p>
     </div>
   );
 }
