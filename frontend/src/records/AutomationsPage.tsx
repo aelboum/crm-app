@@ -563,7 +563,10 @@ function newTrigger(
   type: TriggerType,
   tags: Option[],
   stages: Option[],
+  dateKey: string,
 ): Trigger {
+  if (type === "date_reached")
+    return { type, field_key: dateKey, offset_days: 0, hour: 9 };
   if (type === "tag_added") return { type, tag_id: tags[0]?.id ?? "" };
   if (type === "form_submitted") return { type, form_id: null };
   if (type === "appointment_booked") return { type, booking_page_id: null };
@@ -619,11 +622,13 @@ function TriggerFields({
   workspaceId,
   trigger,
   tags,
+  fields,
   onChange,
 }: {
   workspaceId: string;
   trigger: Trigger;
   tags: Option[];
+  fields: FieldDefinition[];
   onChange: (trigger: Trigger) => void;
 }) {
   const t = useT();
@@ -670,7 +675,14 @@ function TriggerFields({
         aria-label={t("automations.triggerKind")}
         value={trigger.type}
         onChange={(event) => {
-          onChange(newTrigger(event.target.value as TriggerType, tags, stages));
+          onChange(
+            newTrigger(
+              event.target.value as TriggerType,
+              tags,
+              stages,
+              fields.find((f) => f.field_type === "date")?.key ?? "",
+            ),
+          );
         }}
       >
         {TRIGGER_TYPES.map((type) => (
@@ -766,6 +778,19 @@ function TriggerFields({
               onChange({ type: trigger.type, campaign_id: id });
             }}
           />
+        </>
+      ) : null}
+      {trigger.type === "date_reached" ? (
+        <>
+          <DateParts
+            value={trigger}
+            fields={fields}
+            label={(field) => t(field)}
+            onChange={(parts) => {
+              onChange({ type: "date_reached", ...parts });
+            }}
+          />
+          <p className="form-hint">{t("automations.triggerDateHint")}</p>
         </>
       ) : null}
     </fieldset>
@@ -941,6 +966,7 @@ function AutomationEditor({
           workspaceId={workspaceId}
           trigger={definition.trigger}
           tags={tags}
+          fields={fields}
           onChange={(trigger) => {
             set({ trigger });
           }}
@@ -1674,31 +1700,43 @@ function dayOffsetLabel(t: T, days: number): string {
  * hour in the workspace's time zone. A field archived since stays chosen
  * until changed, like the field step.
  */
-function DateWaitStep({
-  action,
-  kind,
+interface DatePartsValue {
+  field_key: string;
+  offset_days: number;
+  hour: number;
+}
+
+/*
+ * A contact date field, the days before or after it and the hour: the
+ * "Wait until a date" step (P8-D) and the date trigger (P8-I).
+ */
+function DateParts({
+  value: action,
   fields,
   label,
   onChange,
 }: {
-  action: Extract<Action, { type: "wait_until_date" }>;
-  kind: string;
+  value: DatePartsValue;
   fields: FieldDefinition[];
   label: (field: MessageId) => string;
-  onChange: (action: Action) => void;
+  onChange: (value: DatePartsValue) => void;
 }) {
   const t = useT();
   const dates = fields.filter((f) => f.field_type === "date");
   const known = dates.some((f) => f.key === action.field_key);
+  const parts = {
+    field_key: action.field_key,
+    offset_days: action.offset_days,
+    hour: action.hour,
+  };
   return (
-    <div className="automation-step-body">
-      <span className="automation-step-kind">{kind}</span>
+    <>
       <select
         className="form-input"
         aria-label={label("automations.field.dateField")}
         value={action.field_key}
         onChange={(event) => {
-          onChange({ ...action, field_key: event.target.value });
+          onChange({ ...parts, field_key: event.target.value });
         }}
       >
         {!dates.length && !action.field_key ? (
@@ -1718,7 +1756,7 @@ function DateWaitStep({
         aria-label={label("automations.field.offsetDays")}
         value={action.offset_days}
         onChange={(event) => {
-          onChange({ ...action, offset_days: Number(event.target.value) });
+          onChange({ ...parts, offset_days: Number(event.target.value) });
         }}
       >
         {[...new Set([...DAY_OFFSETS, action.offset_days])]
@@ -1734,7 +1772,7 @@ function DateWaitStep({
         aria-label={label("automations.field.hour")}
         value={action.hour}
         onChange={(event) => {
-          onChange({ ...action, hour: Number(event.target.value) });
+          onChange({ ...parts, hour: Number(event.target.value) });
         }}
       >
         {HOURS.map((hour) => (
@@ -1743,6 +1781,35 @@ function DateWaitStep({
           </option>
         ))}
       </select>
+    </>
+  );
+}
+
+function DateWaitStep({
+  action,
+  kind,
+  fields,
+  label,
+  onChange,
+}: {
+  action: Extract<Action, { type: "wait_until_date" }>;
+  kind: string;
+  fields: FieldDefinition[];
+  label: (field: MessageId) => string;
+  onChange: (action: Action) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="automation-step-body">
+      <span className="automation-step-kind">{kind}</span>
+      <DateParts
+        value={action}
+        fields={fields}
+        label={label}
+        onChange={(parts) => {
+          onChange({ type: "wait_until_date", ...parts });
+        }}
+      />
       <p className="form-hint">{t("automations.dateWaitHint")}</p>
     </div>
   );

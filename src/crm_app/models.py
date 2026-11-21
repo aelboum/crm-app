@@ -1,6 +1,6 @@
 """Mappings of this product's tables (`PHASE3-PLAN.md` §19.2, §21).
 
-Migrations `0002_contacts_companies` to `0052_wait_until_date` own the
+Migrations `0002_contacts_companies` to `0053_date_reached_trigger` own the
 schema: the constraints, the partial
 unique indexes, the grants and the Row-Level Security policies live there,
 and these classes never create tables. They declare the columns the
@@ -976,6 +976,18 @@ class AutomationDue(Base):
 
     run_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     workspace_id: Mapped[uuid.UUID] = mapped_column()
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AutomationDateWorkspace(Base):
+    """A workspace with an active `date_reached` automation, and when the
+    maintenance run next looks at it (global, for the run; migration 0053,
+    P8-I)."""
+
+    __tablename__ = "automation_date_workspace"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

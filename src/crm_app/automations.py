@@ -9,6 +9,13 @@
   creates the contact (`records.insert_record`): one run per active
   automation it matches, at most once per automation and contact, indexed
   as due now in the global `automation_due`.
+- **Date trigger (P8-I):** activating a `date_reached` automation
+  registers its workspace in the global `automation_date_workspace`. The
+  maintenance run calls `start_date_reached`: for each registered workspace
+  due, in its own tenant session, it starts the automation for every
+  contact whose date, moved by the days, is today in the workspace's time
+  zone once the hour has come, `PER_DATE_SCAN` contacts at a time, and
+  looks again after `DATE_SCAN_EVERY`.
 - **Execution:** `advance` takes a run under a row lock and executes its
   steps in order. Each step's effect and its `automation_step` row commit
   together, so a retried job finds the step done and never acts twice. A
@@ -26,15 +33,17 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from saas_os.core.audit_log import record_in_transaction
 from saas_os.core.authority import UserCaller
 from saas_os.core.identity import get_membership
-from saas_os.core.tenancy import lock_open_tenant
+from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
 from saas_os.infra.db import (
     IntegrityError,
     OperationalError,
@@ -56,6 +65,7 @@ from crm_app.domains.opportunities import OPEN
 from crm_app.domains.records import InvalidValue
 from crm_app.models import (
     Automation,
+    AutomationDateWorkspace,
     AutomationDue,
     AutomationRotation,
     AutomationRun,
@@ -93,6 +103,12 @@ JOB_NAME = "crm_app_automation_run"
 MAX_ATTEMPTS = 5
 RETRY_DELAY = timedelta(minutes=5)
 RUN_PAGE = 50
+# The date trigger (P8-I): how often a workspace's contacts are looked at,
+# and how many are started per automation each time.
+DATE_SCAN_EVERY = timedelta(minutes=5)
+PER_DATE_SCAN = 200
+
+logger = logging.getLogger(__name__)
 
 Item = dict[str, Any]
 
@@ -324,6 +340,13 @@ def _check_fields(session: Session, scope: Scope, given: rules.Definition) -> No
             raise AutomationRuleError("a custom field it sets is not an active contact field")
         if not _fits(field, value):
             raise AutomationRuleError(f"the value for the custom field {key} does not fit it")
+    trigger_field = rules.trigger_date_field(given)
+    if trigger_field is not None:
+        field = custom_fields.active_definitions(session, scope, "contact").get(trigger_field)
+        if field is None or field.field_type != "date":
+            raise AutomationRuleError(
+                "the date field its trigger reads is not an active contact date field"
+            )
     waits = rules.date_fields(given)
     if waits:
         dated = custom_fields.active_definitions(session, scope, "contact")
@@ -415,6 +438,8 @@ def activate(scope: Scope, automation_id: uuid.UUID, *, expected_version: int) -
         row.version += 1
         session.flush()
         _audit(session, scope, "activated", automation_id, version=number)
+        if given.trigger == "date_reached":
+            _register_date_workspace(scope.workspace, now)
         return _item(row)
 
     return _transaction(scope, apply)
@@ -999,6 +1024,158 @@ def record_failure(workspace: uuid.UUID, run_id: uuid.UUID, code: str) -> str:
     else:
         _schedule(run_id, workspace, now + RETRY_DELAY)
     return status
+
+
+# --- The date trigger (P8-I) -----------------------------------------------------------
+
+
+def _register_date_workspace(workspace: uuid.UUID, now: datetime) -> None:
+    """Have the next maintenance run look at `workspace`. Its own
+    transaction, before the activation commits: a rolled-back activation
+    leaves a row that the run finds with nothing active and removes."""
+    with session_scope() as session:
+        row = session.get(AutomationDateWorkspace, workspace, with_for_update=True)
+        if row is None:
+            session.add(AutomationDateWorkspace(workspace_id=workspace, due_at=now))
+        else:
+            row.due_at = now
+
+
+def forget_date_workspace(tenant_id: uuid.UUID) -> bool:
+    """Remove a purged workspace's row; True when none remains."""
+    with session_scope() as session:
+        session.execute(
+            delete(AutomationDateWorkspace).where(AutomationDateWorkspace.workspace_id == tenant_id)
+        )
+    with session_scope() as session:
+        return session.get(AutomationDateWorkspace, tenant_id) is None
+
+
+def _date_fields_of(session: Session, workspace: uuid.UUID) -> set[str]:
+    return set(
+        session.execute(
+            select(CustomFieldDefinition.key).where(
+                CustomFieldDefinition.tenant_id == workspace,
+                CustomFieldDefinition.entity == "contact",
+                CustomFieldDefinition.field_type == "date",
+                CustomFieldDefinition.archived_at.is_(None),
+            )
+        ).scalars()
+    )
+
+
+def _scan_date_workspace(workspace: uuid.UUID, now: datetime) -> tuple[int, bool] | None:
+    """Start the workspace's `date_reached` automations for the contacts
+    whose day is today; (runs started, whether contacts were left for the
+    next look), or None when no such automation is active."""
+    with tenant_session_scope(workspace) as session:
+        lock_open_tenant(session, workspace)
+        rows = _active(session, workspace, "date_reached")
+        if not rows:
+            return None
+        _, zone = workspace_hours(session, workspace)
+        local = now.astimezone(ZoneInfo(zone))
+        dated = _date_fields_of(session, workspace)
+        started: list[uuid.UUID] = []
+        more = False
+        for automation_id, version, definition in rows:
+            parsed = _stored(definition)
+            if version is None or parsed is None or parsed.trigger_args is None:
+                continue
+            key, hour = parsed.trigger_args["field_key"], parsed.trigger_args["hour"]
+            day = rules.date_reached_on(local.date(), parsed.trigger_args["offset_days"])
+            # A field archived or retyped since activation starts nobody.
+            if key not in dated or local.hour < hour or day is None:
+                continue
+            already = select(AutomationRun.contact_id).where(
+                AutomationRun.tenant_id == workspace, AutomationRun.automation_id == automation_id
+            )
+            contacts = list(
+                session.execute(
+                    select(Contact.id)
+                    .where(
+                        Contact.tenant_id == workspace,
+                        Contact.archived_at.is_(None),
+                        Contact.custom_fields[key].as_string() == day.isoformat(),
+                        Contact.id.not_in(already),
+                    )
+                    .order_by(Contact.id)
+                    .limit(PER_DATE_SCAN)
+                ).scalars()
+            )
+            more = more or len(contacts) == PER_DATE_SCAN
+            for contact_id in contacts:
+                run_id = uuid.uuid4()
+                try:
+                    # A concurrent look may start it first.
+                    with session.begin_nested():
+                        session.add(
+                            _new_run(workspace, automation_id, version, contact_id, run_id, now)
+                        )
+                        session.flush()
+                except IntegrityError:
+                    continue
+                started.append(run_id)
+        _index_runs(workspace, started, now)
+    return len(started), more
+
+
+def _due_date_workspaces(now: datetime, limit: int) -> list[tuple[uuid.UUID, datetime]]:
+    """The registered workspaces due, each pushed back by `DATE_SCAN_EVERY`
+    so a failed look is tried again; (workspace, the time it was set to)."""
+    later = now + DATE_SCAN_EVERY
+    with session_scope() as session:
+        rows = session.execute(
+            select(AutomationDateWorkspace)
+            .where(AutomationDateWorkspace.due_at <= now)
+            .order_by(AutomationDateWorkspace.due_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        ).scalars()
+        due_now: list[tuple[uuid.UUID, datetime]] = []
+        for row in rows:
+            row.due_at = later
+            due_now.append((row.workspace_id, later))
+    return due_now
+
+
+def _after_scan(workspace: uuid.UUID, set_to: datetime, outcome: tuple[int, bool] | None) -> None:
+    # Only a row this run set: an activation since then set it to now.
+    with session_scope() as session:
+        if outcome is None:
+            session.execute(
+                delete(AutomationDateWorkspace).where(
+                    AutomationDateWorkspace.workspace_id == workspace,
+                    AutomationDateWorkspace.due_at == set_to,
+                )
+            )
+        elif outcome[1]:
+            row = session.get(AutomationDateWorkspace, workspace, with_for_update=True)
+            if row is not None and row.due_at == set_to:
+                row.due_at = _now()
+
+
+def start_date_reached(now: datetime | None = None, *, limit: int = 500) -> dict[str, int]:
+    """Start the `date_reached` automations whose day has come (P8-I). A
+    workspace that fails is looked at again after `DATE_SCAN_EVERY`."""
+    now = now or _now()
+    totals = {"started": 0, "workspaces": 0, "failed": 0}
+    for workspace, set_to in _due_date_workspaces(now, limit):
+        try:
+            outcome = _scan_date_workspace(workspace, now)
+        except (TenantClosedError, TenantNotFoundError, IntegrityError, OperationalError):
+            totals["failed"] += 1
+            continue
+        except Exception as exc:  # noqa: BLE001 - one workspace never stops the run
+            # The workspace id and the error's type only: never its data.
+            logger.warning("date trigger: workspace %s failed (%s)", workspace, type(exc).__name__)
+            totals["failed"] += 1
+            continue
+        _after_scan(workspace, set_to, outcome)
+        totals["workspaces"] += 1
+        if outcome is not None:
+            totals["started"] += outcome[0]
+    return totals
 
 
 # --- The global index and the sweeper ------------------------------------------------------

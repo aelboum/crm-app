@@ -143,6 +143,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "saved_view",
         # P8-R (round-robin counters).
         "automation_rotation",
+        # P8-I (workspaces with a date trigger).
+        "automation_date_workspace",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
@@ -193,6 +195,7 @@ GLOBAL_TABLES: frozenset[str] = frozenset(
         "reminder_workspace",
         "member_reminder_workspace",
         "campaign_queue",
+        "automation_date_workspace",
     }
 )
 

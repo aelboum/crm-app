@@ -388,4 +388,5 @@ def test_the_migration_rolls_back_and_forward(
         "member_reminder_workspace",
         "saved_view",
         "automation_rotation",
+        "automation_date_workspace",
     }

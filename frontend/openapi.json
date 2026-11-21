@@ -1096,7 +1096,8 @@
               "appointment_booked",
               "deal_stage_changed",
               "campaign_sent",
-              "campaign_unsubscribed"
+              "campaign_unsubscribed",
+              "date_reached"
             ],
             "title": "Trigger Type",
             "type": "string"

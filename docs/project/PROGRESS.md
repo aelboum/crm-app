@@ -1390,6 +1390,27 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Automation trigger on a contact's date (2026-11-21, owner: "go 1 and then 3")
+
+Decision P8-I, migration `0053_date_reached_trigger`. An automation starts
+for a contact on the day its date in a contact date field, moved by -365 to
+365 days, falls in the workspace's time zone, once the chosen hour has come.
+The automation maintenance run looks at each registered workspace every 5
+minutes. Each automation still runs at most once per contact.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/integration` (full suite) against `crm_app_test` at `0053` | 962 passed (1:04:04) |
+| `pytest tests/integration/test_automation_date_trigger.py` | 3 passed |
+| `pytest tests/unit` | 866 passed |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 0 errors; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | `openapi.json` and `schema.d.ts` regenerated (the trigger type) |
+| `npx vitest run` | 38 files, 425 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+Not tested: a yearly repeat (not built), and the look against a large
+workspace (no JSON index). Not deployed to staging.
+
 ## Staging deployed at `ae5f9d0` (2026-11-21, owner: "go 1 and then 3")
 
 From `cd3a844`: the automation step that waits until a contact's date

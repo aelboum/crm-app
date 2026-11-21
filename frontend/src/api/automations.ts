@@ -101,7 +101,14 @@ export type Trigger =
   | { type: "deal_stage_changed"; stage_id: string }
   // Decision P8-C: for one campaign, or any when null.
   | { type: "campaign_sent"; campaign_id: string | null }
-  | { type: "campaign_unsubscribed"; campaign_id: string | null };
+  | { type: "campaign_unsubscribed"; campaign_id: string | null }
+  // Decision P8-I: a contact's date, moved by the days, at the hour.
+  | {
+      type: "date_reached";
+      field_key: string;
+      offset_days: number;
+      hour: number;
+    };
 export type TriggerType = Trigger["type"];
 export const TRIGGER_TYPES: TriggerType[] = [
   "contact_created",
@@ -111,6 +118,7 @@ export const TRIGGER_TYPES: TriggerType[] = [
   "deal_stage_changed",
   "campaign_sent",
   "campaign_unsubscribed",
+  "date_reached",
 ];
 
 export interface Definition {

@@ -1073,6 +1073,53 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-I — Automation trigger on a contact's date (2026-11-21)
+
+- **Status:** Implemented on the owner's "go 1 and then 3" (option 3: a
+  "date reached" trigger, so an automation starts on a contact's date
+  instead of waiting inside a run).
+- **Decision:** a trigger `{"type": "date_reached", "field_key": ...,
+  "offset_days": -365..365 (0 when left out), "hour": 0..23}` starts the
+  automation for a contact on the day its date in one contact custom field
+  of type `date`, moved by `offset_days`, falls in the workspace's time
+  zone, once `hour`:00 has come ("7 days before Renewal, at 09:00").
+  - Activation checks that the key names an active contact field of type
+    `date` ("the date field its trigger reads is not an active contact
+    date field") and registers the workspace in a new global table,
+    `automation_date_workspace` (an id and a time only, tenant-context
+    exclusion, removed by the purge participant).
+  - The automation maintenance run (`crm_app.automation_maintenance`, every
+    minute) calls `start_date_reached` first. For each registered workspace
+    due, in that workspace's own tenant session, it starts every active
+    `date_reached` automation for the unarchived contacts whose stored date
+    is today minus `offset_days`, up to 200 per automation per look, and
+    looks again after 5 minutes (at once when the 200 were taken). The new
+    runs are due at once, so the same pass enqueues them.
+  - Only that day counts: a contact whose day has already gone, or whose
+    day passes while the run is down, is not started. Activating an
+    automation late in the day still starts that day's contacts once the
+    hour has come.
+  - The rule that an automation runs at most once per contact stays, so a
+    date that comes back every year (a birthday, a yearly renewal) starts
+    it only the first time. Repeating every year is not built: it needs
+    runs per contact and per occurrence.
+  - A field archived or no longer a date field since activation starts
+    nobody. A workspace with no active `date_reached` automation left has
+    its row removed by the next look.
+  - Migration `0053_date_reached_trigger`: `automation.trigger_type` also
+    allows `date_reached`; the new global table and its grants.
+  - The look filters on the JSON value of the field without an index;
+    enough for the staging and pilot sizes, to revisit with large
+    workspaces.
+- **Editor:** "A date in a contact field comes" trigger with the same three
+  controls as the "Wait until a date" step (shared component) and a hint
+  that names the once-per-contact rule.
+- **Tests:** unit `test_automation_rules.py` (refused shapes, the stored
+  date a day leads to); `tests/unit/test_purge.py` and the catalog lists
+  for the new global table; `tests/integration/test_automation_date_trigger.py`
+  (refusals, the hour, once per contact, archived contacts, another
+  workspace, the row removed when nothing is active); `automations.test.tsx`.
+
 ## P8-D — Automation step that waits until a contact's date (2026-11-21)
 
 - **Status:** Implemented on the owner's "go 1, then 2 and 3 together then

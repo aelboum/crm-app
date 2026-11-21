@@ -21,6 +21,11 @@ deal's contact). Decision P8-C adds `campaign_sent`, when the provider
 accepts a campaign's email to the contact (never delivery; a rehearsal sends
 nothing, so it never fires), and `campaign_unsubscribed`, when the contact
 uses a campaign's unsubscribe link; both take an optional `campaign_id`.
+Decision P8-I adds `date_reached` (`field_key` of a contact date field,
+`offset_days` and `hour` as `wait_until_date` takes them): it starts for a
+contact on the day its date, moved by the days, falls in the workspace's
+time zone, once that hour has come. The maintenance run looks for such
+contacts; nothing starts for a day already gone.
 Each automation runs at most once per contact, whatever the trigger, so
 automations that trigger one another always stop.
 
@@ -78,6 +83,7 @@ TRIGGERS = (
     "deal_stage_changed",
     "campaign_sent",
     "campaign_unsubscribed",
+    "date_reached",
 )
 # The record a trigger may be limited to, and whether it must be.
 TRIGGER_SUBJECTS: dict[str, tuple[str, bool]] = {
@@ -135,6 +141,8 @@ class Definition:
     trigger: str = "contact_created"
     # The tag, form, booking page or stage the trigger is limited to.
     subject_id: str | None = None
+    # A `date_reached` trigger's `field_key`, `offset_days` and `hour` (P8-I).
+    trigger_args: Mapping[str, Any] | None = None
 
     def branch(self, name: str) -> tuple[Action, ...]:
         return self.yes if name == "yes" else self.no
@@ -142,6 +150,8 @@ class Definition:
     def _trigger_json(self) -> dict[str, Any]:
         if self.trigger == "contact_created":
             return {"type": self.trigger, "sources": list(self.sources)}
+        if self.trigger == "date_reached":
+            return {"type": self.trigger, **(self.trigger_args or {})}
         key, _ = TRIGGER_SUBJECTS[self.trigger]
         return {"type": self.trigger, key: self.subject_id}
 
@@ -272,16 +282,30 @@ def _whole(value: object, lowest: int, highest: int, where: str) -> int:
     return value
 
 
-def _date_wait(raw: Mapping[str, Any], where: str) -> Action:
-    """`wait_until_date` (P8-D): a date field's key, days and an hour; that
-    the key names an active contact date field is checked at activation."""
+def _date_args(raw: Mapping[str, Any], where: str) -> dict[str, Any]:
+    """A date field's key, days and an hour, as `wait_until_date` (P8-D)
+    and `date_reached` (P8-I) take them; that the key names an active
+    contact date field is checked at activation."""
     _keys(raw, {"type", "field_key", "offset_days", "hour"}, where)
     key = _field_key(raw.get("field_key"), f"{where}.field_key")
     days = _whole(
         raw.get("offset_days", 0), -OFFSET_DAYS_MAX, OFFSET_DAYS_MAX, f"{where}.offset_days"
     )
     hour = _whole(raw.get("hour"), 0, 23, f"{where}.hour")
-    return Action("wait_until_date", {"field_key": key, "offset_days": days, "hour": hour})
+    return {"field_key": key, "offset_days": days, "hour": hour}
+
+
+def _date_wait(raw: Mapping[str, Any], where: str) -> Action:
+    return Action("wait_until_date", _date_args(raw, where))
+
+
+def date_reached_on(today: date, offset_days: int) -> date | None:
+    """The stored date (P8-I) whose day, moved by `offset_days`, is
+    `today`; `None` past the calendar's ends."""
+    try:
+        return today - timedelta(days=offset_days)
+    except OverflowError:
+        return None
 
 
 def date_wait_at(stored: object, offset_days: int, hour: int, zone: str) -> datetime | None:
@@ -404,7 +428,10 @@ def definition(raw: object) -> Definition:
     kind = str(trigger["type"])
     sources: tuple[str, ...] = ()
     subject: str | None = None
-    if kind == "contact_created":
+    trigger_args: dict[str, Any] | None = None
+    if kind == "date_reached":
+        trigger_args = _date_args(trigger, "trigger")
+    elif kind == "contact_created":
         _keys(trigger, {"type", "sources"}, "trigger")
         raw_sources = trigger.get("sources") or []
         if raw_sources:
@@ -425,7 +452,9 @@ def definition(raw: object) -> Definition:
         branches[branch] = tuple(_action(step, f"{branch}[{i}]") for i, step in enumerate(steps))
     if condition is None and branches["no"]:
         raise InvalidValue("no: only with a condition")
-    return Definition(sources, condition, branches["yes"], branches["no"], kind, subject)
+    return Definition(
+        sources, condition, branches["yes"], branches["no"], kind, subject, trigger_args
+    )
 
 
 def activatable(given: Definition) -> None:
@@ -437,7 +466,7 @@ def activatable(given: Definition) -> None:
 def matches(given: Definition, trigger: str, subject_id: str | None) -> bool:
     """Whether an event (`trigger` about the tag, form, booking page or
     stage `subject_id`) starts the automation."""
-    if given.trigger != trigger or trigger == "contact_created":
+    if given.trigger != trigger or trigger in ("contact_created", "date_reached"):
         return False
     return given.subject_id is None or given.subject_id == subject_id
 
@@ -549,3 +578,9 @@ def date_fields(given: Definition) -> set[str]:
     return {
         step.args["field_key"] for step in (*given.yes, *given.no) if step.type == "wait_until_date"
     }
+
+
+def trigger_date_field(given: Definition) -> str | None:
+    """The contact date field a `date_reached` trigger reads (P8-I), to
+    check before activation; None for other triggers."""
+    return None if given.trigger_args is None else given.trigger_args["field_key"]

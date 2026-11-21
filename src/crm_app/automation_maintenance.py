@@ -8,7 +8,8 @@ through a queue outside its public surface. New runs and runs whose wait
 has passed are found in the global `automation_due`, read without a
 workspace; each is pushed back by `RETRY_DELAY` and its job enqueued, so a
 lost job is tried again. The job decides what to do; a step it already did
-is never done again. It prints counts only.
+is never done again. First it starts the automations whose date trigger
+has come (P8-I). It prints counts only.
 """
 
 from __future__ import annotations
@@ -36,8 +37,16 @@ async def _enqueue_all(pairs: list[tuple[uuid.UUID, uuid.UUID]]) -> tuple[int, i
 def maintain() -> dict[str, int]:
     from crm_app import automations  # noqa: PLC0415
 
+    # Runs a date trigger starts (P8-I) are due at once, so this same pass
+    # enqueues them.
+    dated = automations.start_date_reached()
     queued, unreachable = asyncio.run(_enqueue_all(automations.due()))
-    return {"queued": queued, "unreachable": unreachable}
+    return {
+        "queued": queued,
+        "unreachable": unreachable,
+        "date_started": dated["started"],
+        "date_failed": dated["failed"],
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -46,7 +55,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     validate_settings(Process.WORKER)
     report = maintain()
-    print(f"automations: queued {report['queued']}, queue unreachable {report['unreachable']}")
+    print(
+        f"automations: queued {report['queued']}, queue unreachable {report['unreachable']},"
+        f" started by a date {report['date_started']},"
+        f" date workspaces failed {report['date_failed']}"
+    )
     return 1 if report["unreachable"] else 0
 
 

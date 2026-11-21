@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -137,6 +138,21 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
             ]
         },
         {"yes": [{"type": "wait_until_date", "field_key": "renewal", "hour": 9, "x": 1}]},
+        # P8-I
+        {"trigger": {"type": "date_reached", "hour": 9}},
+        {"trigger": {"type": "date_reached", "field_key": "Bad Key", "hour": 9}},
+        {"trigger": {"type": "date_reached", "field_key": "renewal"}},
+        {"trigger": {"type": "date_reached", "field_key": "renewal", "hour": -1}},
+        {
+            "trigger": {
+                "type": "date_reached",
+                "field_key": "renewal",
+                "hour": 9,
+                "offset_days": -366,
+            }
+        },
+        {"trigger": {"type": "date_reached", "field_key": "renewal", "hour": 9, "tag_id": TAG}},
+        {"trigger": {"type": "date_reached", "field_key": "renewal", "hour": 9, "sources": []}},
         # P8-H
         {"condition": {"field": "deal", "op": "in", "values": ["open"]}},
         {"condition": {"field": "deal", "op": "has", "values": ["pending"]}},
@@ -413,3 +429,41 @@ def test_a_date_wait_ends_at_the_hour_in_the_workspace_zone() -> None:
         assert rules.date_wait_at(stored, 0, 9, "UTC") is None
     # Moved past the last date there is.
     assert rules.date_wait_at("9999-12-31", 1, 9, "UTC") is None
+
+
+def test_a_date_trigger_is_plain_data_and_never_matches_an_event() -> None:
+    """P8-I: `date_reached` takes a date field, days and an hour; the
+    maintenance run starts it, never an event."""
+    given = rules.definition(
+        _base(
+            trigger={"type": "date_reached", "field_key": "renewal", "offset_days": -7, "hour": 9}
+        )
+    )
+    assert given.as_json()["trigger"] == {
+        "type": "date_reached",
+        "field_key": "renewal",
+        "offset_days": -7,
+        "hour": 9,
+    }
+    assert rules.trigger_date_field(given) == "renewal"
+    assert rules.date_fields(given) == set()
+    assert rules.definition(given.as_json()) == given
+    for event in rules.TRIGGERS:
+        assert not rules.matches(given, event, None)
+    assert not rules.triggered_by(given, "manual")
+    plain = rules.definition(
+        _base(trigger={"type": "date_reached", "field_key": "renewal", "hour": 0})
+    )
+    assert plain.as_json()["trigger"]["offset_days"] == 0
+    assert rules.trigger_date_field(rules.definition(_base())) is None
+
+
+def test_a_date_trigger_looks_for_the_date_its_days_lead_to_today() -> None:
+    today = date(2026, 12, 1)
+    # Seven days before the renewal: renewals on 8 December start today.
+    assert rules.date_reached_on(today, -7) == date(2026, 12, 8)
+    # Three days after: dates of 28 November.
+    assert rules.date_reached_on(today, 3) == date(2026, 11, 28)
+    assert rules.date_reached_on(today, 0) == today
+    assert rules.date_reached_on(date(1, 1, 1), 1) is None
+    assert rules.date_reached_on(date(9999, 12, 31), -1) is None

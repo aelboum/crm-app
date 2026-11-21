@@ -905,6 +905,68 @@ describe("automations", () => {
     });
   });
 
+  it("starts on a contact's date (P8-I)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Renewal");
+    await user.selectOptions(
+      within(dialog).getByLabelText("When this happens"),
+      "date_reached",
+    );
+    const field = within(dialog).getByLabelText("Date field");
+    await waitFor(() => {
+      expect(field).toHaveValue("renewal");
+    });
+    // Only date fields are offered.
+    expect(
+      within(field)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Renewal"]);
+    await user.selectOptions(
+      within(dialog).getByLabelText("When"),
+      "7 days before",
+    );
+    await user.selectOptions(within(dialog).getByLabelText("At"), "10:00");
+    expect(
+      within(dialog).getByText(/a day already gone starts nobody/),
+    ).toBeInTheDocument();
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "add_tag",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "POST")?.body as {
+        definition: { trigger: unknown };
+      };
+      expect(body.definition.trigger).toEqual({
+        type: "date_reached",
+        field_key: "renewal",
+        offset_days: -7,
+        hour: 10,
+      });
+    });
+  });
+
   it("lists a removed stage so it can be cleared (P8-H)", async () => {
     const user = userEvent.setup();
     const gone = "e0000009-0000-4000-8000-000000000009";

@@ -3488,7 +3488,7 @@ export interface components {
              * Trigger Type
              * @enum {string}
              */
-            trigger_type: "contact_created" | "tag_added" | "form_submitted" | "appointment_booked" | "deal_stage_changed" | "campaign_sent" | "campaign_unsubscribed";
+            trigger_type: "contact_created" | "tag_added" | "form_submitted" | "appointment_booked" | "deal_stage_changed" | "campaign_sent" | "campaign_unsubscribed" | "date_reached";
             /**
              * Updated At
              * Format: date-time

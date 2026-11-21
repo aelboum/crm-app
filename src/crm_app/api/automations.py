@@ -65,6 +65,7 @@ class AutomationOut(BaseModel):
         "deal_stage_changed",
         "campaign_sent",
         "campaign_unsubscribed",
+        "date_reached",
     ]
     definition: dict[str, Any]
     active_version: int | None

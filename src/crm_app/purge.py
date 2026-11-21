@@ -126,6 +126,8 @@ _IDENTIFIER = re.compile(r"[a-z_][a-z0-9_]*")
 # `member_reminder_workspace` (migration 0039) says up to when a workspace
 # has appointments to remind their hosts of. `campaign_queue` (migration
 # 0046) names a workspace's campaigns waiting to be sent.
+# `automation_date_workspace` (migration 0053) says when a workspace's
+# date-triggered automations are next looked at.
 PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
     "signup",
     "import_expiry",
@@ -138,6 +140,7 @@ PURGE_GLOBAL_REFERENCES: tuple[str, ...] = (
     "reminder_workspace",
     "member_reminder_workspace",
     "campaign_queue",
+    "automation_date_workspace",
 )
 
 
@@ -237,6 +240,13 @@ def _forget_automation_due(tenant_id: uuid.UUID) -> None:
         raise PurgeIncompleteError("Rows remain in: automation_due")
 
 
+def _forget_date_triggers(tenant_id: uuid.UUID) -> None:
+    from crm_app import automations  # noqa: PLC0415
+
+    if not automations.forget_date_workspace(tenant_id):
+        raise PurgeIncompleteError("Rows remain in: automation_date_workspace")
+
+
 class PurgeIncompleteError(RuntimeError):
     """Rows of the purged workspace are still present after deletion. SaaS-OS
     records only this type name (`participant_error`) and leaves the
@@ -260,6 +270,7 @@ _GLOBAL_STEPS: tuple[tuple[tuple[str, ...], Callable[[uuid.UUID], None]], ...] =
     (("reminder_workspace",), _forget_reminders),
     (("member_reminder_workspace",), _forget_member_reminders),
     (("campaign_queue",), _forget_campaign_queue),
+    (("automation_date_workspace",), _forget_date_triggers),
 )
 
 
