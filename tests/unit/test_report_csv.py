@@ -52,6 +52,46 @@ def test_the_csv_has_the_fixed_columns_and_empty_cells_for_none() -> None:
     assert f"owners,{OWNER},1," in lines
 
 
+# --- The campaigns report (decision P10-C.1) -------------------------------------------
+
+
+def test_campaign_rows_carry_ids_and_counts_never_names() -> None:
+    campaign = uuid.uuid4()
+    rows = rules.campaign_csv_rows(
+        {
+            "period": {"start": date(2026, 11, 1), "end": date(2026, 11, 10), "days": 10},
+            "capped": False,
+            "campaigns": 1,
+            "campaigns_before": 0,
+            "recipients": 3,
+            "outcomes": {"delivered": 2, "bounced": 1},
+            "unsubscribed": 1,
+            "items": [
+                {
+                    "campaign_id": campaign,
+                    "name": "Autumn news",
+                    "status": "sent",
+                    "queued_at": datetime(2026, 11, 2, tzinfo=UTC),
+                    "recipients": 3,
+                    "outcomes": {"delivered": 2, "bounced": 1},
+                    "unsubscribed": 1,
+                }
+            ],
+        }
+    )
+    assert rows[3] == {"section": "period", "item": "capped", "value": False, "previous": ""}
+    assert {"section": "total", "item": "campaigns", "value": 1, "previous": 0} in rows
+    assert {"section": "outcome", "item": "bounced", "value": 1, "previous": ""} in rows
+    assert {
+        "section": "campaign_outcome_delivered",
+        "item": str(campaign),
+        "value": 2,
+        "previous": "",
+    } in rows
+    assert "Autumn news" not in repr(rows)
+    assert "sent" not in [row["value"] for row in rows]
+
+
 # --- The lead trend's weeks (decision P10-F) --------------------------------------------
 
 

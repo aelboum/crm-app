@@ -148,6 +148,20 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         result["outsider"] = report("outsider").status_code
         result["bad_period"] = report(start=str(today), end=str(today - timedelta(days=1)))
         result["bad_period"] = result["bad_period"].status_code
+
+        # --- The same report as CSV (decision P10-C.1) -----------------------------
+        exported = client.get(
+            f"{a_base}/reports/campaigns/export.csv", params=period, headers=auth()
+        )
+        result["csv"] = {
+            "status": exported.status_code,
+            "type": exported.headers.get("content-type"),
+            "disposition": exported.headers.get("content-disposition"),
+            "lines": exported.content.decode("utf-8-sig").splitlines(),
+        }
+        result["csv_outsider"] = client.get(
+            f"{a_base}/reports/campaigns/export.csv", params=period, headers=auth("outsider")
+        ).status_code
     print("RESULT " + json.dumps(result, default=str))
 
 

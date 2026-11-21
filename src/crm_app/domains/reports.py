@@ -109,6 +109,38 @@ def csv_rows(report: Mapping[str, Any]) -> list[dict[str, object]]:
     return rows
 
 
+def campaign_csv_rows(report: Mapping[str, Any]) -> list[dict[str, object]]:
+    """The campaigns report as rows (decision P10-C.1), in the columns of
+    `csv_rows`: the period, the totals, recipients by outcome, then each
+    listed campaign's figures with its id as the `item`. A campaign's name
+    is its author's text, so it is left out like any record's contents."""
+    rows = csv_rows({key: report[key] for key in ("period", "capped")})
+    rows.append(
+        {
+            "section": "total",
+            "item": "campaigns",
+            "value": report["campaigns"],
+            "previous": report["campaigns_before"],
+        }
+    )
+    for name in ("recipients", "unsubscribed"):
+        rows.append({"section": "total", "item": name, "value": report[name], "previous": ""})
+    for outcome, count in report["outcomes"].items():
+        rows.append({"section": "outcome", "item": outcome, "value": count, "previous": ""})
+    for entry in report["items"]:
+        campaign = str(entry["campaign_id"])
+        figures = {
+            "recipients": entry["recipients"],
+            "unsubscribed": entry["unsubscribed"],
+            **{f"outcome_{o}": n for o, n in entry["outcomes"].items()},
+        }
+        for name, value in figures.items():
+            rows.append(
+                {"section": f"campaign_{name}", "item": campaign, "value": value, "previous": ""}
+            )
+    return rows
+
+
 def where(instant: datetime | None, chosen: Period) -> str | None:
     """`"current"`, `"previous"` or `None` for an instant outside both."""
     if instant is None or instant < chosen.previous_since or instant >= chosen.until:

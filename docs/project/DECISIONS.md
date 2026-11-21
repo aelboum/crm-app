@@ -1073,6 +1073,32 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-H — Automation condition on a contact's deals (2026-11-21)
+
+- **Status:** Implemented on the owner's "do all four" (option 3 of the
+  options after the `f5cca88` deploy; the "wait until" step stays open).
+- **Decision:** two more condition fields, both `has` / `has_not` with 1
+  to 20 values:
+  - `{"field": "deal", "values": ["open" | "won" | "lost", ...]}`: the
+    contact has (or has no) deal with one of those outcomes.
+  - `{"field": "deal_stage", "values": [stage id, ...]}`: the contact has
+    (or has no) open deal in one of those pipeline stages. A won or lost
+    deal still sitting in the stage does not count.
+  - Saving checks the shape. Activation also checks that every stage
+    exists in the workspace ("a stage its condition names no longer
+    exists"); another workspace's stage is refused the same way. A stage
+    removed after activation simply matches no deal.
+  - The deals are read when the run starts, and only for a deal
+    condition. No amounts or dates: a condition stays a lookup.
+  - No migration: the condition lives in the stored definition.
+- **Editor:** "Deals" (Open, Won, Lost) and "Open deal stage" (every
+  pipeline's stages, named with their pipeline when there are several)
+  in the condition types, with "has one of" / "has none of". The
+  introduction mentions deals.
+- **Tests:** unit `test_automation_rules.py` (refused shapes, branches);
+  `tests/integration/test_automation_deal_condition.py` (refusals at save
+  and activation, branches from real deals); `automations.test.tsx`.
+
 ## P8-G — Automation condition on a contact custom field (2026-11-20)
 
 - **Status:** Implemented on the owner's "do all 4" (option 1 of the
@@ -4424,6 +4450,26 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
 - **Tests:** `tests/integration/test_setup.py`, `tests/unit/test_routes.py`,
   `frontend/src/records/dashboard.test.tsx`.
 
+## P10-C.1 — Campaigns report as CSV (2026-11-21)
+
+- **Status:** Implemented on the owner's "do all four" (option 4 of the
+  options after the `f5cca88` deploy). Replaces P10-C's "no CSV".
+- **Decision:** `GET .../reports/campaigns/export.csv?start&end`, guarded
+  by `crm_app.campaign:read`, in the fixed report columns `section, item,
+  value, previous` (P10-B):
+  - the period rows; `total` campaigns (with the previous period),
+    recipients and unsubscribed; `outcome` rows per bucket;
+  - for each listed campaign (at most 50), `campaign_recipients`,
+    `campaign_unsubscribed` and `campaign_outcome_<bucket>` rows with the
+    campaign's id as the item.
+  - Never a campaign's name: it is its author's text, and P10-B exports
+    only counts, rates, amounts and ids. Each campaign's own results CSV
+    (P7-RX) still covers recipients.
+- **Reports card:** the Campaigns card gets the same "CSV" button as the
+  other cards.
+- **Tests:** unit `test_report_csv.py`; `test_report_campaigns.py` (the
+  figures, no names, 404 for a non-member); `reports.test.tsx`.
+
 ## P10-C — Campaigns in Reports (2026-11-20)
 
 - **Status:** Implemented on the owner's "do all 4" (option 2 of the
@@ -4440,7 +4486,7 @@ Still open. Selection criteria are recorded in `DESIGN-INSPECTION.md`
     whenever they happened, not only within the period.
   - At most 50 campaigns are listed, newest first; all are counted. Row
     reads stop at the report cap (20,000) and say so (`capped`).
-  - No CSV: each campaign's own results CSV (P7-RX) covers the detail.
+  - No CSV at first; P10-C.1 adds one.
   - Read only, no migration, no sending. Opens and clicks are not tracked.
 - **Reports card:** "Campaigns": campaigns sent or rehearsed (with the
   previous period), recipients, unsubscribed, outcome bars without empty

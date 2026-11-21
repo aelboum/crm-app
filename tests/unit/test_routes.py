@@ -133,6 +133,7 @@ RECORDS |= {
     "GET /v1/workspaces/{tenant_id}/reports/tasks/export.csv": "crm_app.task:read",
     "GET /v1/workspaces/{tenant_id}/reports/appointments/export.csv": "crm_app.appointment:read",
     "GET /v1/workspaces/{tenant_id}/reports/funnel/export.csv": "crm_app.contact:read",
+    "GET /v1/workspaces/{tenant_id}/reports/campaigns/export.csv": "crm_app.campaign:read",
 }
 EDITORS = {Role.OWNER, Role.ADMIN, Role.MEMBER}
 

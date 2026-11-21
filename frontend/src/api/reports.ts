@@ -152,7 +152,13 @@ export function useContactTrend(workspaceId: string, weeks = 12) {
  * report's own permission. Saved through `fileDownload`.
  */
 export type ReportKind =
-  "contacts" | "deals" | "tasks" | "appointments" | "funnel";
+  | "contacts"
+  | "deals"
+  | "tasks"
+  | "appointments"
+  | "funnel"
+  // P10-C.1: campaign ids and counts, never names.
+  | "campaigns";
 
 export async function exportReport(
   workspaceId: string,

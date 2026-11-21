@@ -82,6 +82,7 @@ const SOURCES = [
   "other",
   "booking",
 ] as const;
+const OUTCOMES = ["open", "won", "lost"] as const;
 const WAITS = [15, 60, 240, 1440, 4320, 10080];
 const DUES = [null, 15, 60, 1440, 4320];
 
@@ -91,7 +92,9 @@ type ConditionKind =
   | "lifecycle_stage"
   | "email"
   | "tag"
-  | "custom_field";
+  | "custom_field"
+  | "deal"
+  | "deal_stage";
 type FieldValue = string | number | boolean;
 type T = ReturnType<typeof useT>;
 
@@ -262,10 +265,13 @@ function CampaignSummary({
         : campaign.error instanceof ApiError && campaign.error.status === 404
           ? t("automations.campaignGone")
           : t("automations.campaignSome");
-  return t(sent ? "automations.summarySent" : "automations.summaryUnsubscribed", {
-    campaign: name,
-    count,
-  });
+  return t(
+    sent ? "automations.summarySent" : "automations.summaryUnsubscribed",
+    {
+      campaign: name,
+      count,
+    },
+  );
 }
 
 function AutomationCard({
@@ -593,7 +599,9 @@ function CampaignPick({
     >
       <option value="">{t("automations.triggerAny")}</option>
       {value && !items.some((item) => item.id === value) ? (
-        <option value={value}>{t("automations.triggerCampaignUnlisted")}</option>
+        <option value={value}>
+          {t("automations.triggerCampaignUnlisted")}
+        </option>
       ) : null}
       {items.map((item) => (
         <option key={item.id} value={item.id}>
@@ -780,8 +788,16 @@ function startingCondition(
   kind: ConditionKind,
   tags: Option[],
   fields: FieldDefinition[],
+  stages: Option[],
 ): Condition | null {
   if (kind === "custom_field") return fieldCondition(fields[0]);
+  if (kind === "deal") return { field: "deal", op: "has", values: ["open"] };
+  if (kind === "deal_stage")
+    return {
+      field: "deal_stage",
+      op: "has",
+      values: stages[0] ? [stages[0].id] : [],
+    };
   if (kind === "source") return { field: "source", op: "in", values: ["form"] };
   if (kind === "lifecycle_stage")
     return { field: "lifecycle_stage", op: "in", values: ["lead"] };
@@ -810,6 +826,16 @@ function AutomationEditor({
   const membersQuery = useMembers(workspaceId, 0, true);
   const fieldsQuery = useFieldDefinitions(workspaceId);
   const fields = activeFields(fieldsQuery.data?.items, "contact");
+  const pipelinesQuery = usePipelines(workspaceId);
+  const pipelines = pipelinesQuery.data?.items ?? [];
+  // Every pipeline's stages; named with their pipeline when there are several.
+  const stages: Option[] = pipelines.flatMap((pipeline) =>
+    pipeline.stages.map((stage) => ({
+      id: stage.id,
+      label:
+        pipelines.length > 1 ? `${pipeline.name} · ${stage.name}` : stage.name,
+    })),
+  );
   const settingsQuery = useWorkspaceSettings(workspaceId);
   // Unknown (undefined) while loading or unreadable: no warning is shown.
   const hoursSet =
@@ -928,6 +954,7 @@ function AutomationEditor({
                 event.target.value as ConditionKind,
                 tags,
                 fields,
+                stages,
               );
               set({ condition, no: condition ? definition.no : [] });
             }}
@@ -942,12 +969,17 @@ function AutomationEditor({
             <option value="custom_field">
               {t("automations.condition.customField")}
             </option>
+            <option value="deal">{t("automations.condition.deal")}</option>
+            <option value="deal_stage">
+              {t("automations.condition.dealStage")}
+            </option>
           </select>
           {definition.condition ? (
             <ConditionEditor
               condition={definition.condition}
               tags={tags}
               fields={fields}
+              stages={stages}
               onChange={(condition) => {
                 set({ condition });
               }}
@@ -997,17 +1029,23 @@ function ConditionEditor({
   condition,
   tags,
   fields,
+  stages,
   onChange,
 }: {
   condition: Condition;
   tags: Option[];
   fields: FieldDefinition[];
+  stages: Option[];
   onChange: (condition: Condition) => void;
 }) {
   const t = useT();
   if (condition.field === "custom_field") {
     return (
-      <FieldCondition condition={condition} fields={fields} onChange={onChange} />
+      <FieldCondition
+        condition={condition}
+        fields={fields}
+        onChange={onChange}
+      />
     );
   }
   if (condition.field === "email") {
@@ -1028,12 +1066,30 @@ function ConditionEditor({
       </select>
     );
   }
-  const isTag = condition.field === "tag";
-  const choices: Option[] = isTag
-    ? tags
-    : condition.field === "source"
-      ? SOURCES.map((s) => ({ id: s, label: t(`source.${s}` as MessageId) }))
-      : STAGES.map((s) => ({ id: s, label: t(`stage.${s}` as MessageId) }));
+  const isTag =
+    condition.field === "tag" ||
+    condition.field === "deal" ||
+    condition.field === "deal_stage";
+  const choices: Option[] =
+    condition.field === "tag"
+      ? tags
+      : condition.field === "deal_stage"
+        ? stages
+        : condition.field === "deal"
+          ? OUTCOMES.map((o) => ({
+              id: o,
+              label: t(`automations.outcome.${o}` as MessageId),
+            }))
+          : condition.field === "source"
+            ? SOURCES.map((s) => ({
+                id: s,
+                label: t(`source.${s}` as MessageId),
+              }))
+            : STAGES.map((s) => ({
+                id: s,
+                label: t(`stage.${s}` as MessageId),
+              }));
+  const values = condition.values as string[];
   return (
     <>
       <select
@@ -1056,12 +1112,12 @@ function ConditionEditor({
           <label key={choice.id} className="public-check-label">
             <input
               type="checkbox"
-              checked={condition.values.includes(choice.id)}
+              checked={values.includes(choice.id)}
               onChange={(event) => {
-                const values = event.target.checked
-                  ? [...condition.values, choice.id]
-                  : condition.values.filter((v) => v !== choice.id);
-                onChange({ ...condition, values });
+                const next = event.target.checked
+                  ? [...values, choice.id]
+                  : values.filter((v) => v !== choice.id);
+                onChange({ ...condition, values: next } as Condition);
               }}
             />
             <span>{choice.label}</span>
@@ -1175,10 +1231,7 @@ function Branch({
             size="sm"
             aria-label={t("automations.addStepTo", { branch: label })}
             onPress={() => {
-              onChange([
-                ...actions,
-                newAction(adding, tags, members, fields),
-              ]);
+              onChange([...actions, newAction(adding, tags, members, fields)]);
             }}
           >
             <Plus size={13} aria-hidden="true" />
@@ -1697,7 +1750,8 @@ function FieldCondition({
               field: "custom_field",
               key: condition.key,
               op: op === "not_in" ? "not_in" : "in",
-              values: "values" in condition ? condition.values : startValues(field),
+              values:
+                "values" in condition ? condition.values : startValues(field),
             });
           }
         }}

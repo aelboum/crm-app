@@ -387,7 +387,9 @@ describe("reports", () => {
     expect(
       within(card).getByText(/Completed · .* · 5 recipients/),
     ).toBeInTheDocument();
-    expect(card).toHaveTextContent("1 more campaign is counted but not listed.");
+    expect(card).toHaveTextContent(
+      "1 more campaign is counted but not listed.",
+    );
     expect(await accessibilityViolations()).toEqual([]);
   });
 
@@ -471,8 +473,20 @@ describe("reports", () => {
           status: 200,
           body: {
             items: [
-              { membership_id: "m1", user_id: ME, status: "active", roles: ["Owner"], display_name: "Me" },
-              { membership_id: "m2", user_id: ADA, status: "active", roles: ["Member"], display_name: "Ada Bakker" },
+              {
+                membership_id: "m1",
+                user_id: ME,
+                status: "active",
+                roles: ["Owner"],
+                display_name: "Me",
+              },
+              {
+                membership_id: "m2",
+                user_id: ADA,
+                status: "active",
+                roles: ["Member"],
+                display_name: "Ada Bakker",
+              },
             ],
             total: 2,
             limit: 50,
@@ -514,6 +528,32 @@ describe("reports", () => {
       /\/reports\/deals\/export\.csv\?start=\d{4}-\d{2}-\d{2}&end=\d{4}-\d{2}-\d{2}$/,
     );
     expect(save.mock.calls[0]?.[1]).toMatch(/^report-deals-.*\.csv$/);
+    save.mockRestore();
+  });
+
+  it("downloads the Campaigns card as CSV (P10-C.1)", async () => {
+    const user = userEvent.setup();
+    const save = vi
+      .spyOn(fileDownload, "save")
+      .mockImplementation(() => undefined);
+    const { sent } = renderApp(`/w/${WS}/reports`, (method, path, body) =>
+      path.includes("/reports/campaigns/export.csv")
+        ? { status: 200, body: "section,item,value,previous" }
+        : reports()(method, path, body),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Download Campaigns as CSV",
+      }),
+    );
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+    const asked = sent.find((r) => r.path.includes("/export.csv"));
+    expect(asked?.path).toMatch(
+      /\/reports\/campaigns\/export\.csv\?start=\d{4}-\d{2}-\d{2}&end=\d{4}-\d{2}-\d{2}$/,
+    );
+    expect(save.mock.calls[0]?.[1]).toMatch(/^report-campaigns-.*\.csv$/);
     save.mockRestore();
   });
 });

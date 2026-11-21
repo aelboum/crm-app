@@ -51,6 +51,7 @@ from crm_app.appointments import workspace_hours
 from crm_app.domains import appointments as hours_rules
 from crm_app.domains import automations as rules
 from crm_app.domains import custom_fields as field_rules
+from crm_app.domains.opportunities import OPEN
 from crm_app.domains.records import InvalidValue
 from crm_app.models import (
     Automation,
@@ -65,6 +66,7 @@ from crm_app.models import (
     ContactTag,
     CustomFieldDefinition,
     Form,
+    Opportunity,
     PipelineStage,
     Tag,
 )
@@ -338,6 +340,19 @@ def _check_references(session: Session, scope: Scope, given: rules.Definition) -
         if not _active_member(scope.workspace, uuid.UUID(user)):
             raise AutomationRuleError("a member it names is not an active member")
     _check_fields(session, scope, given)
+    stages = rules.condition_stages(given)
+    if stages:
+        wanted_stages = {uuid.UUID(s) for s in stages}
+        found_stages = set(
+            session.execute(
+                select(PipelineStage.id).where(
+                    PipelineStage.tenant_id == scope.workspace,
+                    PipelineStage.id.in_(wanted_stages),
+                )
+            ).scalars()
+        )
+        if found_stages != wanted_stages:
+            raise AutomationRuleError("a stage its condition names no longer exists")
     model = _SUBJECT_MODELS.get(given.trigger)
     if model is not None and given.subject_id is not None:
         found_subject = session.execute(
@@ -618,12 +633,24 @@ def _facts(
         ).first()
         if active is not None:
             custom_value = (contact.custom_fields or {}).get(key)
+    deal_outcomes: frozenset[str] = frozenset()
+    open_stages: frozenset[str] = frozenset()
+    if condition is not None and condition["field"] in ("deal", "deal_stage"):
+        deals = session.execute(
+            select(Opportunity.outcome, Opportunity.stage_id).where(
+                Opportunity.tenant_id == workspace, Opportunity.contact_id == contact.id
+            )
+        ).all()
+        deal_outcomes = frozenset(outcome for outcome, _ in deals)
+        open_stages = frozenset(str(stage) for outcome, stage in deals if outcome == OPEN)
     return rules.Facts(
         source=contact.source,
         lifecycle_stage=contact.lifecycle_stage,
         has_email=bool(contact.email),
         tag_ids=tag_ids,
         custom_value=custom_value,
+        deal_outcomes=deal_outcomes,
+        open_deal_stage_ids=open_stages,
     )
 
 

@@ -9,7 +9,7 @@
     GET /v1/workspaces/{tenant_id}/reports/contact-trend crm_app.contact:read, and
                                                          deal read (decision P10-F)
     GET /v1/workspaces/{tenant_id}/reports/campaigns     crm_app.campaign:read
-                                                         (decision P10-C; no CSV)
+                                                         (decision P10-C; CSV P10-C.1)
 
 and each as CSV at `.../reports/<name>/export.csv` with the same
 permission (decision P10-B).
@@ -301,9 +301,15 @@ _CSV: dict[int | str, dict[str, Any]] = {
 }
 
 
-async def _csv(context: RequestContext, params: PeriodParams, name: str, build: Any) -> Response:
+async def _csv(
+    context: RequestContext,
+    params: PeriodParams,
+    name: str,
+    build: Any,
+    rows: Any = rules.csv_rows,
+) -> Response:
     report = await _report(context, params, build)
-    content = await run_in_threadpool(csv_export.to_csv, rules.CSV_COLUMNS, rules.csv_rows(report))
+    content = await run_in_threadpool(csv_export.to_csv, rules.CSV_COLUMNS, rows(report))
     file_name = csv_export.filename(f"report-{name}", datetime.now(UTC).date())
     return Response(
         content=content,
@@ -356,6 +362,17 @@ async def export_report_tasks(context: ReadTasks, params: Params) -> Response:
 )
 async def export_report_appointments(context: ReadAppointments, params: Params) -> Response:
     return await _csv(context, params, "appointments", reports.appointments)
+
+
+@router.get(
+    "/{tenant_id}/reports/campaigns/export.csv",
+    response_class=Response,
+    responses=_CSV,
+    name="export_report_campaigns",
+)
+async def export_report_campaigns(context: ReadCampaigns, params: Params) -> Response:
+    """Campaign ids and counts only, never a campaign's name (P10-C.1)."""
+    return await _csv(context, params, "campaigns", reports.campaigns, rules.campaign_csv_rows)
 
 
 @router.get(

@@ -1390,6 +1390,34 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Deal conditions in automations and the Campaigns report as CSV (2026-11-21, owner: "do all four")
+
+Decisions P8-H and P10-C.1, no migration of the database.
+
+- **P8-H:** an automation condition can read the contact's deals: `deal`
+  ("has" or "has none" with the outcomes open, won, lost) and `deal_stage`
+  (an open deal in one of the named stages; a won or lost deal in that
+  stage does not count). A stage that no longer exists, or belongs to
+  another workspace, refuses activation. The deals are read once, when the
+  run starts, and only when the condition names them.
+- **P10-C.1:** `GET .../reports/campaigns/export.csv` (`crm_app.campaign:read`)
+  and a CSV button on the Campaigns card. The rows carry counts and
+  campaign IDs, never campaign names or recipients.
+- Option 1 of the four (a browser check on staging) waits for the owner's
+  sign-in; option 2 (the P9-B administrative grants on staging) was
+  skipped by the owner. Neither is deployed.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/unit` | 848 passed |
+| `pytest tests/integration` against `crm_app_test` | 956 passed (1:02:26) |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | regenerated (the CSV route) |
+| `npx vitest run --maxWorkers=3` | 38 files, 422 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+Not deployed to staging.
+
 ## Staging deployed at `f5cca88` (2026-11-20, owner: "go ahead")
 
 From `6d5708b`: the automation condition on a contact custom field (P8-G),

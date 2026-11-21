@@ -75,3 +75,22 @@ def test_only_the_workspaces_own_campaigns_and_members_count(probe: Probe) -> No
 
 def test_a_period_that_ends_before_it_starts_is_refused(probe: Probe) -> None:
     assert probe["bad_period"] == 422
+
+
+def test_the_csv_has_the_same_figures_with_ids_and_no_names(probe: Probe) -> None:
+    """P10-C.1: counts and campaign ids only."""
+    csv = probe["csv"]
+    assert csv["status"] == 200
+    assert csv["type"] == "text/csv; charset=utf-8"
+    assert csv["disposition"].startswith('attachment; filename="report-campaigns-')
+    lines = csv["lines"]
+    latest = probe["ids"]["latest"]
+    assert lines[0] == "section,item,value,previous"
+    assert "total,campaigns,2,1" in lines
+    assert "total,recipients,4," in lines
+    assert "total,unsubscribed,1," in lines
+    assert "outcome,rehearsed,4," in lines
+    assert f"campaign_unsubscribed,{latest},1," in lines
+    names = {item["name"] for item in probe["report"]["items"]}
+    assert not [line for line in lines if any(name in line for name in names)]
+    assert probe["csv_outsider"] == 404

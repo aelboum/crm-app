@@ -708,7 +708,11 @@ function CampaignsCard({
   const data: CampaignsReport | undefined = report.data;
   const more = data ? data.campaigns - data.items.length : 0;
   return (
-    <Card id="reports-campaigns" title={t("reports.campaigns")}>
+    <Card
+      id="reports-campaigns"
+      title={t("reports.campaigns")}
+      csv={{ workspaceId, kind: "campaigns", period }}
+    >
       {report.isError ? (
         <LoadError error={report.error} onRetry={() => void report.refetch()} />
       ) : data ? (
@@ -745,7 +749,9 @@ function CampaignsCard({
                     <span className="reports-campaign-name">{row.name}</span>
                     <span className="muted">
                       {t("reports.campaigns.row", {
-                        status: t(`campaigns.status.${row.status}` as MessageId),
+                        status: t(
+                          `campaigns.status.${row.status}` as MessageId,
+                        ),
                         date: intl.formatDate(row.queued_at, {
                           dateStyle: "medium",
                         }),

@@ -44,6 +44,13 @@ Conditions read the contact's `source` or `lifecycle_stage` (`in`,
 [...]}` or `"op": "present" | "absent"` without values. Values have the
 shapes `set_custom_field` takes; text compares without regard to case. A
 field archived since activation counts as having no value.
+
+Decision P8-H adds the contact's deals: `{"field": "deal", "op": "has" |
+"has_not", "values": ["open", "won", "lost"]}` asks whether the contact has
+a deal with one of those outcomes, and `{"field": "deal_stage", "op": "has"
+| "has_not", "values": [stage ids]}` whether it has an open deal in one of
+those stages. The stages must exist at activation; a stage removed since
+simply matches no deal.
 """
 
 from __future__ import annotations
@@ -54,6 +61,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from crm_app.domains import custom_fields as field_rules
+from crm_app.domains.opportunities import OUTCOMES
 from crm_app.domains.records import SOURCES, STAGES, InvalidValue, visible_text
 
 TRIGGERS = (
@@ -332,8 +340,11 @@ def _condition(raw: object) -> dict[str, Any] | None:
         return {"field": field, "op": op, "values": values}
     if field == "email" and op in ("present", "absent"):
         return {"field": field, "op": op}
-    if field == "tag" and op in ("has", "has_not"):
+    if field in ("tag", "deal_stage") and op in ("has", "has_not"):
         values = _values(raw.get("values"), None, "condition.values")
+        return {"field": field, "op": op, "values": values}
+    if field == "deal" and op in ("has", "has_not"):
+        values = _values(raw.get("values"), OUTCOMES, "condition.values")
         return {"field": field, "op": op, "values": values}
     raise InvalidValue("condition: an unsupported field or operator")
 
@@ -406,6 +417,10 @@ class Facts:
     # The value of the custom field a condition reads (P8-G); None when it
     # has none or the field is no longer active.
     custom_value: object = None
+    # The outcomes of the contact's deals, and the stages of its open deals
+    # (P8-H); read only for a condition on deals.
+    deal_outcomes: frozenset[str] = frozenset()
+    open_deal_stage_ids: frozenset[str] = frozenset()
 
 
 def branch_for(condition: dict[str, Any] | None, facts: Facts) -> str:
@@ -422,8 +437,13 @@ def branch_for(condition: dict[str, Any] | None, facts: Facts) -> str:
             matched = held if op == "in" else not held
     elif field == "email":
         matched = facts.has_email == (op == "present")
-    elif field == "tag":
-        held = bool(facts.tag_ids & set(values))
+    elif field in ("tag", "deal", "deal_stage"):
+        held_set = {
+            "tag": facts.tag_ids,
+            "deal": facts.deal_outcomes,
+            "deal_stage": facts.open_deal_stage_ids,
+        }[field]
+        held = bool(held_set & set(values))
         matched = held if op == "has" else not held
     else:
         value = facts.source if field == "source" else facts.lifecycle_stage
@@ -460,6 +480,14 @@ def condition_field(given: Definition) -> tuple[str, list[object]] | None:
     if not given.condition or given.condition["field"] != "custom_field":
         return None
     return given.condition["key"], list(given.condition.get("values", []))
+
+
+def condition_stages(given: Definition) -> set[str]:
+    """The pipeline stage ids a `deal_stage` condition names (P8-H), to
+    check before activation."""
+    if not given.condition or given.condition["field"] != "deal_stage":
+        return set()
+    return set(given.condition["values"])
 
 
 def field_values(given: Definition) -> list[tuple[str, object]]:

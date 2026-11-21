@@ -124,6 +124,13 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
                 "values": [str(i) for i in range(rules.MAX_VALUES + 1)],
             }
         },
+        # P8-H
+        {"condition": {"field": "deal", "op": "in", "values": ["open"]}},
+        {"condition": {"field": "deal", "op": "has", "values": ["pending"]}},
+        {"condition": {"field": "deal", "op": "has", "values": []}},
+        {"condition": {"field": "deal", "op": "has"}},
+        {"condition": {"field": "deal_stage", "op": "has", "values": ["not-a-uuid"]}},
+        {"condition": {"field": "deal_stage", "op": "in", "values": [TAG]}},
     ],
 )
 def test_anything_outside_the_rules_is_refused(changes: dict[str, Any]) -> None:
@@ -328,3 +335,40 @@ def test_a_custom_field_condition_is_plain_data_and_compares_by_kind() -> None:
     absent = {"field": "custom_field", "key": "vip", "op": "absent"}
     assert rules.branch_for(absent, facts(None)) == "yes"
     assert rules.condition_field(rules.definition(_base())) is None
+
+
+def test_a_deal_condition_reads_outcomes_or_open_stages() -> None:
+    """P8-H: `deal` asks for a deal with one of the outcomes; `deal_stage`
+    for an open deal in one of the stages."""
+    stage, other = str(uuid.uuid4()), str(uuid.uuid4())
+    by_outcome = rules.definition(
+        _base(condition={"field": "deal", "op": "has", "values": ["won", "won", "lost"]})
+    )
+    assert by_outcome.as_json()["condition"] == {
+        "field": "deal",
+        "op": "has",
+        "values": ["won", "lost"],
+    }
+    assert rules.condition_stages(by_outcome) == set()
+    by_stage = rules.definition(
+        _base(condition={"field": "deal_stage", "op": "has_not", "values": [stage.upper()]})
+    )
+    assert by_stage.as_json()["condition"]["values"] == [stage]
+    assert rules.condition_stages(by_stage) == {stage}
+
+    def facts(outcomes: set[str], stages: set[str]) -> rules.Facts:
+        return rules.Facts(
+            source="form",
+            lifecycle_stage="lead",
+            has_email=True,
+            tag_ids=frozenset(),
+            deal_outcomes=frozenset(outcomes),
+            open_deal_stage_ids=frozenset(stages),
+        )
+
+    assert rules.branch_for(by_outcome.condition, facts({"open", "won"}, set())) == "yes"
+    assert rules.branch_for(by_outcome.condition, facts({"open"}, {stage})) == "no"
+    assert rules.branch_for(by_outcome.condition, facts(set(), set())) == "no"
+    assert rules.branch_for(by_stage.condition, facts({"open"}, {other})) == "yes"
+    assert rules.branch_for(by_stage.condition, facts({"open"}, {stage})) == "no"
+    assert rules.branch_for(by_stage.condition, facts(set(), set())) == "yes"

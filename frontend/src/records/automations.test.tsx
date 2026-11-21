@@ -104,12 +104,38 @@ function definitionOf(
 // P8-F: contact fields of each kind, plus ones the step never offers.
 const FIELDS = {
   items: [
-    definitionOf(1, "contact", "tier", "select", { options: ["Gold", "Silver"] }),
+    definitionOf(1, "contact", "tier", "select", {
+      options: ["Gold", "Silver"],
+    }),
     definitionOf(2, "contact", "seats", "number"),
     definitionOf(3, "contact", "vip", "boolean"),
     definitionOf(4, "company", "region", "text"),
     definitionOf(5, "contact", "old", "text", { archived: true }),
   ],
+};
+
+// P8-H: two pipelines, so each stage is named with its pipeline.
+function pipeline(n: number, name: string, stages: string[]) {
+  return {
+    id: `e000000${String(n)}-0000-4000-8000-000000000000`,
+    name,
+    version: 1,
+    created_at: stamp,
+    updated_at: stamp,
+    stages: stages.map((stage, i) => ({
+      id: `e000000${String(n)}-0000-4000-8000-00000000000${String(i + 1)}`,
+      name: stage,
+      probability: 10,
+      position: i,
+    })),
+  };
+}
+const PIPELINES = {
+  items: [
+    pipeline(1, "Sales", ["New", "Proposal"]),
+    pipeline(2, "Renewals", ["Due"]),
+  ],
+  max_stages: 20,
 };
 
 function workspace(
@@ -171,6 +197,7 @@ function workspace(
       };
     }
     if (path === `${base}/custom-fields`) return { status: 200, body: FIELDS };
+    if (path === `${base}/pipelines`) return { status: 200, body: PIPELINES };
     if (path === `${base}/tags`) {
       return {
         status: 200,
@@ -249,7 +276,9 @@ describe("automations", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("When a contact unsubscribes from any campaign · 1 step"),
+      screen.getByText(
+        "When a contact unsubscribes from any campaign · 1 step",
+      ),
     ).toBeInTheDocument();
     expect(
       await screen.findByText(
@@ -446,7 +475,9 @@ describe("automations", () => {
       within(dialog).getByLabelText("When this happens"),
       "campaign_sent",
     );
-    expect(within(dialog).getByText(/That is not delivery/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/That is not delivery/),
+    ).toBeInTheDocument();
     const pick = within(dialog).getByLabelText("Campaign");
     expect(pick).toHaveValue("");
     await within(dialog).findByRole("option", { name: "Autumn news" });
@@ -495,7 +526,9 @@ describe("automations", () => {
       within(dialog).getByLabelText("When this happens"),
       "campaign_unsubscribed",
     );
-    expect(within(dialog).getByText(/uses the unsubscribe link/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/uses the unsubscribe link/),
+    ).toBeInTheDocument();
     await user.selectOptions(
       within(dialog).getByLabelText("Step to add to Steps"),
       "set_lifecycle_stage",
@@ -596,7 +629,9 @@ describe("automations", () => {
       );
     };
     await add();
-    const first = within(dialog).getByLabelText("Custom field, step 1 of Steps");
+    const first = within(dialog).getByLabelText(
+      "Custom field, step 1 of Steps",
+    );
     await waitFor(() => {
       expect(first).toHaveValue("tier");
     });
@@ -673,9 +708,9 @@ describe("automations", () => {
     await waitFor(() => {
       expect(select).toHaveValue("old");
     });
-    expect(within(select).getByRole("option", { selected: true })).toHaveTextContent(
-      "A field that is archived or no longer exists",
-    );
+    expect(
+      within(select).getByRole("option", { selected: true }),
+    ).toHaveTextContent("A field that is archived or no longer exists");
   });
 
   it("branches on a contact custom field (P8-G)", async () => {
@@ -708,9 +743,14 @@ describe("automations", () => {
         .map((o) => o.textContent),
     ).toEqual(["Tier", "Seats", "Vip"]);
     // A select field starts on its first option; tick a second one.
-    expect(within(dialog).getByRole("checkbox", { name: "Gold" })).toBeChecked();
+    expect(
+      within(dialog).getByRole("checkbox", { name: "Gold" }),
+    ).toBeChecked();
     await user.click(within(dialog).getByRole("checkbox", { name: "Silver" }));
-    await user.selectOptions(within(dialog).getByLabelText("Condition test"), "not_in");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Condition test"),
+      "not_in",
+    );
     await user.selectOptions(
       within(dialog).getByLabelText("Step to add to If it matches"),
       "add_tag",
@@ -731,6 +771,75 @@ describe("automations", () => {
         key: "tier",
         op: "not_in",
         values: ["Gold", "Silver"],
+      });
+    });
+  });
+
+  it("branches on the contact's deals (P8-H)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Open deals");
+    const kind = within(dialog).getByLabelText("Condition type");
+    await user.selectOptions(kind, "deal");
+    expect(
+      within(dialog).getByRole("checkbox", { name: "Open" }),
+    ).toBeChecked();
+    await user.click(within(dialog).getByRole("checkbox", { name: "Won" }));
+    expect(
+      within(dialog).getByRole("checkbox", { name: "Lost" }),
+    ).not.toBeChecked();
+
+    // Every pipeline's stages are offered, named with their pipeline.
+    await user.selectOptions(kind, "deal_stage");
+    await waitFor(() => {
+      expect(
+        within(dialog).getByRole("checkbox", { name: "Sales · New" }),
+      ).toBeChecked();
+    });
+    for (const name of ["Sales · Proposal", "Renewals · Due"]) {
+      expect(within(dialog).getByRole("checkbox", { name })).not.toBeChecked();
+    }
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Renewals · Due" }),
+    );
+    await user.selectOptions(
+      within(dialog).getByLabelText("Condition test"),
+      "has_not",
+    );
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to If it matches"),
+      "add_tag",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to If it matches" }),
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "POST")?.body as {
+        definition: { condition: unknown };
+      };
+      expect(body.definition.condition).toEqual({
+        field: "deal_stage",
+        op: "has_not",
+        values: [
+          "e0000001-0000-4000-8000-000000000001",
+          "e0000002-0000-4000-8000-000000000001",
+        ],
       });
     });
   });
@@ -757,9 +866,15 @@ describe("automations", () => {
     expect(value).toHaveAttribute("type", "number");
     await user.type(value, "3");
     expect(value).toHaveValue(3);
-    await user.selectOptions(within(dialog).getByLabelText("Condition test"), "absent");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Condition test"),
+      "absent",
+    );
     expect(within(dialog).queryByLabelText("Condition value")).toBeNull();
-    await user.selectOptions(within(dialog).getByLabelText("Condition test"), "in");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Condition test"),
+      "in",
+    );
     expect(within(dialog).getByLabelText("Condition value")).toHaveValue(null);
   });
 

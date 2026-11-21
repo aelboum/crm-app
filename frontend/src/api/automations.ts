@@ -71,7 +71,14 @@ export type Condition =
       op: "in" | "not_in";
       values: (string | number | boolean)[];
     }
-  | { field: "custom_field"; key: string; op: "present" | "absent" };
+  | { field: "custom_field"; key: string; op: "present" | "absent" }
+  // P8-H: the contact's deals, by outcome, or its open deals by stage id.
+  | {
+      field: "deal";
+      op: "has" | "has_not";
+      values: ("open" | "won" | "lost")[];
+    }
+  | { field: "deal_stage"; op: "has" | "has_not"; values: string[] };
 
 /*
  * Triggers (decision P8-B adds all but the first). The tag and stage
