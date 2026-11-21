@@ -1390,6 +1390,25 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Staging deployed at `94c62c8` (2026-11-21, owner: "Yes")
+
+From `ae5f9d0`: the date trigger (P8-I, `5515563`) and the step that waits
+for a contact field's value (P8-J, `94c62c8`). Migrations
+`0053_date_reached_trigger` and `0054_wait_for_field`.
+
+| Check | Result |
+| --- | --- |
+| CI on `5515563`; on `94c62c8` | passed (runs 44941627379, 44949149948) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | kept 0 new lines (162 in all); **15 passed, 0 failed**, this backup is the rollback point |
+| Image | built on the VPS after `HEAD` was checked, `crm-app:94c62c8`; `VERSION=94c62c8`; previous image `crm-app:ae5f9d0` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `public.alembic_version` | `0054_wait_for_field` |
+| Schema | `automation_step_action_check` names `wait_for_field`; `automation_run.field_wait_until` and `automation_date_workspace` exist |
+| `/readyz` | 200 |
+
+Not checked in a browser yet: the new trigger and step in the editor, and
+a run that waits on staging.
+
 ## Automation step that waits for a contact field's value (2026-11-21, owner: "go 1 and then 3")
 
 Decision P8-J, migration `0054_wait_for_field`. A "Wait for a field value"
