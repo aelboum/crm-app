@@ -1390,6 +1390,30 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Staging deployed at `ae5f9d0` (2026-11-21, owner: "go 1 and then 3")
+
+From `cd3a844`: the automation step that waits until a contact's date
+(P8-D, `67fc907`) and two PROGRESS records. Migration
+`0052_wait_until_date`.
+
+| Check | Result |
+| --- | --- |
+| CI on `67fc907`; on `ae5f9d0` | passed (runs 44928993991, 44931521063) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS after `HEAD` was checked, `crm-app:ae5f9d0`; `VERSION=ae5f9d0`; previous image `crm-app:cd3a844` |
+| `$C up -d --wait` | every service healthy |
+| `public.alembic_version` | `0052_wait_until_date` |
+| `automation_step_action_check` | names `wait_until_date` |
+| `/readyz` | 200 |
+
+- Browser check as alice: the step picker offers "Wait until a date"; the
+  step shows the day offsets, the hours and the hint. Staging Alpha has no
+  contact date field, so the field list says "No contact date fields yet";
+  the dialog was cancelled, nothing saved. A run that waits was not
+  started on staging.
+- Rolling back past `0052` needs its downgrade, which deletes
+  `wait_until_date` steps; staging has none.
+
 ## Automation step that waits until a contact's date (2026-11-21, owner: "go 1, then 2 and 3 toghether then 4")
 
 Decision P8-D, migration `0052_wait_until_date`.
