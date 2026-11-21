@@ -124,6 +124,19 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
                 "values": [str(i) for i in range(rules.MAX_VALUES + 1)],
             }
         },
+        # P8-D
+        {"yes": [{"type": "wait_until_date", "hour": 9}]},
+        {"yes": [{"type": "wait_until_date", "field_key": "Bad Key", "hour": 9}]},
+        {"yes": [{"type": "wait_until_date", "field_key": "renewal"}]},
+        {"yes": [{"type": "wait_until_date", "field_key": "renewal", "hour": 24}]},
+        {"yes": [{"type": "wait_until_date", "field_key": "renewal", "hour": True}]},
+        {"yes": [{"type": "wait_until_date", "field_key": "renewal", "hour": 9.5}]},
+        {
+            "yes": [
+                {"type": "wait_until_date", "field_key": "renewal", "hour": 9, "offset_days": 366}
+            ]
+        },
+        {"yes": [{"type": "wait_until_date", "field_key": "renewal", "hour": 9, "x": 1}]},
         # P8-H
         {"condition": {"field": "deal", "op": "in", "values": ["open"]}},
         {"condition": {"field": "deal", "op": "has", "values": ["pending"]}},
@@ -372,3 +385,31 @@ def test_a_deal_condition_reads_outcomes_or_open_stages() -> None:
     assert rules.branch_for(by_stage.condition, facts({"open"}, {other})) == "yes"
     assert rules.branch_for(by_stage.condition, facts({"open"}, {stage})) == "no"
     assert rules.branch_for(by_stage.condition, facts(set(), set())) == "yes"
+
+
+def test_a_date_wait_ends_at_the_hour_in_the_workspace_zone() -> None:
+    given = rules.definition(
+        _base(
+            yes=[
+                {"type": "wait_until_date", "field_key": "renewal", "offset_days": -3, "hour": 9},
+                {"type": "wait_until_date", "field_key": "renewal", "hour": 0},
+            ]
+        )
+    )
+    assert [step.args for step in given.yes] == [
+        {"field_key": "renewal", "offset_days": -3, "hour": 9},
+        {"field_key": "renewal", "offset_days": 0, "hour": 0},
+    ]
+    assert rules.date_fields(given) == {"renewal"}
+    # 2026-12-04 minus three days, 09:00 in Amsterdam (UTC+1 in winter).
+    at = rules.date_wait_at("2026-12-04", -3, 9, "Europe/Amsterdam")
+    assert at is not None
+    assert at.isoformat() == "2026-12-01T08:00:00+00:00"
+    # Summer time: UTC+2.
+    summer = rules.date_wait_at("2026-07-01", 0, 9, "Europe/Amsterdam")
+    assert summer is not None
+    assert summer.isoformat() == "2026-07-01T07:00:00+00:00"
+    for stored in (None, "", "01-12-2026", 20261201, True):
+        assert rules.date_wait_at(stored, 0, 9, "UTC") is None
+    # Moved past the last date there is.
+    assert rules.date_wait_at("9999-12-31", 1, 9, "UTC") is None

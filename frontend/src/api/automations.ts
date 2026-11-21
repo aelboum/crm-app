@@ -53,6 +53,14 @@ export type Action =
       type: "set_custom_field";
       field_key: string;
       value: string | number | boolean;
+    }
+  // P8-D: until a contact date field, moved by whole days, at an hour in
+  // the workspace's time zone; skipped without a date or once it is past.
+  | {
+      type: "wait_until_date";
+      field_key: string;
+      offset_days: number;
+      hour: number;
     };
 
 export type Condition =

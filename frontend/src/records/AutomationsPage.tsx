@@ -530,6 +530,13 @@ function newAction(
   if (type === "assign_owner") return { type, user_id: members[0]?.id ?? "" };
   if (type === "wait") return { type, minutes: 60 };
   if (type === "wait_for_business_hours") return { type };
+  if (type === "wait_until_date")
+    return {
+      type,
+      field_key: fields.find((f) => f.field_type === "date")?.key ?? "",
+      offset_days: 0,
+      hour: 9,
+    };
   if (type === "set_custom_field")
     return {
       type,
@@ -1224,6 +1231,9 @@ function Branch({
             <option value="wait_for_business_hours">
               {t("automations.action.wait_for_business_hours")}
             </option>
+            <option value="wait_until_date">
+              {t("automations.action.wait_until_date")}
+            </option>
           </select>
           <Button
             size="sm"
@@ -1431,6 +1441,17 @@ function ActionEditor({
       </div>
     );
   }
+  if (action.type === "wait_until_date") {
+    return (
+      <DateWaitStep
+        action={action}
+        kind={kind}
+        fields={fields}
+        label={label}
+        onChange={onChange}
+      />
+    );
+  }
   if (action.type === "wait_for_business_hours") {
     return (
       <div className="automation-step-body">
@@ -1632,6 +1653,97 @@ function FieldStep({
       </select>
       {control}
       <p className="form-hint">{t("automations.fieldHint")}</p>
+    </div>
+  );
+}
+
+const DAY_OFFSETS = [-30, -14, -7, -3, -1, 0, 1, 3, 7, 14, 30];
+const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+
+function dayOffsetLabel(t: T, days: number): string {
+  if (days === 0) return t("automations.onTheDay");
+  if (days === -1) return t("automations.dayBefore");
+  if (days === 1) return t("automations.dayAfter");
+  return t(days < 0 ? "automations.daysBefore" : "automations.daysAfter", {
+    count: Math.abs(days),
+  });
+}
+
+/*
+ * P8-D: which contact date field, how many days before or after, and the
+ * hour in the workspace's time zone. A field archived since stays chosen
+ * until changed, like the field step.
+ */
+function DateWaitStep({
+  action,
+  kind,
+  fields,
+  label,
+  onChange,
+}: {
+  action: Extract<Action, { type: "wait_until_date" }>;
+  kind: string;
+  fields: FieldDefinition[];
+  label: (field: MessageId) => string;
+  onChange: (action: Action) => void;
+}) {
+  const t = useT();
+  const dates = fields.filter((f) => f.field_type === "date");
+  const known = dates.some((f) => f.key === action.field_key);
+  return (
+    <div className="automation-step-body">
+      <span className="automation-step-kind">{kind}</span>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.dateField")}
+        value={action.field_key}
+        onChange={(event) => {
+          onChange({ ...action, field_key: event.target.value });
+        }}
+      >
+        {!dates.length && !action.field_key ? (
+          <option value="">{t("automations.noDateFields")}</option>
+        ) : null}
+        {action.field_key && !known ? (
+          <option value={action.field_key}>{t("automations.fieldGone")}</option>
+        ) : null}
+        {dates.map((option) => (
+          <option key={option.id} value={option.key}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.offsetDays")}
+        value={action.offset_days}
+        onChange={(event) => {
+          onChange({ ...action, offset_days: Number(event.target.value) });
+        }}
+      >
+        {[...new Set([...DAY_OFFSETS, action.offset_days])]
+          .sort((x, y) => x - y)
+          .map((days) => (
+            <option key={days} value={days}>
+              {dayOffsetLabel(t, days)}
+            </option>
+          ))}
+      </select>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.hour")}
+        value={action.hour}
+        onChange={(event) => {
+          onChange({ ...action, hour: Number(event.target.value) });
+        }}
+      >
+        {HOURS.map((hour) => (
+          <option key={hour} value={hour}>
+            {`${String(hour).padStart(2, "0")}:00`}
+          </option>
+        ))}
+      </select>
+      <p className="form-hint">{t("automations.dateWaitHint")}</p>
     </div>
   );
 }

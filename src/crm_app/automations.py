@@ -13,7 +13,8 @@
   steps in order. Each step's effect and its `automation_step` row commit
   together, so a retried job finds the step done and never acts twice. A
   `wait` sets the run waiting until its time, and `wait_for_business_hours`
-  until the workspace's next opening (P8-W); the sweeper
+  until the workspace's next opening (P8-W), `wait_until_date` until a
+  contact's date (P8-D); the sweeper
   (`crm_app.automation_maintenance`) enqueues due runs. A missing tag or a
   member who left skips the step with a code; a deleted contact cancels
   the run; anything unexpected raises, the job queue retries, and after
@@ -323,6 +324,15 @@ def _check_fields(session: Session, scope: Scope, given: rules.Definition) -> No
             raise AutomationRuleError("a custom field it sets is not an active contact field")
         if not _fits(field, value):
             raise AutomationRuleError(f"the value for the custom field {key} does not fit it")
+    waits = rules.date_fields(given)
+    if waits:
+        dated = custom_fields.active_definitions(session, scope, "contact")
+        for key in waits:
+            field = dated.get(key)
+            if field is None or field.field_type != "date":
+                raise AutomationRuleError(
+                    "the date field it waits for is not an active contact date field"
+                )
 
 
 def _check_references(session: Session, scope: Scope, given: rules.Definition) -> None:
@@ -706,6 +716,11 @@ def _act(  # noqa: PLR0911, PLR0912 - one answer per action
     if action.type == "wait_for_business_hours":
         opening = _opening(session, scope.workspace, _now())
         return ("done", None) if opening is not None else ("skipped", "no_hours")
+    if action.type == "wait_until_date":
+        until = _date_wait(session, scope.workspace, contact, args)
+        if until is None:
+            return "skipped", "no_date"
+        return ("done", None) if until > _now() else ("skipped", "date_passed")
     # wait: the caller sets the run waiting.
     return "done", None
 
@@ -785,6 +800,44 @@ def _opening(session: Session, workspace: uuid.UUID, now: datetime) -> datetime 
     (or every day is closed), and the step is skipped."""
     hours, zone = workspace_hours(session, workspace)
     return None if hours is None else hours_rules.next_opening(hours, zone, now)
+
+
+def _resume_at(
+    session: Session, workspace: uuid.UUID, contact: Contact, action: rules.Action, now: datetime
+) -> datetime | None:
+    """When a waiting step's run goes on, or `None` to go on at once. Read
+    again on a retry, so the hours or the date as they are now decide."""
+    until: datetime | None = None
+    if action.type == "wait":
+        until = now + timedelta(minutes=action.args["minutes"])
+    elif action.type == "wait_for_business_hours":
+        until = _opening(session, workspace, now)
+    elif action.type == "wait_until_date":
+        until = _date_wait(session, workspace, contact, action.args)
+    return until if until is not None and until > now else None
+
+
+def _date_wait(
+    session: Session, workspace: uuid.UUID, contact: Contact, args: Mapping[str, Any]
+) -> datetime | None:
+    """`wait_until_date` (P8-D): when the wait ends, from the contact's date
+    as it is now; `None` without a date or once the field is archived or no
+    longer a date field."""
+    key = args["field_key"]
+    field_type = session.execute(
+        select(CustomFieldDefinition.field_type).where(
+            CustomFieldDefinition.tenant_id == workspace,
+            CustomFieldDefinition.entity == "contact",
+            CustomFieldDefinition.key == key,
+            CustomFieldDefinition.archived_at.is_(None),
+        )
+    ).scalar_one_or_none()
+    if field_type != "date":
+        return None
+    _, zone = workspace_hours(session, workspace)
+    return rules.date_wait_at(
+        (contact.custom_fields or {}).get(key), args["offset_days"], args["hour"], zone
+    )
 
 
 def advance(workspace: uuid.UUID, run_id: uuid.UUID) -> str:
@@ -894,13 +947,7 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
         # transient errors over a long run do not fail it (13-H5).
         run.next_step, run.updated_at, run.last_error = position + 1, now, None
         run.attempts = 0
-        resume_at = None
-        if action.type == "wait":
-            resume_at = now + timedelta(minutes=action.args["minutes"])
-        elif action.type == "wait_for_business_hours":
-            # Read again on a retry, so the hours as they are now decide.
-            opening = _opening(session, workspace, now)
-            resume_at = opening if opening is not None and opening > now else None
+        resume_at = _resume_at(session, workspace, contact, action, now)
         if resume_at is not None:
             run.status = "waiting"
             run.resume_at = resume_at

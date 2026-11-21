@@ -1390,6 +1390,51 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Automation step that waits until a contact's date (2026-11-21, owner: "go 1, then 2 and 3 toghether then 4")
+
+Decision P8-D, migration `0052_wait_until_date`.
+
+- A `wait_until_date` step waits until a day relative to a contact date
+  field (`offset_days` -365..365) at an hour (0-23) in the workspace's time
+  zone. Activation is refused unless the field is an active contact date
+  field.
+- When the contact has no date, or the time has already passed, the step is
+  skipped (`no_date`, `date_passed`) and the run goes on. A date changed
+  after the wait began does not move the wait.
+- Editor: "Wait until a date" step with the date field, days before or
+  after, and the hour.
+- Waiting until a field merely gets a value is not built (see P8-D).
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/unit` | 857 passed |
+| `pytest tests/integration` against `crm_app_test` | 959 passed (1:04:08) |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | regenerated (the new step type) |
+| `npx vitest run --maxWorkers=3` | 38 files, 424 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+Not deployed to staging.
+
+## Staging deployed at `cd3a844` (2026-11-21, owner: "go 1, then 2 and 3 toghether then 4")
+
+From `f5cca88`: deal conditions in automations (P8-H), the Campaigns report
+as CSV (P10-C.1) and the review fixes in `cd3a844`. No migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `cd3a844` | passed (run 44919668154) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | **15 passed, 0 failed**; this backup is the rollback point |
+| Image | built on the VPS, `crm-app:cd3a844`; `VERSION=cd3a844`; rollback image `crm-app:f5cca88` |
+| `$C up -d --wait` | every service healthy |
+| `public.alembic_version` | `0051_custom_field_step` (unchanged) |
+| `/readyz` | 200 |
+
+- The first build ran from the old checkout: `sudo git fetch` failed host
+  key verification and the chain went on. It was rebuilt after a plain
+  `git fetch`, with `HEAD` checked against `cd3a844` before the build.
+- Browser check of the new screens: waits for the owner's sign-in. Not run.
+
 ## Deal conditions in automations and the Campaigns report as CSV (2026-11-21, owner: "do all four")
 
 Decisions P8-H and P10-C.1, no migration of the database.

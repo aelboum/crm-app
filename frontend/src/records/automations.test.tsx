@@ -111,6 +111,8 @@ const FIELDS = {
     definitionOf(3, "contact", "vip", "boolean"),
     definitionOf(4, "company", "region", "text"),
     definitionOf(5, "contact", "old", "text", { archived: true }),
+    // P8-D: the date a wait can be until.
+    definitionOf(6, "contact", "renewal", "date"),
   ],
 };
 
@@ -383,6 +385,7 @@ describe("automations", () => {
       "Set a custom field",
       "Wait",
       "Wait for business hours",
+      "Wait until a date",
     ]);
     expect(await accessibilityViolations()).toEqual([]);
     await user.click(
@@ -640,7 +643,7 @@ describe("automations", () => {
       within(first)
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toEqual(["Tier", "Seats", "Vip"]);
+    ).toEqual(["Tier", "Seats", "Vip", "Renewal"]);
     await user.selectOptions(
       within(dialog).getByLabelText("Value, step 1 of Steps"),
       "Silver",
@@ -741,7 +744,7 @@ describe("automations", () => {
       within(field)
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toEqual(["Tier", "Seats", "Vip"]);
+    ).toEqual(["Tier", "Seats", "Vip", "Renewal"]);
     // A select field starts on its first option; tick a second one.
     expect(
       within(dialog).getByRole("checkbox", { name: "Gold" }),
@@ -840,6 +843,64 @@ describe("automations", () => {
           "e0000001-0000-4000-8000-000000000001",
           "e0000002-0000-4000-8000-000000000001",
         ],
+      });
+    });
+  });
+
+  it("waits until a contact's date (P8-D)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Renewal");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "wait_until_date",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    const field = within(dialog).getByLabelText("Date field, step 1 of Steps");
+    await waitFor(() => {
+      expect(field).toHaveValue("renewal");
+    });
+    // Only date fields are offered.
+    expect(
+      within(field)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Renewal"]);
+    await user.selectOptions(
+      within(dialog).getByLabelText("When, step 1 of Steps"),
+      "3 days before",
+    );
+    await user.selectOptions(
+      within(dialog).getByLabelText("At, step 1 of Steps"),
+      "08:00",
+    );
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "POST")?.body as {
+        definition: { yes: unknown[] };
+      };
+      expect(body.definition.yes[0]).toEqual({
+        type: "wait_until_date",
+        field_key: "renewal",
+        offset_days: -3,
+        hour: 8,
       });
     });
   });

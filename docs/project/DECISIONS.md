@@ -1073,6 +1073,36 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-D — Automation step that waits until a contact's date (2026-11-21)
+
+- **Status:** Implemented on the owner's "go 1, then 2 and 3 together then
+  4" (option 4: the "wait until" step left open by P8-H).
+- **Decision:** a step `{"type": "wait_until_date", "field_key": ...,
+  "offset_days": -365..365, "hour": 0..23}` pauses the run until the date
+  in one contact custom field of type `date`, moved by `offset_days`, at
+  `hour`:00 in the workspace's time zone ("3 days before Renewal date, at
+  09:00").
+  - Activation checks that the key names an active contact field of type
+    `date` ("the date field it waits for is not an active contact date
+    field").
+  - The date is read when the step runs. No date, an archived field, or a
+    moment already past: the step is `skipped` (`no_date`, `date_passed`)
+    and the run goes on at once, so a contact never waits on a date that
+    has gone.
+  - A date changed after the step started does not move the wait; the run
+    keeps the time it computed.
+  - Waiting until a field merely gets a value is not built: it needs an
+    event on every field change and a cap on open waits.
+  - Migration `0052_wait_until_date`: `automation_step.action` also allows
+    `wait_until_date`.
+- **Editor:** "Wait until a date" step: the contact date field (only date
+  fields are offered), days before or after (on the day, 1, 3, 7, 14, 30)
+  and the hour. The Automations introduction mentions it.
+- **Tests:** unit `test_automation_rules.py` (refused shapes, the time in
+  winter and summer, unreadable dates); `tests/integration/test_automation_date_wait.py`
+  (refusals, waiting, skipping, a changed date, going on when due);
+  `automations.test.tsx`.
+
 ## P8-H — Automation condition on a contact's deals (2026-11-21)
 
 - **Status:** Implemented on the owner's "do all four" (option 3 of the

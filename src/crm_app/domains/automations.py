@@ -35,6 +35,10 @@ id, and a fixed `message` the definition's author writes; decision P8-N),
 `value` the author writes; decision P8-F). A field's key and type never
 change, so the key names it; whether the field is active and the value fits
 its type is checked at activation and again at each run.
+Decision P8-D adds `wait_until_date` (`field_key` of a contact custom
+field of type date, `offset_days` from -365 to 365 and `hour` from 0 to
+23): the run waits until that date, moved by the days, at that hour in the
+workspace's time zone. No date, or a moment already past, skips the step.
 Contacts created by an import never start an automation.
 
 Conditions read the contact's `source` or `lifecycle_stage` (`in`,
@@ -58,7 +62,9 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from crm_app.domains import custom_fields as field_rules
 from crm_app.domains.opportunities import OUTCOMES
@@ -95,6 +101,7 @@ ACTIONS = (
     "wait",
     "wait_for_business_hours",
     "set_custom_field",
+    "wait_until_date",
 )
 PRIORITIES = ("high", "medium", "low")
 MAX_ACTIONS = 10
@@ -108,6 +115,9 @@ NOTICE_MAX = 200
 ROTATION_MIN, ROTATION_MAX = 2, 20
 MINUTES_MAX = 30 * 24 * 60
 MAX_VALUES = 20
+# A `wait_until_date` step (P8-D): days before or after the date, and the
+# hour of the day in the workspace's time zone.
+OFFSET_DAYS_MAX = 365
 
 
 @dataclass(frozen=True)
@@ -256,6 +266,38 @@ def _field_value(raw: Mapping[str, Any], where: str) -> Action:
     return Action("set_custom_field", {"field_key": key, "value": value})
 
 
+def _whole(value: object, lowest: int, highest: int, where: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not lowest <= value <= highest:
+        raise InvalidValue(f"{where}: a whole number from {lowest} to {highest}")
+    return value
+
+
+def _date_wait(raw: Mapping[str, Any], where: str) -> Action:
+    """`wait_until_date` (P8-D): a date field's key, days and an hour; that
+    the key names an active contact date field is checked at activation."""
+    _keys(raw, {"type", "field_key", "offset_days", "hour"}, where)
+    key = _field_key(raw.get("field_key"), f"{where}.field_key")
+    days = _whole(
+        raw.get("offset_days", 0), -OFFSET_DAYS_MAX, OFFSET_DAYS_MAX, f"{where}.offset_days"
+    )
+    hour = _whole(raw.get("hour"), 0, 23, f"{where}.hour")
+    return Action("wait_until_date", {"field_key": key, "offset_days": days, "hour": hour})
+
+
+def date_wait_at(stored: object, offset_days: int, hour: int, zone: str) -> datetime | None:
+    """When a `wait_until_date` step ends (P8-D), in UTC: the stored date
+    (`YYYY-MM-DD`) moved by `offset_days`, at `hour`:00 in `zone`; `None`
+    without a readable date."""
+    if not isinstance(stored, str):
+        return None
+    try:
+        day = date.fromisoformat(stored) + timedelta(days=offset_days)
+    except (ValueError, OverflowError):
+        return None
+    local = datetime.combine(day, time(hour), tzinfo=ZoneInfo(zone))
+    return local.astimezone(UTC)
+
+
 def _action(raw: object, where: str) -> Action:
     if not isinstance(raw, Mapping):
         raise InvalidValue(f"{where}: an object")
@@ -284,6 +326,7 @@ def _action(raw: object, where: str) -> Action:
         "notify_member": _notice,
         "assign_round_robin": _rotation,
         "set_custom_field": _field_value,
+        "wait_until_date": _date_wait,
     }
     if isinstance(kind, str) and kind in builder:
         return builder[kind](raw, where)
@@ -498,3 +541,11 @@ def field_values(given: Definition) -> list[tuple[str, object]]:
         for step in (*given.yes, *given.no)
         if step.type == "set_custom_field"
     ]
+
+
+def date_fields(given: Definition) -> set[str]:
+    """The contact date fields `wait_until_date` steps wait for (P8-D), to
+    check before activation."""
+    return {
+        step.args["field_key"] for step in (*given.yes, *given.no) if step.type == "wait_until_date"
+    }

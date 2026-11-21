@@ -10444,7 +10444,8 @@
               "assign_round_robin",
               "wait",
               "wait_for_business_hours",
-              "set_custom_field"
+              "set_custom_field",
+              "wait_until_date"
             ],
             "title": "Action",
             "type": "string"
