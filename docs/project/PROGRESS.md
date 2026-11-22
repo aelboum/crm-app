@@ -1420,6 +1420,28 @@ the email is recorded and closed unsent.
 28,649 tenants left in the local test database, not from this change. Not
 deployed to staging and not checked in a browser.
 
+## Email steps in the run history (2026-11-22, owner: "do B then C")
+
+B (campaign metrics) was already built: P7-RP counts each campaign's
+recipients by outcome and unsubscribes, P7-RX exports them as CSV, and
+P10-C and P10-C.1 show campaigns in Reports. The roadmap's "campaign
+metrics not built" was out of date and now names those slices.
+
+C: in an automation's latest runs, each send-email step (P8-E) now says
+what it did: "Email queued", "Email recorded, not sent (rehearsal)", or
+"Email not sent:" with the reason from its skip code (no frozen text, no
+address, sending not set up, no consent or suppressed, daily limit, address
+not valid). Frontend only; the API already returned each step's outcome
+and detail.
+
+| Check | Result |
+| --- | --- |
+| `npx vitest run --maxWorkers=3` | 38 files, 428 passed (the run-history test now covers a queued and a skipped email) |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+`AutomationsPage.tsx` keeps the 24 lines of Prettier differences it had
+before; the new lines add none. Not deployed to staging.
+
 ## Staging deployed at `5b68d14` (2026-11-22, owner: "go")
 
 From `1a9d8ce`: the automation step that sends a marketing email (P8-E),

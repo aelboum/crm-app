@@ -509,6 +509,7 @@ function Runs({
                 {run.branch
                   ? ` · ${t(run.branch === "yes" ? "automations.yes" : "automations.no")}`
                   : ""}
+                <RunEmails run={run} />
               </td>
             </tr>
           ))}
@@ -539,6 +540,49 @@ function RunWait({ run }: { run: AutomationRun }) {
       {" · "}
       {t("automations.run.waitUntil")} <When value={run.resume_at} />
     </span>
+  );
+}
+
+/*
+ * What each send-email step of a run did (P8-E): queued, recorded in a
+ * rehearsal, or not sent and why. The reasons are the step's skip codes.
+ */
+const EMAIL_SKIPS = new Set([
+  "no_content",
+  "no_email",
+  "sending_unavailable",
+  "not_eligible",
+  "daily_limit",
+  "invalid_email",
+]);
+
+function emailResult(
+  step: AutomationRun["steps"][number],
+  t: ReturnType<typeof useT>,
+): string {
+  if (step.outcome === "done")
+    return t(
+      step.detail === "rehearsal"
+        ? "automations.run.email.rehearsal"
+        : "automations.run.email.queued",
+    );
+  const code =
+    step.detail && EMAIL_SKIPS.has(step.detail) ? step.detail : "unknown";
+  return t("automations.run.email.skipped", {
+    reason: t(`automations.run.email.reason.${code}` as MessageId),
+  });
+}
+
+function RunEmails({ run }: { run: AutomationRun }) {
+  const t = useT();
+  const sends = run.steps.filter((s) => s.action === "send_email");
+  if (sends.length === 0) return null;
+  return (
+    <ul className="run-emails muted">
+      {sends.map((step) => (
+        <li key={`${step.branch}-${step.position}`}>{emailResult(step, t)}</li>
+      ))}
+    </ul>
   );
 }
 

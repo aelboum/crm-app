@@ -1463,6 +1463,7 @@ a.btn-primary:hover { filter: brightness(0.94); }
 .automation-card-text { min-width: 0; }
 .automation-card-title { margin: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .automation-card-summary { margin: 2px 0 0; font-size: 12.5px; }
+.run-emails { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12.5px; overflow-wrap: anywhere; }
 .automation-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .automation-form .automation-block { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .automation-checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }

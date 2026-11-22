@@ -70,6 +70,22 @@ const RUNS = {
           detail: null,
           executed_at: stamp,
         },
+        {
+          branch: "yes",
+          position: 1,
+          action: "send_email",
+          outcome: "done",
+          detail: null,
+          executed_at: stamp,
+        },
+        {
+          branch: "yes",
+          position: 2,
+          action: "send_email",
+          outcome: "skipped",
+          detail: "not_eligible",
+          executed_at: stamp,
+        },
       ],
     },
     {
@@ -1403,7 +1419,12 @@ describe("automations", () => {
       name: "Latest runs",
     });
     expect(table).toHaveTextContent("Completed");
-    expect(table).toHaveTextContent("1 done, 0 skipped · yes branch");
+    expect(table).toHaveTextContent("2 done, 1 skipped · yes branch");
+    // Each send-email step says what it did (P8-E).
+    expect(table).toHaveTextContent("Email queued");
+    expect(table).toHaveTextContent(
+      "Email not sent: no marketing consent, or the address is suppressed",
+    );
     // A run waiting for a field value shows when the wait gives up (P8-J).
     expect(table).toHaveTextContent(
       "Waiting · for a field value, at most until Nov 28, 2026",

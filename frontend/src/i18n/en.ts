@@ -319,6 +319,21 @@ export const en = {
   "automations.run.done": "{done} done, {skipped} skipped",
   "automations.run.waitUntil": "until",
   "automations.run.fieldWaitUntil": "for a field value, at most until",
+  "automations.run.email.queued": "Email queued",
+  "automations.run.email.rehearsal": "Email recorded, not sent (rehearsal)",
+  "automations.run.email.skipped": "Email not sent: {reason}",
+  "automations.run.email.reason.no_content":
+    "no email text was saved at activation",
+  "automations.run.email.reason.no_email": "the contact has no email address",
+  "automations.run.email.reason.sending_unavailable":
+    "sending is not set up for this workspace",
+  "automations.run.email.reason.not_eligible":
+    "no marketing consent, or the address is suppressed",
+  "automations.run.email.reason.daily_limit":
+    "the automation's daily limit was reached",
+  "automations.run.email.reason.invalid_email":
+    "the contact's address is not valid",
+  "automations.run.email.reason.unknown": "skipped",
   "automations.runStatus.running": "Running",
   "automations.runStatus.waiting": "Waiting",
   "automations.runStatus.completed": "Completed",
