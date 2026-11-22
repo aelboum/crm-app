@@ -1406,8 +1406,14 @@ for a contact field's value (P8-J, `94c62c8`). Migrations
 | Schema | `automation_step_action_check` names `wait_for_field`; `automation_run.field_wait_until` and `automation_date_workspace` exist |
 | `/readyz` | 200 |
 
-Not checked in a browser yet: the new trigger and step in the editor, and
-a run that waits on staging.
+- Browser check as the Staging Alpha owner (2026-11-22): the trigger list
+  offers "A date in a contact field comes" with the day offsets, the hours
+  and the hint; Staging Alpha has no contact date field, so the field list
+  says "No contact date fields yet". The step picker offers "Wait for a
+  field value"; the step lists the contact fields ("Plan"), "7 days" and
+  the hint. The dialog was closed, nothing saved.
+- Not checked: a run that waits or starts on a date on staging. The page
+  intro does not yet name the field-value wait.
 
 ## Automation step that waits for a contact field's value (2026-11-21, owner: "go 1 and then 3")
 
