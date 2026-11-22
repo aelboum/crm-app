@@ -287,7 +287,7 @@ export const en = {
   "inbox.error.stale": "Someone else changed this conversation. It has been reloaded; try again.",
   "inbox.error.forbidden": "Your role cannot change conversations.",
   "inbox.error.failed": "That did not work. Try again.",
-  "automations.intro": "When a contact is created, tagged, submits a form, books online, has a deal moved into a stage, is sent a campaign email, unsubscribes from a campaign or reaches a date in a contact field, an active automation can tag it, set its stage or a custom field, assign it, notify a team member, create tasks, and wait between steps or until a date in a contact field. A condition can send contacts down different steps by their source, stage, email, tags, a custom field or their deals. Each automation runs once per contact; imports never start one.",
+  "automations.intro": "When a contact is created, tagged, submits a form, books online, has a deal moved into a stage, is sent a campaign email, unsubscribes from a campaign or reaches a date in a contact field, an active automation can tag it, set its stage or a custom field, assign it, notify a team member, create tasks, and wait between steps, until a date in a contact field or until a contact field has a value. A condition can send contacts down different steps by their source, stage, email, tags, a custom field or their deals. Each automation runs once per contact; imports never start one.",
   "automations.new": "New automation",
   "automations.empty": "No automations yet",
   "automations.emptyBody": "Owners and Admins can create one to follow up new contacts automatically.",
