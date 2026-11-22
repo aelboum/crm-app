@@ -1390,6 +1390,22 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Staging deployed at `1a9d8ce` (2026-11-22, owner: "Do 1 then 5")
+
+From `94c62c8`: the Automations intro (`2154ef5`), field waits woken by the
+change and the wait's end in the run history (`1a9d8ce`). No migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `2154ef5`; on `1a9d8ce` | passed (runs 45014919558, 45023760468) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | kept 0 new lines (192 in all); **15 passed, 0 failed** |
+| Image | built on the VPS after `HEAD` was checked, `crm-app:1a9d8ce`; `VERSION=1a9d8ce`; previous image `crm-app:94c62c8` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `public.alembic_version` | `0054_wait_for_field` (unchanged) |
+| `/readyz` | 200 |
+
+Not checked in a browser: the run table's new wait text.
+
 ## Field waits woken by the change; staging run checked (2026-11-22, owner: "do1 and2 after that 3")
 
 - **1. Automations intro** names the field-value wait (`2154ef5`).
