@@ -1420,6 +1420,25 @@ the email is recorded and closed unsent.
 28,649 tenants left in the local test database, not from this change. Not
 deployed to staging and not checked in a browser.
 
+## Staging deployed at `5b68d14` (2026-11-22, owner: "go")
+
+From `1a9d8ce`: the automation step that sends a marketing email (P8-E),
+migration `0055_automation_email` (one new table, two widened checks; no
+data changed on upgrade).
+
+| Check | Result |
+| --- | --- |
+| CI on `5b68d14` | passed (run 45043959184, all 5 jobs) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | kept 0 new lines (200 in all); **15 passed, 0 failed** |
+| Image | built on the VPS after `HEAD` was checked, `crm-app:5b68d14`; `VERSION=5b68d14`; previous image `crm-app:1a9d8ce` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `public.alembic_version` | `0055_automation_email` |
+| `/readyz` | 200 |
+
+Rolling back the code needs a downgrade to `0054_wait_for_field` first.
+Staging workspaces are not rehearsal workspaces, so the step is skipped
+as `sending_unavailable` there. Not checked in a browser.
+
 ## Staging deployed at `1a9d8ce` (2026-11-22, owner: "Do 1 then 5")
 
 From `94c62c8`: the Automations intro (`2154ef5`), field waits woken by the
