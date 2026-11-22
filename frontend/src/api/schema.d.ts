@@ -6260,6 +6260,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Field Wait Until */
+            field_wait_until: string | null;
             /** Finished At */
             finished_at: string | null;
             /**

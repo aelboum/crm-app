@@ -317,6 +317,8 @@ export const en = {
   "automations.run.openContact": "Open contact",
   "automations.run.contactGone": "Contact deleted",
   "automations.run.done": "{done} done, {skipped} skipped",
+  "automations.run.waitUntil": "until",
+  "automations.run.fieldWaitUntil": "for a field value, at most until",
   "automations.runStatus.running": "Running",
   "automations.runStatus.waiting": "Waiting",
   "automations.runStatus.completed": "Completed",

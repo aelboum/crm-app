@@ -1021,6 +1021,11 @@ def update(
 
             data = {**webhooks.contact_data(row), "changed": sorted(changed)}
             webhooks.emit(session, scope.workspace, "contact.updated", data)
+            if custom_keys:
+                # Runs waiting for one of these fields look again now (P8-J).
+                from crm_app import automations  # noqa: PLC0415 - automations imports this module
+
+                automations.wake_field_waits(session, scope.workspace, record_id, custom_keys)
 
     _write(kind, scope, lambda: unique.get("value"), apply)
     return get(kind, scope, record_id)
@@ -1233,6 +1238,9 @@ def set_custom_field_in(
     metadata = {"fields": ["custom_fields"], "custom_field_keys": [key]}
     _audit(session, CONTACT, scope, _Event("updated", contact_id, metadata))
     _contact_changed(session, scope, row, ["custom_fields"])
+    from crm_app import automations  # noqa: PLC0415 - automations imports this module
+
+    automations.wake_field_waits(session, scope.workspace, contact_id, [key])
     return "set"
 
 

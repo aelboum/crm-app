@@ -5,9 +5,10 @@ days, or with days out of range, is refused when saved; a key that is not an
 active contact field is refused at activation. A contact that has a value
 goes on at once; one without stays on the step, looked at again every 10
 minutes (a retried job early changes nothing), and goes on once the value
-is filled in; after the days without one the step is skipped as
-`timed_out`, and a field archived meanwhile skips it as `field_gone`. The
-run history lists the step.
+is filled in; filling it in wakes the run at once, another field does
+not; after the days without one the step is skipped as `timed_out`, and a
+field archived meanwhile skips it as `field_gone`. The run history lists
+the step.
 """
 
 from __future__ import annotations
@@ -66,9 +67,19 @@ def test_a_bad_field_wait_is_refused_when_saved_or_activated(probe: Probe) -> No
 def test_the_run_goes_on_once_the_field_has_a_value(probe: Probe) -> None:
     assert probe["ann"] == ["completed", _state("completed", DONE)]
     assert probe["bob_waiting"] == ["waiting", _state("waiting", [], 600.0)]
+    # The run history shows the next look and when the wait gives up.
+    assert probe["history_waiting"] == ["waiting", 600.0, DAYS_2]
     assert probe["bob_early"] == ["waiting", _state("waiting", [], 600.0)]
     assert probe["bob_still"] == ["waiting", _state("waiting", [], 1200.0)]
     assert probe["bob_found"] == ["completed", _state("completed", DONE)]
+
+
+def test_filling_the_field_wakes_the_run_at_once(probe: Probe) -> None:
+    # Another field's change leaves the next look where it was.
+    assert probe["eve_other_field"] == _state("waiting", [], 600.0)
+    # The awaited field filled in at +3 minutes: due now, and the sweeper takes it.
+    assert probe["eve_woken"] == [_state("waiting", [], 180.0), True]
+    assert probe["eve_done"] == ["completed", _state("completed", DONE)]
 
 
 def test_the_step_is_skipped_when_the_days_run_out_or_the_field_goes(probe: Probe) -> None:
@@ -82,6 +93,6 @@ def test_the_step_is_skipped_when_the_days_run_out_or_the_field_goes(probe: Prob
         "completed",
         _state("completed", [[0, "skipped", "field_gone"], [1, "done", None]]),
     ]
-    assert probe["tagged"] == ["Ann", "Bob", "Cy", "Dee"]
+    assert probe["tagged"] == ["Ann", "Bob", "Cy", "Dee", "Eve"]
     assert probe["history"] == 200
     assert probe["history_actions"] == ["add_tag", "wait_for_field"]

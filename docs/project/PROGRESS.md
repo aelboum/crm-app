@@ -1390,6 +1390,46 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Field waits woken by the change; staging run checked (2026-11-22, owner: "do1 and2 after that 3")
+
+- **1. Automations intro** names the field-value wait (`2154ef5`).
+- **2. Live run on staging (`94c62c8`, Staging Alpha, as the owner):** test
+  fields `QA Seats` (number) and `QA Renewal` (date), tags "QA seats filled"
+  and "QA renewal day", automations "QA wait for seats" (contact created,
+  wait for QA Seats at most 1 day, add tag) and "QA renewal day" (QA
+  Renewal on the day at 00:00, add tag), contacts QA Waiter and QA Renewer.
+  Read from the database: QA Waiter's run waited with its next look 10
+  minutes on and the end one day on; after QA Seats was filled in, the next
+  look completed both steps (tag added). QA Renewer, dated today, was
+  started by the date look and tagged. Both automations were then paused;
+  QA Renewer's own field wait finishes when its day runs out. The test
+  records stay in Staging Alpha.
+- **3a. Woken at once:** a change to the awaited field (contact screen or
+  API, or another automation's custom-field step) makes the waiting run
+  due now (`automations.wake_field_waits`, decision P8-J follow-up).
+- **3b. Run history:** `field_wait_until` in the runs API; the run table
+  shows "until" a waiting run's next time, or "for a field value, at most
+  until" the day the wait gives up.
+- **3d:** not built. An index for the date look needs a `jsonb @>` query,
+  which the SaaS-OS database surface the product may use cannot express.
+- **3c:** a yearly date trigger waits for a product decision.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/integration/test_automation_field_wait.py` | 4 passed |
+| `pytest tests/integration` (full suite) | 961 passed, **5 errors**: `test_directory.py` (all five) time out at setup after 600 s, also when run alone |
+| `pytest tests/unit` | 875 passed |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 0 errors; 2 contracts kept |
+| `npx vitest run` | 38 files, 426 passed |
+| `tsc -b`; `eslint`; `npm run build` | clean |
+
+The `test_directory.py` errors are not from this change: `GET /v1/workspaces`
+(`crm_app.directory.list_workspaces`, unchanged since P2-F) reads every open
+workspace one by one, and the local test database has grown to about 28,600
+workspaces from repeated runs, so the probe outlasts its 600 s limit. CI
+starts from an empty database. The scan is a real limit to fix before many
+workspaces exist. Not deployed to staging.
+
 ## Staging deployed at `94c62c8` (2026-11-21, owner: "Yes")
 
 From `ae5f9d0`: the date trigger (P8-I, `5515563`) and the step that waits

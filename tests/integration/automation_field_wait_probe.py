@@ -56,6 +56,12 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
             headers=headers,
         )
         assert seats.status_code == 201, seats.text
+        plan = client.post(
+            f"{base}/custom-fields",
+            json={"entity": "contact", "key": "plan", "label": "Plan", "field_type": "text"},
+            headers=headers,
+        )
+        assert plan.status_code == 201, plan.text
         tag = client.post(f"{base}/tags", json={"name": "Known"}, headers=headers).json()["id"]
 
         def create(steps: list[dict[str, Any]]) -> Any:
@@ -136,6 +142,13 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         # minutes; a job retried before then changes nothing.
         bob_contact, bob = contact("Bob")
         result["bob_waiting"] = [automations.advance(a.id, bob), state(bob)]
+        listed = client.get(f"{base}/automations/{made.json()['id']}/runs", headers=headers)
+        bob_listed = next(r for r in listed.json()["items"] if r["id"] == str(bob))
+        result["history_waiting"] = [
+            bob_listed["status"],
+            _since(datetime.fromisoformat(bob_listed["resume_at"])),
+            _since(datetime.fromisoformat(bob_listed["field_wait_until"])),
+        ]
         later(minutes=5)
         result["bob_early"] = [automations.advance(a.id, bob), state(bob)]
         later(minutes=10)
@@ -149,6 +162,29 @@ def main() -> None:  # noqa: PLR0915 - one scenario script, read top to bottom
         assert updated.is_success, updated.text
         later(minutes=20)
         result["bob_found"] = [automations.advance(a.id, bob), state(bob)]
+
+        # Eve's other field changes: nothing moves. Her seats are filled in
+        # three minutes on: the run is woken at once, and the sweeper takes it.
+        later(minutes=0)
+        eve_contact, eve = contact("Eve")
+        automations.advance(a.id, eve)
+        later(minutes=2)
+
+        def patch_eve(fields: dict[str, Any]) -> None:
+            body = client.patch(
+                f"{base}/contacts/{eve_contact['id']}",
+                json={"custom_fields": fields},
+                headers={**headers, "If-Match": f'"{eve_contact["version"]}"'},
+            )
+            assert body.is_success, body.text
+            eve_contact["version"] = body.json()["version"]
+
+        patch_eve({"plan": "Pro"})
+        result["eve_other_field"] = state(eve)
+        later(minutes=3)
+        patch_eve({"seats": 1})
+        result["eve_woken"] = [state(eve), (a.id, eve) in automations.due()]
+        result["eve_done"] = [automations.advance(a.id, eve), state(eve)]
 
         # Cy never gets one: after the two days the step is skipped and the
         # run goes on.

@@ -1100,14 +1100,32 @@ approval), **Superseded**.
     custom field it waits for is not an active contact field").
   - Migration `0054_wait_for_field`: `automation_step.action` also allows
     `wait_for_field`; the new nullable column `automation_run.field_wait_until`.
-- **Not built:** waking a waiting run when the contact changes (the delay
-  is at most 10 minutes); showing the end of the wait in the run history.
+- **Follow-up (2026-11-22, owner: "do1 and2 after that 3"):**
+  - A change to the awaited field through the contact screen or API
+    (`records.update`) or another automation's "Set a custom field" step
+    (`records.set_custom_field_in`) wakes the run at once
+    (`automations.wake_field_waits`): inside the change's transaction the
+    waiting runs of that contact whose current step waits for one of the
+    changed keys get `resume_at = now` and are indexed as due now. The runs
+    stay locked until the change commits, so a worker that takes one sees
+    the value; a run being stepped at that moment is skipped (`SKIP
+    LOCKED`) and keeps its next look. A change to another field wakes
+    nothing. Forms and imports do not change existing contacts' custom
+    fields, so the 10-minute look still covers anything else.
+  - The run history (`GET .../automations/{id}/runs`) returns
+    `field_wait_until`; the editor's run table shows a waiting run "until"
+    its next time, or "for a field value, at most until" the day the wait
+    gives up.
+  - Not tested: the wake from another automation's step (the code path is
+    the same call; the screen/API path is tested).
 - **Editor:** "Wait for a field value" step: the field (all contact custom
   fields) and "Wait at most" (1 to 365 days, 7 by default), with a hint.
 - **Tests:** unit `test_automation_rules.py` (refused shapes, what counts as
   a value); `tests/integration/test_automation_field_wait.py` (refusals,
   a value already there, the look every 10 minutes, a value filled in,
-  timed out, field archived, run history); `automations.test.tsx`.
+  timed out, field archived, run history; the wake on a change of the
+  awaited field, none on another field); `automations.test.tsx` (the run
+  table's wait).
 
 ## P8-I — Automation trigger on a contact's date (2026-11-21)
 

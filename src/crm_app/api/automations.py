@@ -109,6 +109,8 @@ class RunOut(BaseModel):
     branch: Literal["yes", "no"] | None
     status: Literal["running", "waiting", "completed", "failed", "cancelled"]
     resume_at: datetime | None
+    # Decision P8-J: when a field wait gives up, while a run waits on one.
+    field_wait_until: datetime | None
     attempts: int
     last_error: str | None
     created_at: datetime

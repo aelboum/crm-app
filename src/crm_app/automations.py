@@ -24,7 +24,8 @@
   contact's date (P8-D); `wait_for_field` (P8-J) keeps the run on its step
   while the contact's field has no value, looking again every
   `FIELD_LOOK_EVERY` until its days run out (`automation_run.field_wait_until`
-  holds the end, set on the first look); the sweeper
+  holds the end, set on the first look). A member's or a step's change to
+  that field wakes the run at once (`wake_field_waits`); the sweeper
   (`crm_app.automation_maintenance`) enqueues due runs. A missing tag or a
   member who left skips the step with a code; a deleted contact cancels
   the run; anything unexpected raises, the job queue retries, and after
@@ -38,7 +39,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -869,6 +870,46 @@ def _field_pending(
     return min(now + FIELD_LOOK_EVERY, run.field_wait_until)
 
 
+def wake_field_waits(
+    session: Session, workspace: uuid.UUID, contact_id: uuid.UUID, keys: Collection[str]
+) -> int:
+    """A contact's custom fields `keys` changed: its runs waiting for one of
+    them (`wait_for_field`) look again now instead of at their next look.
+    Called inside the change's transaction, which keeps the runs locked, so
+    a worker that takes one waits for the change and then sees the value; a
+    run being stepped right now is skipped and looks on its own. Returns
+    how many runs were woken."""
+    if not keys:
+        return 0
+    waiting = session.execute(
+        select(AutomationRun)
+        .where(
+            AutomationRun.tenant_id == workspace,
+            AutomationRun.contact_id == contact_id,
+            AutomationRun.status == "waiting",
+            AutomationRun.field_wait_until.is_not(None),
+        )
+        .with_for_update(skip_locked=True)
+    ).scalars()
+    now = _now()
+    woken: list[uuid.UUID] = []
+    for run in waiting:
+        if run.branch is None:
+            continue
+        steps = _version(session, workspace, run).branch(run.branch)
+        if run.next_step >= len(steps):
+            continue
+        action = steps[run.next_step]
+        if action.type == "wait_for_field" and action.args["field_key"] in keys:
+            run.resume_at = now
+            woken.append(run.id)
+    if woken:
+        session.flush()
+        for run_id in woken:
+            _schedule(run_id, workspace, now)
+    return len(woken)
+
+
 def _opening(session: Session, workspace: uuid.UUID, now: datetime) -> datetime | None:
     """`wait_for_business_hours` (P8-W): `now` while the workspace is open,
     else its next opening in its time zone; `None` while no hours are set
@@ -1337,6 +1378,7 @@ def runs(scope: Scope, automation_id: uuid.UUID) -> list[Item]:
                 "branch": row.branch,
                 "status": row.status,
                 "resume_at": row.resume_at,
+                "field_wait_until": row.field_wait_until,
                 "attempts": row.attempts,
                 "last_error": row.last_error,
                 "created_at": row.created_at,

@@ -9466,6 +9466,18 @@
             "title": "Created At",
             "type": "string"
           },
+          "field_wait_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Wait Until"
+          },
           "finished_at": {
             "anyOf": [
               {
@@ -9536,6 +9548,7 @@
           "branch",
           "status",
           "resume_at",
+          "field_wait_until",
           "attempts",
           "last_error",
           "created_at",

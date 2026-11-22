@@ -490,6 +490,7 @@ function Runs({
                 <Badge tone={RUN_TONE[run.status]}>
                   {t(`automations.runStatus.${run.status}` as MessageId)}
                 </Badge>
+                <RunWait run={run} />
                 {run.last_error ? (
                   <span className="muted"> · {run.last_error}</span>
                 ) : null}
@@ -509,6 +510,30 @@ function Runs({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/*
+ * How long a waiting run waits: until its time, or, waiting for a field
+ * value (P8-J), until the wait gives up.
+ */
+function RunWait({ run }: { run: AutomationRun }) {
+  const t = useT();
+  if (run.status !== "waiting") return null;
+  if (run.field_wait_until)
+    return (
+      <span className="muted">
+        {" · "}
+        {t("automations.run.fieldWaitUntil")}{" "}
+        <When value={run.field_wait_until} />
+      </span>
+    );
+  if (!run.resume_at) return null;
+  return (
+    <span className="muted">
+      {" · "}
+      {t("automations.run.waitUntil")} <When value={run.resume_at} />
+    </span>
   );
 }
 

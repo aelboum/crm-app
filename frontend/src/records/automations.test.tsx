@@ -56,6 +56,7 @@ const RUNS = {
       branch: "yes",
       status: "completed",
       resume_at: null,
+      field_wait_until: null,
       attempts: 0,
       last_error: null,
       created_at: stamp,
@@ -70,6 +71,20 @@ const RUNS = {
           executed_at: stamp,
         },
       ],
+    },
+    {
+      id: "r2",
+      contact_id: null,
+      version: 1,
+      branch: "yes",
+      status: "waiting",
+      resume_at: "2026-11-21T10:10:00Z",
+      field_wait_until: "2026-11-28T10:00:00Z",
+      attempts: 0,
+      last_error: null,
+      created_at: stamp,
+      finished_at: null,
+      steps: [],
     },
   ],
 };
@@ -1291,6 +1306,10 @@ describe("automations", () => {
     });
     expect(table).toHaveTextContent("Completed");
     expect(table).toHaveTextContent("1 done, 0 skipped · yes branch");
+    // A run waiting for a field value shows when the wait gives up (P8-J).
+    expect(table).toHaveTextContent(
+      "Waiting · for a field value, at most until Nov 28, 2026",
+    );
     await user.click(
       within(table).getByRole("button", { name: "Open contact" }),
     );
