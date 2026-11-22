@@ -10460,7 +10460,8 @@
               "wait_for_business_hours",
               "set_custom_field",
               "wait_until_date",
-              "wait_for_field"
+              "wait_for_field",
+              "send_email"
             ],
             "title": "Action",
             "type": "string"

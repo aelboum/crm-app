@@ -48,6 +48,13 @@ Decision P8-J adds `wait_for_field` (`field_key` of a contact custom field
 of any type, `max_days` from 1 to 365): the run goes on as soon as the
 contact's field has a value, looked at again every few minutes, and skips
 the step as `timed_out` once the days have gone by without one.
+Decision P8-E adds `send_email` (`template_id` of an email template and
+`daily_limit` from 1 to 1000, 200 unless given): one marketing email to the
+contact, with the campaign rules (consent, suppression, unsubscribe). The
+draft names the template; activation, by a member who may approve
+campaigns, freezes its `subject` and `body` into the version, so editing
+the template later changes nothing until the automation is activated again.
+The limit counts the automation's emails over the last 24 hours.
 Contacts created by an import never start an automation.
 
 Conditions read the contact's `source` or `lifecycle_stage` (`in`,
@@ -69,12 +76,13 @@ simply matches no deal.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from crm_app.domains import campaigns as email_rules
 from crm_app.domains import custom_fields as field_rules
 from crm_app.domains.opportunities import OUTCOMES
 from crm_app.domains.records import SOURCES, STAGES, InvalidValue, visible_text
@@ -113,6 +121,7 @@ ACTIONS = (
     "set_custom_field",
     "wait_until_date",
     "wait_for_field",
+    "send_email",
 )
 PRIORITIES = ("high", "medium", "low")
 MAX_ACTIONS = 10
@@ -131,6 +140,9 @@ MAX_VALUES = 20
 OFFSET_DAYS_MAX = 365
 # A `wait_for_field` step (P8-J): the longest it waits for a value, in days.
 FIELD_WAIT_DAYS_MAX = 365
+# A `send_email` step (P8-E): at most this many emails from the automation
+# in any 24 hours.
+DAILY_LIMIT_DEFAULT, DAILY_LIMIT_MAX = 200, 1000
 
 
 @dataclass(frozen=True)
@@ -316,6 +328,31 @@ def _field_wait(raw: Mapping[str, Any], where: str) -> Action:
     return Action("wait_for_field", {"field_key": key, "max_days": days})
 
 
+def _send(raw: Mapping[str, Any], where: str) -> Action:
+    """`send_email` (P8-E): a template and the daily limit. A stored version
+    also holds the `subject` and `body` frozen at activation; a draft's are
+    dropped (`without_content`)."""
+    _keys(raw, {"type", "template_id", "daily_limit", "subject", "body"}, where)
+    args: dict[str, Any] = {
+        "template_id": _uuid(raw.get("template_id"), f"{where}.template_id"),
+        "daily_limit": _whole(
+            raw.get("daily_limit", DAILY_LIMIT_DEFAULT),
+            1,
+            DAILY_LIMIT_MAX,
+            f"{where}.daily_limit",
+        ),
+    }
+    if ("subject" in raw) != ("body" in raw):
+        raise InvalidValue(f"{where}: a subject and a body together, or neither")
+    if "subject" in raw:
+        try:
+            args["subject"] = email_rules.subject(str(raw["subject"]))
+            args["body"] = email_rules.body(str(raw["body"]))
+        except InvalidValue as exc:
+            raise InvalidValue(f"{where}.{exc}") from None
+    return Action("send_email", args)
+
+
 def has_value(stored: object) -> bool:
     """Whether a stored custom field value counts as filled in for
     `wait_for_field` (P8-J), as for a `present` condition: anything but
@@ -376,6 +413,7 @@ def _action(raw: object, where: str) -> Action:
         "set_custom_field": _field_value,
         "wait_until_date": _date_wait,
         "wait_for_field": _field_wait,
+        "send_email": _send,
     }
     if isinstance(kind, str) and kind in builder:
         return builder[kind](raw, where)
@@ -617,3 +655,43 @@ def trigger_date_field(given: Definition) -> str | None:
     """The contact date field a `date_reached` trigger reads (P8-I), to
     check before activation; None for other triggers."""
     return None if given.trigger_args is None else given.trigger_args["field_key"]
+
+
+def templates(given: Definition) -> set[str]:
+    """The email templates `send_email` steps send (P8-E), to freeze at
+    activation."""
+    return {
+        step.args["template_id"] for step in (*given.yes, *given.no) if step.type == "send_email"
+    }
+
+
+def _replace_sends(
+    given: Definition, change: Callable[[dict[str, Any]], dict[str, Any]]
+) -> Definition:
+    def branch(steps: tuple[Action, ...]) -> tuple[Action, ...]:
+        return tuple(
+            Action(step.type, change(step.args)) if step.type == "send_email" else step
+            for step in steps
+        )
+
+    return replace(given, yes=branch(given.yes), no=branch(given.no))
+
+
+def without_content(given: Definition) -> Definition:
+    """A draft as stored: its `send_email` steps name their template only."""
+    return _replace_sends(
+        given, lambda args: {k: v for k, v in args.items() if k not in ("subject", "body")}
+    )
+
+
+def with_content(given: Definition, content: Mapping[str, tuple[str, str]]) -> Definition:
+    """The version activation freezes (P8-E): each `send_email` step with its
+    template's subject and body as they are now (`content`, by template id)."""
+    return _replace_sends(
+        given,
+        lambda args: {
+            **args,
+            "subject": content[args["template_id"]][0],
+            "body": content[args["template_id"]][1],
+        },
+    )

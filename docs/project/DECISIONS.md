@@ -1073,6 +1073,65 @@ approval), **Superseded**.
   `inbound.` domain with its MX record, the webhook secret, and a
   retention period for unmatched rows (EMAIL-ARCHITECTURE section 6).
 
+## P8-E — Automation step that sends one marketing email (2026-11-22)
+
+- **Status:** Approved by the owner, 2026-11-22. They asked "What do you
+  recommend?", said "Go" to this step, then chose "A" (activation is the
+  approval) over a separate approval step.
+- **Decision:** a step `{"type": "send_email", "template_id": ...,
+  "daily_limit": 1..1000}` (200 unless given) sends one marketing email from
+  a reusable template (P7-T) to the run's contact.
+  - **Activation is the approval.** A draft names the template only (a
+    subject or body sent with it is dropped). Activation copies the
+    template's current subject and body into the frozen version, and needs
+    `crm_app.campaign:approve` (Owner, Admin) as well as
+    `crm_app.automation:manage`, else 403 `campaign_approval_required`.
+    Editing the template later changes nothing sent until the automation is
+    paused and activated again. A template gone at activation is refused
+    ("an email template it sends no longer exists"). The activation's audit
+    entry lists the templates.
+  - **Marketing rules as for campaigns.** Purpose `automation`, on the
+    campaign stream (its sender, switches and rate limits). It needs the
+    contact's marketing consent and an address not suppressed, checked at
+    the step and again at send time. Each email carries the campaign footer
+    with an unsubscribe link and one-click `List-Unsubscribe` (E-H1).
+  - **Only where campaigns may send.** The step queues only while
+    `campaigns.queue_available` holds (sending available, or a rehearsal
+    workspace) and the app has an `https:` origin; otherwise it is skipped
+    as `sending_unavailable`. In a rehearsal workspace (P7-R) the email is
+    recorded and closed unsent (detail `rehearsal`). Production stays
+    blocked by the existing locks; this changes no switch.
+  - **Daily limit:** at most `daily_limit` emails from the automation in any
+    24 hours, counted from `automation_email` under a per-automation
+    advisory lock, so parallel runs never pass it; past it the step is
+    skipped as `daily_limit` (the run goes on). Other skips: `no_email`,
+    `not_eligible` (no consent or suppressed), `invalid_email`.
+  - **Once per run and step.** The email, its `automation_email` row and the
+    step row commit together, so a retried job never sends twice. The run
+    job hands committed emails to the sender at once; the sweeper finds any
+    other at its retry time.
+  - **Unsubscribe:** the same public link and one-click route as campaigns.
+    A token not found among campaign recipients is looked up in
+    `automation_email`; the address is suppressed (`unsubscribed`) and the
+    consent withdrawn. No campaign trigger fires. The automation and run
+    references are set to null on deletion, so links keep working after the
+    automation is deleted.
+  - Migration `0055_automation_email`: table `automation_email`
+    (tenant-owned, forced RLS, in `PURGE_TABLES`); `automation_step.action`
+    allows `send_email`; `email_message.purpose` allows `automation`.
+- **Editor:** "Send a marketing email" step: the template and "Most emails
+  per 24 hours" (10 to 1000, 200 by default), with a hint on consent,
+  sending and activation. A refused activation says who may activate it.
+- **Not built:** per-step reporting of the emails' delivery in the run
+  history (the email statuses are stored); a choice of sender per step.
+- **Tests:** unit `test_automation_rules.py` (refused shapes, the draft and
+  the frozen version); `tests/integration/test_automation_email.py`
+  (refusals, the approval right, freezing, sending unavailable, one email
+  with unsubscribe headers through a recording provider, no second email
+  on a retry, no consent, no address, the daily limit and its 24 hours,
+  unsubscribe before and after deletion, another workspace's path,
+  rehearsal); `automations.test.tsx` (the step, the refusal message).
+
 ## P8-J — Automation step that waits for a contact field's value (2026-11-21)
 
 - **Status:** Implemented on the owner's "go 1 and then 3" (option 3, second

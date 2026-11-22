@@ -30,6 +30,8 @@ PURPOSES = (
     "campaign",
     "appointment_reminder",
     "consent_confirmation",
+    # Decision P8-E: one marketing email from an automation step.
+    "automation",
 )
 SUBJECT_MAX = 200
 BODY_MAX = 20_000
@@ -130,7 +132,7 @@ def message_id(email_id: str, sender: str) -> str:
 # --- Headers (decision E-H1) -------------------------------------------------------------
 
 # Bulk-sender rules ask one-click unsubscribe of campaign mail (RFC 8058).
-UNSUBSCRIBE_PURPOSES = frozenset({"campaign"})
+UNSUBSCRIBE_PURPOSES = frozenset({"campaign", "automation"})
 UNSUBSCRIBE_URL_MAX = 2048
 # How many earlier messages a reply's `References` names, newest last.
 REFERENCES_MAX = 10
@@ -147,7 +149,7 @@ def unsubscribe_url(purpose: str, url: str | None) -> str | None:
             raise ValueError(f"{purpose} email carries no unsubscribe address")
         return None
     if url is None or len(url) > UNSUBSCRIBE_URL_MAX or not _UNSUBSCRIBE_URL.fullmatch(url):
-        raise ValueError("a campaign email needs an https one-click unsubscribe address")
+        raise ValueError("a marketing email needs an https one-click unsubscribe address")
     return url
 
 

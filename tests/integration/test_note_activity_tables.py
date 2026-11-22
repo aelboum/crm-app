@@ -482,6 +482,7 @@ def test_the_migration_backfills_created_entries_and_rolls_back(
         "automation_version",
         "automation_run",
         "automation_step",
+        "automation_email",
         "automation_due",
         "conversation",
         "conversation_message",

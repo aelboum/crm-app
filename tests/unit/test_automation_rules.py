@@ -147,6 +147,17 @@ def test_a_definition_is_normalised_to_plain_data() -> None:
         {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": True}]},
         {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": 1.5}]},
         {"yes": [{"type": "wait_for_field", "field_key": "plan", "max_days": 3, "hour": 9}]},
+        # P8-E
+        {"yes": [{"type": "send_email"}]},
+        {"yes": [{"type": "send_email", "template_id": "not-a-uuid"}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "daily_limit": 0}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "daily_limit": 1001}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "daily_limit": True}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "subject": "Hi"}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "body": "Hi"}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "subject": "x" * 201, "body": "x"}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "subject": "Hi", "body": " "}]},
+        {"yes": [{"type": "send_email", "template_id": TAG, "to": "a@example.com"}]},
         # P8-I
         {"trigger": {"type": "date_reached", "hour": 9}},
         {"trigger": {"type": "date_reached", "field_key": "Bad Key", "hour": 9}},
@@ -498,3 +509,39 @@ def test_a_field_wait_is_plain_data_and_names_its_field() -> None:
     for stored in ("gold", "", 0, False, "2026-12-01"):
         assert rules.has_value(stored)
     assert not rules.has_value(None)
+
+
+def test_an_email_step_names_its_template_and_freezes_its_content() -> None:
+    """P8-E: `send_email` takes a template and a daily limit (200 unless
+    given, 1 to 1000). A draft keeps the template only; activation adds the
+    template's subject and body, which a stored version then carries."""
+    other = str(uuid.uuid4())
+    given = rules.definition(
+        _base(
+            yes=[
+                {"type": "send_email", "template_id": TAG},
+                {"type": "send_email", "template_id": other, "daily_limit": 1000},
+            ]
+        )
+    )
+    assert given.as_json()["yes"] == [
+        {"type": "send_email", "template_id": TAG, "daily_limit": 200},
+        {"type": "send_email", "template_id": other, "daily_limit": 1000},
+    ]
+    assert rules.templates(given) == {TAG, other}
+    assert rules.referenced(given) == (set(), set())
+    frozen = rules.with_content(
+        given, {TAG: ("Hello {{first_name}}", "Body one"), other: ("Two", "Body two")}
+    )
+    assert frozen.as_json()["yes"][0] == {
+        "type": "send_email",
+        "template_id": TAG,
+        "daily_limit": 200,
+        "subject": "Hello {{first_name}}",
+        "body": "Body one",
+    }
+    # A stored version reads back unchanged; a draft drops the content.
+    assert rules.definition(frozen.as_json()) == frozen
+    assert rules.without_content(frozen) == given
+    assert rules.without_content(given) == given
+    assert rules.templates(rules.definition(_base())) == set()

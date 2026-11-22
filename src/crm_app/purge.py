@@ -69,6 +69,8 @@ PURGE_TABLES: tuple[str, ...] = (
     "conversation_read",
     "conversation_message",
     "conversation",
+    # P8-E: the emails automation steps queued.
+    "automation_email",
     "automation_step",
     "automation_run",
     "automation_version",

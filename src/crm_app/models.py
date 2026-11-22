@@ -1195,6 +1195,28 @@ class CampaignRecipient(Base):
     unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class AutomationEmail(Base):
+    """One email a `send_email` automation step queued, with its
+    unsubscribe token's hash (migration 0055, decision P8-E)."""
+
+    __tablename__ = "automation_email"
+    __table_args__ = ({"schema": SCHEMA},)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    automation_id: Mapped[uuid.UUID | None] = mapped_column()
+    run_id: Mapped[uuid.UUID | None] = mapped_column()
+    branch: Mapped[str] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer)
+    contact_id: Mapped[uuid.UUID | None] = mapped_column()
+    email: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    email_message_id: Mapped[uuid.UUID | None] = mapped_column()
+    unsubscribe_hash: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Website(Base):
     """An external site whose pages may submit the workspace's published
     forms (migration 0027, P12-W)."""

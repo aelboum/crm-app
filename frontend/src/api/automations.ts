@@ -27,6 +27,9 @@ export const NOTICE_MAX = 200;
 // P8-R: a round-robin step hands contacts out among 2 to 20 members.
 export const ROTATION_MIN = 2;
 export const ROTATION_MAX = 20;
+// P8-E: a send-email step's limit on the automation's emails per 24 hours.
+export const DAILY_LIMIT_DEFAULT = 200;
+export const DAILY_LIMIT_MAX = 1000;
 
 export type Action =
   | { type: "add_tag"; tag_id: string }
@@ -64,7 +67,10 @@ export type Action =
     }
   // P8-J: on as soon as a contact custom field has a value, looked at again
   // every few minutes; skipped as timed_out after max_days without one.
-  | { type: "wait_for_field"; field_key: string; max_days: number };
+  | { type: "wait_for_field"; field_key: string; max_days: number }
+  // P8-E: one marketing email from a template; activation (by a member who
+  // may approve campaigns) freezes the template's subject and text.
+  | { type: "send_email"; template_id: string; daily_limit: number };
 
 export type Condition =
   | {

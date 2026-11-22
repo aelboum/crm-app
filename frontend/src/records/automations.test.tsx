@@ -92,6 +92,8 @@ const RUNS = {
 type Reply = { status: number; body?: unknown } | undefined;
 const CAMPAIGN = "ca000000-0000-4000-8000-000000000001";
 const GONE = "ca000000-0000-4000-8000-000000000009";
+const TEMPLATE = "e0000000-0000-4000-8000-000000000001";
+const TEMPLATE_2 = "e0000000-0000-4000-8000-000000000002";
 
 function definitionOf(
   n: number,
@@ -214,6 +216,27 @@ function workspace(
       };
     }
     if (path === `${base}/custom-fields`) return { status: 200, body: FIELDS };
+    if (path === `${base}/email-templates`) {
+      const at = "2026-11-01T10:00:00Z";
+      const template = (id: string, name: string) => ({
+        id,
+        name,
+        subject: "Hello {{first_name}}",
+        body: "Welcome.",
+        created_at: at,
+        updated_at: at,
+        version: 1,
+      });
+      return {
+        status: 200,
+        body: {
+          items: [
+            template(TEMPLATE, "Welcome"),
+            template(TEMPLATE_2, "Renewal"),
+          ],
+        },
+      };
+    }
     if (path === `${base}/pipelines`) return { status: 200, body: PIPELINES };
     if (path === `${base}/tags`) {
       return {
@@ -402,6 +425,7 @@ describe("automations", () => {
       "Wait for business hours",
       "Wait until a date",
       "Wait for a field value",
+      "Send a marketing email",
     ]);
     expect(await accessibilityViolations()).toEqual([]);
     await user.click(
@@ -971,6 +995,80 @@ describe("automations", () => {
         max_days: 30,
       });
     });
+  });
+
+  it("sends a marketing email from a template (P8-E)", async () => {
+    const user = userEvent.setup();
+    const { sent } = renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: (method) =>
+          method === "POST" ? { status: 201, body: automation() } : undefined,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "New automation" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "New automation",
+    });
+    await user.type(within(dialog).getByLabelText("Name"), "Welcome email");
+    await user.selectOptions(
+      within(dialog).getByLabelText("Step to add to Steps"),
+      "send_email",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Add step to Steps" }),
+    );
+    const template = within(dialog).getByLabelText(
+      "Email template, step 1 of Steps",
+    );
+    await waitFor(() => {
+      expect(template).toHaveValue(TEMPLATE);
+    });
+    await user.selectOptions(template, "Renewal");
+    const limit = within(dialog).getByLabelText(
+      "Most emails per 24 hours, step 1 of Steps",
+    );
+    expect(limit).toHaveValue("200");
+    await user.selectOptions(limit, "50");
+    expect(
+      within(dialog).getByText(/only if they agreed to marketing email/),
+    ).toBeInTheDocument();
+    expect(await accessibilityViolations()).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => {
+      const body = sent.find((r) => r.method === "POST")?.body as {
+        definition: { yes: unknown[] };
+      };
+      expect(body.definition.yes[0]).toEqual({
+        type: "send_email",
+        template_id: TEMPLATE_2,
+        daily_limit: 50,
+      });
+    });
+  });
+
+  it("says who may activate an automation that sends email", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      `/w/${WS}/automations`,
+      workspace(true, {
+        onWrite: () => ({
+          status: 403,
+          body: { detail: { code: "campaign_approval_required" } },
+        }),
+      }),
+    );
+    const card = await screen.findByRole("listitem", {
+      name: "Welcome form leads",
+    });
+    await user.click(within(card).getByRole("button", { name: "Activate" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent(
+      "Only members who may approve campaigns",
+    );
   });
 
   it("starts on a contact's date (P8-I)", async () => {

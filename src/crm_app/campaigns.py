@@ -86,6 +86,7 @@ from crm_app.domains import email_streams as streams
 from crm_app.domains import paging
 from crm_app.domains.records import STAGES, InvalidValue
 from crm_app.models import (
+    AutomationEmail,
     Campaign,
     CampaignQueue,
     CampaignRecipient,
@@ -922,7 +923,9 @@ def _start_scheduled(scope: Scope, campaign_id: uuid.UUID) -> bool:
     return _transaction(scope, business)
 
 
-def _token_hash(token: str) -> str:
+def token_hash(token: str) -> str:
+    """The SHA-256 an unsubscribe token is kept as (campaigns, and automation
+    emails, P8-E)."""
     return hashlib.sha256(token.encode("ascii")).hexdigest()
 
 
@@ -1008,7 +1011,7 @@ def process(  # noqa: PLR0913 - one campaign and where its links point
                     email=(contact.email or "").strip().lower(),
                     status="queued",
                     email_message_id=email_id,
-                    unsubscribe_hash=_token_hash(token),
+                    unsubscribe_hash=token_hash(token),
                     created_at=_now(),
                 )
             )
@@ -1085,7 +1088,7 @@ def forget_workspace(tenant_id: uuid.UUID) -> bool:
     return left is None
 
 
-def _links() -> tuple[str, str] | None:
+def unsubscribe_links() -> tuple[str, str] | None:
     """The unsubscribe page and the one-click route, under the app's public
     `https:` origin; None without one (nothing is processed)."""
     origin = os.environ.get("PUBLIC_APP_ORIGIN", "").strip().rstrip("/")
@@ -1111,7 +1114,7 @@ def run_queued(
         "waiting": 0,
         "emails": [],
     }
-    links = _links()
+    links = unsubscribe_links()
     moment = now or _now()
     with session_scope() as session:
         rows = list(
@@ -1301,8 +1304,9 @@ def results(scope: Scope, campaign_id: uuid.UUID) -> list[Item]:
 
 
 def unsubscribe(workspace: uuid.UUID, token: str) -> bool:
-    """Act on a recipient's unsubscribe link; True when the token is known.
-    Repeating it changes nothing more."""
+    """Act on a recipient's unsubscribe link, from a campaign's email or an
+    automation's (P8-E); True when the token is known. Repeating it changes
+    nothing more."""
     if len(token) != 32 or not all(c in "0123456789abcdef" for c in token):
         return False
     with tenant_session_scope(workspace) as session:
@@ -1310,12 +1314,12 @@ def unsubscribe(workspace: uuid.UUID, token: str) -> bool:
             select(CampaignRecipient)
             .where(
                 CampaignRecipient.tenant_id == workspace,
-                CampaignRecipient.unsubscribe_hash == _token_hash(token),
+                CampaignRecipient.unsubscribe_hash == token_hash(token),
             )
             .with_for_update()
         ).scalar_one_or_none()
         if row is None:
-            return False
+            return _unsubscribe_automation_email(session, workspace, token)
         if row.status != "unsubscribed":
             row.status, row.unsubscribed_at = "unsubscribed", _now()
             suppression.suppress_unsubscribed(session, workspace, row.email, row.contact_id)
@@ -1326,3 +1330,22 @@ def unsubscribe(workspace: uuid.UUID, token: str) -> bool:
                     session, workspace, "campaign_unsubscribed", row.contact_id, row.campaign_id
                 )
         return True
+
+
+def _unsubscribe_automation_email(session: Session, workspace: uuid.UUID, token: str) -> bool:
+    """The link of an email an automation step sent (P8-E): the address is
+    suppressed like a campaign recipient's. No campaign trigger fires."""
+    row = session.execute(
+        select(AutomationEmail)
+        .where(
+            AutomationEmail.tenant_id == workspace,
+            AutomationEmail.unsubscribe_hash == token_hash(token),
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if row is None:
+        return False
+    if row.status != "unsubscribed":
+        row.status, row.unsubscribed_at = "unsubscribed", _now()
+        suppression.suppress_unsubscribed(session, workspace, row.email, row.contact_id)
+    return True

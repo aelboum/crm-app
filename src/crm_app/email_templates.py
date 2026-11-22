@@ -3,8 +3,10 @@
 A template is a name, a one-line subject and a plain-text body with the
 campaign placeholders (`{{first_name}}`, `{{last_name}}`, checked by
 `crm_app.domains.campaigns`). It sends nothing: the campaign editor copies
-it into a draft (which then needs its own approval, P7-C), and the reply
-composer asks for it rendered for the conversation's contact. At most
+it into a draft (which then needs its own approval, P7-C), the reply
+composer asks for it rendered for the conversation's contact, and an
+automation's `send_email` step (P8-E) keeps the copy frozen when the
+automation was activated. At most
 `TEMPLATES_MAX` per workspace; names are unique per workspace. Every read
 and write runs in `tenant_session_scope(workspace)` with an explicit
 workspace predicate; changes are audited without their text.

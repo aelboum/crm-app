@@ -2,7 +2,9 @@
 
 - **Definitions** are edited as drafts (`create`, `update`) and checked by
   `crm_app.domains.automations`. `activate` checks them again, plus every
-  tag and member they name, and freezes them as an immutable version; runs
+  tag and member they name, and freezes them as an immutable version, with
+  the content of each email template a `send_email` step names (P8-E;
+  activating such an automation needs `crm_app.campaign:approve`); runs
   follow the version they began with. `pause` stops new runs; running ones
   finish. At most `MAX_AUTOMATIONS` per workspace.
 - **Trigger:** `on_contact_created` runs inside the transaction that
@@ -25,7 +27,13 @@
   while the contact's field has no value, looking again every
   `FIELD_LOOK_EVERY` until its days run out (`automation_run.field_wait_until`
   holds the end, set on the first look). A member's or a step's change to
-  that field wakes the run at once (`wake_field_waits`); the sweeper
+  that field wakes the run at once (`wake_field_waits`). `send_email`
+  (P8-E) queues one marketing email from the subject and body frozen at
+  activation, only where campaigns may send or rehearse, never past the
+  contact's consent or suppression, and at most the step's daily limit per
+  automation over 24 hours; its `automation_email` row keeps the
+  unsubscribe token's hash. The job hands the email to the sender after
+  the step commits (`advance`'s `queued`); the sweeper
   (`crm_app.automation_maintenance`) enqueues due runs. A missing tag or a
   member who left skips the step with a code; a deleted contact cancels
   the run; anything unexpected raises, the job queue retries, and after
@@ -37,7 +45,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import secrets
 import uuid
 from collections.abc import Callable, Collection, Mapping
 from datetime import UTC, datetime, timedelta
@@ -47,7 +57,13 @@ from zoneinfo import ZoneInfo
 from saas_os.core.audit_log import record_in_transaction
 from saas_os.core.authority import UserCaller
 from saas_os.core.identity import get_membership
-from saas_os.core.tenancy import TenantClosedError, TenantNotFoundError, lock_open_tenant
+from saas_os.core.rbac import can
+from saas_os.core.tenancy import (
+    TenantClosedError,
+    TenantNotFoundError,
+    get_tenant,
+    lock_open_tenant,
+)
 from saas_os.infra.db import (
     IntegrityError,
     OperationalError,
@@ -60,10 +76,20 @@ from saas_os.infra.db import (
     tenant_session_scope,
 )
 
-from crm_app import custom_fields, notifications, records, system_audit, tasks
+from crm_app import (
+    campaigns,
+    custom_fields,
+    emails,
+    notifications,
+    records,
+    suppression,
+    system_audit,
+    tasks,
+)
 from crm_app.appointments import workspace_hours
 from crm_app.domains import appointments as hours_rules
 from crm_app.domains import automations as rules
+from crm_app.domains import campaigns as email_rules
 from crm_app.domains import custom_fields as field_rules
 from crm_app.domains.opportunities import OPEN
 from crm_app.domains.records import InvalidValue
@@ -71,6 +97,7 @@ from crm_app.models import (
     Automation,
     AutomationDateWorkspace,
     AutomationDue,
+    AutomationEmail,
     AutomationRotation,
     AutomationRun,
     AutomationStep,
@@ -80,6 +107,7 @@ from crm_app.models import (
     Contact,
     ContactTag,
     CustomFieldDefinition,
+    EmailTemplate,
     Form,
     Opportunity,
     PipelineStage,
@@ -113,6 +141,8 @@ DATE_SCAN_EVERY = timedelta(minutes=5)
 PER_DATE_SCAN = 200
 # How often a `wait_for_field` step (P8-J) looks at the contact's field again.
 FIELD_LOOK_EVERY = timedelta(minutes=10)
+# The window a `send_email` step's daily limit counts over (P8-E).
+EMAIL_WINDOW = timedelta(hours=24)
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +161,13 @@ class AutomationRuleError(RecordError):
 
 class AutomationLimitError(RecordError):
     status, code = 409, "automation_limit"
+
+
+class AutomationApprovalError(RecordError):
+    """Activating an automation that sends email needs the right to approve
+    campaigns (P8-E): activation is that email's approval."""
+
+    status, code = 403, "campaign_approval_required"
 
 
 class AutomationStateError(RecordError):
@@ -253,7 +290,7 @@ def create(scope: Scope, name: str, definition: object) -> Item:
             name=clean_name,
             status="draft",
             trigger_type=given.trigger,
-            definition=given.as_json(),
+            definition=rules.without_content(given).as_json(),
             active_version=None,
             activated_by_user_id=None,
             created_by_user_id=scope.actor,
@@ -286,7 +323,7 @@ def update(
         except InvalidValue as exc:
             raise AutomationRuleError(str(exc)) from None
     if "definition" in changes:
-        values["definition"] = _definition(changes["definition"]).as_json()
+        values["definition"] = rules.without_content(_definition(changes["definition"])).as_json()
 
     def apply(session: Session) -> Item:
         row = _load(session, scope, automation_id, lock=True)
@@ -418,6 +455,34 @@ def _check_references(session: Session, scope: Scope, given: rules.Definition) -
             )
 
 
+def _frozen(session: Session, scope: Scope, given: rules.Definition) -> rules.Definition:
+    """The definition with each `send_email` step's template content as it
+    is now (P8-E). Only a member who may approve campaigns activates an
+    automation that sends email: the activation approves that content."""
+    wanted = rules.templates(given)
+    if not wanted:
+        return given
+    if not can(
+        actor_id=scope.actor,
+        tenant_id=scope.workspace,
+        action="approve",
+        resource=campaigns.RESOURCE,
+    ):
+        raise AutomationApprovalError
+    found = {
+        str(row.id): (row.subject, row.body)
+        for row in session.execute(
+            select(EmailTemplate).where(
+                EmailTemplate.tenant_id == scope.workspace,
+                EmailTemplate.id.in_([uuid.UUID(t) for t in wanted]),
+            )
+        ).scalars()
+    }
+    if set(found) != wanted:
+        raise AutomationRuleError("an email template it sends no longer exists")
+    return rules.with_content(given, found)
+
+
 def activate(scope: Scope, automation_id: uuid.UUID, *, expected_version: int) -> Item:
     """Freeze the draft as a new version and start matching new contacts."""
 
@@ -431,6 +496,7 @@ def activate(scope: Scope, automation_id: uuid.UUID, *, expected_version: int) -
         except InvalidValue as exc:
             raise AutomationRuleError(str(exc)) from None
         _check_references(session, scope, given)
+        given = _frozen(session, scope, given)
         latest = session.execute(
             select(AutomationVersion.number)
             .where(
@@ -456,7 +522,9 @@ def activate(scope: Scope, automation_id: uuid.UUID, *, expected_version: int) -
         row.updated_by_user_id, row.updated_at = scope.actor, now
         row.version += 1
         session.flush()
-        _audit(session, scope, "activated", automation_id, version=number)
+        sent = sorted(rules.templates(given))
+        extra = {"email_templates": sent} if sent else {}
+        _audit(session, scope, "activated", automation_id, version=number, **extra)
         if given.trigger == "date_reached":
             _register_date_workspace(scope.workspace, now)
         return _item(row)
@@ -698,11 +766,20 @@ def _facts(
     )
 
 
-def _act(  # noqa: PLR0911, PLR0912 - one answer per action
-    session: Session, scope: Scope, contact: Contact, action: rules.Action, run: AutomationRun
+def _act(  # noqa: PLR0911, PLR0912, PLR0913, PLR0917 - one answer per action
+    session: Session,
+    scope: Scope,
+    contact: Contact,
+    action: rules.Action,
+    run: AutomationRun,
+    queued: list[uuid.UUID],
 ) -> tuple[str, str | None]:
-    """One action's effect in the run's transaction: (outcome, detail)."""
+    """One action's effect in the run's transaction: (outcome, detail). An
+    email a step queued is added to `queued`, to hand to the sender once the
+    step commits."""
     args = action.args
+    if action.type == "send_email":
+        return _send_email(session, scope, contact, run, args, queued)
     if action.type == "add_tag":
         result = records.add_tag_in(session, scope, contact.id, uuid.UUID(args["tag_id"]))
         return ("done", None) if result in ("added", "present") else ("skipped", result)
@@ -790,6 +867,94 @@ def _notice(
         actor=None,
         note=args["message"],
     )
+    return "done", None
+
+
+def _send_email(  # noqa: PLR0911, PLR0913, PLR0917 - one answer per refusal
+    session: Session,
+    scope: Scope,
+    contact: Contact,
+    run: AutomationRun,
+    args: Mapping[str, Any],
+    queued: list[uuid.UUID],
+) -> tuple[str, str | None]:
+    """`send_email` (P8-E): one marketing email to the contact, in the step's
+    transaction, so a retried step never queues twice. Skipped while
+    campaigns can neither send nor rehearse here, without an address, the
+    contact's consent or with the address suppressed (checked again at send
+    time), or once the automation has sent its daily limit. In a rehearsal
+    workspace the email is recorded and closed unsent."""
+    workspace = scope.workspace
+    if "subject" not in args:
+        return "skipped", "no_content"
+    address = (contact.email or "").strip().lower()
+    if not address:
+        return "skipped", "no_email"
+    links = campaigns.unsubscribe_links()
+    if links is None or not campaigns.queue_available(workspace):
+        return "skipped", "sending_unavailable"
+    if not suppression.may_send(session, workspace, address, contact.id, marketing=True):
+        return "skipped", "not_eligible"
+    # Steps of the same automation take turns here, so parallel runs never
+    # pass the limit together.
+    acquire_tenant_advisory_lock(
+        session, workspace, f"crm_app.automation_email.{run.automation_id}"
+    )
+    sent = len(
+        session.execute(
+            select(AutomationEmail.id)
+            .where(
+                AutomationEmail.tenant_id == workspace,
+                AutomationEmail.automation_id == run.automation_id,
+                AutomationEmail.created_at > _now() - EMAIL_WINDOW,
+            )
+            .limit(args["daily_limit"])
+        ).all()
+    )
+    if sent >= args["daily_limit"]:
+        return "skipped", "daily_limit"
+    unsubscribe_base, one_click_base = links
+    token = secrets.token_hex(16)
+    values = {"first_name": contact.first_name, "last_name": contact.last_name}
+    # The page keeps the token in the fragment, out of server logs.
+    text = email_rules.render(args["body"], values) + email_rules.footer(
+        get_tenant(workspace).name, f"{unsubscribe_base}/{workspace}#{token}"
+    )
+    try:
+        email_id = emails.queue(
+            session,
+            scope,
+            purpose="automation",
+            to_email=address,
+            subject=email_rules.render(args["subject"], values),
+            text_body=text,
+            contact_id=contact.id,
+            list_unsubscribe_url=f"{one_click_base}/{workspace}/{token}",
+        )
+    except InvalidValue:
+        return "skipped", "invalid_email"
+    rehearsed = campaigns.rehearsal(workspace)
+    if rehearsed:
+        emails.close_unsent(session, workspace, email_id, "rehearsal")
+    session.add(
+        AutomationEmail(
+            id=uuid.uuid4(),
+            tenant_id=workspace,
+            automation_id=run.automation_id,
+            run_id=run.id,
+            branch=run.branch or "yes",
+            position=run.next_step,
+            contact_id=contact.id,
+            email=address,
+            status="queued",
+            email_message_id=email_id,
+            unsubscribe_hash=hashlib.sha256(token.encode("ascii")).hexdigest(),
+            created_at=_now(),
+        )
+    )
+    if rehearsed:
+        return "done", "rehearsal"
+    queued.append(email_id)
     return "done", None
 
 
@@ -956,10 +1121,14 @@ def _date_wait(
     )
 
 
-def advance(workspace: uuid.UUID, run_id: uuid.UUID) -> str:
-    """Execute a run's due steps; returns its status afterwards."""
+def advance(workspace: uuid.UUID, run_id: uuid.UUID, queued: list[uuid.UUID] | None = None) -> str:
+    """Execute a run's due steps; returns its status afterwards. The emails
+    its `send_email` steps queued (P8-E) are added to `queued` once
+    committed, for the caller to hand to the sender; otherwise the sweeper
+    finds them at their retry time."""
+    found = queued if queued is not None else []
     while True:
-        status, more = _step(workspace, run_id)
+        status, more = _step(workspace, run_id, found)
         if not more:
             return status
 
@@ -984,8 +1153,18 @@ def _version(session: Session, workspace: uuid.UUID, run: AutomationRun) -> rule
     )
 
 
-def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa: PLR0911 - one exit per state
-    """At most one step, in one transaction: (status, whether to go on)."""
+def _step(workspace: uuid.UUID, run_id: uuid.UUID, queued: list[uuid.UUID]) -> tuple[str, bool]:
+    """At most one step, in one transaction: (status, whether to go on). The
+    step's emails join `queued` only once it has committed."""
+    step_emails: list[uuid.UUID] = []
+    result = _step_in(workspace, run_id, step_emails)
+    queued.extend(step_emails)
+    return result
+
+
+def _step_in(  # noqa: PLR0911 - one exit per state
+    workspace: uuid.UUID, run_id: uuid.UUID, step_emails: list[uuid.UUID]
+) -> tuple[str, bool]:
     with tenant_session_scope(workspace) as session:
         run = _load_run(session, workspace, run_id)
         if run is None:
@@ -1055,7 +1234,7 @@ def _step(workspace: uuid.UUID, run_id: uuid.UUID) -> tuple[str, bool]:  # noqa:
                 component="crm_app.automation_run",
                 component_ref=run.automation_id,
             )
-            outcome, detail = _act(session, scope, contact, action, run)
+            outcome, detail = _act(session, scope, contact, action, run, step_emails)
             session.add(
                 AutomationStep(
                     tenant_id=workspace,

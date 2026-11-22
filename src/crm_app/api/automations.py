@@ -12,6 +12,8 @@
 The path's `tenant_id` is only the request; handlers use `context.tenant_id`
 alone. Changes need `If-Match`. A refused definition answers 422
 `invalid_automation` with the rule it breaks, never the value sent.
+Activating one with a `send_email` step also needs `crm_app.campaign:approve`
+(decision P8-E), else 403 `campaign_approval_required`.
 """
 
 from __future__ import annotations
@@ -96,6 +98,7 @@ class StepOut(BaseModel):
         "set_custom_field",
         "wait_until_date",
         "wait_for_field",
+        "send_email",
     ]
     outcome: Literal["done", "skipped"]
     detail: str | None

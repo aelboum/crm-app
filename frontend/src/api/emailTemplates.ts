@@ -8,8 +8,9 @@ import type { components } from "./schema";
  * Email templates (decision P7-T): a name, subject and plain-text body with
  * the campaign placeholders. Every role reads them (`read_campaigns`);
  * members who may manage campaigns change them; the reply composer asks
- * for one filled in for the conversation's contact. A template never sends
- * anything.
+ * for one filled in for the conversation's contact. A template sends
+ * nothing itself: an automation's send-email step (P8-E) sends the copy
+ * frozen when the automation was activated.
  */
 
 export type EmailTemplate = components["schemas"]["TemplateOut"];

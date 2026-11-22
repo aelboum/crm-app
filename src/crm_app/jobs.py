@@ -64,16 +64,22 @@ async def crm_app_email_send(context: TenantJobContext, payload: TenantJobPayloa
 
 
 async def crm_app_automation_run(context: TenantJobContext, payload: TenantJobPayload) -> None:
-    from crm_app import automations  # noqa: PLC0415
+    from crm_app import automations, emails  # noqa: PLC0415
 
     run_id = uuid.UUID(str(payload.data["run_id"]))
+    queued: list[uuid.UUID] = []
     try:
-        await asyncio.to_thread(automations.advance, context.tenant_id, run_id)
+        await asyncio.to_thread(automations.advance, context.tenant_id, run_id, queued)
     except Exception as exc:
         await asyncio.to_thread(
             automations.record_failure, context.tenant_id, run_id, type(exc).__name__.lower()
         )
         raise
+    finally:
+        # Emails its `send_email` steps committed (P8-E); one the queue
+        # cannot take is found by the sweeper at its retry time.
+        for email_id in queued:
+            await emails.enqueue(context.tenant_id, email_id)
 
 
 async def crm_app_inbound_process(context: SystemJobContext) -> None:

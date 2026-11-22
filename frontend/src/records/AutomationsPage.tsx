@@ -7,6 +7,8 @@ import {
   type Automation,
   type AutomationRun,
   type Condition,
+  DAILY_LIMIT_DEFAULT,
+  DAILY_LIMIT_MAX,
   type Definition,
   EMPTY_DEFINITION,
   MAX_ACTIONS,
@@ -33,6 +35,7 @@ import {
   type FieldDefinition,
   useFieldDefinitions,
 } from "../api/customFields";
+import { useEmailTemplates } from "../api/emailTemplates";
 import { useForms } from "../api/forms";
 import { usePipelines } from "../api/pipelines";
 import {
@@ -57,8 +60,8 @@ import { type Option, ownerOptions, When } from "./parts";
  * editor for the design's shape (one trigger, an optional condition, a yes
  * and a no branch of actions), activation and pausing, and each one's
  * latest runs with their steps. Only the actions the engine runs are
- * offered; the design's email, SMS, notification and AI actions are not.
- * The server checks every definition again.
+ * offered: one marketing email from a template (P8-E), not yet the
+ * design's SMS and AI actions. The server checks every definition again.
  */
 
 const STATUS_TONE: Record<Automation["status"], Tone> = {
@@ -103,6 +106,8 @@ function failure(error: unknown): MessageId {
     if (error.code === "invalid_automation") return "automations.error.invalid";
     if (error.code === "automation_limit") return "automations.error.limit";
     if (error.code === "automation_active") return "automations.error.active";
+    if (error.code === "campaign_approval_required")
+      return "automations.error.approval";
     if (error.code === "stale_version") return "automations.error.stale";
     if (error.status === 403) return "automations.error.forbidden";
   }
@@ -548,7 +553,14 @@ function newAction(
   tags: Option[],
   members: Option[],
   fields: FieldDefinition[],
+  templates: Option[],
 ): Action {
+  if (type === "send_email")
+    return {
+      type,
+      template_id: templates[0]?.id ?? "",
+      daily_limit: DAILY_LIMIT_DEFAULT,
+    };
   if (type === "add_tag" || type === "remove_tag")
     return { type, tag_id: tags[0]?.id ?? "" };
   if (type === "set_lifecycle_stage") return { type, stage: "customer" };
@@ -880,6 +892,10 @@ function AutomationEditor({
   const membersQuery = useMembers(workspaceId, 0, true);
   const fieldsQuery = useFieldDefinitions(workspaceId);
   const fields = activeFields(fieldsQuery.data?.items, "contact");
+  const templatesQuery = useEmailTemplates(workspaceId);
+  const templates: Option[] = (templatesQuery.data?.items ?? []).map(
+    (template) => ({ id: template.id, label: template.name }),
+  );
   const pipelinesQuery = usePipelines(workspaceId);
   const pipelines = pipelinesQuery.data?.items ?? [];
   // Every pipeline's stages; named with their pipeline when there are several.
@@ -1051,6 +1067,7 @@ function AutomationEditor({
           tags={tags}
           members={members}
           fields={fields}
+          templates={templates}
           hoursSet={hoursSet}
           onChange={(yes) => {
             set({ yes });
@@ -1063,6 +1080,7 @@ function AutomationEditor({
             tags={tags}
             members={members}
             fields={fields}
+            templates={templates}
             hoursSet={hoursSet}
             onChange={(no) => {
               set({ no });
@@ -1192,6 +1210,7 @@ function Branch({
   tags,
   members,
   fields,
+  templates,
   hoursSet,
   onChange,
 }: {
@@ -1200,6 +1219,7 @@ function Branch({
   tags: Option[];
   members: Option[];
   fields: FieldDefinition[];
+  templates: Option[];
   hoursSet: boolean | undefined;
   onChange: (actions: Action[]) => void;
 }) {
@@ -1222,6 +1242,7 @@ function Branch({
                 tags={tags}
                 members={members}
                 fields={fields}
+                templates={templates}
                 hoursSet={hoursSet}
                 onChange={(next) => {
                   onChange(
@@ -1290,6 +1311,9 @@ function Branch({
             <option value="wait_for_field">
               {t("automations.action.wait_for_field")}
             </option>
+            <option value="send_email">
+              {t("automations.action.send_email")}
+            </option>
           </select>
           <Button
             size="sm"
@@ -1297,7 +1321,7 @@ function Branch({
             onPress={() => {
               onChange([
                 ...actions,
-                newAction(adding, tags, members, fields),
+                newAction(adding, tags, members, fields, templates),
               ]);
             }}
           >
@@ -1317,6 +1341,7 @@ function ActionEditor({
   tags,
   members,
   fields,
+  templates,
   hoursSet,
   onChange,
 }: {
@@ -1326,6 +1351,7 @@ function ActionEditor({
   tags: Option[];
   members: Option[];
   fields: FieldDefinition[];
+  templates: Option[];
   hoursSet: boolean | undefined;
   onChange: (action: Action) => void;
 }) {
@@ -1333,6 +1359,17 @@ function ActionEditor({
   const kind = t(`automations.action.${action.type}` as MessageId);
   const label = (field: MessageId) =>
     t("automations.fieldOf", { field: t(field), branch, number: index + 1 });
+  if (action.type === "send_email") {
+    return (
+      <EmailStep
+        action={action}
+        kind={kind}
+        templates={templates}
+        label={label}
+        onChange={onChange}
+      />
+    );
+  }
   if (action.type === "set_lifecycle_stage") {
     return (
       <div className="automation-step-body">
@@ -1787,6 +1824,82 @@ function FieldWaitStep({
           ))}
       </select>
       <p className="form-hint">{t("automations.fieldWaitHint")}</p>
+    </div>
+  );
+}
+
+const DAILY_LIMITS = [
+  10,
+  25,
+  50,
+  100,
+  DAILY_LIMIT_DEFAULT,
+  500,
+  DAILY_LIMIT_MAX,
+];
+
+/*
+ * P8-E: which email template to send, and the automation's limit per 24
+ * hours. A template deleted since stays chosen until changed; activation
+ * then refuses it.
+ */
+function EmailStep({
+  action,
+  kind,
+  templates,
+  label,
+  onChange,
+}: {
+  action: Extract<Action, { type: "send_email" }>;
+  kind: string;
+  templates: Option[];
+  label: (field: MessageId) => string;
+  onChange: (action: Action) => void;
+}) {
+  const t = useT();
+  const known = templates.some((option) => option.id === action.template_id);
+  return (
+    <div className="automation-step-body">
+      <span className="automation-step-kind">{kind}</span>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.template")}
+        value={action.template_id}
+        onChange={(event) => {
+          onChange({ ...action, template_id: event.target.value });
+        }}
+      >
+        {!templates.length && !action.template_id ? (
+          <option value="">{t("automations.noTemplates")}</option>
+        ) : null}
+        {action.template_id && !known ? (
+          <option value={action.template_id}>
+            {t("automations.templateGone")}
+          </option>
+        ) : null}
+        {templates.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <select
+        className="form-input"
+        aria-label={label("automations.field.dailyLimit")}
+        value={action.daily_limit}
+        onChange={(event) => {
+          onChange({ ...action, daily_limit: Number(event.target.value) });
+        }}
+      >
+        {[...new Set([...DAILY_LIMITS, action.daily_limit])]
+          .sort((x, y) => x - y)
+          .map((count) => (
+            <option key={count} value={count}>
+              {count}
+            </option>
+          ))}
+      </select>
+      <p className="form-hint">{t("automations.emailHint")}</p>
     </div>
   );
 }

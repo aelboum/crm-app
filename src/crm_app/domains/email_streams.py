@@ -51,6 +51,8 @@ PURPOSE_STREAMS: Mapping[str, Stream] = {
     "test": Stream.TRANSACTIONAL,
     "conversation_reply": Stream.CONVERSATION,
     "campaign": Stream.CAMPAIGN,
+    # Decision P8-E: marketing, like a campaign.
+    "automation": Stream.CAMPAIGN,
 }
 
 # The local part each stream sends from unless configured otherwise.

@@ -1390,6 +1390,36 @@ The first full `vitest` run with default workers had 25 timeouts, spread
 over 16 unrelated files and different on a second run; with three workers
 everything passed. Deployed to staging below.
 
+## Automation step that sends a marketing email (2026-11-22, owner: "A")
+
+Decision P8-E, migration `0055_automation_email`. A step sends one
+marketing email from a template to the run's contact. Only an Owner or
+Admin may activate an automation with this step (403
+`campaign_approval_required` otherwise); activation is the approval, and
+the template's subject and body are frozen into the active version. At
+send time the step checks consent, suppression and the address, adds the
+campaign unsubscribe footer, and keeps a daily limit per automation
+(default 200, 1 to 1000, 24-hour window). The email is queued only after
+the step commits, and a retried step sends nothing twice. Unsubscribing
+suppresses the contact without firing campaign triggers. When sending is
+not configured (staging runs with `ENVIRONMENT=production`) the step is
+skipped as `sending_unavailable`, except in a rehearsal workspace, where
+the email is recorded and closed unsent.
+
+| Check | Result |
+| --- | --- |
+| `pytest tests/unit` (no environment) | 886 passed |
+| `pytest tests/integration --deselect tests/integration/test_directory.py` against `crm_app_test` | 965 passed, 3 failed |
+| The 3 failures: migration-head and table lists in `test_foundation`, `test_crm_tables`, `test_note_activity_tables` not yet naming 0055; lists updated, those 3 files rerun | 85 passed |
+| `ruff format --check`; `ruff check`; `pyright`; `lint-imports` | clean; 2 contracts kept |
+| `crm_app.openapi`, `npm run gen:api` | `openapi.json` and `schema.d.ts` regenerated (the step list) |
+| `npx vitest run --maxWorkers=3` | 38 files, 428 passed |
+| `tsc -b`; `eslint .`; `npm run build` | clean |
+
+`test_directory.py` was left out: its 5 timeouts come from the about
+28,649 tenants left in the local test database, not from this change. Not
+deployed to staging and not checked in a browser.
+
 ## Staging deployed at `1a9d8ce` (2026-11-22, owner: "Do 1 then 5")
 
 From `94c62c8`: the Automations intro (`2154ef5`), field waits woken by the

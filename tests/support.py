@@ -145,6 +145,8 @@ PRODUCT_TABLES: frozenset[str] = frozenset(
         "automation_rotation",
         # P8-I (workspaces with a date trigger).
         "automation_date_workspace",
+        # P8-E (emails sent by automation steps).
+        "automation_email",
         # S-1, Stage C (owner decision of 2026-10-25, option A).
         "signup",
         "signup_attempt",
