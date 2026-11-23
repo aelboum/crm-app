@@ -1420,6 +1420,22 @@ the email is recorded and closed unsent.
 28,649 tenants left in the local test database, not from this change. Not
 deployed to staging and not checked in a browser.
 
+## Staging deployed at `2642e2a` (2026-11-23, owner: "go")
+
+From `5b68d14`: email steps in the run history. No migration.
+
+| Check | Result |
+| --- | --- |
+| CI on `2642e2a` | passed (run 45051415166, all 5 jobs) |
+| Before: `audit_store.sh collect`; `backup_drill.py` | kept 2 new lines (228 in all); **15 passed, 0 failed** |
+| Image | built on the VPS after `HEAD` was checked, `crm-app:2642e2a`; `VERSION=2642e2a`; previous image `crm-app:5b68d14` |
+| `$C up -d --wait` | every service healthy; `migrate` exited 0 |
+| `public.alembic_version` | `0055_automation_email` (unchanged) |
+| `/readyz` | 200 |
+
+Rolling back the code needs no downgrade (`crm-app:5b68d14`). Not checked
+in a browser.
+
 ## Email steps in the run history (2026-11-22, owner: "do B then C")
 
 B (campaign metrics) was already built: P7-RP counts each campaign's
